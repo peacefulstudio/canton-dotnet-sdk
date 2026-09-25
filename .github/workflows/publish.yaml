@@ -77,35 +77,56 @@ jobs:
           else
             echo "published=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Setup .NET (dry-run pack path only)
-        if: steps.ver.outputs.should_publish == 'true' && inputs.dry_run == true
-        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.0.0
+      - name: Setup .NET
+        if: steps.ver.outputs.should_publish == 'true'
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: '10.0.x'
+      - name: Restore
+        if: steps.ver.outputs.should_publish == 'true'
+        run: dotnet restore
+      - name: Build
+        if: steps.ver.outputs.should_publish == 'true'
+        env:
+          PACKAGE_VERSION: ${{ steps.ver.outputs.version }}
+        run: dotnet build --configuration Release --no-restore -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true
+      - name: Test
+        if: steps.ver.outputs.should_publish == 'true'
+        run: dotnet test --configuration Release --no-build
+      - name: Pack
+        if: steps.ver.outputs.should_publish == 'true'
+        env:
+          PACKAGE_VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          dotnet pack --configuration Release --no-build \
+            -p:PackageVersion="$PACKAGE_VERSION" \
+            -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg \
+            -o "$GITHUB_WORKSPACE/output/nuget"
+      - name: Upload packages as artifacts
+        if: steps.ver.outputs.should_publish == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nuget-packages
+          path: |
+            output/nuget/*.nupkg
+            output/nuget/*.snupkg
+          if-no-files-found: error
+          retention-days: 30
+      - name: Verify the packed set and its dependency-first push order
+        if: steps.ver.outputs.should_publish == 'true'
+        run: scripts/order-nuget-push.sh output/nuget
       - name: NuGet login (OIDC -> short-lived key)
         id: login
         if: steps.ver.outputs.should_publish == 'true' && inputs.dry_run != true
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           user: ${{ secrets.NUGET_USER }}
-      - name: Build, test, pack & push
+      - name: Push to nuget.org in dependency order
         if: steps.ver.outputs.should_publish == 'true' && inputs.dry_run != true
-        uses: peacefulstudio/github-actions/.github/actions/csharp-publish@v2
-        with:
-          api-key: ${{ steps.login.outputs.NUGET_API_KEY }}
-          version_override: ${{ steps.ver.outputs.version }}
-      - name: Build & pack only (dry-run — no push)
-        if: steps.ver.outputs.should_publish == 'true' && inputs.dry_run == true
         env:
-          PACKAGE_VERSION: ${{ steps.ver.outputs.version }}
-        run: |
-          set -euo pipefail
-          dotnet restore
-          dotnet build --configuration Release --no-restore -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true
-          dotnet pack --configuration Release --no-build \
-            -p:PackageVersion="$PACKAGE_VERSION" \
-            -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg \
-            -o "$GITHUB_WORKSPACE/output/nuget"
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: scripts/order-nuget-push.sh output/nuget --push https://api.nuget.org/v3/index.json
       - name: Attach packages to draft release (upload only; never create/publish)
         if: steps.ver.outputs.should_publish == 'true'
         env:
