@@ -686,9 +686,14 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            echo "no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
+          if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
+            :
+          elif printf '%s' "$release_err" | grep -qi 'release not found'; then
+            echo "::notice::no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
             exit 0
+          else
+            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_err"
+            exit 1
           fi
           shopt -s nullglob
           files=(bundles/*.tar.gz)
@@ -725,9 +730,14 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            echo "no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
+          if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
+            :
+          elif printf '%s' "$release_err" | grep -qi 'release not found'; then
+            echo "::notice::no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
             exit 0
+          else
+            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_err"
+            exit 1
           fi
 
           mkdir -p standalone-assets
