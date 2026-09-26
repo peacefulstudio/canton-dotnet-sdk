@@ -34,7 +34,7 @@ because they are versioned in lockstep:
 - CI: `intermediate-fixtures-<version>.tar.gz` is now attached alongside the jar/proto —
   a schema-only `.binpb` plus a canonical-JSON rendering per conformance-corpus DAR, with a
   `manifest.json` recording each DAR's and each output's SHA-256, so external SDKs (Rust
-  first) can diff their own lowering against ours without a JVM (#1453).
+  first) can diff their own lowering against ours without a JVM (#51).
 
 ### Changed
 
