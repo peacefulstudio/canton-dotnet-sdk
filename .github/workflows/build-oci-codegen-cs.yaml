@@ -213,6 +213,9 @@ jobs:
 
             [ -s "fixtures/${name}.binpb" ] || { echo "::error::fixtures/${name}.binpb is empty"; exit 1; }
             [ -s "fixtures/${name}.json" ] || { echo "::error::fixtures/${name}.json is empty"; exit 1; }
+            jq -e '[.main.modules[]? | ((.dataTypes // []) + (.templates // []) + (.interfaces // []))] | flatten | length > 0' \
+              "fixtures/${name}.json" > /dev/null \
+              || { echo "::error::fixtures/${name}.json's main package carries no data types, templates or interfaces — refusing to pin a hollow schema-only decode."; exit 1; }
 
             jq -n -c \
               --arg name "${name}" \
@@ -559,7 +562,7 @@ jobs:
 
   compose-index:
     name: Compose multi-arch index
-    needs: [validate-inputs, build-per-rid]
+    needs: [validate-inputs, build-per-rid, build-intermediate-fixtures]
     if: needs.validate-inputs.outputs.push == 'true'
     runs-on: ubuntu-latest
     permissions:
