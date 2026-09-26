@@ -27,6 +27,11 @@ because they are versioned in lockstep:
 
 ### Added
 
+- CI: `daml-dar-to-proto-<version>.jar`, `intermediate_dar-<version>.proto` and a `SHA256SUMS`
+  checksum file are now attached to the draft release a `v*` tag push creates, and the
+  assembled jar's `--version` now reports the release version instead of the `0.0.0-dev`
+  placeholder every prior release shipped with (#49).
+
 ### Changed
 
 ### Deprecated
