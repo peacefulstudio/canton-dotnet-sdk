@@ -124,6 +124,8 @@ conformance/**/.daml/
 *.dar
 # Vendored DAR fixtures used by drift-detection / snapshot tests are an exception.
 !tests/Daml.Codegen.CSharp.Tests/Snapshots/**/*.dar
+# The quickstart sample's source archive, vendored for provenance beside its intermediate.binpb.
+!tests/Daml.Codegen.CSharp.Tests/QuickstartSample/*.dar
 # Conformance corpus DAR is the committed source of truth.
 !conformance/**/*.dar
 
