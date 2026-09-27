@@ -525,6 +525,7 @@ The `--generate-project` flag creates a `.csproj` file with:
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <PackageId>my.contracts</PackageId>
     <Version>1.0.0.0</Version>
     <Description>C# bindings for Daml package my-contracts</Description>
@@ -547,7 +548,7 @@ The `--generate-project` flag creates a `.csproj` file with:
 
 The `<Version>` is the 4-part `Major.Minor.Patch.Generation` scheme (see
 `--emitter-counter`/`--release-counters` in the [CLI Reference](#cli-reference)),
-and passing `--nullable` additionally emits `<Nullable>enable</Nullable>`.
+and `<Nullable>enable</Nullable>` is emitted by default; pass `--nullable false` to omit it.
 
 `Daml.Runtime` and `Daml.Ledger.Abstractions` default to the code generator's own
 version, so generated code and the runtime it compiles against stay in lockstep and
@@ -597,8 +598,8 @@ The main package's `.csproj` automatically references its dependencies:
   <None Include="icon.png" Pack="true" PackagePath="\" />
   <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.1" />
   <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.1" />
-  <PackageReference Include="daml.finance" Version="2.0.0.0" />
-  <PackageReference Include="some.library" Version="1.5.0.0" />
+  <PackageReference Include="daml.finance" Version="2.0.0.*-*" />
+  <PackageReference Include="some.library" Version="1.5.0.*-*" />
 </ItemGroup>
 ```
 
@@ -940,7 +941,7 @@ Daml and C# ecosystem; no CLA required.
 
 - [x] IntermediateDar proto reader covering the full Daml-LF type surface
 - [x] Interface support (`IDamlInterface`, `IHasView<TView>`, `IImplements<TInterface>`)
-- [x] Contract key support (key type, `<Choice>ByKeyCommand` builders, and a `Contract.Key` slot that stays `null` until the ledger client reads `contractKey` off the wire)
+- [x] Contract key support (key type, `<Choice>ByKeyCommand` builders, and a non-nullable `Contract<T, TKey>.Key` decoded from the created event's `contractKey`)
 - [x] Package upgrade support (`IUpgradeable` marker interface)
 - [x] Generic types (type parameters on records and variants)
 - [x] DAR dependencies and NuGet pipeline
