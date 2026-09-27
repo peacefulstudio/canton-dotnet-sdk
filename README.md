@@ -683,21 +683,25 @@ var createCmd = CreateCommand.For(contract);
 | Variant | Abstract record + derived | `DamlVariant` |
 | Enum | `enum` | `DamlEnum` |
 
-An `Optional a` maps to `T?` wherever C# nullable syntax can carry it. Three
+An `Optional a` maps to `T?` wherever C# nullable syntax can carry it. Four
 positions it cannot: an `Optional` over a type variable, an
-`Optional` passed as a type argument to a generated generic, and an `Optional`
-nested directly inside another `Optional`, where `T??` does not exist and
-`Some None` would collapse into `None`. All three map to `Optional<T>`
-(`Daml.Runtime.Stdlib`), a `Some`/`None` pair read through `Match`, `HasValue`,
-`TryGetValue` or `GetValueOrDefault()`. For the first two the wire encoding is
-unchanged, so which representation a field gets does not change the payload it
-serializes to. A nested chain is the exception: every level of it writes the
-array form — `[]` when absent, `[v]` when present — which is what a participant
-accepts in a nested position.
+`Optional` passed as a type argument to a generated generic, an `Optional`
+used as a `GenMap` key (`IReadOnlyDictionary`'s key type parameter is
+`notnull`), and an `Optional` nested directly inside another `Optional`, where
+`T??` does not exist and `Some None` would collapse into `None`. All four map
+to `Optional<T>` (`Daml.Runtime.Stdlib`), a `Some`/`None` pair read through
+`Match`, `HasValue`, `TryGetValue` or `GetValueOrDefault()`. For the first
+three the wire encoding is unchanged, so which representation a field gets
+does not change the payload it serializes to. A nested chain is the
+exception: every level of it writes the array form — `[]` when absent, `[v]`
+when present — which is what a participant accepts in a nested position.
 
 Every `Numeric n` maps to `decimal` whatever the declared scale, which the
-generated type does not carry. A high-scale field works for every value a
-`decimal` can hold. A participant pads a Numeric out to its declared scale, so a
+generated type does not carry. A value works when it is representable as a
+`decimal` and valid for the declared `Numeric n` — at most 38 significant
+digits total, `n` of them after the decimal point; the generated type does
+not enforce that scale, so an out-of-range value is rejected by the
+participant. A participant pads a Numeric out to its declared scale, so a
 `Numeric 37` slot carrying `1.5` arrives with 36 trailing zeros; those zeros are
 stripped and the narrowing retried, so padding alone never fails. Stripping is
 attempted only after the exact narrowing fails, so a mantissa that already fits
