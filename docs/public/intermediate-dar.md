@@ -33,7 +33,7 @@ onward, every `v*` GitHub release attaches:
 |---|---|
 | `daml-dar-to-proto-<version>.jar` | The reference producer, a self-contained JVM jar. |
 | `intermediate_dar-<version>.proto` | The exact schema that jar writes against. |
-| `SHA256SUMS` | Checksums for every asset in the release, including the two above. |
+| `SHA256SUMS` | Checksums for the jar, the proto and the fixtures archive. |
 | `intermediate-fixtures-<version>.tar.gz` | A schema-only `.binpb` plus its canonical protobuf-JSON rendering for each DAR in this project's conformance corpus, alongside the SHA-256 of each source DAR. |
 
 ### Older releases
