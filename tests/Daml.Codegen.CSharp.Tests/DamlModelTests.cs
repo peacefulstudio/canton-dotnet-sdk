@@ -15,72 +15,6 @@ public class DamlModelTests
     #region DamlType Tests
 
     [Fact]
-    public void DamlPrimitiveType_should_not_be_optional()
-    {
-        // Arrange
-        var type = new DamlPrimitiveType(DamlPrimitive.Text);
-
-        // Assert
-        type.IsOptional.Should().BeFalse();
-    }
-
-    [Fact]
-    public void DamlTypeRef_should_not_be_optional()
-    {
-        // Arrange
-        var type = new DamlTypeRef("package-id", "Module.Name", "TypeName");
-
-        // Assert
-        type.IsOptional.Should().BeFalse();
-    }
-
-    [Fact]
-    public void DamlTypeApp_should_be_optional_when_base_is_Optional()
-    {
-        // Arrange
-        var optionalType = new DamlTypeApp(
-            new DamlPrimitiveType(DamlPrimitive.Optional),
-            [new DamlPrimitiveType(DamlPrimitive.Text)]);
-
-        // Assert
-        optionalType.IsOptional.Should().BeTrue();
-    }
-
-    [Fact]
-    public void DamlTypeApp_should_not_be_optional_when_base_is_List()
-    {
-        // Arrange
-        var listType = new DamlTypeApp(
-            new DamlPrimitiveType(DamlPrimitive.List),
-            [new DamlPrimitiveType(DamlPrimitive.Text)]);
-
-        // Assert
-        listType.IsOptional.Should().BeFalse();
-    }
-
-    [Fact]
-    public void DamlTypeApp_should_not_be_optional_when_base_is_ContractId()
-    {
-        // Arrange
-        var contractIdType = new DamlTypeApp(
-            new DamlPrimitiveType(DamlPrimitive.ContractId),
-            [new DamlTypeRef("", "Module", "Template")]);
-
-        // Assert
-        contractIdType.IsOptional.Should().BeFalse();
-    }
-
-    [Fact]
-    public void DamlTypeVar_should_not_be_optional()
-    {
-        // Arrange
-        var typeVar = new DamlTypeVar("T");
-
-        // Assert
-        typeVar.IsOptional.Should().BeFalse();
-    }
-
-    [Fact]
     public void DamlTypeRef_should_store_package_module_name()
     {
         // Arrange & Act
@@ -408,6 +342,39 @@ public class DamlModelTests
 
         // Assert
         iface.ViewType.Should().BeNull();
+    }
+
+    [Fact]
+    public void DamlInterfaceMethod_should_carry_name_and_return_type()
+    {
+        // Arrange
+        var method = new DamlInterfaceMethod("holder", new DamlPrimitiveType(DamlPrimitive.Party));
+        var equalMethod = new DamlInterfaceMethod("holder", new DamlPrimitiveType(DamlPrimitive.Party));
+
+        // Act & Assert
+        method.Name.Should().Be("holder");
+        method.ReturnType.Should().Be(new DamlPrimitiveType(DamlPrimitive.Party));
+        method.Should().Be(equalMethod,
+            "DamlInterfaceMethod is a record: two instances with an equal name and an equal "
+            + "return type must compare equal structurally");
+    }
+
+    [Fact]
+    public void DamlInterface_Methods_should_default_to_empty()
+    {
+        // Arrange & Act
+        var iface = new DamlInterface
+        {
+            Name = "Methodless",
+            Choices = []
+        };
+
+        // Assert
+        iface.Methods.Should().NotBeNull(
+            "a freshly constructed DamlInterface without Methods set must yield an empty list, "
+            + "never null — existing construction sites (the .NET DalfReader producer among them) "
+            + "set no Methods and must not be forced to change");
+        iface.Methods.Should().BeEmpty();
     }
 
     #endregion

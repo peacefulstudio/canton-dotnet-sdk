@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Collections.Frozen;
 using Daml.Codegen.Intermediate.Model;
 using RuntimeNamespaces = Daml.Runtime.RuntimeNamespaces;
 
@@ -33,47 +34,62 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
     public CollectionShape ClassifyCollection(DamlType type) =>
         ClassifyRewritten(OptionalRepresentation.Rewrite(type, context.Package, resolver));
 
-    private static CollectionShape ClassifyRewritten(DamlType type) => type switch
-    {
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List } } => CollectionShape.List,
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap or DamlPrimitive.GenMap } } =>
-            CollectionShape.Map,
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var argument] } =>
-            ClassifyRewritten(argument),
-        _ => CollectionShape.None,
-    };
+    private CollectionShape ClassifyRewritten(DamlType type) =>
+        new ClassifyCollectionVisitor(this, depth: 0).Dispatch(type);
 
     private string MapType(DamlType type, int depth)
     {
         ThrowIfTooDeep(depth, nameof(MapType));
 
-        return type switch
-    {
-        DamlPrimitiveType primitive => MapBarePrimitiveToCSharp(primitive.Primitive),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Numeric } } => "decimal",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.ContractId }, Arguments: [var arg] } =>
-            $"{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{MapType(arg, depth + 1)}>",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var arg] } =>
-            $"{MapType(arg, depth + 1)}?",
-        DamlWrappedOptional wrapped =>
-            $"{context.Qualifier.Qualify(RuntimeTypeNames.Optional)}<{MapType(wrapped.Argument, depth + 1)}>",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List }, Arguments: [var arg] } =>
-            $"{context.Qualifier.Qualify("IReadOnlyList")}<{MapType(arg, depth + 1)}>",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap }, Arguments: [var arg] } =>
-            $"{context.Qualifier.Qualify("IReadOnlyDictionary")}<string, {MapType(arg, depth + 1)}>",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }, Arguments: [var keyArg, var valueArg] } =>
-            $"{context.Qualifier.Qualify("IReadOnlyDictionary")}<{MapType(keyArg, depth + 1)}, {MapType(valueArg, depth + 1)}>",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app =>
-            app.Arguments.Count > 0
-                ? $"{resolver.Resolve(typeRef, context)}<{string.Join(", ", app.Arguments.Select(arg => MapType(arg, depth + 1)))}>"
-                : resolver.Resolve(typeRef, context),
-        DamlTypeRef typeRef => resolver.Resolve(typeRef, context),
-        DamlTypeVar typeVar => EmitterHelpers.TypeParameterName(typeVar.Name),
-        _ => FallbackTypeName
-    };
+        return new MapTypeNameVisitor(this, context, resolver, depth).Dispatch(type);
     }
 
     private const string FallbackTypeName = "object";
+
+    /// <summary>
+    /// True for the <see cref="DamlPrimitive"/> members the catalog records as
+    /// <see cref="DamlPrimitiveDisposition.SignatureOnly"/>: structural type-formers that
+    /// are legal in type signatures but have no C# data-position mapping. Mirrors the
+    /// signature-only arms of the three bare-primitive switches — a member added to that
+    /// set must be added here too, or its applied forms fall to the unknown-application
+    /// failure below with a less precise message.
+    /// </summary>
+    private static bool IsSignatureOnlyPrimitive(DamlPrimitive primitive) => primitive is
+        DamlPrimitive.Arrow or DamlPrimitive.Update or DamlPrimitive.TypeRep
+        or DamlPrimitive.Any or DamlPrimitive.AnyException or DamlPrimitive.FailureCategory;
+
+    /// <summary>
+    /// The loud failure for a signature-only builtin reaching
+    /// <see cref="ClassifyCollection(DamlType)"/>: answering <see cref="CollectionShape.None"/>
+    /// would let the emitter keep walking into a member it can never map, so the classification
+    /// fails where the signature-only builtin is first seen, bare or applied.
+    /// </summary>
+    private static NotSupportedException SignatureOnlyDataPositionFailure(DamlPrimitive primitive, bool applied) =>
+        new(
+            $"Daml primitive '{primitive}' is a signature-only builtin — it can appear in type signatures "
+            + "but has no C# data-position mapping, so classifying the collection shape of its "
+            + (applied ? "application" : "bare form")
+            + " in a data position fails loudly instead of answering None and letting the emitter walk "
+            + "into a member it can never map.");
+
+    /// <summary>
+    /// The loud failure for a builtin application no supported arm names: a signature-only
+    /// builtin applied in a data position (named as such), or a supported type constructor
+    /// applied to the wrong number of arguments. Both once fell through to the silent
+    /// <see cref="FallbackTypeName"/> catch-all, which emitted knowingly-wrong C# — an
+    /// <c>object</c> member backed by <c>GenericStub</c> stubs — instead of failing codegen;
+    /// no cataloged builtin shape may reach that fallback anymore.
+    /// </summary>
+    private static NotSupportedException UnsupportedPrimitiveApplication(DamlPrimitive primitive, int argumentCount) =>
+        IsSignatureOnlyPrimitive(primitive)
+            ? new NotSupportedException(
+                $"Daml primitive '{primitive}' is a signature-only builtin — it can appear in type signatures "
+                + $"but has no C# data-position mapping, so its application to {argumentCount} type argument(s) "
+                + "in a data position fails loudly instead of silently mapping to 'object'.")
+            : new NotSupportedException(
+                $"Daml primitive '{primitive}' applied to {argumentCount} type argument(s) matches no supported "
+                + "C# data-position mapping — the application does not carry the argument count its "
+                + "type-constructor arm requires. The emitter refuses to silently map it to 'object'.");
 
     /// <summary>Produces the expression that serializes <paramref name="fieldName"/> of <paramref name="type"/> to a Daml value.</summary>
     /// <param name="type">The Daml type of the field being serialized.</param>
@@ -99,40 +115,7 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
     {
         ThrowIfTooDeep(depth, nameof(ToValue));
 
-        return type switch
-    {
-        DamlPrimitiveType primitive => GetBarePrimitiveToValueConversion(primitive.Primitive, fieldName),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Numeric } } =>
-            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlNumeric)}({fieldName})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.ContractId } } =>
-            $"{fieldName}.ToDamlValue()",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } } app =>
-            $"{fieldName} is {{ }} __{fieldName.TrimStart('@')} ? new {context.Qualifier.Qualify(RuntimeTypeNames.DamlOptional)}({ToValue(app.Arguments[0], $"__{fieldName.TrimStart('@')}", typeVarDelegates, depth + 1)}) : {context.Qualifier.Qualify(RuntimeTypeNames.DamlOptional)}.None",
-        DamlWrappedOptional wrapped =>
-            $"{fieldName}.{WrappedOptionalSerializer(wrapped.Encoding)}(__optional{depth} => {ToValue(wrapped.Argument, $"__optional{depth}", typeVarDelegates, depth + 1)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List } } app =>
-            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlList)}({fieldName}.Select(x => ({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)}){ToValue(app.Arguments[0], "x", typeVarDelegates, depth + 1)}).ToList())",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap } } app =>
-            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlTextMap)}({fieldName}.ToDictionary(kv => kv.Key, kv => ({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)}){ToValue(app.Arguments[0], "kv.Value", typeVarDelegates, depth + 1)}))",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap } } app =>
-            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlGenMap)}({fieldName}.Select(kv => (({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)}){ToValue(app.Arguments[0], "kv.Key", typeVarDelegates, depth + 1)}, ({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)}){ToValue(app.Arguments[1], "kv.Value", typeVarDelegates, depth + 1)})).ToList())",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app
-            when StdlibPackages.IsStdlibTypeRef(resolver, typeRef, parametric: true) =>
-            EmitParametricStdlibToValue(typeRef, app.Arguments, fieldName, typeVarDelegates, depth),
-        DamlTypeRef typeRef when IsEnumTypeRef(typeRef) =>
-            EnumToDamlEnumCall(typeRef, fieldName),
-        DamlTypeApp { Base: DamlTypeRef typeRef } app when IsVariantTypeRef(typeRef) =>
-            $"{fieldName}.ToVariant({string.Join(", ", ToValueConverterLambdas(app.Arguments, typeVarDelegates, depth))})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app when IsRecordTypeRef(typeRef) =>
-            $"{fieldName}.ToRecord({string.Join(", ", ToValueConverterLambdas(app.Arguments, typeVarDelegates, depth))})",
-        DamlTypeRef typeRef when IsVariantTypeRef(typeRef) =>
-            $"{fieldName}.ToVariant()",
-        DamlTypeVar typeVar when TryResolveDelegate(typeVarDelegates, typeVar, out var convert) =>
-            $"{convert}({fieldName})",
-        DamlTypeVar => FallbackToValueStub(fieldName),
-        _ when MapsToFallbackObject(type, depth) => FallbackToValueStub(fieldName),
-        _ => $"{fieldName}.ToRecord()"
-    };
+        return new ToValueVisitor(this, context, resolver, fieldName, typeVarDelegates, depth).Dispatch(type);
     }
 
     private string FallbackToValueStub(string fieldName) =>
@@ -140,8 +123,6 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
 
     private string FallbackFromValueStub(string valueName) =>
         $"{context.Qualifier.Qualify(RuntimeTypeNames.GenericStub)}.NotImplemented<{FallbackTypeName}>(\"{valueName.Replace("\"", "\\\"", StringComparison.Ordinal)}\")";
-
-    private bool MapsToFallbackObject(DamlType type, int depth = 0) => MapType(type, depth) == FallbackTypeName;
 
     /// <summary>
     /// True when <see cref="MapType(DamlType)"/> renders <paramref name="type"/> as a C#
@@ -158,17 +139,8 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
     public bool MapsToReferenceType(DamlType type) =>
         MapsToRewrittenReferenceType(OptionalRepresentation.Rewrite(type, context.Package, resolver));
 
-    private bool MapsToRewrittenReferenceType(DamlType type) => type switch
-    {
-        DamlPrimitiveType { Primitive: DamlPrimitive.Text } => true,
-        DamlPrimitiveType => false,
-        DamlWrappedOptional => true,
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Numeric or DamlPrimitive.Optional } } => false,
-        DamlTypeApp { Base: DamlPrimitiveType } => true,
-        DamlTypeApp { Base: DamlTypeRef typeRef } => !IsEnumTypeRef(typeRef),
-        DamlTypeRef typeRef => !IsEnumTypeRef(typeRef),
-        _ => false,
-    };
+    private bool MapsToRewrittenReferenceType(DamlType type) =>
+        new ReferenceTypeVisitor(this, depth: 0).Dispatch(type);
 
     /// <summary>Produces the expression that deserializes <paramref name="valueName"/> back into <paramref name="type"/>.</summary>
     /// <param name="type">The Daml type to reconstruct.</param>
@@ -203,44 +175,8 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
     {
         ThrowIfTooDeep(depth, nameof(FromValue));
 
-        return type switch
-    {
-        DamlPrimitiveType primitive => GetBarePrimitiveFromValueConversion(primitive.Primitive, valueName),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Numeric } } =>
-            $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlNumeric)}>().Value",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var arg] } =>
-            $"{valueName}.AsOptional().HasValue ? {FromValue(arg, $"{valueName}.AsOptional().Value!", typeVarDelegates, nestedArgTypeNames, depth + 1)} : null",
-        DamlWrappedOptional wrapped =>
-            $"{context.Qualifier.Qualify(RuntimeTypeNames.Optional)}<{MapType(wrapped.Argument, depth + 1)}>.{WrappedOptionalDeserializer(wrapped.Encoding)}({valueName}, __optional{depth} => {FromValue(wrapped.Argument, $"__optional{depth}", typeVarDelegates, nestedArgTypeNames, depth + 1)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List }, Arguments: [var arg] } =>
-            $"({context.Qualifier.Qualify("IReadOnlyList")}<{MapType(arg, depth + 1)}>){valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlList)}>().Values.Select(x => {FromValue(arg, "x", typeVarDelegates, nestedArgTypeNames, depth + 1)}).ToList()",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap }, Arguments: [var arg] } =>
-            $"({context.Qualifier.Qualify("IReadOnlyDictionary")}<string, {MapType(arg, depth + 1)}>){valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlTextMap)}>().Values.ToDictionary(kv => kv.Key, kv => {FromValue(arg, "kv.Value", typeVarDelegates, nestedArgTypeNames, depth + 1)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }, Arguments: [var keyArg, var valueArg] } =>
-            $"({context.Qualifier.Qualify("IReadOnlyDictionary")}<{MapType(keyArg, depth + 1)}, {MapType(valueArg, depth + 1)}>){valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlGenMap)}>().Entries.ToDictionary(kv => {FromValue(keyArg, "kv.Key", typeVarDelegates, nestedArgTypeNames, depth + 1)}, kv => {FromValue(valueArg, "kv.Value", typeVarDelegates, nestedArgTypeNames, depth + 1)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.ContractId }, Arguments: [var arg] } =>
-            $"new {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{MapType(arg, depth + 1)}>({valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlContractId)}>().Value)",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app
-            when StdlibPackages.IsStdlibTypeRef(resolver, typeRef, parametric: true) =>
-            EmitParametricStdlibFromValue(typeRef, app.Arguments, valueName, typeVarDelegates, nestedArgTypeNames, depth),
-        DamlTypeRef typeRef when IsEnumTypeRef(typeRef) =>
-            QualifiedEnumExtensionsCall(typeRef, "FromDamlEnum", $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlEnum)}>()"),
-        DamlTypeRef typeRef when IsVariantTypeRef(typeRef) =>
-            $"{resolver.Resolve(typeRef, context)}.FromVariant({valueName}.As<{DamlVariantReference(nestedArgTypeNames)}>())",
-        DamlTypeRef typeRef => $"{resolver.Resolve(typeRef, context)}.FromRecord({valueName}.As<{DamlRecordReference(nestedArgTypeNames)}>())",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app when IsVariantTypeRef(typeRef) =>
-            $"{resolver.Resolve(typeRef, context)}<{string.Join(", ", app.Arguments.Select(arg => MapType(arg, depth + 1)))}>.FromVariant({valueName}.As<{DamlVariantReference(nestedArgTypeNames)}>(), {string.Join(", ", FromValueConverterLambdas(app.Arguments, typeVarDelegates, nestedArgTypeNames, depth))})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app when IsRecordTypeRef(typeRef) =>
-            $"{resolver.Resolve(typeRef, context)}<{string.Join(", ", app.Arguments.Select(arg => MapType(arg, depth + 1)))}>.FromRecord({valueName}.As<{DamlRecordReference(nestedArgTypeNames)}>(), {string.Join(", ", FromValueConverterLambdas(app.Arguments, typeVarDelegates, nestedArgTypeNames, depth))})",
-        DamlTypeVar typeVar when TryResolveDelegate(typeVarDelegates, typeVar, out var convert) =>
-            $"{convert}({valueName})",
-        DamlTypeVar typeVar => $"{context.Qualifier.Qualify(RuntimeTypeNames.GenericStub)}.NotImplemented<{EmitterHelpers.TypeParameterName(typeVar.Name)}>(\"{typeVar.Name}\")",
-        _ when MapsToFallbackObject(type, depth) => FallbackFromValueStub(valueName),
-        _ => throw new CodegenException(
-            $"Cannot emit a deserialization expression for Daml type '{type}'. "
-            + "The C# code generator does not support this type shape, so generation fails "
-            + "here instead of emitting a silent 'default!' fallback into generated code.")
-    };
+        return new FromValueVisitor(this, context, resolver, valueName, typeVarDelegates, nestedArgTypeNames, depth)
+            .Dispatch(type);
     }
 
     private string DamlRecordReference(IReadOnlySet<string>? nestedArgTypeNames) =>
@@ -340,65 +276,9 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
     {
         ThrowIfTooDeep(depth, nameof(FromJson));
 
-        return type switch
-    {
-        DamlPrimitiveType primitive => GetBarePrimitiveFromJsonConversion(primitive.Primitive, jsonName, contextName),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Numeric } } =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadNumeric({jsonName}, {contextName})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.ContractId } } =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadContractId({jsonName}, {contextName})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } } app =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadOptional({jsonName}, {contextName}, {FromJsonElementReader(app.Arguments[0], nestedArgTypeNames, typeVarReaders, depth)})",
-        DamlWrappedOptional wrapped =>
-            $"{DamlLfJsonDecodersQualifiedName}.{WrappedOptionalJsonReader(wrapped.Encoding)}({jsonName}, {contextName}, {FromJsonElementReader(wrapped.Argument, nestedArgTypeNames, typeVarReaders, depth)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List } } app =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadList({jsonName}, {contextName}, {FromJsonElementReader(app.Arguments[0], nestedArgTypeNames, typeVarReaders, depth)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap } } app =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadTextMap({jsonName}, {contextName}, {FromJsonElementReader(app.Arguments[0], nestedArgTypeNames, typeVarReaders, depth)})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap } } app =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadGenMap({jsonName}, {contextName}, {FromJsonElementReader(app.Arguments[0], nestedArgTypeNames, typeVarReaders, depth)}, {FromJsonElementReader(app.Arguments[1], nestedArgTypeNames, typeVarReaders, depth)})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app
-            when StdlibPackages.IsStdlibTypeRef(resolver, typeRef, parametric: true) =>
-            EmitParametricStdlibFromJson(typeRef, app.Arguments, jsonName, contextName, nestedArgTypeNames, typeVarReaders, depth),
-        DamlTypeRef typeRef when IsEnumTypeRef(typeRef) =>
-            QualifiedEnumExtensionsCall(typeRef, "__ReadDamlLfJson", $"{jsonName}, {contextName}"),
-        DamlTypeRef typeRef when IsVariantTypeRef(typeRef) =>
-            $"{resolver.Resolve(typeRef, context)}.__ReadDamlLfJson({jsonName}, {contextName})",
-        DamlTypeRef typeRef => $"{resolver.Resolve(typeRef, context)}.__ReadDamlLfJson({jsonName}, {contextName})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app when IsVariantTypeRef(typeRef) && app.Arguments.Count > 0 =>
-            $"{resolver.Resolve(typeRef, context)}<{string.Join(", ", app.Arguments.Select(arg => MapType(arg, depth + 1)))}>.__ReadDamlLfJson({jsonName}, {contextName}, {string.Join(", ", FromJsonElementReaders(app.Arguments, nestedArgTypeNames, typeVarReaders, depth))})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } when IsVariantTypeRef(typeRef) =>
-            $"{resolver.Resolve(typeRef, context)}.__ReadDamlLfJson({jsonName}, {contextName})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } app when IsRecordTypeRef(typeRef) && app.Arguments.Count > 0 =>
-            $"{resolver.Resolve(typeRef, context)}<{string.Join(", ", app.Arguments.Select(arg => MapType(arg, depth + 1)))}>.__ReadDamlLfJson({jsonName}, {contextName}, {string.Join(", ", FromJsonElementReaders(app.Arguments, nestedArgTypeNames, typeVarReaders, depth))})",
-        DamlTypeApp { Base: DamlTypeRef typeRef } when IsRecordTypeRef(typeRef) =>
-            $"{resolver.Resolve(typeRef, context)}.__ReadDamlLfJson({jsonName}, {contextName})",
-        DamlTypeVar typeVar when TryResolveDelegate(typeVarReaders, typeVar, out var read) =>
-            $"{read}({jsonName}, {contextName})",
-        DamlTypeVar typeVar =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadUnsupported({jsonName}, {contextName}, \"{DescribeUnsupportedDamlType(type)}\")",
-        _ when MapsToFallbackObject(type, depth) =>
-            $"{DamlLfJsonDecodersQualifiedName}.ReadUnsupported({jsonName}, {contextName}, \"{DescribeUnsupportedDamlType(type)}\")",
-        _ => throw new CodegenException(
-            $"Cannot emit a JSON-decode expression for Daml type '{type}'. "
-            + "The C# code generator does not support this type shape, so generation fails "
-            + "here instead of emitting a silent 'default!' fallback into generated code.")
-    };
+        return new FromJsonVisitor(this, context, resolver, jsonName, contextName, nestedArgTypeNames, typeVarReaders, depth)
+            .Dispatch(type);
     }
-
-    /// <summary>
-    /// Renders <paramref name="type"/> in its Daml wire spelling for
-    /// <see cref="Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnsupported"/>'s error message —
-    /// <c>Module.Name</c> for a user-defined type reference (bare or applied), or the bare type
-    /// variable name for an open type variable that escaped its generic body.
-    /// </summary>
-    private static string DescribeUnsupportedDamlType(DamlType type) => type switch
-    {
-        DamlTypeRef typeRef => $"{typeRef.Module}.{typeRef.Name}",
-        DamlTypeApp { Base: DamlTypeRef typeRef } => $"{typeRef.Module}.{typeRef.Name}",
-        DamlTypeVar typeVar => typeVar.Name,
-        _ => type.ToString() ?? "?",
-    };
 
     /// <summary>
     /// Builds a <c>DamlLfJsonDecoders</c> element-reader lambda decoding one composite argument of
@@ -486,7 +366,15 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
             or DamlPrimitive.TextMap
             or DamlPrimitive.GenMap =>
             throw new NotSupportedException(
-                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the DamlTypeApp arms of MapType)."),
+                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the typed-node arms of MapType)."),
+        DamlPrimitive.Arrow
+            or DamlPrimitive.Update
+            or DamlPrimitive.TypeRep
+            or DamlPrimitive.Any
+            or DamlPrimitive.AnyException
+            or DamlPrimitive.FailureCategory =>
+            throw new NotSupportedException(
+                $"Daml primitive '{primitive}' is a signature-only builtin — it can appear in type signatures but has no C# data-position mapping."),
     };
 #pragma warning restore CS8524
 
@@ -508,7 +396,15 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
             or DamlPrimitive.TextMap
             or DamlPrimitive.GenMap =>
             throw new NotSupportedException(
-                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the DamlTypeApp arms of ToValue)."),
+                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the typed-node arms of ToValue)."),
+        DamlPrimitive.Arrow
+            or DamlPrimitive.Update
+            or DamlPrimitive.TypeRep
+            or DamlPrimitive.Any
+            or DamlPrimitive.AnyException
+            or DamlPrimitive.FailureCategory =>
+            throw new NotSupportedException(
+                $"Daml primitive '{primitive}' is a signature-only builtin — it can appear in type signatures but has no C# data-position mapping."),
     };
 #pragma warning restore CS8524
 
@@ -530,7 +426,15 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
             or DamlPrimitive.TextMap
             or DamlPrimitive.GenMap =>
             throw new NotSupportedException(
-                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the DamlTypeApp arms of FromValue)."),
+                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the typed-node arms of FromValue)."),
+        DamlPrimitive.Arrow
+            or DamlPrimitive.Update
+            or DamlPrimitive.TypeRep
+            or DamlPrimitive.Any
+            or DamlPrimitive.AnyException
+            or DamlPrimitive.FailureCategory =>
+            throw new NotSupportedException(
+                $"Daml primitive '{primitive}' is a signature-only builtin — it can appear in type signatures but has no C# data-position mapping."),
     };
 #pragma warning restore CS8524
 
@@ -552,7 +456,15 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
             or DamlPrimitive.TextMap
             or DamlPrimitive.GenMap =>
             throw new NotSupportedException(
-                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the DamlTypeApp arms of FromJson)."),
+                $"Daml primitive '{primitive}' is a type constructor and cannot appear bare — it must be applied to argument types (handled by the typed-node arms of FromJson)."),
+        DamlPrimitive.Arrow
+            or DamlPrimitive.Update
+            or DamlPrimitive.TypeRep
+            or DamlPrimitive.Any
+            or DamlPrimitive.AnyException
+            or DamlPrimitive.FailureCategory =>
+            throw new NotSupportedException(
+                $"Daml primitive '{primitive}' is a signature-only builtin — it can appear in type signatures but has no C# data-position mapping."),
     };
 #pragma warning restore CS8524
 
@@ -725,5 +637,554 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
             throw new InvalidDataException(
                 $"{operation} exceeded the maximum Daml type depth of {MaxTypeDepth}. The type is too deeply nested to emit safely.");
         }
+    }
+
+    /// <summary>
+    /// The catalog arity table for the five folding builtins — the same five-node set
+    /// <see cref="AppliedTypeFolding"/> folds at the reader boundaries, keyed on the catalog so
+    /// a builtin moved between node and application spellings here follows the catalog, not a
+    /// private copy of the table.
+    /// </summary>
+    private static readonly FrozenDictionary<DamlPrimitive, int> FoldingArities =
+        DamlPrimitiveCatalog.Rows
+            .Where(row => row.Primitive is DamlPrimitive.List or DamlPrimitive.Optional
+                or DamlPrimitive.TextMap or DamlPrimitive.GenMap or DamlPrimitive.ContractId)
+            .ToFrozenDictionary(row => row.Primitive!.Value, row => row.Arity);
+
+    /// <summary>
+    /// The typed node a complete application of one of the five folding builtins spells, or
+    /// <c>null</c> when <paramref name="application"/> is not one: a builtin outside the
+    /// folding five (the <c>Numeric n</c> scale pun included — its argument is a type
+    /// variable, not a type), or a folding builtin applied to the wrong number of arguments.
+    /// The caller fails loudly on <c>null</c>, so the double-representation edge holds: a
+    /// hand-built legacy application that never passed a reader folds into its node and maps
+    /// exactly like its normalized equivalent, and a malformed application never reaches a
+    /// silent fallback.
+    /// </summary>
+    private static DamlType? FoldedApplication(DamlTypeApp application)
+    {
+        if (application.Base is not DamlPrimitiveType { Primitive: var primitive }
+            || !FoldingArities.TryGetValue(primitive, out var arity)
+            || application.Arguments.Count != arity)
+        {
+            return null;
+        }
+
+        return primitive switch
+        {
+            DamlPrimitive.List => new DamlListType(application.Arguments[0]),
+            DamlPrimitive.Optional => new DamlOptionalType(application.Arguments[0]),
+            DamlPrimitive.TextMap => new DamlTextMapType(application.Arguments[0]),
+            DamlPrimitive.ContractId => new DamlContractIdType(application.Arguments[0]),
+            DamlPrimitive.GenMap => new DamlGenMapType(application.Arguments[0], application.Arguments[1]),
+            _ => throw new NotSupportedException(
+                $"DamlPrimitive '{primitive}' is recorded in DamlPrimitiveCatalog as one of the five folding "
+                + "builtins but has no typed node. Add the node mapping in DamlTypeMapper.FoldedApplication "
+                + "alongside the model's typed nodes."),
+        };
+    }
+
+    /// <summary>
+    /// The loud failure for a generic application whose base the emitter cannot classify —
+    /// the shape the old silent 'default!' fallback used to absorb. Only reachable for a
+    /// type-constructor application that resolves to neither a stdlib conversion nor a
+    /// record or variant, so generation fails here instead of emitting a stub.
+    /// </summary>
+    private static CodegenException UnclassifiableGenericApplication(DamlType type) => new(
+        $"Cannot emit a deserialization expression for Daml type '{type}'. "
+        + "The C# code generator does not support this type shape, so generation fails "
+        + "here instead of emitting a silent 'default!' fallback into generated code.");
+
+    /// <summary>
+    /// The JSON-reader twin of <see cref="UnclassifiableGenericApplication"/>.
+    /// </summary>
+    private static CodegenException UnclassifiableGenericJsonApplication(DamlType type) => new(
+        $"Cannot emit a JSON-decode expression for Daml type '{type}'. "
+        + "The C# code generator does not support this type shape, so generation fails "
+        + "here instead of emitting a silent 'default!' fallback into generated code.");
+
+    /// <summary>
+    /// The shared scaffolding of the per-operation <see cref="IDamlTypeVisitor{TResult}"/>
+    /// implementations. <see cref="Dispatch"/> routes the emitter's own
+    /// <see cref="DamlWrappedOptional"/> structurally — it is a representation node, not a
+    /// member of the public algebra, so no visitor arm exists for it — and every public node
+    /// through its own arm. <see cref="VisitTypeApp"/> carries the double-representation
+    /// edge: an application of one of the five folding builtins folds into its typed node
+    /// and re-dispatches to that node's arm, so a hand-built legacy application maps exactly
+    /// like its normalized equivalent; the <c>Numeric n</c> pun routes to
+    /// <see cref="VisitNumericApplication"/>; every other builtin application — a
+    /// signature-only builtin in a data position, or a constructor applied to the wrong
+    /// number of arguments — fails loudly by name; an application of a user type constructor
+    /// routes to <see cref="VisitGenericApplication"/>; and an application whose base the
+    /// emitter cannot represent routes to <see cref="VisitUnrepresentableApplication"/>.
+    /// </summary>
+    private abstract class TypeOperation<TResult>(DamlTypeMapper mapper, int depth) : IDamlTypeVisitor<TResult>
+    {
+        protected DamlTypeMapper Mapper { get; } = mapper;
+
+        protected int Depth { get; } = depth;
+
+        /// <summary>
+        /// Dispatches <paramref name="type"/>: the emitter's own wrapper structurally,
+        /// every public node through its own visitor arm.
+        /// </summary>
+        public TResult Dispatch(DamlType type) =>
+            type is DamlWrappedOptional wrapped
+                ? VisitWrappedOptional(wrapped)
+                : type.Accept(this);
+
+        /// <summary>Handles the emitter's own optional-representation node.</summary>
+        protected abstract TResult VisitWrappedOptional(DamlWrappedOptional wrapped);
+
+        public TResult VisitTypeApp(DamlTypeApp type)
+        {
+            if (type.Base is DamlPrimitiveType primitive)
+            {
+                if (primitive.Primitive == DamlPrimitive.Numeric)
+                {
+                    return VisitNumericApplication(type);
+                }
+                if (FoldedApplication(type) is { } folded)
+                {
+                    return folded.Accept(this);
+                }
+                throw DamlTypeMapper.UnsupportedPrimitiveApplication(primitive.Primitive, type.Arguments.Count);
+            }
+            if (type.Base is DamlTypeRef)
+            {
+                return VisitGenericApplication(type);
+            }
+            return VisitUnrepresentableApplication(type);
+        }
+
+        /// <summary>Handles the <c>Numeric n</c> scale pun, whose argument rides a type variable.</summary>
+        protected abstract TResult VisitNumericApplication(DamlTypeApp application);
+
+        /// <summary>Handles an application of a user-defined type constructor.</summary>
+        protected abstract TResult VisitGenericApplication(DamlTypeApp application);
+
+        /// <summary>
+        /// Handles an application whose base the emitter cannot represent — a type variable
+        /// or a nested application — which the mapper maps to its fallback type name.
+        /// </summary>
+        protected abstract TResult VisitUnrepresentableApplication(DamlTypeApp application);
+
+        public abstract TResult VisitPrimitive(DamlPrimitiveType type);
+
+        public abstract TResult VisitTypeRef(DamlTypeRef type);
+
+        public abstract TResult VisitTypeVar(DamlTypeVar type);
+
+        public abstract TResult VisitList(DamlListType type);
+
+        public abstract TResult VisitOptional(DamlOptionalType type);
+
+        public abstract TResult VisitTextMap(DamlTextMapType type);
+
+        public abstract TResult VisitGenMap(DamlGenMapType type);
+
+        public abstract TResult VisitContractId(DamlContractIdType type);
+    }
+
+    /// <summary>
+    /// The type-name operation: each node's C# member type, preserving the pre-migration
+    /// meaning of the shape arms — <see cref="DamlListType"/> → <c>IReadOnlyList&lt;T&gt;</c>,
+    /// a surviving <see cref="DamlOptionalType"/> → <c>T?</c>, <see cref="DamlTextMapType"/> →
+    /// <c>IReadOnlyDictionary&lt;string,T&gt;</c>, <see cref="DamlGenMapType"/> →
+    /// <c>IReadOnlyDictionary&lt;K,V&gt;</c>, <see cref="DamlContractIdType"/> →
+    /// <c>ContractId&lt;T&gt;</c>.
+    /// </summary>
+    private sealed class MapTypeNameVisitor(
+        DamlTypeMapper mapper,
+        PackageEmitContext context,
+        ICrossPackageResolver resolver,
+        int depth) : TypeOperation<string>(mapper, depth)
+    {
+        protected override string VisitWrappedOptional(DamlWrappedOptional wrapped) =>
+            $"{context.Qualifier.Qualify(RuntimeTypeNames.Optional)}<{Mapper.MapType(wrapped.Argument, Depth + 1)}>";
+
+        public override string VisitPrimitive(DamlPrimitiveType type) =>
+            Mapper.MapBarePrimitiveToCSharp(type.Primitive);
+
+        public override string VisitTypeRef(DamlTypeRef type) => resolver.Resolve(type, context);
+
+        public override string VisitTypeVar(DamlTypeVar type) => EmitterHelpers.TypeParameterName(type.Name);
+
+        public override string VisitList(DamlListType type) =>
+            $"{context.Qualifier.Qualify("IReadOnlyList")}<{Mapper.MapType(type.Element, Depth + 1)}>";
+
+        public override string VisitOptional(DamlOptionalType type) => $"{Mapper.MapType(type.Value, Depth + 1)}?";
+
+        public override string VisitTextMap(DamlTextMapType type) =>
+            $"{context.Qualifier.Qualify("IReadOnlyDictionary")}<string, {Mapper.MapType(type.Value, Depth + 1)}>";
+
+        public override string VisitGenMap(DamlGenMapType type) =>
+            $"{context.Qualifier.Qualify("IReadOnlyDictionary")}<{Mapper.MapType(type.Key, Depth + 1)}, {Mapper.MapType(type.Value, Depth + 1)}>";
+
+        public override string VisitContractId(DamlContractIdType type) =>
+            $"{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{Mapper.MapType(type.Payload, Depth + 1)}>";
+
+        protected override string VisitNumericApplication(DamlTypeApp application) => "decimal";
+
+        protected override string VisitGenericApplication(DamlTypeApp application) =>
+            application.Arguments.Count > 0
+                ? $"{resolver.Resolve((DamlTypeRef)application.Base, context)}<{string.Join(", ", application.Arguments.Select(argument => Mapper.MapType(argument, Depth + 1)))}>"
+                : resolver.Resolve((DamlTypeRef)application.Base, context);
+
+        protected override string VisitUnrepresentableApplication(DamlTypeApp application) => FallbackTypeName;
+    }
+
+    /// <summary>
+    /// The collection-shape operation: <see cref="CollectionShape.List"/> for the nodes the
+    /// mapper writes as <c>IReadOnlyList&lt;T&gt;</c>, <see cref="CollectionShape.Map"/> for
+    /// the dictionaries, <see cref="CollectionShape.None"/> for everything else — with the
+    /// same loud failure the shape arms carried for a signature-only builtin in a data
+    /// position, bare or applied.
+    /// </summary>
+    private sealed class ClassifyCollectionVisitor(DamlTypeMapper mapper, int depth)
+        : TypeOperation<CollectionShape>(mapper, depth)
+    {
+        protected override CollectionShape VisitWrappedOptional(DamlWrappedOptional wrapped) =>
+            CollectionShape.None;
+
+        public override CollectionShape VisitPrimitive(DamlPrimitiveType type) =>
+            DamlTypeMapper.IsSignatureOnlyPrimitive(type.Primitive)
+                ? throw DamlTypeMapper.SignatureOnlyDataPositionFailure(type.Primitive, applied: false)
+                : CollectionShape.None;
+
+        public override CollectionShape VisitTypeRef(DamlTypeRef type) => CollectionShape.None;
+
+        public override CollectionShape VisitTypeVar(DamlTypeVar type) => CollectionShape.None;
+
+        public override CollectionShape VisitList(DamlListType type) => CollectionShape.List;
+
+        public override CollectionShape VisitTextMap(DamlTextMapType type) => CollectionShape.Map;
+
+        public override CollectionShape VisitGenMap(DamlGenMapType type) => CollectionShape.Map;
+
+        public override CollectionShape VisitContractId(DamlContractIdType type) => CollectionShape.None;
+
+        public override CollectionShape VisitOptional(DamlOptionalType type) => Dispatch(type.Value);
+
+        protected override CollectionShape VisitNumericApplication(DamlTypeApp application) =>
+            CollectionShape.None;
+
+        protected override CollectionShape VisitGenericApplication(DamlTypeApp application) =>
+            CollectionShape.None;
+
+        protected override CollectionShape VisitUnrepresentableApplication(DamlTypeApp application) =>
+            CollectionShape.None;
+    }
+
+    /// <summary>
+    /// The reference-type operation: answers whether the mapper renders the node as a C#
+    /// reference type, so a parameter of that type can carry a null guard. Answers
+    /// <c>false</c> for anything it cannot place with certainty, which costs a missing guard
+    /// rather than a boxed value-type argument or a guard on an already-nullable parameter.
+    /// </summary>
+    private sealed class ReferenceTypeVisitor(DamlTypeMapper mapper, int depth)
+        : TypeOperation<bool>(mapper, depth)
+    {
+        protected override bool VisitWrappedOptional(DamlWrappedOptional wrapped) => true;
+
+        public override bool VisitPrimitive(DamlPrimitiveType type) =>
+            type.Primitive == DamlPrimitive.Text;
+
+        public override bool VisitTypeRef(DamlTypeRef type) => !Mapper.IsEnumTypeRef(type);
+
+        public override bool VisitTypeVar(DamlTypeVar type) => false;
+
+        public override bool VisitList(DamlListType type) => true;
+
+        public override bool VisitOptional(DamlOptionalType type) => false;
+
+        public override bool VisitTextMap(DamlTextMapType type) => true;
+
+        public override bool VisitGenMap(DamlGenMapType type) => true;
+
+        public override bool VisitContractId(DamlContractIdType type) => true;
+
+        protected override bool VisitNumericApplication(DamlTypeApp application) => false;
+
+        protected override bool VisitGenericApplication(DamlTypeApp application) =>
+            !Mapper.IsEnumTypeRef((DamlTypeRef)application.Base);
+
+        protected override bool VisitUnrepresentableApplication(DamlTypeApp application) => false;
+    }
+
+    /// <summary>
+    /// The serialize operation: the expression that turns a field of the node's type into a
+    /// <c>DamlValue</c>, preserving the pre-migration meaning of the shape arms — including
+    /// the optional arm's <c>@</c>-stripped local and the wrapper's converter-lambda
+    /// composition per encoding.
+    /// </summary>
+    private sealed class ToValueVisitor(
+        DamlTypeMapper mapper,
+        PackageEmitContext context,
+        ICrossPackageResolver resolver,
+        string fieldName,
+        IReadOnlyDictionary<string, string>? typeVarDelegates,
+        int depth) : TypeOperation<string>(mapper, depth)
+    {
+        protected override string VisitWrappedOptional(DamlWrappedOptional wrapped) =>
+            $"{fieldName}.{DamlTypeMapper.WrappedOptionalSerializer(wrapped.Encoding)}(__optional{Depth} => "
+            + $"{Mapper.ToValue(wrapped.Argument, $"__optional{Depth}", typeVarDelegates, Depth + 1)})";
+
+        public override string VisitPrimitive(DamlPrimitiveType type) =>
+            Mapper.GetBarePrimitiveToValueConversion(type.Primitive, fieldName);
+
+        public override string VisitTypeRef(DamlTypeRef type)
+        {
+            if (Mapper.IsEnumTypeRef(type))
+            {
+                return Mapper.EnumToDamlEnumCall(type, fieldName);
+            }
+            if (Mapper.IsVariantTypeRef(type))
+            {
+                return $"{fieldName}.ToVariant()";
+            }
+            return $"{fieldName}.ToRecord()";
+        }
+
+        public override string VisitTypeVar(DamlTypeVar type) =>
+            DamlTypeMapper.TryResolveDelegate(typeVarDelegates, type, out var convert)
+                ? $"{convert}({fieldName})"
+                : Mapper.FallbackToValueStub(fieldName);
+
+        public override string VisitList(DamlListType type) =>
+            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlList)}({fieldName}.Select(x => "
+            + $"({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)})"
+            + $"{Mapper.ToValue(type.Element, "x", typeVarDelegates, Depth + 1)}).ToList())";
+
+        public override string VisitOptional(DamlOptionalType type) =>
+            $"{fieldName} is {{ }} __{fieldName.TrimStart('@')} ? "
+            + $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlOptional)}"
+            + $"({Mapper.ToValue(type.Value, $"__{fieldName.TrimStart('@')}", typeVarDelegates, Depth + 1)}) "
+            + $": {context.Qualifier.Qualify(RuntimeTypeNames.DamlOptional)}.None";
+
+        public override string VisitTextMap(DamlTextMapType type) =>
+            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlTextMap)}({fieldName}.ToDictionary(kv => kv.Key, kv => "
+            + $"({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)})"
+            + $"{Mapper.ToValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)}))";
+
+        public override string VisitGenMap(DamlGenMapType type) =>
+            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlGenMap)}({fieldName}.Select(kv => ("
+            + $"({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)})"
+            + $"{Mapper.ToValue(type.Key, "kv.Key", typeVarDelegates, Depth + 1)}, "
+            + $"({context.Qualifier.Qualify(RuntimeTypeNames.DamlValue)})"
+            + $"{Mapper.ToValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)})).ToList())";
+
+        public override string VisitContractId(DamlContractIdType type) => $"{fieldName}.ToDamlValue()";
+
+        protected override string VisitNumericApplication(DamlTypeApp application) =>
+            $"new {context.Qualifier.Qualify(RuntimeTypeNames.DamlNumeric)}({fieldName})";
+
+        protected override string VisitGenericApplication(DamlTypeApp application)
+        {
+            var typeRef = (DamlTypeRef)application.Base;
+            if (StdlibPackages.IsStdlibTypeRef(resolver, typeRef, parametric: true))
+            {
+                return Mapper.EmitParametricStdlibToValue(
+                    typeRef, application.Arguments, fieldName, typeVarDelegates, Depth);
+            }
+            if (Mapper.IsVariantTypeRef(typeRef))
+            {
+                return $"{fieldName}.ToVariant({string.Join(", ", Mapper.ToValueConverterLambdas(application.Arguments, typeVarDelegates, Depth))})";
+            }
+            if (Mapper.IsRecordTypeRef(typeRef))
+            {
+                return $"{fieldName}.ToRecord({string.Join(", ", Mapper.ToValueConverterLambdas(application.Arguments, typeVarDelegates, Depth))})";
+            }
+            return $"{fieldName}.ToRecord()";
+        }
+
+        protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
+            Mapper.FallbackToValueStub(fieldName);
+    }
+
+    /// <summary>
+    /// The deserialize operation: the expression that turns a <c>DamlValue</c> back into the
+    /// node's C# type, preserving the pre-migration meaning of the shape arms — including the
+    /// declared-collection casts, the root-qualified <c>DamlRecord</c> reference the nested
+    /// choice-argument names can shadow, and the wrapper's per-encoding converter pair.
+    /// </summary>
+    private sealed class FromValueVisitor(
+        DamlTypeMapper mapper,
+        PackageEmitContext context,
+        ICrossPackageResolver resolver,
+        string valueName,
+        IReadOnlyDictionary<string, string>? typeVarDelegates,
+        IReadOnlySet<string>? nestedArgTypeNames,
+        int depth) : TypeOperation<string>(mapper, depth)
+    {
+        protected override string VisitWrappedOptional(DamlWrappedOptional wrapped) =>
+            $"{context.Qualifier.Qualify(RuntimeTypeNames.Optional)}<{Mapper.MapType(wrapped.Argument, Depth + 1)}>"
+            + $".{DamlTypeMapper.WrappedOptionalDeserializer(wrapped.Encoding)}({valueName}, __optional{Depth} => "
+            + $"{Mapper.FromValue(wrapped.Argument, $"__optional{Depth}", typeVarDelegates, nestedArgTypeNames, Depth + 1)})";
+
+        public override string VisitPrimitive(DamlPrimitiveType type) =>
+            Mapper.GetBarePrimitiveFromValueConversion(type.Primitive, valueName);
+
+        public override string VisitTypeRef(DamlTypeRef type)
+        {
+            if (Mapper.IsEnumTypeRef(type))
+            {
+                return Mapper.QualifiedEnumExtensionsCall(
+                    type, "FromDamlEnum", $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlEnum)}>()");
+            }
+            if (Mapper.IsVariantTypeRef(type))
+            {
+                return $"{resolver.Resolve(type, context)}.FromVariant({valueName}.As<{Mapper.DamlVariantReference(nestedArgTypeNames)}>())";
+            }
+            return $"{resolver.Resolve(type, context)}.FromRecord({valueName}.As<{Mapper.DamlRecordReference(nestedArgTypeNames)}>())";
+        }
+
+        public override string VisitTypeVar(DamlTypeVar type) =>
+            DamlTypeMapper.TryResolveDelegate(typeVarDelegates, type, out var convert)
+                ? $"{convert}({valueName})"
+                : $"{context.Qualifier.Qualify(RuntimeTypeNames.GenericStub)}.NotImplemented<{EmitterHelpers.TypeParameterName(type.Name)}>(\"{type.Name}\")";
+
+        public override string VisitList(DamlListType type) =>
+            $"({context.Qualifier.Qualify("IReadOnlyList")}<{Mapper.MapType(type.Element, Depth + 1)}>)"
+            + $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlList)}>().Values"
+            + $".Select(x => {Mapper.FromValue(type.Element, "x", typeVarDelegates, nestedArgTypeNames, Depth + 1)}).ToList()";
+
+        public override string VisitOptional(DamlOptionalType type) =>
+            $"{valueName}.AsOptional().HasValue ? "
+            + $"{Mapper.FromValue(type.Value, $"{valueName}.AsOptional().Value!", typeVarDelegates, nestedArgTypeNames, Depth + 1)} "
+            + ": null";
+
+        public override string VisitTextMap(DamlTextMapType type) =>
+            $"({context.Qualifier.Qualify("IReadOnlyDictionary")}<string, {Mapper.MapType(type.Value, Depth + 1)}>)"
+            + $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlTextMap)}>().Values"
+            + $".ToDictionary(kv => kv.Key, kv => "
+            + $"{Mapper.FromValue(type.Value, "kv.Value", typeVarDelegates, nestedArgTypeNames, Depth + 1)})";
+
+        public override string VisitGenMap(DamlGenMapType type) =>
+            $"({context.Qualifier.Qualify("IReadOnlyDictionary")}<{Mapper.MapType(type.Key, Depth + 1)}, {Mapper.MapType(type.Value, Depth + 1)}>)"
+            + $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlGenMap)}>().Entries"
+            + $".ToDictionary(kv => {Mapper.FromValue(type.Key, "kv.Key", typeVarDelegates, nestedArgTypeNames, Depth + 1)}, "
+            + $"kv => {Mapper.FromValue(type.Value, "kv.Value", typeVarDelegates, nestedArgTypeNames, Depth + 1)})";
+
+        public override string VisitContractId(DamlContractIdType type) =>
+            $"new {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{Mapper.MapType(type.Payload, Depth + 1)}>"
+            + $"({valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlContractId)}>().Value)";
+
+        protected override string VisitNumericApplication(DamlTypeApp application) =>
+            $"{valueName}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlNumeric)}>().Value";
+
+        protected override string VisitGenericApplication(DamlTypeApp application)
+        {
+            var typeRef = (DamlTypeRef)application.Base;
+            if (StdlibPackages.IsStdlibTypeRef(resolver, typeRef, parametric: true))
+            {
+                return Mapper.EmitParametricStdlibFromValue(
+                    typeRef, application.Arguments, valueName, typeVarDelegates, nestedArgTypeNames, Depth);
+            }
+            var typeArguments =
+                $"<{string.Join(", ", application.Arguments.Select(argument => Mapper.MapType(argument, Depth + 1)))}>";
+            if (Mapper.IsVariantTypeRef(typeRef))
+            {
+                return $"{resolver.Resolve(typeRef, context)}{typeArguments}.FromVariant("
+                    + $"{valueName}.As<{Mapper.DamlVariantReference(nestedArgTypeNames)}>(), "
+                    + $"{string.Join(", ", Mapper.FromValueConverterLambdas(application.Arguments, typeVarDelegates, nestedArgTypeNames, Depth))})";
+            }
+            if (Mapper.IsRecordTypeRef(typeRef))
+            {
+                return $"{resolver.Resolve(typeRef, context)}{typeArguments}.FromRecord("
+                    + $"{valueName}.As<{Mapper.DamlRecordReference(nestedArgTypeNames)}>(), "
+                    + $"{string.Join(", ", Mapper.FromValueConverterLambdas(application.Arguments, typeVarDelegates, nestedArgTypeNames, Depth))})";
+            }
+            throw DamlTypeMapper.UnclassifiableGenericApplication(application);
+        }
+
+        protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
+            Mapper.FallbackFromValueStub(valueName);
+    }
+
+    /// <summary>
+    /// The JSON-decode operation: the <c>DamlLfJsonDecoders</c> call decoding a
+    /// <c>JsonElement</c> into a <c>DamlValue</c> for the node's type, composing the element
+    /// readers the composite readers take as delegates, and routing a record, variant or enum
+    /// reference straight into that type's emitted <c>__ReadDamlLfJson</c> — a generic
+    /// application passes one element reader per type argument.
+    /// </summary>
+    private sealed class FromJsonVisitor(
+        DamlTypeMapper mapper,
+        PackageEmitContext context,
+        ICrossPackageResolver resolver,
+        string jsonName,
+        string contextName,
+        IReadOnlySet<string>? nestedArgTypeNames,
+        IReadOnlyDictionary<string, string>? typeVarReaders,
+        int depth) : TypeOperation<string>(mapper, depth)
+    {
+        protected override string VisitWrappedOptional(DamlWrappedOptional wrapped) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.{DamlTypeMapper.WrappedOptionalJsonReader(wrapped.Encoding)}"
+            + $"({jsonName}, {contextName}, {ElementReader(wrapped.Argument)})";
+
+        public override string VisitPrimitive(DamlPrimitiveType type) =>
+            DamlTypeMapper.GetBarePrimitiveFromJsonConversion(type.Primitive, jsonName, contextName);
+
+        public override string VisitTypeRef(DamlTypeRef type) =>
+            Mapper.IsEnumTypeRef(type)
+                ? Mapper.QualifiedEnumExtensionsCall(type, "__ReadDamlLfJson", $"{jsonName}, {contextName}")
+                : $"{resolver.Resolve(type, context)}.__ReadDamlLfJson({jsonName}, {contextName})";
+
+        public override string VisitTypeVar(DamlTypeVar type) =>
+            DamlTypeMapper.TryResolveDelegate(typeVarReaders, type, out var read)
+                ? $"{read}({jsonName}, {contextName})"
+                : ReadUnsupported(type.Name);
+
+        public override string VisitList(DamlListType type) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadList({jsonName}, {contextName}, {ElementReader(type.Element)})";
+
+        public override string VisitOptional(DamlOptionalType type) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadOptional({jsonName}, {contextName}, {ElementReader(type.Value)})";
+
+        public override string VisitTextMap(DamlTextMapType type) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadTextMap({jsonName}, {contextName}, {ElementReader(type.Value)})";
+
+        public override string VisitGenMap(DamlGenMapType type) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadGenMap({jsonName}, {contextName}, "
+            + $"{ElementReader(type.Key)}, {ElementReader(type.Value)})";
+
+        public override string VisitContractId(DamlContractIdType type) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadContractId({jsonName}, {contextName})";
+
+        protected override string VisitNumericApplication(DamlTypeApp application) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadNumeric({jsonName}, {contextName})";
+
+        protected override string VisitGenericApplication(DamlTypeApp application)
+        {
+            var typeRef = (DamlTypeRef)application.Base;
+            if (StdlibPackages.IsStdlibTypeRef(resolver, typeRef, parametric: true))
+            {
+                return Mapper.EmitParametricStdlibFromJson(
+                    typeRef, application.Arguments, jsonName, contextName, nestedArgTypeNames, typeVarReaders, Depth);
+            }
+            if (!Mapper.IsVariantTypeRef(typeRef) && !Mapper.IsRecordTypeRef(typeRef))
+            {
+                throw DamlTypeMapper.UnclassifiableGenericJsonApplication(application);
+            }
+            if (application.Arguments.Count == 0)
+            {
+                return $"{resolver.Resolve(typeRef, context)}.__ReadDamlLfJson({jsonName}, {contextName})";
+            }
+            var typeArguments =
+                $"<{string.Join(", ", application.Arguments.Select(argument => Mapper.MapType(argument, Depth + 1)))}>";
+            var elementReaders = Mapper.FromJsonElementReaders(application.Arguments, nestedArgTypeNames, typeVarReaders, Depth);
+            return $"{resolver.Resolve(typeRef, context)}{typeArguments}.__ReadDamlLfJson("
+                + $"{jsonName}, {contextName}, {string.Join(", ", elementReaders)})";
+        }
+
+        protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
+            ReadUnsupported(application.ToString());
+
+        private string ElementReader(DamlType argument) =>
+            Mapper.FromJsonElementReader(argument, nestedArgTypeNames, typeVarReaders, Depth);
+
+        private string ReadUnsupported(string damlTypeDescription) =>
+            $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadUnsupported({jsonName}, {contextName}, \"{damlTypeDescription}\")";
     }
 }

@@ -126,7 +126,7 @@ public class TransactionTreeTests
     {
         var node = MakeExercised("00node", children: []);
 
-        node.GetHashCode().Should().NotBe((node with { ChoiceName = "Other" }).GetHashCode());
+        node.GetHashCode().Should().NotBe((node with { ChoiceName = new ChoiceName("Other") }).GetHashCode());
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public class TransactionTreeTests
 
         var result = tree.ToTransactionResult();
 
-        result.ExercisedEvents.Should().ContainSingle().Which.ChoiceName.Should().Be("Inner");
+        result.ExercisedEvents.Should().ContainSingle().Which.ChoiceName.Should().Be(new ChoiceName("Inner"));
         result.CreatedContracts.Should().ContainSingle().Which.ContractId.Should().Be("00child");
     }
 
@@ -399,7 +399,7 @@ public class TransactionTreeTests
             ContractId: contractId,
             TemplateId: FooTemplateId,
             InterfaceId: null,
-            ChoiceName: choiceName,
+            ChoiceName: new ChoiceName(choiceName),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: DamlUnit.Instance,
             Consuming: consuming,

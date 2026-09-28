@@ -43,9 +43,9 @@ public class EventRecordListMemberTests
     /// dropped every record would otherwise pass the assertion above by finding nothing.
     /// </summary>
     [Fact]
-    public void Sweep_finds_exactly_the_thirty_four_list_members()
+    public void Sweep_finds_exactly_the_thirty_three_list_members()
     {
-        ListMembers().Should().HaveCount(34);
+        ListMembers().Should().HaveCount(33);
     }
 
     private static IEnumerable<PropertyInfo> ListMembers() =>

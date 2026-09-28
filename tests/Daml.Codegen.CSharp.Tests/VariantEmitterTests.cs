@@ -101,6 +101,48 @@ public class VariantEmitterTests
         output.Should().NotContain("notnull");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void VariantEmitter_names_the_variant_json_converter_factory_on_the_abstract_base_record(bool generateXmlDocs)
+    {
+        var output = EmitVariant(Variant("PaymentMethod", Ctor("Cash"), Ctor("Card", Text)), generateXmlDocs);
+
+        LineBefore(output, "public abstract record PaymentMethod : IDamlVariant<PaymentMethod>").Should().Be(
+            "[global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]");
+    }
+
+    [Fact]
+    public void VariantEmitter_names_the_variant_json_converter_factory_on_a_generic_abstract_base_record()
+    {
+        var output = EmitVariant(new DamlDataType
+        {
+            Name = "Slot",
+            TypeParams = ["a"],
+            Definition = new DamlVariantDefinition([Ctor("Filled", new DamlTypeVar("a")), Ctor("Vacant")]),
+        });
+
+        LineBefore(output, "public abstract record Slot<TA> where TA : notnull").Should().Be(
+            "[global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]");
+    }
+
+    [Fact]
+    public void VariantEmitter_leaves_every_constructor_record_without_a_json_converter_attribute()
+    {
+        var output = EmitVariant(Variant("PaymentMethod", Ctor("Cash"), Ctor("Card", Text)));
+
+        LineBefore(output, "public sealed record Cash() : PaymentMethod").Should().NotContain("JsonConverter");
+        LineBefore(output, "public sealed record Card(string Value) : PaymentMethod").Should().NotContain("JsonConverter");
+    }
+
+    private static string LineBefore(string output, string line)
+    {
+        var lines = output.Split('\n').Select(l => l.Trim()).ToList();
+        var index = lines.IndexOf(line);
+        index.Should().BePositive($"the emitted output should contain the line `{line}`");
+        return lines[index - 1];
+    }
+
     [Fact]
     public void VariantEmitter_emits_the_abstract_base_record_and_every_constructor()
     {

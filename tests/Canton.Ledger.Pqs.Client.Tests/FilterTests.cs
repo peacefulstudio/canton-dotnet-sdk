@@ -1,0 +1,302 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Daml.Runtime.Serialization;
+using System.Text.Json;
+using Canton.Ledger.Abstractions;
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Data;
+using AwesomeAssertions;
+using Xunit;
+
+namespace Canton.Ledger.Pqs.Client.Tests;
+
+public class FilterTests
+{
+    [Fact]
+    public void Field_generates_correct_sql()
+    {
+        var filter = Filter.Field<SampleTemplate>(t => t.Initiator, "party::123");
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("payload->>'initiator' = @p0");
+        parameters.Should().ContainSingle().Which.Should().Be(("@p0", "party::123"));
+        paramIndex.Should().Be(1);
+    }
+
+    [Fact]
+    public void Field_value_type_generates_correct_sql()
+    {
+        var filter = Filter.Field<SampleTemplate>(t => t.NumSwaps, "5");
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("payload->>'numSwaps' = @p0");
+        parameters.Should().ContainSingle().Which.Should().Be(("@p0", "5"));
+    }
+
+    [Fact]
+    public void Field_throws_for_null_selector()
+    {
+        var act = () => Filter.Field<SampleTemplate>(null!, "alice");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("selector");
+    }
+
+    [Fact]
+    public void Field_throws_for_null_value()
+    {
+        var act = () => Filter.Field<SampleTemplate>(t => t.Initiator, null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("value");
+    }
+
+    [Fact]
+    public void Field_value_with_sql_metacharacters_is_passed_as_parameter()
+    {
+        const string nasty = "alice'; DROP TABLE active; --";
+        var filter = Filter.Field<SampleTemplate>(t => t.Initiator, nasty);
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("payload->>'initiator' = @p0");
+        sql.Should().NotContain(nasty);
+        parameters.Should().ContainSingle().Which.Should().Be(("@p0", nasty));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("1leadingDigit")]
+    [InlineData("has-dash")]
+    [InlineData("has.dot")]
+    [InlineData("has space")]
+    [InlineData("has;semicolon")]
+    [InlineData("has'quote")]
+    [InlineData("has\"doublequote")]
+    [InlineData("has\\backslash")]
+    [InlineData("has/slash")]
+    [InlineData("has(paren")]
+    [InlineData("name; DROP TABLE active; --")]
+    public void FieldEquals_throws_for_unsafe_field_name(string fieldName)
+    {
+        var filter = new PqsFilter.FieldEquals(fieldName, "value");
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var act = () => filter.ToSqlClause(parameters, ref paramIndex);
+
+        act.Should().Throw<ArgumentException>().WithMessage($"*'{fieldName}'*");
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("Z")]
+    [InlineData("_underscore")]
+    [InlineData("camelCase")]
+    [InlineData("PascalCase")]
+    [InlineData("with_underscores")]
+    [InlineData("name123")]
+    [InlineData("name_123_456")]
+    public void FieldEquals_accepts_safe_field_name(string fieldName)
+    {
+        var filter = new PqsFilter.FieldEquals(fieldName, "value");
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be($"payload->>'{fieldName}' = @p0");
+    }
+
+    [Fact]
+    public void Or_two_filters_generates_correct_sql()
+    {
+        var filter = Filter.Or(
+            Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
+            Filter.Field<SampleTemplate>(t => t.Counterparty, "alice"));
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("(payload->>'initiator' = @p0 OR payload->>'counterparty' = @p1)");
+        parameters.Should().Equal(("@p0", "alice"), ("@p1", "alice"));
+        paramIndex.Should().Be(2);
+    }
+
+    [Fact]
+    public void Or_single_filter_returns_that_filter()
+    {
+        var inner = Filter.Field<SampleTemplate>(t => t.Initiator, "alice");
+        var result = Filter.Or(inner);
+        result.Should().BeSameAs(inner);
+    }
+
+    [Fact]
+    public void Or_empty_throws()
+    {
+        var act = () => Filter.Or();
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Or_null_throws()
+    {
+        var act = () => Filter.Or(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Or_throws_when_element_is_null()
+    {
+        var validFilter = Filter.Field<SampleTemplate>(t => t.Initiator, "alice");
+        var act = () => Filter.Or(validFilter, null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("filters[1]");
+    }
+
+    [Fact]
+    public void And_two_filters_generates_correct_sql()
+    {
+        var filter = Filter.And(
+            Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
+            Filter.Field<SampleTemplate>(t => t.Status, "Active"));
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("(payload->>'initiator' = @p0 AND payload->>'status' = @p1)");
+        parameters.Should().Equal(("@p0", "alice"), ("@p1", "Active"));
+    }
+
+    [Fact]
+    public void And_single_filter_returns_that_filter()
+    {
+        var inner = Filter.Field<SampleTemplate>(t => t.Initiator, "alice");
+        var result = Filter.And(inner);
+        result.Should().BeSameAs(inner);
+    }
+
+    [Fact]
+    public void And_empty_throws()
+    {
+        var act = () => Filter.And();
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void And_null_throws()
+    {
+        var act = () => Filter.And(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void And_throws_when_element_is_null()
+    {
+        var validFilter = Filter.Field<SampleTemplate>(t => t.Initiator, "alice");
+        var act = () => Filter.And(null!, validFilter);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("filters[0]");
+    }
+
+    [Fact]
+    public void Or_three_filters_generates_correct_sql()
+    {
+        var filter = Filter.Or(
+            Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
+            Filter.Field<SampleTemplate>(t => t.Counterparty, "alice"),
+            Filter.Field<SampleTemplate>(t => t.Status, "Active"));
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("(payload->>'initiator' = @p0 OR payload->>'counterparty' = @p1 OR payload->>'status' = @p2)");
+        paramIndex.Should().Be(3);
+    }
+
+    [Fact]
+    public void And_nested_or_generates_correct_sql()
+    {
+        var filter = Filter.And(
+            Filter.Or(
+                Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
+                Filter.Field<SampleTemplate>(t => t.Counterparty, "alice")),
+            Filter.Field<SampleTemplate>(t => t.Status, "Active"));
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("((payload->>'initiator' = @p0 OR payload->>'counterparty' = @p1) AND payload->>'status' = @p2)");
+        paramIndex.Should().Be(3);
+    }
+
+    [Fact]
+    public void Or_nested_and_generates_correct_sql()
+    {
+        var filter = Filter.Or(
+            Filter.And(
+                Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
+                Filter.Field<SampleTemplate>(t => t.Status, "Active")),
+            Filter.Field<SampleTemplate>(t => t.Counterparty, "bob"));
+
+        var parameters = new List<(string Name, string Value)>();
+        var paramIndex = 0;
+        var sql = filter.ToSqlClause(parameters, ref paramIndex);
+
+        sql.Should().Be("((payload->>'initiator' = @p0 AND payload->>'status' = @p1) OR payload->>'counterparty' = @p2)");
+        paramIndex.Should().Be(3);
+    }
+
+    [Fact]
+    public void BuildFilteredQuery_generates_full_query()
+    {
+        var filter = Filter.Field<SampleTemplate>(t => t.Initiator, "alice");
+        var (sql, parameters) = PqsClient.BuildFilteredQuery(filter);
+
+        sql.Should().Be("SELECT contract_id, payload FROM active(@typeId) WHERE payload->>'initiator' = @p0");
+        parameters.Should().ContainSingle()
+            .Which.Should().Be(("@p0", "alice"));
+    }
+
+    internal sealed record SampleTemplate(
+        [property: DamlFieldAttribute("initiator")] string Initiator,
+        [property: DamlFieldAttribute("counterparty")] string Counterparty,
+        [property: DamlFieldAttribute("numSwaps")] long NumSwaps,
+        [property: DamlFieldAttribute("status")] string Status) : ITemplate, IDamlRecord<SampleTemplate>
+    {
+        public static Identifier TemplateId { get; } = new("pkg123", "Test.Module", "SampleTemplate");
+        public static string PackageId => "pkg123";
+        public static string PackageName => "test-package";
+        public static Version PackageVersion { get; } = new(0, 1, 0);
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+
+        public DamlRecord ToRecord() => DamlRecord.Create(
+            DamlField.Create("initiator", new DamlParty(Initiator)),
+            DamlField.Create("counterparty", new DamlParty(Counterparty)),
+            DamlField.Create("numSwaps", new DamlInt64(NumSwaps)),
+            DamlField.Create("status", new DamlText(Status)));
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
+            PqsRecordReader.Read(
+                json,
+                context,
+                ("initiator", DamlLfJsonDecoders.ReadParty),
+                ("counterparty", DamlLfJsonDecoders.ReadParty),
+                ("numSwaps", DamlLfJsonDecoders.ReadInt64),
+                ("status", DamlLfJsonDecoders.ReadText));
+
+        public static SampleTemplate FromRecord(DamlRecord record) => new(
+            Initiator: record.GetRequiredField("initiator").As<DamlParty>().Value,
+            Counterparty: record.GetRequiredField("counterparty").As<DamlParty>().Value,
+            NumSwaps: record.GetRequiredField("numSwaps").As<DamlInt64>().Value,
+            Status: record.GetRequiredField("status").As<DamlText>().Value);
+    }
+}

@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Daml.Ledger.Abstractions.Extensions;
@@ -77,7 +78,7 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task ExerciseAsync_throws_InvalidOperationException_when_TryExerciseAsync_returns_InfraError()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
@@ -90,7 +91,7 @@ public class LedgerClientExtensionsTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(1, "Cancelled"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "Cancelled"));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: cts.Token);
 
@@ -102,7 +103,7 @@ public class LedgerClientExtensionsTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(1, "Cancelled"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "Cancelled"));
 
         Func<Task> act = () => client.ExerciseAsync(SampleCommand, new Party("alice"), cancellationToken: cts.Token);
 
@@ -238,7 +239,7 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task ExerciseAsync_void_throws_InvalidOperationException_when_TrySubmitAndWaitForTransactionAsync_returns_InfraError()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
 
         Func<Task> act = () => client.ExerciseAsync(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
@@ -277,7 +278,7 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task ExerciseAsync_with_SubmitterInfo_throws_InvalidOperationException_when_TryExerciseAsync_returns_InfraError()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
         var submitter = new SubmitterInfo(new Party("alice"));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, submitter, cancellationToken: TestContext.Current.CancellationToken);
@@ -291,7 +292,7 @@ public class LedgerClientExtensionsTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(1, "Cancelled"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "Cancelled"));
         var submitter = new SubmitterInfo(new Party("alice"));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, submitter, cancellationToken: cts.Token);
@@ -377,7 +378,7 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task ExerciseAsync_void_with_SubmitterInfo_throws_InvalidOperationException_when_TrySubmitAndWaitForTransactionAsync_returns_InfraError()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
         var submitter = new SubmitterInfo(new Party("alice"));
 
         Func<Task> act = () => client.ExerciseAsync(SampleCommand, submitter, cancellationToken: TestContext.Current.CancellationToken);
@@ -391,7 +392,7 @@ public class LedgerClientExtensionsTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(1, "Cancelled"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "Cancelled"));
         var submitter = new SubmitterInfo(new Party("alice"));
 
         Func<Task> act = () => client.ExerciseAsync(SampleCommand, submitter, cancellationToken: cts.Token);
@@ -415,19 +416,19 @@ public class LedgerClientExtensionsTests
         exception.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing);
         exception.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
         exception.Metadata.Should().ContainKey("cid").WhoseValue.Should().Be("00abc");
-        exception.StatusCode.Should().BeNull();
+        exception.Status.Should().BeNull();
     }
 
     [Fact]
     public async Task ExerciseAsync_throws_LedgerOperationException_carrying_the_InfraError_outcome()
     {
         var sourceException = new InvalidOperationException("transport failed");
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(14, "Connection reset", SourceException: sourceException));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset", SourceException: sourceException));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
         var exception = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
-        exception.StatusCode.Should().Be(14);
+        exception.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         exception.InnerException.Should().BeSameAs(sourceException);
         exception.Category.Should().BeNull();
         exception.ErrorId.Should().BeNull();
@@ -438,13 +439,13 @@ public class LedgerClientExtensionsTests
     public async Task ExerciseAsync_throws_LedgerOperationException_carrying_the_InfraError_category_and_status_code_together()
     {
         ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(
-            400, "Bad Request", DamlErrorCategory.InvalidIndependentOfSystemState));
+            new TransportStatus.Http(HttpStatusCode.BadRequest), "Bad Request", DamlErrorCategory.InvalidIndependentOfSystemState));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
         var exception = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
         exception.Category.Should().Be(DamlErrorCategory.InvalidIndependentOfSystemState);
-        exception.StatusCode.Should().Be(400);
+        exception.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.BadRequest));
         exception.ErrorId.Should().BeNull(
             "a classified transport failure carries no recoverable Canton error id, and both facts have to " +
             "survive on the one exception rather than the caller having to pick which to discard");
@@ -453,12 +454,12 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task ExerciseAsync_throws_LedgerOperationException_with_null_InnerException_when_InfraError_has_no_SourceException()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
         var exception = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
-        exception.StatusCode.Should().Be(14);
+        exception.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         exception.InnerException.Should().BeNull();
     }
 
@@ -503,9 +504,9 @@ public class LedgerClientExtensionsTests
         var noneException = (await noneAct.Should().ThrowAsync<LedgerOperationException>()).Which;
         var manyException = (await manyAct.Should().ThrowAsync<LedgerOperationException>()).Which;
         noneException.Category.Should().BeNull();
-        noneException.StatusCode.Should().BeNull();
+        noneException.Status.Should().BeNull();
         manyException.Category.Should().BeNull();
-        manyException.StatusCode.Should().BeNull();
+        manyException.Status.Should().BeNull();
     }
 
     [Fact]
@@ -593,7 +594,7 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task ExerciseAsync_throws_LedgerOperationException_with_CommitState_Unknown_for_InfraError()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<int>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
 
         Func<Task> act = () => client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
@@ -651,12 +652,12 @@ public class LedgerClientExtensionsTests
     public async Task ExerciseAsync_void_throws_LedgerOperationException_carrying_the_InfraError_outcome()
     {
         var sourceException = new TimeoutException("deadline transport failure");
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(4, "Deadline exceeded", SourceException: sourceException));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.DeadlineExceeded), "Deadline exceeded", SourceException: sourceException));
 
         Func<Task> act = () => client.ExerciseAsync(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
         var exception = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
-        exception.StatusCode.Should().Be(4);
+        exception.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.DeadlineExceeded));
         exception.InnerException.Should().BeSameAs(sourceException);
         exception.CommitState.Should().Be(CommitState.Unknown);
     }
@@ -735,20 +736,20 @@ public class LedgerClientExtensionsTests
     [Fact]
     public async Task TryCreateOneByExerciseAsync_propagates_InfraError()
     {
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(14, "Connection reset"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "Connection reset"));
 
         var result = await client.TryCreateOneByExerciseAsync<SampleTemplate>(
             SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ExerciseOutcome<ContractId<SampleTemplate>>.InfraError>()
-            .Which.StatusCode.Should().Be(14);
+            .Which.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
     }
 
     [Fact]
     public async Task TryCreateOneByExerciseAsync_carries_the_InfraError_category_through_the_remap()
     {
         ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(
-            400, "Bad Request", DamlErrorCategory.InvalidIndependentOfSystemState));
+            new TransportStatus.Http(HttpStatusCode.BadRequest), "Bad Request", DamlErrorCategory.InvalidIndependentOfSystemState));
 
         var result = await client.TryCreateOneByExerciseAsync<SampleTemplate>(
             SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
@@ -918,7 +919,7 @@ public class LedgerClientExtensionsTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(1, "Cancelled"));
+        ILedgerClient client = new StubLedgerClient(new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "Cancelled"));
 
         Func<Task> act = () => client.CreateOneByExerciseAsync<SampleTemplate>(
             SampleCommand, new Party("alice"), cancellationToken: cts.Token);

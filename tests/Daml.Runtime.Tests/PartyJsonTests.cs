@@ -26,7 +26,7 @@ public class PartyJsonTests
 
         var party = JsonSerializer.Deserialize<Party>(json);
 
-        party.Id.Should().Be("Alice::122012ab");
+        party.Value.Should().Be("Alice::122012ab");
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class PartyJsonTests
         var payload = JsonSerializer.Deserialize<TemplatePayload>(json, CaseInsensitiveOptions);
 
         payload.Should().NotBeNull();
-        payload!.Operator.Id.Should().Be("Platform::1220abcd");
+        payload!.Operator.Value.Should().Be("Platform::1220abcd");
         payload.MarketId.Should().Be("BTC-USD");
     }
 
@@ -148,7 +148,7 @@ public class PartyJsonTests
 
         payload.Should().NotBeNull();
         payload!.Delegate.Should().NotBeNull();
-        payload!.Delegate!.Value.Id.Should().Be("Alice::122012ab");
+        payload!.Delegate!.Value.Value.Should().Be("Alice::122012ab");
     }
 
     [Fact]

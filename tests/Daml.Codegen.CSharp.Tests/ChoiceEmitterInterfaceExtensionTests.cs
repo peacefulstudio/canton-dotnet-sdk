@@ -75,8 +75,8 @@ public class ChoiceEmitterInterfaceExtensionTests
             Choice("Freeze", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
         output.Should().Contain("public static class IAssetExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> TransferAsync(");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> FreezeAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryFreezeAsync(");
         output.Should().Contain("this ContractId<IAsset> contractId,");
     }
 
@@ -86,7 +86,7 @@ public class ChoiceEmitterInterfaceExtensionTests
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
         output.Should().Contain(
-            "public static async Task<ExerciseOutcome<Unit>> TransferAsync(\n"
+            "public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(\n"
             + "        this ContractId<IAsset> contractId,\n"
             + "        ILedgerWriter client,\n"
             + "        SubmitterInfo submitter,");
@@ -112,7 +112,7 @@ public class ChoiceEmitterInterfaceExtensionTests
         output.Should().Contain("if (exercised.InterfaceId is { } interfaceId");
         output.Should().Contain("&& string.Equals(interfaceId.ModuleName, IAsset.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)");
         output.Should().Contain("&& string.Equals(interfaceId.EntityName, IAsset.InterfaceId.EntityName, global::System.StringComparison.Ordinal)");
-        output.Should().Contain("&& string.Equals(exercised.ChoiceName, \"Transfer\", global::System.StringComparison.Ordinal))");
+        output.Should().Contain("&& string.Equals(exercised.ChoiceName.Value, \"Transfer\", global::System.StringComparison.Ordinal))");
         output.Should().Contain("var decoded = IAsset.ChoiceTransfer.ResultDecoder!(exercised.ExerciseResult);");
         output.Should().Contain("return new ExerciseOutcome<string>.One(decoded);");
         output.Should().Contain("catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)");

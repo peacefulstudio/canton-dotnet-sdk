@@ -112,13 +112,141 @@ jobs:
 
       - name: Assemble JAR
         working-directory: jvm-helper
+        env:
+          DAML_DAR_TO_PROTO_VERSION: ${{ needs.validate-inputs.outputs.version }}
         run: sbt 'clean; assembly'
+
+      - name: Verify assembled jar reports the resolved version
+        working-directory: jvm-helper
+        env:
+          RESOLVED_VERSION: ${{ needs.validate-inputs.outputs.version }}
+        run: |
+          REPORTED="$(java -jar target/scala-2.13/daml-dar-to-proto.jar --version)"
+          if [ "${REPORTED}" != "${RESOLVED_VERSION}" ]; then
+            echo "::error::assembled jar reports version '${REPORTED}', expected '${RESOLVED_VERSION}' — the DAML_DAR_TO_PROTO_VERSION injection is broken"
+            exit 1
+          fi
 
       - name: Upload JAR
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jvm-helper-jar
           path: jvm-helper/target/scala-2.13/daml-dar-to-proto.jar
+          retention-days: 1
+          if-no-files-found: error
+
+  build-intermediate-fixtures:
+    name: Build intermediate DAR fixtures
+    needs: [validate-inputs, build-jvm-helper]
+    if: needs.validate-inputs.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION_INPUT: ${{ needs.validate-inputs.outputs.version }}
+      PINNED_RICHTYPES_INTERMEDIATE_SHA256: '103ad17b448c6870889781f484daac1757167ea2c4cc186a560dc61e823782a4'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Download JVM helper JAR
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jvm-helper-jar
+          path: jvm-helper-artifact
+
+      - name: Install buf 1.73.0 from GitHub release (sha256-pinned; converts binpb to canonical JSON from a bare .proto with no codegen step)
+        env:
+          BUF_VERSION: '1.73.0'
+          BUF_SHA256: '8f2986298ad08f0cc1bf999b9797b7c383adf32d7edf0f73d6f1e1a701baeac1'
+        run: |
+          set -euo pipefail
+          BIN="${RUNNER_TEMP}/buf"
+          curl -fsSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64" -o "${BIN}"
+          echo "${BUF_SHA256}  ${BIN}" | sha256sum -c -
+          chmod +x "${BIN}"
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+
+      - name: Assert richtypes.dar full-decode matches the internal twin's determinism oracle (tests/determinism/shas/intermediate.sha256)
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/richtypes-full-decode.binpb"
+          java -jar jvm-helper-artifact/daml-dar-to-proto.jar \
+            --dar conformance/richtypes/richtypes.dar --out "${OUT}"
+          ACTUAL="$(sha256sum "${OUT}" | awk '{print $1}')"
+          if [ "${ACTUAL}" != "${PINNED_RICHTYPES_INTERMEDIATE_SHA256}" ]; then
+            echo "::error::richtypes.dar full-decode sha256 (${ACTUAL}) does not match the internal twin's pinned tests/determinism/shas/intermediate.sha256 (${PINNED_RICHTYPES_INTERMEDIATE_SHA256}) — the public jar's IntermediateDar output has drifted from the determinism oracle."
+            exit 1
+          fi
+          echo "richtypes.dar full-decode matches the pinned determinism oracle: ${ACTUAL}"
+
+      - name: Decode every corpus DAR (--schema-only) and convert to canonical JSON
+        run: |
+          set -euo pipefail
+          mkdir -p fixtures
+          : > "${RUNNER_TEMP}/manifest-entries.jsonl"
+
+          mapfile -t dars < <(find conformance -name '*.dar' | LC_ALL=C sort)
+          expected_dars=4
+          if [ "${#dars[@]}" -ne "${expected_dars}" ]; then
+            echo "::error::expected ${expected_dars} corpus DAR(s) under conformance/, found ${#dars[@]} — a new/removed corpus DAR needs this count updated deliberately, not silently."
+            printf '  found: %s\n' "${dars[@]:-<none>}"
+            exit 1
+          fi
+
+          for dar in "${dars[@]}"; do
+            name="$(basename "${dar}" .dar)"
+            java -jar jvm-helper-artifact/daml-dar-to-proto.jar \
+              --schema-only --dar "${dar}" --out "fixtures/${name}.binpb"
+            buf convert proto/intermediate_dar.proto \
+              --type daml.codegen.intermediate.IntermediateDar \
+              --from "fixtures/${name}.binpb#format=binpb" \
+              --to "${RUNNER_TEMP}/${name}.raw.json#format=json"
+            jq -S . "${RUNNER_TEMP}/${name}.raw.json" > "fixtures/${name}.json"
+            rm "${RUNNER_TEMP}/${name}.raw.json"
+
+            [ -s "fixtures/${name}.binpb" ] || { echo "::error::fixtures/${name}.binpb is empty"; exit 1; }
+            [ -s "fixtures/${name}.json" ] || { echo "::error::fixtures/${name}.json is empty"; exit 1; }
+            jq -e '[.main.modules[]? | ((.dataTypes // []) + (.templates // []) + (.interfaces // []))] | flatten | length > 0' \
+              "fixtures/${name}.json" > /dev/null \
+              || { echo "::error::fixtures/${name}.json's main package carries no data types, templates or interfaces — refusing to pin a hollow schema-only decode."; exit 1; }
+
+            jq -n -c \
+              --arg name "${name}" \
+              --arg dar "${dar}" \
+              --arg darSha256 "$(sha256sum "${dar}" | awk '{print $1}')" \
+              --arg binpb "${name}.binpb" \
+              --arg binpbSha256 "$(sha256sum "fixtures/${name}.binpb" | awk '{print $1}')" \
+              --arg json "${name}.json" \
+              --arg jsonSha256 "$(sha256sum "fixtures/${name}.json" | awk '{print $1}')" \
+              '{name: $name, dar: $dar, darSha256: $darSha256, binpb: $binpb, binpbSha256: $binpbSha256, json: $json, jsonSha256: $jsonSha256}' \
+              >> "${RUNNER_TEMP}/manifest-entries.jsonl"
+          done
+
+          jq -n \
+            --arg version "${VERSION_INPUT}" \
+            --slurpfile fixtures "${RUNNER_TEMP}/manifest-entries.jsonl" \
+            '{version: $version, schemaOnly: true, fixtures: $fixtures}' \
+            | jq -S . > fixtures/manifest.json
+
+          find fixtures -type f | LC_ALL=C sort
+
+      - name: Archive intermediate fixtures for release assets
+        run: |
+          set -euo pipefail
+          tar -czf "intermediate-fixtures-${VERSION_INPUT}.tar.gz" -C fixtures .
+
+      - name: Upload intermediate fixtures artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: intermediate-fixtures
+          path: intermediate-fixtures-*.tar.gz
           retention-days: 1
           if-no-files-found: error
 
@@ -434,7 +562,7 @@ jobs:
 
   compose-index:
     name: Compose multi-arch index
-    needs: [validate-inputs, build-per-rid]
+    needs: [validate-inputs, build-per-rid, build-intermediate-fixtures]
     if: needs.validate-inputs.outputs.push == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -673,9 +801,14 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            echo "no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
+          if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
+            :
+          elif printf '%s' "$release_err" | grep -qi 'release not found'; then
+            echo "::notice::no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
             exit 0
+          else
+            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_err"
+            exit 1
           fi
           shopt -s nullglob
           files=(bundles/*.tar.gz)
@@ -686,3 +819,65 @@ jobs:
             exit 1
           fi
           gh release upload "$TAG" "${files[@]}" --clobber
+
+  attach-standalone-assets-to-draft-release:
+    name: Attach standalone dar-to-proto assets to draft release
+    needs: [validate-inputs, build-jvm-helper, build-per-rid, build-intermediate-fixtures]
+    if: github.event_name == 'push' && github.ref_type == 'tag' && vars.OCI_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Download JVM helper JAR
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: jvm-helper-jar
+          path: jvm-helper-artifact
+
+      - name: Download intermediate fixtures
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: intermediate-fixtures
+          path: intermediate-fixtures-artifact
+
+      - name: Attach dar-to-proto jar + proto + intermediate fixtures + checksums to draft release (upload only; never create/publish)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESOLVED_VERSION: ${{ needs.validate-inputs.outputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
+            :
+          elif printf '%s' "$release_err" | grep -qi 'release not found'; then
+            echo "::notice::no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
+            exit 0
+          else
+            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_err"
+            exit 1
+          fi
+
+          mkdir -p standalone-assets
+          cp jvm-helper-artifact/daml-dar-to-proto.jar \
+            "standalone-assets/daml-dar-to-proto-${RESOLVED_VERSION}.jar"
+          cp proto/intermediate_dar.proto \
+            "standalone-assets/intermediate_dar-${RESOLVED_VERSION}.proto"
+          cp "intermediate-fixtures-artifact/intermediate-fixtures-${RESOLVED_VERSION}.tar.gz" \
+            "standalone-assets/intermediate-fixtures-${RESOLVED_VERSION}.tar.gz"
+
+          files=(
+            "standalone-assets/daml-dar-to-proto-${RESOLVED_VERSION}.jar"
+            "standalone-assets/intermediate_dar-${RESOLVED_VERSION}.proto"
+            "standalone-assets/intermediate-fixtures-${RESOLVED_VERSION}.tar.gz"
+          )
+          for f in "${files[@]}"; do
+            [ -s "$f" ] || { echo "::error::standalone asset $f is empty (0 bytes) — refusing to attach a corrupt artifact"; exit 1; }
+          done
+
+          (cd standalone-assets && sha256sum "$(basename "${files[0]}")" "$(basename "${files[1]}")" "$(basename "${files[2]}")" > SHA256SUMS)
+
+          gh release upload "$TAG" "${files[@]}" standalone-assets/SHA256SUMS --clobber

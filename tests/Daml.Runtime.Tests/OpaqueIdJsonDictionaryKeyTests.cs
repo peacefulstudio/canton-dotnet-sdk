@@ -122,18 +122,18 @@ public class OpaqueIdJsonDictionaryKeyTests
     [Fact]
     public void ContractId_should_round_trip_as_a_dictionary_key()
     {
-        var original = new Dictionary<Marker.ContractId, long> { [new Marker.ContractId("00abc")] = 1 };
+        var original = new Dictionary<ContractId<Marker>, long> { [new ContractId<Marker>("00abc")] = 1 };
 
         var json = JsonSerializer.Serialize(original);
 
         json.Should().Be("{\"00abc\":1}");
-        JsonSerializer.Deserialize<Dictionary<Marker.ContractId, long>>(json).Should().BeEquivalentTo(original);
+        JsonSerializer.Deserialize<Dictionary<ContractId<Marker>, long>>(json).Should().BeEquivalentTo(original);
     }
 
     [Fact]
     public void ContractId_should_throw_JsonException_when_dictionary_key_is_blank()
     {
-        var deserialize = () => JsonSerializer.Deserialize<Dictionary<Marker.ContractId, long>>("{\"\":1}");
+        var deserialize = () => JsonSerializer.Deserialize<Dictionary<ContractId<Marker>, long>>("{\"\":1}");
 
         deserialize.Should().Throw<JsonException>();
     }
@@ -149,8 +149,5 @@ public class OpaqueIdJsonDictionaryKeyTests
         public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
 
         public DamlRecord ToRecord() => DamlRecord.Create();
-
-        [System.Text.Json.Serialization.JsonConverter(typeof(ContractIdJsonConverterFactory))]
-        public sealed record ContractId(string Value) : Daml.Runtime.Contracts.ContractId<Marker>(Value);
     }
 }

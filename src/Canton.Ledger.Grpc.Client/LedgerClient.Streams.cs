@@ -1,0 +1,425 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Streams;
+using Canton.Ledger.Kernel.Telemetry;
+using Com.Daml.Ledger.Api.V2;
+using Daml.Runtime;
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
+using Daml.Runtime.Streams;
+using Grpc.Core;
+using Microsoft.Extensions.Logging;
+using ProtoCompletion = Com.Daml.Ledger.Api.V2.Completion;
+using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
+using RuntimeCommands = Daml.Runtime.Commands;
+
+namespace Canton.Ledger.Grpc.Client;
+
+internal sealed partial class LedgerClient
+{
+    /// <inheritdoc />
+    /// <remarks>
+    /// Fault contract: a mid-stream transport fault, and a completion whose
+    /// payload cannot be decoded, are both surfaced in-band as a terminal
+    /// <see cref="CompletionStreamEvent.StreamError"/>, never thrown — the same
+    /// value-not-exception contract as
+    /// <see cref="SubscribeAsync{T}"/>. A caller cancelling via
+    /// <paramref name="cancellationToken"/> still gets an
+    /// <see cref="OperationCanceledException"/>.
+    /// </remarks>
+    public IAsyncEnumerable<CompletionStreamEvent> CompletionStreamAsync(
+        RuntimeCommands.SubmitterInfo submitter,
+        LedgerOffset? beginExclusiveOffset = null,
+        CancellationToken cancellationToken = default) =>
+        CompletionStreamAsyncCore(submitter, (beginExclusiveOffset ?? LedgerOffset.Begin).Value, cancellationToken);
+
+    private async IAsyncEnumerable<CompletionStreamEvent> CompletionStreamAsyncCore(
+        RuntimeCommands.SubmitterInfo submitter,
+        long beginExclusiveOffset,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
+        _invoker.TagServerCall(activity, CommandCompletionService.Descriptor, "CompletionStream");
+        activity?.SetTag(LedgerActivityTagNames.CantonFromOffset, beginExclusiveOffset);
+        activity.SetSubmitterTags(submitter, _options);
+
+        var request = BuildCompletionStreamRequest(submitter, beginExclusiveOffset);
+        LogCompletionStreamStarted(_logger, beginExclusiveOffset);
+
+        using var call = _commandCompletionService.CompletionStream(
+            request,
+            headers: await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false),
+            deadline: null,
+            cancellationToken: cancellationToken);
+
+        var stream = call.ResponseStream;
+
+        while (true)
+        {
+            var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
+            if (step.RecordFault(activity) is { } fault)
+            {
+                LogCompletionStreamError(_logger, fault.Status, fault.Message);
+                yield return new CompletionStreamEvent.StreamError(
+                    fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
+                yield break;
+            }
+
+            if (!step.Moved) yield break;
+
+            switch (stream.Current.CompletionResponseCase)
+            {
+                case CompletionStreamResponse.CompletionResponseOneofCase.Completion:
+                    var wireCompletion = stream.Current.Completion;
+                    if (!TryProject(wireCompletion, GrpcCompletionProjector.Project, out var completion, out var completionFailure))
+                    {
+                        yield return DecodeFailed(wireCompletion.Offset, completionFailure);
+                        yield break;
+                    }
+
+                    yield return completion;
+                    break;
+                case CompletionStreamResponse.CompletionResponseOneofCase.OffsetCheckpoint:
+                    var wireCheckpoint = stream.Current.OffsetCheckpoint;
+                    if (!TryProject(wireCheckpoint, GrpcCompletionProjector.ProjectCheckpoint, out var checkpoint, out var checkpointFailure))
+                    {
+                        yield return DecodeFailed(wireCheckpoint.Offset, checkpointFailure);
+                        yield break;
+                    }
+
+                    yield return checkpoint;
+                    break;
+                default:
+                    LogCompletionStreamVariantSkipped(_logger, stream.Current.CompletionResponseCase);
+                    break;
+            }
+        }
+    }
+
+    private CompletionStreamEvent.StreamError DecodeFailed(long wireOffset, Exception decodeFailure)
+    {
+        LogCompletionStreamDecodeFailed(_logger, wireOffset, decodeFailure);
+        return new CompletionStreamEvent.StreamError(
+            new TransportStatus.UndecodableBody(), decodeFailure.Message, SourceException: decodeFailure);
+    }
+
+    private static bool TryProject<TWire>(
+        TWire wire,
+        Func<TWire, CompletionStreamEvent> project,
+        [NotNullWhen(true)] out CompletionStreamEvent? projected,
+        [NotNullWhen(false)] out Exception? decodeFailure)
+    {
+        try
+        {
+            projected = project(wire);
+            decodeFailure = null;
+            return true;
+        }
+        catch (Exception failure) when (StreamEventClassifier.IsNotCancellation(failure))
+        {
+            projected = null;
+            decodeFailure = failure;
+            return false;
+        }
+    }
+
+    private CompletionStreamRequest BuildCompletionStreamRequest(
+        RuntimeCommands.SubmitterInfo submitter,
+        long beginExclusiveOffset)
+    {
+        var request = new CompletionStreamRequest { BeginExclusive = beginExclusiveOffset };
+        if (_options.UserId is not null)
+        {
+            request.UserId = _options.UserId;
+        }
+
+        request.Parties.AddRange(CompletionParties(submitter));
+        return request;
+    }
+
+    private static IEnumerable<string> CompletionParties(RuntimeCommands.SubmitterInfo submitter)
+    {
+        var seen = new HashSet<string>();
+        foreach (var party in submitter.ActAs)
+        {
+            if (seen.Add(party.Value)) yield return party.Value;
+        }
+
+        foreach (var party in submitter.ReadAs)
+        {
+            if (seen.Add(party.Value)) yield return party.Value;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Always <see langword="true"/>: <see cref="SubscribeAsync{T}"/> and
+    /// <see cref="SubscribeLedgerEffectsAsync{T}"/> with <c>toOffset: null</c> open a genuine
+    /// open-ended server stream over gRPC, which ends only on a fault or on caller cancellation.
+    /// </remarks>
+    public bool SupportsUnboundedStreaming => true;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Fault contract: a mid-stream transport fault is surfaced
+    /// in-band as a terminal <see cref="ContractStreamEvent{T}.StreamError"/>,
+    /// never thrown, so a caller draining with <c>await foreach</c> decides
+    /// policy. A caller cancelling via <paramref name="cancellationToken"/>
+    /// still gets an <see cref="OperationCanceledException"/>.
+    /// </remarks>
+    public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
+        RuntimeCommands.SubmitterInfo submitter,
+        LedgerOffset? fromOffset = null,
+        LedgerOffset? toOffset = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        var filterId = GrpcMarkerMatcher<T>.StreamFilterIdentifier();
+        return SubscribeAsyncCore<T>(submitter, filterId, fromOffset?.Value, toOffset?.Value, TransactionShape.AcsDelta, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Fault contract: a mid-stream transport fault is surfaced
+    /// in-band as a terminal <see cref="ContractStreamEvent{T}.StreamError"/>,
+    /// never thrown. A caller cancelling via <paramref name="cancellationToken"/>
+    /// still gets an <see cref="OperationCanceledException"/>.
+    /// </remarks>
+    public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeLedgerEffectsAsync<T>(
+        RuntimeCommands.SubmitterInfo submitter,
+        LedgerOffset? fromOffset = null,
+        LedgerOffset? toOffset = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        var filterId = GrpcMarkerMatcher<T>.StreamFilterIdentifier();
+        return SubscribeAsyncCore<T>(submitter, filterId, fromOffset?.Value, toOffset?.Value, TransactionShape.LedgerEffects, cancellationToken);
+    }
+
+    private async IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsyncCore<T>(
+        RuntimeCommands.SubmitterInfo submitter,
+        ProtoIdentifier filterId,
+        long? fromOffset,
+        long? toOffset,
+        TransactionShape transactionShape,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
+        _invoker.TagServerCall(activity, UpdateService.Descriptor, "GetUpdates");
+        activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
+        activity?.SetTag(LedgerActivityTagNames.CantonFromOffset, fromOffset);
+        activity.SetSubmitterTags(submitter, _options);
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetUpdatesRequest(
+            submitter,
+            filterId,
+            fromOffset,
+            toOffset,
+            GrpcMarkerMatcher<T>.IsInterface,
+            transactionShape);
+
+        LogSubscribeStarted(_logger, typeof(T).Name, fromOffset ?? 0L);
+
+        using var call = _updateService.GetUpdates(
+            request,
+            headers: await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false),
+            deadline: null,
+            cancellationToken: cancellationToken);
+
+        var stream = call.ResponseStream;
+
+        while (true)
+        {
+            var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
+            if (step.RecordFault(activity) is { } fault)
+            {
+                LogSubscribeStreamError(_logger, typeof(T).Name, fault.Status, fault.Message);
+                yield return new ContractStreamEvent<T>.StreamError(
+                    fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
+                yield break;
+            }
+
+            if (!step.Moved) yield break;
+
+            foreach (var typedEvent in ProjectUpdate<T>(stream.Current))
+            {
+                yield return typedEvent;
+            }
+        }
+    }
+
+    private IEnumerable<ContractStreamEvent<T>> ProjectUpdate<T>(
+        GetUpdatesResponse response)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        switch (response.UpdateCase)
+        {
+            case GetUpdatesResponse.UpdateOneofCase.Transaction:
+                foreach (var typedEvent in GrpcContractStreamProjector.ProjectTransactionEvents<T>(response.Transaction, _logger))
+                {
+                    yield return typedEvent;
+                }
+                break;
+            case GetUpdatesResponse.UpdateOneofCase.OffsetCheckpoint:
+                yield return new ContractStreamEvent<T>.Checkpoint(LedgerOffset.At(response.OffsetCheckpoint.Offset));
+                break;
+            case GetUpdatesResponse.UpdateOneofCase.Reassignment:
+                foreach (var typedEvent in GrpcContractStreamProjector.ProjectReassignmentEvents<T>(response.Reassignment, _logger))
+                {
+                    yield return typedEvent;
+                }
+                break;
+            default:
+                LogStreamVariantSkipped(_logger, typeof(T).Name, response.UpdateCase);
+                break;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Fault contract: a mid-snapshot transport fault is surfaced
+    /// in-band as a terminal <see cref="AcsSnapshotEntry{T}.StreamError"/>,
+    /// never thrown — at parity with <see cref="SubscribeAsync{T}"/>. It is
+    /// mutually exclusive with the success-path terminal
+    /// <see cref="AcsSnapshotEntry{T}.Checkpoint"/>: a faulted snapshot ends
+    /// with <c>StreamError</c> instead, so no snapshot offset is handed over to
+    /// a resumed live subscription and the caller must treat the snapshot as
+    /// incomplete. When <paramref name="activeAtOffset"/> is null the client
+    /// first resolves the ledger end via a unary call before the snapshot stream
+    /// opens; a non-cancellation fault during that resolution propagates as a
+    /// thrown exception (out of the first enumeration step) rather than a
+    /// <c>StreamError</c>, since no snapshot stream has begun. A caller
+    /// cancelling via <paramref name="cancellationToken"/> still gets an
+    /// <see cref="OperationCanceledException"/>.
+    /// </remarks>
+    public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
+        RuntimeCommands.SubmitterInfo submitter,
+        LedgerOffset? activeAtOffset = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        var templateFilter = GrpcMarkerMatcher<T>.StreamFilterIdentifier();
+        return SubscribeActiveAsyncCore<T>(submitter, templateFilter, activeAtOffset?.Value, cancellationToken);
+    }
+
+    private async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsyncCore<T>(
+        RuntimeCommands.SubmitterInfo submitter,
+        ProtoIdentifier templateFilter,
+        long? activeAtOffset,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
+        _invoker.TagServerCall(activity, StateService.Descriptor, "GetActiveContracts");
+        activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
+        activity.SetSubmitterTags(submitter, _options);
+
+        var effectiveOffset = activeAtOffset ?? (await GetLedgerEndForSnapshotAsync(cancellationToken).ConfigureAwait(false)).Offset;
+        var sharedHeaders = await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false);
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
+            submitter,
+            templateFilter,
+            effectiveOffset,
+            GrpcMarkerMatcher<T>.IsInterface);
+
+        LogSubscribeActiveStarted(_logger, typeof(T).Name, effectiveOffset);
+
+        using var call = _stateService.GetActiveContracts(
+            request,
+            headers: sharedHeaders,
+            deadline: null,
+            cancellationToken: cancellationToken);
+
+        var stream = call.ResponseStream;
+
+        while (true)
+        {
+            var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
+            if (step.RecordFault(activity) is { } fault)
+            {
+                LogSubscribeStreamError(_logger, typeof(T).Name, fault.Status, fault.Message);
+                yield return new AcsSnapshotEntry<T>.StreamError(
+                    fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
+                yield break;
+            }
+
+            if (!step.Moved)
+            {
+                yield return new AcsSnapshotEntry<T>.Checkpoint(new StakeholderResume(LedgerOffset.At(effectiveOffset)));
+                yield break;
+            }
+
+            foreach (var projected in GrpcContractStreamProjector.ProjectActiveContractEntry<T>(
+                stream.Current, _logger, LedgerOffset.At(effectiveOffset)))
+            {
+                if (projected is ContractStreamEvent<T>.Unclassified unclassified)
+                {
+                    LogActiveContractEntryUnclassified(
+                        _logger, typeof(T).Name, stream.Current.ContractEntryCase, unclassified.Kind, unclassified.Offset?.Value);
+                }
+                yield return ToAcsSnapshotEntry(projected);
+            }
+        }
+    }
+
+    private static AcsSnapshotEntry<T> ToAcsSnapshotEntry<T>(ContractStreamEvent<T> entry)
+        where T : ITemplate, IDamlRecord<T> => entry switch
+    {
+        ContractStreamEvent<T>.Created created => new AcsSnapshotEntry<T>.Created(
+            created.ContractId, created.Payload, created.Key, created.Offset, created.SynchronizerId, created.WitnessParties),
+        ContractStreamEvent<T>.Unassigned unassigned => new AcsSnapshotEntry<T>.Unclassified(
+            unassigned.Offset, UnclassifiedKind.UnassignedEvent),
+        ContractStreamEvent<T>.Unclassified unclassified => new AcsSnapshotEntry<T>.Unclassified(
+            unclassified.Offset, unclassified.Kind, unclassified.RawKind),
+        _ => throw new InvalidOperationException(
+            $"Active-contract snapshot produced an unexpected entry variant: {entry.GetType().Name}"),
+    };
+
+    private async Task<GetLedgerEndResponse> GetLedgerEndForSnapshotAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _invoker.InvokeAsync(
+                (headers, deadline, token) => _stateService.GetLedgerEndAsync(new GetLedgerEndRequest(), headers, deadline, token),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (RpcException ex) when (CallerCancellation.Signals(ex, cancellationToken))
+        {
+            throw CallerCancellation.AsOperationCanceled(ex, cancellationToken);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Completion stream started from offset {BeginExclusiveOffset}")]
+    private static partial void LogCompletionStreamStarted(ILogger logger, long beginExclusiveOffset);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Completion stream failed: {Status} {Detail}")]
+    private static partial void LogCompletionStreamError(ILogger logger, TransportStatus status, string detail);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Completion stream skipped variant {Variant}")]
+    private static partial void LogCompletionStreamVariantSkipped(ILogger logger, CompletionStreamResponse.CompletionResponseOneofCase variant);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Completion stream could not decode the completion at offset {Offset} — surfaced as a terminal StreamError")]
+    private static partial void LogCompletionStreamDecodeFailed(ILogger logger, long offset, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Subscribing to {TemplateType} updates from offset {FromOffset}")]
+    private static partial void LogSubscribeStarted(ILogger logger, string templateType, long fromOffset);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Subscribing to active {TemplateType} contracts at offset {AtOffset}")]
+    private static partial void LogSubscribeActiveStarted(ILogger logger, string templateType, long atOffset);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Subscribe stream failed for {TemplateType}: {Status} {Detail}")]
+    private static partial void LogSubscribeStreamError(ILogger logger, string templateType, TransportStatus status, string detail);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Subscribe stream for {TemplateType} skipped variant {Variant}")]
+    private static partial void LogStreamVariantSkipped(ILogger logger, string templateType, GetUpdatesResponse.UpdateOneofCase variant);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Active contracts snapshot for {TemplateType} could not classify entry {ContractEntryCase} — surfaced as Unclassified ({Kind}) carrying offset {Offset}")]
+    private static partial void LogActiveContractEntryUnclassified(ILogger logger, string templateType, GetActiveContractsResponse.ContractEntryOneofCase contractEntryCase, UnclassifiedKind kind, long? offset);
+}

@@ -10,7 +10,6 @@ using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
-using Daml.Runtime.Stdlib;
 using Daml.Testing.Roslyn;
 using AwesomeAssertions;
 using Microsoft.CodeAnalysis;
@@ -26,11 +25,11 @@ namespace Daml.Codegen.CSharp.Tests;
 /// <summary>
 /// Round-trip test for a <c>Unit</c>-returning non-CID choice exerciser. Generates
 /// the wrapper for a <c>DoNothing : ()</c> choice, compiles it through Roslyn into an
-/// in-memory assembly, then invokes the emitted <c>DoNothingAsync</c> extension
+/// in-memory assembly, then invokes the emitted <c>TryDoNothingAsync</c> extension
 /// end-to-end through an <see cref="ILedgerWriter"/> substitute and asserts the
-/// projected <see cref="ExerciseOutcome{T}"/> over <c>Unit</c>. Exercises the
-/// Unit-projector branch (<c>needsStdlibUnitDecoder</c>) at runtime, which the
-/// emit-string specs in <c>ChoiceEmitterUnitReturnExerciserTests</c> do not.
+/// projected <see cref="ExerciseOutcome{T}"/> over <see cref="DamlUnit"/>. Runs the
+/// choice descriptor's <c>ResultDecoder</c> at runtime, which the emit-string specs in
+/// <c>ChoiceEmitterUnitReturnExerciserTests</c> do not.
 /// </summary>
 public class NonContractChoiceUnitExerciserRoundTripTests
 {
@@ -133,7 +132,7 @@ public class NonContractChoiceUnitExerciserRoundTripTests
             ContractId: contractId,
             TemplateId: SinkTemplateId,
             InterfaceId: null,
-            ChoiceName: ChoiceName,
+            ChoiceName: new Daml.Runtime.Commands.ChoiceName(ChoiceName),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: DamlUnit.Instance,
             Consuming: false,
@@ -153,13 +152,13 @@ public class NonContractChoiceUnitExerciserRoundTripTests
 
     private static readonly Assembly WrapperAssembly = CompileWrapperAssembly();
 
-    private static MethodInfo DoNothingAsyncExerciser()
+    private static MethodInfo TryDoNothingAsyncExerciser()
     {
         var extensionsType = WrapperAssembly.GetType(
             $"{GeneratedNamespace}.{EntityName}{NonContractExtensionsSuffix}", throwOnError: true)!;
         return extensionsType
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == $"{ChoiceName}Async"
+            .Single(m => m.Name == "TryDoNothingAsync"
                          && m.GetParameters().Any(p => p.ParameterType == typeof(SubmitterInfo)));
     }
 
@@ -169,19 +168,19 @@ public class NonContractChoiceUnitExerciserRoundTripTests
         return Activator.CreateInstance(typeof(ContractId<>).MakeGenericType(sinkType), contractId)!;
     }
 
-    private static async Task<ExerciseOutcome<Unit>> InvokeDoNothingAsync(
+    private static async Task<ExerciseOutcome<DamlUnit>> InvokeTryDoNothingAsync(
         ILedgerWriter client,
         string contractId,
         SubmitterInfo submitter)
     {
-        var task = (Task<ExerciseOutcome<Unit>>)DoNothingAsyncExerciser().Invoke(
+        var task = (Task<ExerciseOutcome<DamlUnit>>)TryDoNothingAsyncExerciser().Invoke(
             null,
             [TypedContractId(contractId), client, submitter, null, null, null, CancellationToken.None])!;
         return await task;
     }
 
     [Fact]
-    public async Task DoNothingAsync_projects_a_unit_outcome_through_the_ledger_writer()
+    public async Task TryDoNothingAsync_projects_a_unit_outcome_through_the_ledger_writer()
     {
         var client = Substitute.For<ILedgerWriter>();
         client.TrySubmitAndWaitForTransactionAsync(
@@ -191,14 +190,14 @@ public class NonContractChoiceUnitExerciserRoundTripTests
 
         SubmitterInfo singleParty = new Party("alice");
 
-        var outcome = await InvokeDoNothingAsync(client, "contract-1", singleParty);
+        var outcome = await InvokeTryDoNothingAsync(client, "contract-1", singleParty);
 
-        var one = outcome.Should().BeOfType<ExerciseOutcome<Unit>.One>().Subject;
-        one.Result.Should().Be(Unit.Value);
+        var one = outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.One>().Subject;
+        one.Result.Should().Be(DamlUnit.Instance);
     }
 
     [Fact]
-    public async Task DoNothingAsync_forwards_the_readAs_parties_of_an_explicit_submitter()
+    public async Task TryDoNothingAsync_forwards_the_readAs_parties_of_an_explicit_submitter()
     {
         var client = Substitute.For<ILedgerWriter>();
         client.TrySubmitAndWaitForTransactionAsync(
@@ -210,7 +209,7 @@ public class NonContractChoiceUnitExerciserRoundTripTests
             actAs: new HashSet<Party> { new("alice"), new("carol") },
             readAs: new HashSet<Party> { new("bob") });
 
-        await InvokeDoNothingAsync(client, "contract-1", submitter);
+        await InvokeTryDoNothingAsync(client, "contract-1", submitter);
 
         await client.Received(1).TrySubmitAndWaitForTransactionAsync(
             Arg.Any<CommandsSubmission>(),
@@ -221,10 +220,10 @@ public class NonContractChoiceUnitExerciserRoundTripTests
 
     /// <summary>
     /// Regression: a Daml package declaring its own <c>enum Unit</c> (as
-    /// <c>splice-wallet-payments</c> does) must still emit a <c>global::</c>-qualified
-    /// reference to <see cref="Daml.Runtime.Stdlib.Unit"/> for a stdlib-<c>Unit</c>-returning
-    /// choice, since the generated namespace is flat and a bare <c>Unit</c> reference would
-    /// otherwise bind to the package-local enum instead (CS0117 on <c>.Value</c>).
+    /// <c>splice-wallet-payments</c> does) must still compile the wrapper of a
+    /// <c>Unit</c>-returning choice, whose outcome is typed to <see cref="DamlUnit"/> and
+    /// never to a bare <c>Unit</c> the flat generated namespace would bind to the
+    /// package-local enum.
     /// </summary>
     [Fact]
     public void NonContractChoiceUnitExerciserRoundTrip_generated_wrapper_compiles_clean_when_the_package_declares_its_own_unit_enum()

@@ -187,7 +187,7 @@ public class TransactionResultTests
             ContractId: "00alice",
             TemplateId: FooBar.TemplateId,
             InterfaceId: null,
-            ChoiceName: "GetTrailingTwap",
+            ChoiceName: new ChoiceName("GetTrailingTwap"),
             ChoiceArgument: argument,
             ExerciseResult: exerciseResult,
             Consuming: false,
@@ -205,12 +205,12 @@ public class TransactionResultTests
         };
 
         result.ExercisedEvents.Should().HaveCount(1);
-        result.ExercisedEvents[0].ChoiceName.Should().Be("GetTrailingTwap");
+        result.ExercisedEvents[0].ChoiceName.Should().Be(new ChoiceName("GetTrailingTwap"));
         result.ExercisedEvents[0].ExerciseResult.Should().BeSameAs(exerciseResult);
         result.ExercisedEvents[0].ChoiceArgument.Should().BeSameAs(argument);
         result.ExercisedEvents[0].Consuming.Should().BeFalse();
         result.ExercisedEvents[0].InterfaceId.Should().BeNull();
-        result.ExercisedEvents[0].ActingParties.Should().ContainSingle().Which.Id.Should().Be("alice");
+        result.ExercisedEvents[0].ActingParties.Should().ContainSingle().Which.Value.Should().Be("alice");
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public class TransactionResultTests
             ContractId: "00c",
             TemplateId: FooBar.TemplateId,
             InterfaceId: null,
-            ChoiceName: "DoThing",
+            ChoiceName: new ChoiceName("DoThing"),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: DamlUnit.Instance,
             Consuming: true,
@@ -253,7 +253,7 @@ public class TransactionResultTests
             ContractId: "00a",
             TemplateId: FooBar.TemplateId,
             InterfaceId: interfaceId,
-            ChoiceName: "Inherited",
+            ChoiceName: new ChoiceName("Inherited"),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: DamlUnit.Instance,
             Consuming: false,
@@ -387,8 +387,8 @@ public class TransactionResultTests
         contractId.Should().Be("00alice");
         templateId.Should().Be(FooBar.TemplateId);
         deconstructed.Should().BeSameAs(payload);
-        witnesses.Should().ContainSingle().Which.Id.Should().Be("alice");
-        signatories.Should().ContainSingle().Which.Id.Should().Be("alice");
+        witnesses.Should().ContainSingle().Which.Value.Should().Be("alice");
+        signatories.Should().ContainSingle().Which.Value.Should().Be("alice");
         observers.Should().BeEmpty();
         contractKey.Should().Be(key);
         at.Should().Be(createdAt);
@@ -781,7 +781,7 @@ public class TransactionResultTests
             ContractId: "00c",
             TemplateId: FooBar.TemplateId,
             InterfaceId: null,
-            ChoiceName: choiceName,
+            ChoiceName: new ChoiceName(choiceName),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: DamlUnit.Instance,
             Consuming: true,

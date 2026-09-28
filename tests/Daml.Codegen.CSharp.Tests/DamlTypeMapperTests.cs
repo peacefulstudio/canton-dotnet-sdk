@@ -779,11 +779,30 @@ public class DamlTypeMapperTests
             [
                 .. Enum.GetValues<OptionalEncoding>()
                     .Select(encoding => new DamlWrappedOptional(Prim(DamlPrimitive.Text), encoding)),
-            ]
+            ],
+            [typeof(DamlListType)] = [new DamlListType(Prim(DamlPrimitive.Int64))],
+            [typeof(DamlOptionalType)] = [new DamlOptionalType(Prim(DamlPrimitive.Text))],
+            [typeof(DamlTextMapType)] = [new DamlTextMapType(Prim(DamlPrimitive.Int64))],
+            [typeof(DamlGenMapType)] =
+            [
+                new DamlGenMapType(Prim(DamlPrimitive.Text), Prim(DamlPrimitive.Int64)),
+            ],
+            [typeof(DamlContractIdType)] =
+            [
+                new DamlContractIdType(new DamlTypeRef(LocalPackageId, "Test.Module", "Widget")),
+            ],
         };
 
+    /// <summary>
+    /// Both assemblies that can declare a concrete <see cref="DamlType"/> subtype: the neutral
+    /// model's, and the emitter's — which owns <see cref="DamlWrappedOptional"/> since it moved
+    /// out of the public model. Enumerating the model assembly alone would let the moved node
+    /// silently drop out of the drift guard, which would then pass while exercising fewer
+    /// subtypes.
+    /// </summary>
     private static IEnumerable<Type> ConcreteDamlTypeSubtypes() =>
-        typeof(DamlType).Assembly.GetTypes()
+        new[] { typeof(DamlType).Assembly, typeof(OptionalRepresentation).Assembly }
+            .SelectMany(assembly => assembly.GetTypes())
             .Where(t => t is { IsAbstract: false, IsGenericTypeDefinition: false } && typeof(DamlType).IsAssignableFrom(t));
 
     public static IEnumerable<object[]> EveryDamlTypeSubtype() =>
@@ -848,7 +867,7 @@ public class DamlTypeMapperTests
         returnedTypeName.Should().NotBeNull(
             "a key in StdlibMappingKeys returned null from MapStdlibType, so the switch and the guarded key set have drifted apart");
 
-        var publicStdlibTypeNames = typeof(Daml.Runtime.Stdlib.Unit).Assembly.GetExportedTypes()
+        var publicStdlibTypeNames = typeof(RelTime).Assembly.GetExportedTypes()
             .Where(t => t.Namespace == Daml.Runtime.RuntimeNamespaces.Stdlib)
             .Select(t => StripGenericArity(t.Name))
             .ToHashSet();
@@ -856,131 +875,6 @@ public class DamlTypeMapperTests
         publicStdlibTypeNames.Should().Contain(returnedTypeName,
             "MapStdlibType returns {0} as a C# reference into {1}; a renamed runtime record must fail loudly here instead of drifting into broken generated code",
             returnedTypeName, Daml.Runtime.RuntimeNamespaces.Stdlib);
-    }
-
-    /// <summary>Carries a <see cref="Tuple2{T1, T2}"/> in a slot the LF-JSON reader must dispatch on.</summary>
-    /// <param name="Probe">The decoded shape.</param>
-    public sealed record Tuple2ProbeHolder(
-        [property: DamlFieldAttribute("probe")] Tuple2<string, long> Probe) : IDamlRecord
-    {
-        /// <inheritdoc />
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create(
-            "probe", Probe.ToRecord(label => new DamlText(label), count => new DamlInt64(count))));
-    }
-
-    /// <summary>Carries a <see cref="Tuple3{T1, T2, T3}"/> in a slot the LF-JSON reader must dispatch on.</summary>
-    /// <param name="Probe">The decoded shape.</param>
-    public sealed record Tuple3ProbeHolder(
-        [property: DamlFieldAttribute("probe")] Tuple3<string, long, bool> Probe) : IDamlRecord
-    {
-        /// <inheritdoc />
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create(
-            "probe",
-            Probe.ToRecord(
-                label => new DamlText(label),
-                count => new DamlInt64(count),
-                flag => new DamlBool(flag))));
-    }
-
-    /// <summary>Carries an <see cref="Either{TL, TR}"/> in a slot the LF-JSON reader must dispatch on.</summary>
-    /// <param name="Probe">The decoded shape.</param>
-    public sealed record EitherProbeHolder(
-        [property: DamlFieldAttribute("probe")] Either<string, long> Probe) : IDamlRecord
-    {
-        /// <inheritdoc />
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create(
-            "probe", Probe.ToValue(label => new DamlText(label), count => new DamlInt64(count))));
-    }
-
-    /// <summary>Carries a <see cref="Set{T}"/> in a slot the LF-JSON reader must dispatch on.</summary>
-    /// <param name="Probe">The decoded shape.</param>
-    public sealed record SetProbeHolder(
-        [property: DamlFieldAttribute("probe")] Set<string> Probe) : IDamlRecord
-    {
-        /// <inheritdoc />
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create(
-            "probe", Probe.ToRecord(element => new DamlText(element))));
-    }
-
-    /// <summary>Carries a <see cref="NonEmpty{T}"/> in a slot the LF-JSON reader must dispatch on.</summary>
-    /// <param name="Probe">The decoded shape.</param>
-    public sealed record NonEmptyProbeHolder(
-        [property: DamlFieldAttribute("probe")] NonEmpty<string> Probe) : IDamlRecord
-    {
-        /// <inheritdoc />
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create(
-            "probe", Probe.ToRecord(element => new DamlText(element))));
-    }
-
-    /// <summary>Carries a <see cref="Map{TKey, TValue}"/> in a slot the LF-JSON reader must dispatch on.</summary>
-    /// <param name="Probe">The decoded shape.</param>
-    public sealed record MapProbeHolder(
-        [property: DamlFieldAttribute("probe")] Map<string, long> Probe) : IDamlRecord
-    {
-        /// <inheritdoc />
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create(
-            "probe", Probe.ToRecord(label => new DamlText(label), count => new DamlInt64(count))));
-    }
-
-    private static readonly IReadOnlyDictionary<Type, string> ReaderDispatchProbes =
-        new Dictionary<Type, string>
-        {
-            [typeof(Tuple2ProbeHolder)] = """{"probe":{"_1":"a","_2":"1"}}""",
-            [typeof(Tuple3ProbeHolder)] = """{"probe":{"_1":"a","_2":"1","_3":true}}""",
-            [typeof(EitherProbeHolder)] = """{"probe":{"tag":"Left","value":"a"}}""",
-            [typeof(SetProbeHolder)] = """{"probe":{"map":[["a",{}]]}}""",
-            [typeof(NonEmptyProbeHolder)] = """{"probe":{"hd":"a","tl":["b"]}}""",
-            [typeof(MapProbeHolder)] = """{"probe":{"map":[["a","1"]]}}""",
-        };
-
-    private static Type ProbedStdlibType(Type holder) =>
-        holder.GetProperties()
-            .Single(property => property.GetCustomAttribute<DamlFieldAttribute>() is not null)
-            .PropertyType.GetGenericTypeDefinition();
-
-    private static Type ParametricStdlibClrType(string module, string name)
-    {
-        var mapped = StdlibPackages.MapStdlibType(module, name);
-        return typeof(Unit).Assembly.GetExportedTypes()
-            .Single(candidate => candidate.Namespace == Daml.Runtime.RuntimeNamespaces.Stdlib
-                                 && candidate.IsGenericTypeDefinition
-                                 && StripGenericArity(candidate.Name) == mapped);
-    }
-
-    [Fact]
-    public void DamlTypeMapper_every_parametric_stdlib_type_has_an_lf_json_reader_probe()
-    {
-        var emitted = StdlibPackages.ParametricStdlibTypes
-            .Select(entry => ParametricStdlibClrType(entry.Module, entry.Name))
-            .Distinct();
-
-        ReaderDispatchProbes.Keys.Select(ProbedStdlibType)
-            .Should().BeEquivalentTo(
-                emitted,
-                "the emitter's parametric stdlib set and the LF-JSON reader's dispatch arms are two "
-                + "hand-maintained lists that nothing else compares, and no corpus carries these shapes, "
-                + "so an entry emitted without a reader arm is invisible to every other gate");
-    }
-
-    /// <summary>
-    /// Workaround: the legacy <c>DamlLfJsonReader.ReadRecord(string, Type, ...)</c> overload
-    /// stays live and tested until every record/variant/enum/template/view has an emitted
-    /// decoder and the reflection reader retires, so this deliberately calls it directly.
-    /// </summary>
-    [Fact]
-    public void DamlTypeMapper_every_parametric_stdlib_type_is_dispatched_by_the_lf_json_reader()
-    {
-        foreach (var (holder, json) in ReaderDispatchProbes)
-        {
-#pragma warning disable DAMLRT0001
-            var read = () => Daml.Runtime.Serialization.DamlLfJsonReader.ReadRecord(json, holder);
-#pragma warning restore DAMLRT0001
-
-            read.Should().NotThrow(
-                "an emitted parametric stdlib type the reader has no arm for falls through to the "
-                + "unmapped-CLR-type throw at decode time, which is what {0} would hit",
-                ProbedStdlibType(holder));
-        }
     }
 
     [Fact]
@@ -1120,5 +1014,222 @@ public class DamlTypeMapperTests
         mapper.ToValue(wrapped, "Note").Should().Be("Note.ToValue(__optional0 => new DamlText(__optional0))");
         mapper.FromValue(wrapped, "value")
             .Should().Be("Optional<string>.FromValue(value, __optional0 => __optional0.As<DamlText>().Value)");
+    }
+
+    /// <summary>
+    /// The catalog's <see cref="DamlPrimitiveDisposition.SignatureOnly"/> rows, each with
+    /// its catalog Daml-LF arity: the structural type-formers that are legal in type
+    /// signatures but have no C# data-position mapping, so both their bare and their
+    /// applied forms must fail loudly at every data-position entry point.
+    /// </summary>
+    public static TheoryData<DamlPrimitive, int> SignatureOnlyRows()
+    {
+        var rows = new TheoryData<DamlPrimitive, int>();
+        foreach (var row in DamlPrimitiveCatalog.Rows.Where(
+                     row => row.Disposition == DamlPrimitiveDisposition.SignatureOnly))
+        {
+            rows.Add(row.Primitive!.Value, row.Arity);
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// The <see cref="DamlPrimitive"/> identities of the
+    /// <see cref="DamlPrimitiveDisposition.SignatureOnly"/> rows, for the bare-form probes.
+    /// </summary>
+    public static TheoryData<DamlPrimitive> SignatureOnlyPrimitives()
+    {
+        var rows = new TheoryData<DamlPrimitive>();
+        foreach (var row in DamlPrimitiveCatalog.Rows.Where(
+                     row => row.Disposition == DamlPrimitiveDisposition.SignatureOnly))
+        {
+            rows.Add(row.Primitive!.Value);
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// The applied shape a signature position actually carries for the row's arity
+    /// (<c>Update X</c>, <c>Arrow A B</c>). Arity-0 formers are probed applied to a single
+    /// argument too: whatever shape arrives, an application of a signature-only builtin in
+    /// a data position must never silently map to <c>object</c>.
+    /// </summary>
+    private static DamlTypeApp AppliedSignatureOnly(DamlPrimitive primitive, int arity) =>
+        arity switch
+        {
+            2 => App(primitive, Prim(DamlPrimitive.Text), Prim(DamlPrimitive.Int64)),
+            _ => App(primitive, Prim(DamlPrimitive.Text)),
+        };
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyRows))]
+    public void MapType_applied_signature_only_builtin_throws_not_supported_naming_the_builtin(
+        DamlPrimitive primitive,
+        int arity)
+    {
+        var act = () => Mapper().MapType(AppliedSignatureOnly(primitive, arity));
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "an applied signature-only builtin in a data position must fail loudly, naming the builtin — " +
+                "before the builtin-catalog milestone's follow-up it silently fell through to the 'object' " +
+                "catch-all, and no cataloged builtin shape may reach that fallback");
+    }
+
+    [Theory]
+    [InlineData(DamlPrimitive.List)]
+    [InlineData(DamlPrimitive.Optional)]
+    [InlineData(DamlPrimitive.TextMap)]
+    [InlineData(DamlPrimitive.GenMap)]
+    [InlineData(DamlPrimitive.ContractId)]
+    public void MapType_type_constructor_applied_to_the_wrong_arity_throws_rather_than_mapping_to_object(
+        DamlPrimitive constructor)
+    {
+        var act = () => Mapper().MapType(App(constructor));
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{constructor}*",
+                "a cataloged builtin applied with the wrong argument count is still a cataloged builtin shape — " +
+                "it must fail loudly instead of silently falling through to the 'object' catch-all");
+    }
+
+    [Theory]
+    [InlineData(DamlPrimitive.List)]
+    [InlineData(DamlPrimitive.Optional)]
+    [InlineData(DamlPrimitive.TextMap)]
+    [InlineData(DamlPrimitive.GenMap)]
+    [InlineData(DamlPrimitive.ContractId)]
+    public void ToValue_type_constructor_applied_to_the_wrong_arity_throws_rather_than_emitting_a_stub(
+        DamlPrimitive constructor)
+    {
+        var act = () => Mapper().ToValue(App(constructor), "Field");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{constructor}*",
+                "serializing a constructor applied with the wrong argument count must fail loudly — " +
+                "the pre-migration ToValue arms were arity-unconstrained, so a wrong-arity application " +
+                "either silently emitted a placeholder or threw an unnamed ArgumentOutOfRangeException " +
+                "while indexing the argument");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyRows))]
+    public void ToValue_applied_signature_only_builtin_throws_not_supported_naming_the_builtin(
+        DamlPrimitive primitive,
+        int arity)
+    {
+        var act = () => Mapper().ToValue(AppliedSignatureOnly(primitive, arity), "Field");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "serializing a data position typed with an applied signature-only builtin must fail loudly " +
+                "instead of silently emitting a GenericStub.NotImplemented placeholder");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyRows))]
+    public void FromValue_applied_signature_only_builtin_throws_not_supported_naming_the_builtin(
+        DamlPrimitive primitive,
+        int arity)
+    {
+        var act = () => Mapper().FromValue(AppliedSignatureOnly(primitive, arity), "value");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "deserializing a data position typed with an applied signature-only builtin must fail loudly " +
+                "instead of silently emitting a GenericStub.NotImplemented placeholder");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyPrimitives))]
+    public void ClassifyCollection_bare_signature_only_builtin_throws_not_supported_naming_the_builtin(
+        DamlPrimitive primitive)
+    {
+        var act = () => Mapper().ClassifyCollection(Prim(primitive));
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "classifying the collection shape of a data position typed with a bare signature-only " +
+                "builtin must fail loudly — returning None would let the emitter keep walking into a " +
+                "member it can never map");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyRows))]
+    public void ClassifyCollection_applied_signature_only_builtin_throws_not_supported_naming_the_builtin(
+        DamlPrimitive primitive,
+        int arity)
+    {
+        var act = () => Mapper().ClassifyCollection(AppliedSignatureOnly(primitive, arity));
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "classifying the collection shape of a data position typed with an applied signature-only " +
+                "builtin must fail loudly — returning None would let the emitter keep walking into a " +
+                "member it can never map");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyPrimitives))]
+    public void MapType_bare_signature_only_builtin_throws_not_supported_naming_the_builtin(DamlPrimitive primitive)
+    {
+        var act = () => Mapper().MapType(Prim(primitive));
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "the bare-primitive switches carry the signature-only arms for MapType; this pins the " +
+                "message so a bare builtin in a data position is never confused with a mapping gap");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyPrimitives))]
+    public void ToValue_bare_signature_only_builtin_throws_not_supported_naming_the_builtin(DamlPrimitive primitive)
+    {
+        var act = () => Mapper().ToValue(Prim(primitive), "Field");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "the bare-primitive switches carry the signature-only arms for ToValue; this pins the " +
+                "message so a bare builtin in a data position is never confused with a mapping gap");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyPrimitives))]
+    public void FromValue_bare_signature_only_builtin_throws_not_supported_naming_the_builtin(DamlPrimitive primitive)
+    {
+        var act = () => Mapper().FromValue(Prim(primitive), "value");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "the bare-primitive switches carry the signature-only arms for FromValue; this pins the " +
+                "message so a bare builtin in a data position is never confused with a mapping gap");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyPrimitives))]
+    public void FromJson_bare_signature_only_builtin_throws_not_supported_naming_the_builtin(DamlPrimitive primitive)
+    {
+        var act = () => Mapper().FromJson(Prim(primitive), "json", "context");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "a JSON data position typed with a bare signature-only builtin fails at codegen time rather " +
+                "than emitting a runtime DamlLfJsonDecoders.ReadUnsupported call");
+    }
+
+    [Theory]
+    [MemberData(nameof(SignatureOnlyRows))]
+    public void FromJson_applied_signature_only_builtin_throws_not_supported_naming_the_builtin(
+        DamlPrimitive primitive,
+        int arity)
+    {
+        var act = () => Mapper().FromJson(AppliedSignatureOnly(primitive, arity), "json", "context");
+
+        act.Should().Throw<NotSupportedException>()
+            .WithMessage($"*{primitive}*signature-only*",
+                "a JSON data position typed with an applied signature-only builtin (Update X, Arrow A B) fails " +
+                "at codegen time rather than emitting a runtime DamlLfJsonDecoders.ReadUnsupported call");
     }
 }

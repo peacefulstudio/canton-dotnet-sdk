@@ -263,7 +263,7 @@ public class InterfaceEmitterTests
             }));
 
         output.Should().Contain("public static class ITransferableExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> TransferAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(");
     }
 
     [Fact]

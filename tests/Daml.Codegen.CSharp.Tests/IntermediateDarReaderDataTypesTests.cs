@@ -109,7 +109,7 @@ public partial class IntermediateDarReaderTests
     }
 
     [Fact]
-    public void IntermediateDarReader_type_app_round_trips_with_function_and_arguments()
+    public void IntermediateDarReader_type_app_over_folding_builtin_reads_as_typed_node()
     {
         var proto = MakePackageWith(module =>
         {
@@ -139,12 +139,10 @@ public partial class IntermediateDarReaderTests
 
         var model = IntermediateDarReader.Read(proto);
         var record = (DamlRecordDefinition)model.MainPackage.Modules[0].DataTypes[0].Definition;
-        var typeApp = record.Fields[0].Type.Should().BeOfType<DamlTypeApp>().Subject;
-        typeApp.Base.Should().BeOfType<DamlPrimitiveType>()
-            .Which.Primitive.Should().Be(DamlPrimitive.List);
-        typeApp.Arguments.Should().HaveCount(1);
-        typeApp.Arguments[0].Should().BeOfType<DamlPrimitiveType>()
-            .Which.Primitive.Should().Be(DamlPrimitive.Text);
+        var list = record.Fields[0].Type.Should().BeOfType<DamlListType>().Subject;
+        list.Element.Should().Be(new DamlPrimitiveType(DamlPrimitive.Text),
+            "a TypeApp over a folding builtin reads into its typed node at the reader boundary — " +
+            "the raw DamlTypeApp shape survives only for applications the catalog does not fold");
     }
 
     [Fact]

@@ -133,8 +133,8 @@ public class ChoiceEmitterContractIdExerciserTests
         var (_, exercisers) = Emit(template);
 
         exercisers.Should().Contain("public static class VaultExtensions");
-        exercisers.Should().Contain("public static async Task<ExerciseOutcome<SpawnResult>> SpawnAsync(");
-        exercisers.Should().Contain("public static Task<ExerciseOutcome<SpawnResult>> SpawnAsync(");
+        exercisers.Should().Contain("public static async Task<ExerciseOutcome<SpawnResult>> TrySpawnAsync(");
+        exercisers.Should().Contain("public static Task<ExerciseOutcome<SpawnResult>> TrySpawnAsync(");
         exercisers.Should().Contain("this ContractId<Vault> contractId,");
     }
 
@@ -210,7 +210,7 @@ public class ChoiceEmitterContractIdExerciserTests
         exercisers.IndexOf(commandCallMarker, firstCall + 1, StringComparison.Ordinal).Should().Be(-1);
 
         exercisers.Should().Contain("SubmitterInfo submitter = owner;");
-        exercisers.Should().Contain("return contractId.SpawnAsync(");
+        exercisers.Should().Contain("return contractId.TrySpawnAsync(");
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public class ChoiceEmitterContractIdExerciserTests
 
         var (_, exercisers) = Emit(template);
 
-        var delegationStart = exercisers.IndexOf("return contract.Id.SpawnAsync(", StringComparison.Ordinal);
+        var delegationStart = exercisers.IndexOf("return contract.Id.TrySpawnAsync(", StringComparison.Ordinal);
         delegationStart.Should().BeGreaterThanOrEqualTo(0);
         var delegation = exercisers.Substring(delegationStart);
 

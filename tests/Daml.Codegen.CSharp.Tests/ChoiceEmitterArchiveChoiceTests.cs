@@ -130,7 +130,7 @@ public class ChoiceEmitterArchiveChoiceTests
         var output = EmitNonContract(ItemTemplate(StdlibPackageId), resolver);
 
         output.Should().Contain("ItemNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> ArchiveAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(");
         output.Should().Contain("DamlRecord.Create()");
         output.Should().NotContain("DamlUnit.Instance");
     }
@@ -143,7 +143,7 @@ public class ChoiceEmitterArchiveChoiceTests
         var output = EmitNonContract(ItemTemplate(UserPackageId), resolver);
 
         output.Should().Contain("ItemNonContractExtensions");
-        output.Should().Contain("ArchiveAsync(");
+        output.Should().Contain("TryArchiveAsync(");
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class ChoiceEmitterArchiveChoiceTests
         var descriptor = EmitDescriptors(template, resolver);
 
         exerciser.Should().Contain("ItemNonContractExtensions");
-        exerciser.Should().Contain("ArchiveAsync(");
+        exerciser.Should().Contain("TryArchiveAsync(");
         exerciser.Should().Contain("User.Package.Archive argument,");
         exerciser.Should().Contain("argument.ToRecord()");
         descriptor.Should().Contain("ArgumentEncoder = arg => arg.ToRecord(),");
@@ -177,7 +177,7 @@ public class ChoiceEmitterArchiveChoiceTests
         var output = EmitInterfaceExtensions(iface, "IArchivable", resolver);
 
         output.Should().Contain("IArchivableExtensions");
-        output.Should().Contain("ArchiveAsync(");
+        output.Should().Contain("TryArchiveAsync(");
         output.Should().Contain("User.Package.Archive argument,");
         output.Should().Contain("argument.ToRecord()");
     }

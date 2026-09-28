@@ -14,7 +14,7 @@ namespace Daml.Runtime.Tests;
 /// Pins the <see cref="System.Text.Json"/> contract for <see cref="Map{TKey, TValue}"/>: the object
 /// <see cref="System.Text.Json"/> derives from its members, read back as the map that wrote it. The
 /// contract is a CLR round trip, not the Daml-LF record <c>{"map":[["a",1]]}</c> the ledger
-/// encoding uses — see ADR 0028. What <see cref="DamlJsonConverters.AddDamlConverters"/> adds on top
+/// encoding uses. What <see cref="DamlJsonConverters.AddDamlConverters"/> adds on top
 /// is requiredness: a member the payload omits is refused rather than bound to a null the slot
 /// forbids.
 /// </summary>

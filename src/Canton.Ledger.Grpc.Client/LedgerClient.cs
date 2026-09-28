@@ -1,0 +1,323 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Canton.Ledger.Abstractions;
+using Com.Daml.Ledger.Api.V2;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime;
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
+using Grpc.Core;
+using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Interactive = Com.Daml.Ledger.Api.V2.Interactive;
+using RuntimeCommands = Daml.Runtime.Commands;
+
+namespace Canton.Ledger.Grpc.Client;
+
+/// <summary>
+/// Implementation of <see cref="ICantonLedgerClient"/> (and thus <see cref="ILedgerClient"/>)
+/// using the Canton gRPC Ledger API.
+/// </summary>
+internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStreamingCapability
+{
+    private readonly GrpcChannel _channel;
+    private readonly LedgerCallInvoker _invoker;
+    private readonly SubmissionClient _submissionClient;
+    private readonly UpdateService.UpdateServiceClient _updateService;
+    private readonly StateService.StateServiceClient _stateService;
+    private readonly CommandCompletionService.CommandCompletionServiceClient _commandCompletionService;
+    private readonly VersionService.VersionServiceClient _versionService;
+    private readonly Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient _interactiveSubmissionService;
+    private readonly GrpcCommandBuilder _commandBuilder;
+    private readonly LedgerClientOptions _options;
+    private readonly ILogger<LedgerClient> _logger;
+    private bool _disposed;
+
+    internal LedgerClient(
+        IOptions<LedgerClientOptions> options,
+        LedgerChannelProvider channels,
+        ITokenProvider tokenProvider,
+        ILogger<LedgerClient>? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(channels);
+        ArgumentNullException.ThrowIfNull(tokenProvider);
+
+        _options = options.Value;
+        _logger = logger ?? NullLogger<LedgerClient>.Instance;
+        _channel = channels.Channel;
+
+        var commandService = new CommandService.CommandServiceClient(_channel);
+        _updateService = new UpdateService.UpdateServiceClient(_channel);
+        _stateService = new StateService.StateServiceClient(_channel);
+        var commandSubmissionService = new CommandSubmissionService.CommandSubmissionServiceClient(_channel);
+        _commandCompletionService = new CommandCompletionService.CommandCompletionServiceClient(_channel);
+        _versionService = new VersionService.VersionServiceClient(_channel);
+        _interactiveSubmissionService =
+            new Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient(_channel);
+
+        _commandBuilder = new GrpcCommandBuilder(_options);
+        _invoker = new LedgerCallInvoker(_options, tokenProvider);
+        _submissionClient = new SubmissionClient(
+            _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
+            (offset, submitter, token) => GetUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token),
+            (offset, submitter, token) => GetUpdateTreeByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token));
+
+        CallContextHelper.LogStartupDiagnostics(
+            _logger, tokenProvider, _options.GrpcAddress, nameof(LedgerClient), "AddLedgerClient");
+    }
+
+    internal LedgerClient(
+        LedgerClientOptions options,
+        GrpcChannel channel,
+        CommandService.CommandServiceClient commandService,
+        ITokenProvider? tokenProvider = null,
+        ILogger<LedgerClient>? logger = null)
+        : this(
+            options,
+            channel,
+            commandService,
+            new UpdateService.UpdateServiceClient(channel),
+            new StateService.StateServiceClient(channel),
+            tokenProvider,
+            logger)
+    {
+    }
+
+    internal LedgerClient(
+        LedgerClientOptions options,
+        GrpcChannel channel,
+        CommandService.CommandServiceClient commandService,
+        UpdateService.UpdateServiceClient updateService,
+        StateService.StateServiceClient stateService,
+        ITokenProvider? tokenProvider = null,
+        ILogger<LedgerClient>? logger = null)
+        : this(
+            options,
+            channel,
+            commandService,
+            updateService,
+            stateService,
+            new CommandSubmissionService.CommandSubmissionServiceClient(channel),
+            new CommandCompletionService.CommandCompletionServiceClient(channel),
+            tokenProvider,
+            logger: logger)
+    {
+    }
+
+    internal LedgerClient(
+        LedgerClientOptions options,
+        GrpcChannel channel,
+        CommandService.CommandServiceClient commandService,
+        UpdateService.UpdateServiceClient updateService,
+        StateService.StateServiceClient stateService,
+        CommandSubmissionService.CommandSubmissionServiceClient commandSubmissionService,
+        CommandCompletionService.CommandCompletionServiceClient commandCompletionService,
+        ITokenProvider? tokenProvider = null,
+        VersionService.VersionServiceClient? versionService = null,
+        Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient? interactiveSubmissionService = null,
+        ILogger<LedgerClient>? logger = null)
+    {
+        _options = options;
+        _channel = channel;
+        _updateService = updateService;
+        _stateService = stateService;
+        _commandCompletionService = commandCompletionService;
+        _versionService = versionService ?? new VersionService.VersionServiceClient(channel);
+        _interactiveSubmissionService = interactiveSubmissionService
+            ?? new Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient(channel);
+        _logger = logger ?? NullLogger<LedgerClient>.Instance;
+
+        _commandBuilder = new GrpcCommandBuilder(_options);
+        _invoker = new LedgerCallInvoker(_options, tokenProvider);
+        _submissionClient = new SubmissionClient(
+            _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
+            (offset, submitter, token) => GetUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token),
+            (offset, submitter, token) => GetUpdateTreeByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token));
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A committed transaction that cannot be decoded, for example because a payload has no loaded
+    /// generated type, is returned as <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>, never as a
+    /// failure: do not resubmit, and read the transaction by its
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable.UpdateId"/> when it carries one. The same
+    /// holds when the committed transaction's choice result cannot be read as
+    /// <typeparamref name="TResult"/>: <typeparamref name="TResult"/> has no Daml mapping, or the
+    /// transaction has zero or more than one exercised event for <paramref name="command"/>'s choice
+    /// (e.g. a nonconsuming choice that only forks other choices).
+    /// </remarks>
+    public Task<ExerciseOutcome<TResult>> TryExerciseAsync<TResult>(
+        RuntimeCommands.ExerciseCommand command,
+        RuntimeCommands.SubmitterInfo submitter,
+        string? workflowId = null,
+        RuntimeCommands.CommandId? commandId = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        return _submissionClient.TryExerciseAsync<TResult>(
+            command, submitter, workflowId, commandId, timeout: timeout, cancellationToken: cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<SubmitAndWaitResult> SubmitAndWaitAsync(
+        RuntimeCommands.CommandsSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.SubmitAndWaitAsync(submission, timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<SubmitAndWaitResult> SubmitAndWaitAsync(
+        RuntimeCommands.CommandsSubmission submission,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.SubmitAndWaitAsync(submission.WithSubmitter(submitter), timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<RuntimeCommands.CommandId> SubmitAsync(
+        RuntimeCommands.CommandsSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.SubmitAsync(submission, timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<RuntimeCommands.CommandId> SubmitReassignmentAsync(
+        ReassignmentSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.SubmitReassignmentAsync(submission, timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<ExerciseOutcome<Daml.Runtime.Streams.ContractStreamEvent<T>>> TrySubmitAndWaitForReassignmentAsync<T>(
+        ReassignmentSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.TrySubmitAndWaitForReassignmentAsync<T>(submission, timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A committed transaction that cannot be decoded, for example because a payload has no loaded
+    /// generated type, is returned as <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>, never as a
+    /// failure: do not resubmit, and read the transaction by its
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable.UpdateId"/> when it carries one.
+    /// </remarks>
+    public Task<ExerciseOutcome<TransactionResult>> TrySubmitAndWaitForTransactionAsync(
+        RuntimeCommands.CommandsSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.TrySubmitAndWaitForTransactionAsync(submission, timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A committed transaction that cannot be decoded, for example because a payload has no loaded
+    /// generated type, is returned as <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>, never as a
+    /// failure: do not resubmit, and read the transaction by its
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable.UpdateId"/> when it carries one.
+    /// </remarks>
+    public Task<ExerciseOutcome<TransactionResult>> TrySubmitAndWaitForTransactionAsync(
+        RuntimeCommands.CommandsSubmission submission,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+        return _submissionClient.TrySubmitAndWaitForTransactionAsync(
+            submission.WithSubmitter(submitter), timeout, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A committed transaction that cannot be decoded, for example because a payload has no loaded
+    /// generated type, is returned as <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>, never as a
+    /// failure: do not resubmit, and read the transaction by its
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable.UpdateId"/> when it carries one.
+    /// </remarks>
+    public Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateAsync<TTemplate>(
+        TTemplate payload,
+        RuntimeCommands.SubmitterInfo submitter,
+        string? workflowId = null,
+        RuntimeCommands.CommandId? commandId = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where TTemplate : ITemplate
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        return _submissionClient.TryCreateAsync(
+            payload, submitter, workflowId, commandId, timeout: timeout, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="CallInvoker"/> bound to this client's channel for driving raw generated
+    /// gRPC stubs — services or overloads the typed surface does not cover — through the client's own
+    /// authentication, deadline, and retry plumbing: construct any generated stub over it, e.g.
+    /// <c>new StateService.StateServiceClient(client.CreateCallInvoker())</c>, and call it without
+    /// building any <see cref="CallOptions"/> by hand.
+    /// </summary>
+    /// <remarks>
+    /// A bearer token is resolved from the configured
+    /// <see cref="Canton.Ledger.Abstractions.ITokenProvider"/> on every call;
+    /// <see cref="Canton.Ledger.Abstractions.ITokenProvider.None"/> sends no
+    /// <c>authorization</c> header, and a caller-supplied <c>authorization</c> metadata entry wins
+    /// over the resolved token. Unary calls carry the configured
+    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none
+    /// and run through the configured <see cref="LedgerClientOptions.Retry"/> pipeline, with auth
+    /// headers and deadline recomputed on each attempt; a caller-supplied deadline is kept verbatim.
+    /// Streaming calls attach auth headers but carry no default deadline — a server stream may
+    /// legitimately outlive any unary budget — and are never retried. Because retried unary calls
+    /// only surface the winning attempt, <c>AsyncUnaryCall&lt;TResponse&gt;.ResponseHeadersAsync</c>
+    /// resolves only once the response itself is available — headers from a failed attempt never
+    /// leak, but callers awaiting headers ahead of the body will wait for the body. The invoker
+    /// runs on the channel the container owns, so it stays valid until the container that resolved
+    /// this client is disposed; dispose the container, not the invoker.
+    /// </remarks>
+    /// <returns>A <see cref="CallInvoker"/> that authenticated raw stubs can be constructed over.</returns>
+    /// <exception cref="ObjectDisposedException">
+    /// This client, or the container that resolved it, has been disposed.
+    /// </exception>
+    public CallInvoker CreateCallInvoker()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return new AuthenticatedCallInvoker(_channel.CreateCallInvoker(), _invoker, _logger);
+    }
+
+    /// <summary>
+    /// Marks the client disposed, so <see cref="CreateCallInvoker"/> stops handing out invokers. The
+    /// gRPC channel the client runs on belongs to the container that resolved it and closes with it.
+    /// </summary>
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Marks the client disposed, so <see cref="CreateCallInvoker"/> stops handing out invokers. The
+    /// gRPC channel the client runs on belongs to the container that resolved it and closes with it.
+    /// </summary>
+    public void Dispose() => _disposed = true;
+}

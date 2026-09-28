@@ -65,7 +65,7 @@ public class DamlValueExtensionsTests
     {
         var result = new DamlParty("party::alice").FromDamlValue<Party>();
 
-        result.Id.Should().Be("party::alice");
+        result.Value.Should().Be("party::alice");
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public class DamlValueExtensionsTests
         var result = new DamlParty("party::alice").FromDamlValue<Party?>();
 
         result.Should().NotBeNull();
-        result!.Value.Id.Should().Be("party::alice");
+        result!.Value.Value.Should().Be("party::alice");
     }
 
     [Fact]

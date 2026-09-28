@@ -8,7 +8,7 @@ namespace Daml.Runtime.Contracts;
 /// <summary>
 /// Null guards and defensive copies for the collection-typed members that still take a caller's
 /// <see cref="IReadOnlyList{T}"/>, <see cref="IEnumerable{T}"/> or
-/// <see cref="IReadOnlyDictionary{TKey,TValue}"/>: <see cref="CaughtException.Metadata"/>,
+/// <see cref="IReadOnlyDictionary{TKey,TValue}"/>:
 /// <see cref="Outcomes.ExerciseOutcome{T}.DamlError.Metadata"/>, and
 /// the emitter-facing command and value shapes — <c>Commands.CommandsSubmission</c>,
 /// <see cref="Data.DamlRecord"/> and the <c>Daml.Runtime.Stdlib</c> collection types — that

@@ -32,7 +32,7 @@ public class HoldingInterfaceChoiceTests
             ContractId: "holding-cid",
             TemplateId: new Identifier("impl-pkg-id", "Impl.Holding", "Holding"),
             InterfaceId: IHolding.InterfaceId,
-            ChoiceName: "Describe",
+            ChoiceName: new ChoiceName("Describe"),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: exerciseResult,
             Consuming: false,
@@ -73,12 +73,12 @@ public class HoldingInterfaceChoiceTests
     }
 
     [Fact]
-    public async Task DescribeAsync_submits_the_interface_typed_exercise_command()
+    public async Task TryDescribeAsync_submits_the_interface_typed_exercise_command()
     {
         var tx = TransactionWith(DescribeExercisedEvent(new DamlText("balance: 42")));
         using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(tx));
 
-        var outcome = await Target.DescribeAsync(client, new Describe("balance: "), new Party("alice"),
+        var outcome = await Target.TryDescribeAsync(client, new Describe("balance: "), new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Should().BeOfType<ExerciseOutcome<string>.One>();
@@ -91,12 +91,12 @@ public class HoldingInterfaceChoiceTests
     }
 
     [Fact]
-    public async Task DescribeAsync_decodes_the_committed_exercise_result_into_the_choices_typed_return()
+    public async Task TryDescribeAsync_decodes_the_committed_exercise_result_into_the_choices_typed_return()
     {
         var tx = TransactionWith(DescribeExercisedEvent(new DamlText("balance: 42")));
         using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(tx));
 
-        var outcome = await Target.DescribeAsync(client, new Describe("balance: "), new Party("alice"),
+        var outcome = await Target.TryDescribeAsync(client, new Describe("balance: "), new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var one = outcome.Should().BeOfType<ExerciseOutcome<string>.One>().Subject;
@@ -104,12 +104,12 @@ public class HoldingInterfaceChoiceTests
     }
 
     [Fact]
-    public async Task DescribeAsync_returns_CommittedUndecodable_when_the_committed_exercise_result_has_the_wrong_shape()
+    public async Task TryDescribeAsync_returns_CommittedUndecodable_when_the_committed_exercise_result_has_the_wrong_shape()
     {
         var tx = TransactionWith(DescribeExercisedEvent(new DamlInt64(42)));
         using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(tx));
 
-        var outcome = await Target.DescribeAsync(client, new Describe("balance: "), new Party("alice"),
+        var outcome = await Target.TryDescribeAsync(client, new Describe("balance: "), new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var undecodable = outcome.Should().BeOfType<ExerciseOutcome<string>.CommittedUndecodable>().Subject;

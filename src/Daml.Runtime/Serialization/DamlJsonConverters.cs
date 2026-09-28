@@ -7,6 +7,7 @@ using System.Text.Json.Serialization.Metadata;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Stdlib;
 using Daml.Runtime.Streams;
 
@@ -30,9 +31,10 @@ namespace Daml.Runtime.Serialization;
 /// rather than as the <see cref="JsonException"/> naming the offending index that <see cref="Set{T}"/>
 /// reports, and the declared-abstract discriminated unions
 /// <see cref="Optional{T}"/>, <see cref="Either{TL, TR}"/>,
-/// <see cref="ContractStreamEvent{T}"/> and <see cref="InterfaceStreamEvent{TInterface, TView}"/>,
+/// <see cref="ContractStreamEvent{T}"/>, <see cref="InterfaceStreamEvent{TInterface, TView}"/> and
+/// <see cref="TransportStatus"/>,
 /// none of which the reflection-based serializer can write or read past their own base members —
-/// together with <see cref="Daml.Runtime.Stdlib.Unit"/>, whose private constructor leaves the
+/// together with <see cref="DamlUnit"/>, whose private constructor leaves the
 /// reflection-based serializer nothing to call.
 /// </summary>
 /// <remarks>
@@ -57,18 +59,15 @@ namespace Daml.Runtime.Serialization;
 /// <see cref="EquatableArray{T}"/>, whose default is the empty list,
 /// <see cref="LedgerOffset"/>, whose default is <see cref="LedgerOffset.Begin"/>, and the Daml
 /// stdlib collections <see cref="Set{T}"/>, <see cref="Map{TKey, TValue}"/> and
-/// <see cref="NonEmpty{T}"/>, whose default is a null their own slot forbids — so a payload
+/// <see cref="NonEmpty{T}"/> together with <see cref="TransportStatus"/>, whose default is a
+/// null their own slot forbids — so a payload
 /// that omits one is refused rather than read as that value, a property the payload never
-/// mentions never reaching a converter at all. It also lists the Daml conversions explicitly, for the
-/// hosts that build their own <see cref="JsonSerializerOptions"/> — a ledger or PQS client's
-/// default options, say — rather than inheriting them from attributes; a converter on
+/// mentions never reaching a converter at all. <see cref="AddDamlConverters"/> is also how a
+/// host that builds its own <see cref="JsonSerializerOptions"/> — a ledger or PQS client's
+/// default options, say — should register these conversions, rather than inheriting them from
+/// attributes or copying <see cref="All"/> on its own: a converter on
 /// <see cref="JsonSerializerOptions.Converters"/> takes precedence over the one an attribute
-/// names on the type.
-/// <see cref="System.Text.Json"/> does not walk the base chain to find an inherited
-/// attribute, so a type deriving from <see cref="ContractId{T}"/> needs one of its own.
-/// The emitted <c>T.ContractId</c> is given that attribute by the codegen; a hand-written
-/// derived contract id is not, and falls back to <c>{"Value":"..."}</c> unless registered
-/// here.
+/// names on the type, and only <see cref="AddDamlConverters"/> carries the full posture above.
 /// </remarks>
 public static class DamlJsonConverters
 {
@@ -95,7 +94,9 @@ public static class DamlJsonConverters
         new EitherJsonConverterFactory(),
         new ContractStreamEventJsonConverterFactory(),
         new InterfaceStreamEventJsonConverterFactory(),
-        new UnitJsonConverter(),
+        new TransportStatusJsonConverterFactory(),
+        new DamlUnitJsonConverter(),
+        new DamlVariantJsonConverterFactory(),
     ];
 
     /// <summary>
@@ -224,6 +225,7 @@ public static class DamlJsonConverters
     private static bool AbsenceBindsAnUnstatedValue(Type type) =>
         EquatableArrayJsonConverterFactory.IsClosedEquatableArray(type)
         || type == typeof(LedgerOffset)
+        || type == typeof(TransportStatus)
         || IsClosedGeneric(type, typeof(Set<>))
         || IsClosedGeneric(type, typeof(Map<,>))
         || IsClosedGeneric(type, typeof(NonEmpty<>));

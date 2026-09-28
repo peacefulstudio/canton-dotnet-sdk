@@ -22,41 +22,6 @@ public class DamlTypeTests
     }
 
     [Fact]
-    public void DamlTypeApp_should_identify_Optional()
-    {
-        // Arrange
-        var optionalType = new DamlTypeApp(
-            new DamlPrimitiveType(DamlPrimitive.Optional),
-            [new DamlPrimitiveType(DamlPrimitive.Text)]);
-
-        // Assert
-        optionalType.IsOptional.Should().BeTrue();
-    }
-
-    [Fact]
-    public void DamlTypeApp_List_should_not_be_Optional()
-    {
-        // Arrange
-        var listType = new DamlTypeApp(
-            new DamlPrimitiveType(DamlPrimitive.List),
-            [new DamlPrimitiveType(DamlPrimitive.Int64)]);
-
-        // Assert
-        listType.IsOptional.Should().BeFalse();
-    }
-
-    [Fact]
-    public void DamlWrappedOptional_should_identify_Optional()
-    {
-        // Arrange
-        var wrapped = new DamlWrappedOptional(
-            new DamlPrimitiveType(DamlPrimitive.Text), OptionalEncoding.Flat);
-
-        // Assert
-        wrapped.IsOptional.Should().BeTrue();
-    }
-
-    [Fact]
     public void DamlTypeApp_should_hash_structurally_identical_values_alike()
     {
         // Arrange
@@ -81,6 +46,102 @@ public class DamlTypeTests
         typeRef.PackageId.Should().Be("pkg123");
         typeRef.Module.Should().Be("Module.Name");
         typeRef.Name.Should().Be("MyType");
+    }
+
+    private static DamlPrimitiveType Prim(DamlPrimitive primitive) => new(primitive);
+
+    private static DamlTypeApp App(DamlPrimitive constructor, params DamlType[] arguments) =>
+        new(Prim(constructor), arguments);
+
+    private static DamlTypeApp Box(DamlType argument) =>
+        new(new DamlTypeRef("pkg123", "Module.Name", "Box"), [argument]);
+
+    private static DamlTypeApp NumericScale(int scale) =>
+        new(Prim(DamlPrimitive.Numeric), [new DamlTypeVar(scale.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
+
+    public static TheoryData<DamlType, DamlType, bool> TypedNodeEqualityPairs() => new()
+    {
+        { new DamlListType(Prim(DamlPrimitive.Int64)), new DamlListType(Prim(DamlPrimitive.Int64)), true },
+        { new DamlListType(Prim(DamlPrimitive.Int64)), new DamlListType(Prim(DamlPrimitive.Text)), false },
+        {
+            new DamlListType(new DamlOptionalType(Prim(DamlPrimitive.Int64))),
+            new DamlListType(new DamlOptionalType(Prim(DamlPrimitive.Int64))),
+            true
+        },
+        {
+            new DamlListType(new DamlOptionalType(Prim(DamlPrimitive.Int64))),
+            new DamlListType(new DamlOptionalType(Prim(DamlPrimitive.Text))),
+            false
+        },
+        {
+            new DamlListType(new DamlOptionalType(Prim(DamlPrimitive.Int64))),
+            new DamlOptionalType(new DamlListType(Prim(DamlPrimitive.Int64))),
+            false
+        },
+        {
+            new DamlGenMapType(Prim(DamlPrimitive.Party), Prim(DamlPrimitive.Int64)),
+            new DamlGenMapType(Prim(DamlPrimitive.Party), Prim(DamlPrimitive.Int64)),
+            true
+        },
+        {
+            new DamlGenMapType(Prim(DamlPrimitive.Party), Prim(DamlPrimitive.Int64)),
+            new DamlGenMapType(Prim(DamlPrimitive.Int64), Prim(DamlPrimitive.Party)),
+            false
+        },
+        {
+            new DamlListType(Prim(DamlPrimitive.Int64)),
+            App(DamlPrimitive.List, Prim(DamlPrimitive.Int64)),
+            false
+        },
+        {
+            new DamlContractIdType(Prim(DamlPrimitive.Text)),
+            new DamlContractIdType(Prim(DamlPrimitive.Text)),
+            true
+        },
+        {
+            new DamlTextMapType(Prim(DamlPrimitive.Int64)),
+            new DamlTextMapType(Prim(DamlPrimitive.Int64)),
+            true
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(TypedNodeEqualityPairs))]
+    public void DamlType_typed_nodes_compare_by_structure_not_by_identity(DamlType left, DamlType right, bool expectEqual)
+    {
+        left.Equals(right).Should().Be(expectEqual,
+            "the typed nodes compare their DamlType parameters structurally, so equal type trees "
+            + "built independently compare equal and differing structure anywhere in the tree "
+            + "compares unequal");
+        if (expectEqual)
+        {
+            right.GetHashCode().Should().Be(left.GetHashCode(),
+                "structurally equal trees must hash alike to stay findable in hash-based collections");
+        }
+    }
+
+    public static TheoryData<DamlTypeApp, DamlTypeApp, bool> ResidualApplicationEqualityPairs() => new()
+    {
+        { Box(Prim(DamlPrimitive.Text)), Box(Prim(DamlPrimitive.Text)), true },
+        { NumericScale(10), NumericScale(10), true },
+        { Box(Prim(DamlPrimitive.Text)), Box(Prim(DamlPrimitive.Int64)), false },
+        { NumericScale(10), NumericScale(20), false },
+        { App(DamlPrimitive.Optional, Prim(DamlPrimitive.Text)), App(DamlPrimitive.List, Prim(DamlPrimitive.Text)), false },
+    };
+
+    [Theory]
+    [MemberData(nameof(ResidualApplicationEqualityPairs))]
+    public void DamlTypeApp_residual_generic_applications_keep_element_wise_equality(DamlTypeApp left, DamlTypeApp right, bool expectEqual)
+    {
+        left.Equals(right).Should().Be(expectEqual,
+            "the hand-rolled element-wise equality on DamlTypeApp stays for the residual generic "
+            + "applications it was written for — user-defined constructors and the Numeric scale "
+            + "pun — so two independently built but identical trees compare equal");
+        if (expectEqual)
+        {
+            right.GetHashCode().Should().Be(left.GetHashCode(),
+                "structurally equal applications must hash alike to stay findable in hash-based collections");
+        }
     }
 }
 

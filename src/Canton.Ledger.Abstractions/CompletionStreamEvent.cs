@@ -1,0 +1,114 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Daml.Runtime;
+using Daml.Runtime.Outcomes;
+
+namespace Canton.Ledger.Abstractions;
+
+/// <summary>
+/// An event observed on the command completion stream
+/// (<see cref="ICantonLedgerClient.CompletionStreamAsync"/>). Discriminated union:
+/// callers <c>switch</c> on the concrete subtype, mirroring
+/// <c>ContractStreamEvent&lt;T&gt;</c> on the update stream. The verdict is modelled as
+/// the event type — <see cref="CommandAccepted"/> versus <see cref="CommandRejected"/> —
+/// so illegal states are unrepresentable: an update id is present only on an accepted
+/// command, a rejection status only on a rejected one.
+/// </summary>
+/// <remarks>
+/// <list type="bullet">
+///   <item><see cref="CommandAccepted"/> — the participant accepted a submitted command;
+///   carries the neutral <see cref="Completion"/> payload and the resulting update id.</item>
+///   <item><see cref="CommandRejected"/> — the participant rejected a submitted command;
+///   carries the neutral <see cref="Completion"/> payload and the rejection
+///   <see cref="CompletionStatus"/>.</item>
+///   <item><see cref="Checkpoint"/> — a participant-emitted offset checkpoint
+///   carrying no completion payload. Consumers persist
+///   <see cref="Checkpoint.Offset"/> to advance their resume offset during
+///   quiet periods (no completions arriving), avoiding the
+///   resume-from-stale-offset failure mode (re-processing, or
+///   <c>PARTICIPANT_PRUNED_DATA_ACCESSED</c> once the participant prunes),
+///   and to detect command timeout: the ledger has progressed past the
+///   checkpoint offset without completing the command.</item>
+///   <item><see cref="StreamError"/> — a condition that terminated the stream
+///   abnormally: a mid-stream transport fault, or a payload the client could
+///   not decode. Surfaced in-band as a terminal event rather than thrown,
+///   mirroring <c>ContractStreamEvent&lt;T&gt;.StreamError</c> on the update
+///   stream and <c>AcsSnapshotEntry&lt;T&gt;.StreamError</c> on the ACS
+///   snapshot.</item>
+/// </list>
+/// </remarks>
+public abstract record CompletionStreamEvent
+{
+    /// <summary>Sealed; new variants live alongside the existing ones.</summary>
+    private protected CompletionStreamEvent() { }
+
+    /// <summary>
+    /// The participant accepted a submitted command.
+    /// </summary>
+    /// <param name="Completion">The neutral completion payload; correlate by
+    /// <see cref="Completion.CommandId"/> and persist <see cref="Completion.Offset"/> as
+    /// the resume offset.</param>
+    /// <param name="UpdateId">The id of the update the accepted command produced.</param>
+    public sealed record CommandAccepted(Completion Completion, string UpdateId) : CompletionStreamEvent;
+
+    /// <summary>
+    /// The participant rejected a submitted command.
+    /// </summary>
+    /// <param name="Completion">The neutral completion payload; correlate by
+    /// <see cref="Completion.CommandId"/> and persist <see cref="Completion.Offset"/> as
+    /// the resume offset.</param>
+    /// <param name="Status">The rejection verdict — a non-zero <c>google.rpc.Code</c> and
+    /// its detail.</param>
+    public sealed record CommandRejected(Completion Completion, CompletionStatus Status) : CompletionStreamEvent;
+
+    /// <summary>
+    /// A participant-emitted offset checkpoint with no completion payload,
+    /// emitted on a participant-configured cadence
+    /// (<c>max_offset_checkpoint_emission_delay</c>) regardless of command
+    /// activity.
+    /// </summary>
+    /// <param name="Offset">The participant's current ledger offset — persist
+    /// it as the resume offset (exclusive) for a subsequent
+    /// <see cref="ICantonLedgerClient.CompletionStreamAsync"/> call.</param>
+    public sealed record Checkpoint(LedgerOffset Offset) : CompletionStreamEvent;
+
+    /// <summary>
+    /// The completion stream failed mid-flight. Surfaced in-band as a terminal
+    /// event rather than thrown, so a caller draining the stream with
+    /// <c>await foreach</c> decides policy — reopen from the last persisted
+    /// offset, log, or stop — with the same value-not-exception handling the
+    /// update stream uses for <c>ContractStreamEvent&lt;T&gt;.StreamError</c>.
+    /// Terminal: no further events follow.
+    /// </summary>
+    /// <param name="Status">What the transport actually said, never a translation:
+    /// <see cref="TransportStatus.Grpc"/> over gRPC, <see cref="TransportStatus.Http"/>
+    /// over REST, <see cref="TransportStatus.NoResponse"/> when the call got no answer,
+    /// and <see cref="TransportStatus.UndecodableBody"/> when the call itself succeeded
+    /// but a payload could not be decoded.</param>
+    /// <param name="Message">Status detail / message from the participant or transport.</param>
+    /// <param name="Category">The Canton error category the transport's error parser
+    /// classified the fault as, or <c>null</c> when the fault carried nothing a category
+    /// could be read from. Mirrors <c>ContractStreamEvent&lt;T&gt;.StreamError.Category</c>
+    /// so a caller classifies a completion-stream fault and an update-stream fault the
+    /// same way.</param>
+    /// <param name="ErrorId">The participant's own Canton error code — <c>STALE_STREAM_AUTHORIZATION</c>,
+    /// <c>PARTICIPANT_BACKPRESSURE</c> — and <c>null</c> when the fault carried no
+    /// structured error to read one from, a payload the client could not decode
+    /// included. It is what separates two faults <paramref name="Status"/> and
+    /// <paramref name="Category"/> cannot: every contention condition arrives as one
+    /// category, so only the code says which of them ended the stream, and therefore
+    /// whether reopening clears the condition or reproduces it. Mirrors
+    /// <c>ContractStreamEvent&lt;T&gt;.StreamError.ErrorId</c> and sits in the same
+    /// fourth slot, so a caller reads the code the same way on either stream.</param>
+    /// <param name="SourceException">The transport exception that ended the stream, or
+    /// <c>null</c> when the fault was carried in-band rather than thrown. Mirrors
+    /// <c>ContractStreamEvent&lt;T&gt;.StreamError.SourceException</c>; weighed by
+    /// reference in equality, as the upstream shape is.</param>
+    public sealed record StreamError(
+        TransportStatus Status,
+        string Message,
+        DamlErrorCategory? Category = null,
+        string? ErrorId = null,
+        Exception? SourceException = null) : CompletionStreamEvent;
+}

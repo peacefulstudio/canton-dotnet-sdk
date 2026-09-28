@@ -15,7 +15,7 @@ own consumer of the intermediate representation.
 ## Installation
 
 ```bash
-dotnet add package Daml.Codegen.Intermediate
+dotnet add package Daml.Codegen.Intermediate --prerelease
 ```
 
 ## Usage

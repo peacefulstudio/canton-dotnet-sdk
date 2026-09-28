@@ -30,6 +30,10 @@ header). A type in neither list fails the run rather than being skipped, so a
 new file type cannot enter the tree unchecked. Files with no extension are read
 as scripts: they must start with a shebang and carry the '#' header.
 
+INTERNAL_ONLY_SCAN_PATHS are walked only in a tree carrying .gitpublic, the
+internal source tree. This checker ships to the public mirror, which authors its
+own .github/scripts, so there it is not scanned.
+
 Each classified comment type must match at least one file. A type that matches
 nothing means the check has stopped running, not that it passed.
 
@@ -61,11 +65,16 @@ SCAN_PATHS=(
   scripts
   conformance
   proto
+  benchmarks
   CONTEXT.md
   Directory.Build.props
   coverage.settings.xml
   .editorconfig
   .pre-commit-config.yaml
+)
+
+INTERNAL_ONLY_SCAN_PATHS=(
+  .github/scripts
 )
 
 COMMENT_PREFIX_BY_TYPE=(
@@ -89,7 +98,9 @@ TYPES_CARRYING_NO_HEADER=(
   json
   manifest
   md
+  patch
   props
+  refitter
   sha256
   targets
   txt
@@ -110,7 +121,7 @@ while [ "$#" -gt 0 ]; do
       exit 0
       ;;
     --print-scan-paths)
-      printf '%s\n' "${SCAN_PATHS[@]}"
+      printf '%s\n' "${SCAN_PATHS[@]}" "${INTERNAL_ONLY_SCAN_PATHS[@]}"
       exit 0
       ;;
     --fix)
@@ -139,6 +150,10 @@ if [ ! -d "$root" ]; then
   exit 2
 fi
 cd "$root"
+
+if [ -f .gitpublic ]; then
+  SCAN_PATHS+=("${INTERNAL_ONLY_SCAN_PATHS[@]}")
+fi
 
 for path in "${SCAN_PATHS[@]}"; do
   if [ ! -e "$path" ]; then

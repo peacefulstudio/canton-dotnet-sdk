@@ -14,7 +14,7 @@ namespace Daml.Runtime.Tests;
 /// Pins the <see cref="System.Text.Json"/> contract for <see cref="Either{TL, TR}"/>: a
 /// <c>"$case"</c>-discriminated object that reads back as the arm that wrote it. The contract is
 /// a CLR round trip, not the Daml-LF <see cref="Data.DamlVariant"/> encoding
-/// <see cref="Either{TL, TR}.ToValue"/> uses — see ADR 0028 — so what the tests assert is that a
+/// <see cref="Either{TL, TR}.ToValue"/> uses, so what the tests assert is that a
 /// value survives the trip, on the bare options a host builds for itself as much as on
 /// <see cref="DamlJsonConverters.AddDamlConverters"/>.
 /// </summary>

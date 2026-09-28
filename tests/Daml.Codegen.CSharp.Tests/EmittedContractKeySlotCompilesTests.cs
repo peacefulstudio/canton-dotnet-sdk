@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Globalization;
+using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
 using AwesomeAssertions;
 using Microsoft.CodeAnalysis;
@@ -12,14 +13,14 @@ using static Daml.Codegen.CSharp.Tests.TestHelpers.GeneratorFactory;
 namespace Daml.Codegen.CSharp.Tests;
 
 /// <summary>
-/// The active contract's key slot is named <c>Key</c>, and it sits in a record body that
-/// nests <c>Contract</c> and <c>ContractId</c> types of its own. When the Daml key type
-/// shares a spelling with one of those, or with the <c>Id</c> / <c>Data</c> / <c>Key</c>
-/// members themselves, the slot and its decoder have to reach past the nearer name — a
-/// compile question no text-compare drift test can answer. So is a template named after
-/// its own key type, a key type named after a C# keyword, an <c>Optional</c> key whose
-/// rendered <c>Name?</c> spelling no bare-name comparison matches, and a key-less template
-/// whose own name collides with a member of the contract record its decoder stands in.
+/// The template's key witness, its by-key builders and its contract-receiver exercisers all
+/// name the key type, the template and the runtime <c>Contract</c> / <c>ContractId</c> types
+/// side by side. When the Daml key type or the template shares a spelling with one of those,
+/// or with the <c>Id</c> / <c>Data</c> / <c>Key</c> members of the runtime contract, the
+/// emitted references have to reach past the nearer name — a compile question no
+/// text-compare drift test can answer. So is a template named after its own key type, a key
+/// type named after a C# keyword, and an <c>Optional</c> key whose rendered <c>Name?</c>
+/// spelling no bare-name comparison matches.
 /// </summary>
 public class EmittedContractKeySlotCompilesTests
 {
@@ -49,7 +50,8 @@ public class EmittedContractKeySlotCompilesTests
                             Name = "Reissue",
                             Consuming = true,
                             ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
-                            ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                            ReturnType = ContractIdOf(templateName),
+                            Controllers = DamlPartyAnalysis.Static([new DamlPartyPayloadField("owner")]),
                         },
                     ],
                     Key = key,
@@ -144,32 +146,48 @@ public class EmittedContractKeySlotCompilesTests
     [InlineData("Id")]
     [InlineData("Data")]
     [InlineData("Key")]
+    [InlineData("Contract")]
+    [InlineData("ContractId")]
     public void EmittedContractKeySlot_compiles_when_a_keyless_template_is_named_after_a_contract_member(string templateName)
     {
         CompilesCleanly(
             KeylessDar(templateName),
-            $"a key-less template named '{templateName}' supplies the active contract's Data parameter type, and its decoder names the template inside a static member of the contract record");
+            $"a key-less template named '{templateName}' is the T of every ContractId<T> and IContract<ContractId<T>, T> the emitter writes, beside the runtime types of that name");
     }
 
     [Theory]
     [InlineData("Contract")]
     [InlineData("ContractId")]
-    public void EmittedContractKeySlot_refuses_a_keyless_template_named_after_a_type_it_nests(string templateName)
+    public void EmittedContractKeySlot_compiles_when_a_keyed_template_is_named_after_a_runtime_contract_type(string templateName)
     {
-        FluentActions.Invoking(() => CreateGenerator().Generate(KeylessDar(templateName)))
-            .Should().Throw<CodegenException>(
-                "the emitter nests a record of that name inside the template record, which CS0542 forbids, so generation must fail with one diagnostic instead of emitting ten cascading C# errors")
-            .WithMessage($"*{templateName}*");
+        CompilesCleanly(
+            KeyedDar(templateName, "VaultKey"),
+            $"a keyed template named '{templateName}' is also the TSelf of its IHasKey witness and by-key builders");
     }
 
-    [Theory]
-    [InlineData("Contract")]
-    [InlineData("ContractId")]
-    public void EmittedContractKeySlot_refuses_a_keyed_template_named_after_a_type_it_nests(string templateName)
+    [Fact]
+    public void EmittedContractKeySlot_keyed_runtime_contract_reaches_the_contract_receiver_exerciser()
     {
-        FluentActions.Invoking(() => CreateGenerator().Generate(KeyedDar(templateName, "VaultKey")))
-            .Should().Throw<CodegenException>(
-                "the collision is in the template record's own body, so carrying a key changes nothing about it")
-            .WithMessage($"*{templateName}*");
+        var files = CreateGenerator().Generate(KeyedDar("Vault", "VaultKey"));
+        var probe = GeneratedFile.Text(
+            "KeyedContractProbe.cs",
+            """
+            namespace Test.Module
+            {
+                internal static class KeyedContractProbe
+                {
+                    internal static System.Threading.Tasks.Task Use(
+                        global::Daml.Runtime.Contracts.Contract<Vault, VaultKey> contract,
+                        global::Daml.Ledger.Abstractions.ILedgerClient client) =>
+                        contract.TryReissueAsync(client);
+                }
+            }
+            """);
+
+        var errors = CompileEmittedFiles([.. files, probe]).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+
+        errors.Should().BeEmpty(
+            "a keyed contract read off the ledger is a Contract<T, TKey>, and the exerciser's receiver must accept it as it accepts Contract<T>, but got: {0}",
+            string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 }

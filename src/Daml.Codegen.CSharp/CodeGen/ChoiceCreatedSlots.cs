@@ -132,6 +132,23 @@ internal static class ChoiceCreatedSlots
     {
         switch (type)
         {
+            case DamlContractIdType contractId:
+            {
+                var (templateName, csharpName, interfaceMatcher) =
+                    ResolveContractIdTarget(context, resolver, mapper, contractId.Payload);
+                slots.Add(new ChoiceCreatedSlot(
+                    FieldName: templateName,
+                    CSharpTemplateType: csharpName,
+                    Cardinality: parentCardinality,
+                    Interface: interfaceMatcher));
+                return;
+            }
+            case DamlOptionalType optional:
+                Walk(context, resolver, mapper, optional.Value, slots, CreatedCardinality.Optional);
+                return;
+            case DamlListType list:
+                Walk(context, resolver, mapper, list.Element, slots, CreatedCardinality.List);
+                return;
             case DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.ContractId }, Arguments: [var arg] }:
             {
                 var (templateName, csharpName, interfaceMatcher) = ResolveContractIdTarget(context, resolver, mapper, arg);

@@ -8,7 +8,7 @@ namespace Daml.Codegen.CSharp.CodeGen;
 internal sealed partial class ChoiceEmitter
 {
     /// <summary>
-    /// Emits the readAs-capable <c>&lt;Choice&gt;Async</c> overload on
+    /// Emits the readAs-capable <c>Try&lt;Choice&gt;Async</c> overload on
     /// <c>ContractId&lt;TemplateName&gt;</c> that takes an explicit
     /// <c>SubmitterInfo</c> instead of named <c>Party</c> parameters.
     /// Companion to the ergonomic named-<c>Party</c> overload for choices whose
@@ -47,7 +47,7 @@ internal sealed partial class ChoiceEmitter
             WriteSubmissionParameterDocs(indent);
         }
 
-        indent.AppendLine($"public static async Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> {choiceName}Async(");
+        indent.AppendLine($"public static async Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> Try{choiceName}Async(");
         indent.Indent();
         indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
         indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
@@ -71,7 +71,7 @@ internal sealed partial class ChoiceEmitter
 
     /// <summary>
     /// Emits the readAs-capable sibling of <see cref="WriteSingleContractChoiceAsyncExerciser"/>:
-    /// the same <c>TemplateName.Contract</c> receiver, but with an explicit
+    /// the same <c>IContract&lt;ContractId&lt;TemplateName&gt;, TemplateName&gt;</c> receiver, but with an explicit
     /// <c>SubmitterInfo</c> replacing the payload-derived parties. Without it a caller
     /// holding a fetched contract has to unwrap <c>contract.Id</c> by hand the moment the
     /// submission needs <c>readAs</c> or a multi-party <c>actAs</c>, because the
@@ -119,12 +119,11 @@ internal sealed partial class ChoiceEmitter
     }
 
     /// <summary>
-    /// Emits the sibling <c>&lt;Choice&gt;Async</c> overload that receives the
-    /// generated nested <c>TemplateName.Contract</c> — the type
-    /// <c>TemplateName.Contract.FromCreatedEvent</c> returns — instead of a bare
-    /// <c>ContractId&lt;TemplateName&gt;</c>. Targeting the nested record (rather
-    /// than the runtime <c>Contract&lt;T&gt;</c> base) keeps the overload reachable
-    /// from a <c>FromCreatedEvent</c> result without an intermediate allocation.
+    /// Emits the sibling <c>Try&lt;Choice&gt;Async</c> overload that receives a fetched
+    /// contract instead of a bare <c>ContractId&lt;TemplateName&gt;</c>. The receiver is
+    /// <c>IContract&lt;ContractId&lt;TemplateName&gt;, TemplateName&gt;</c>, which both the
+    /// key-less <c>Contract&lt;T&gt;</c> and the keyed <c>Contract&lt;T, TKey&gt;</c> implement,
+    /// so one overload serves every shape a stream, snapshot or <c>FromCreatedEvent</c> returns.
     /// Because the receiver carries the payload, the wrapper reads every
     /// controller / observer party off <c>contract.Data</c> and delegates to the
     /// <c>ContractId&lt;T&gt;</c> overload — the caller passes zero parties. Emitted
@@ -196,9 +195,9 @@ internal sealed partial class ChoiceEmitter
             WriteSubmissionParameterDocs(indent);
         }
 
-        indent.AppendLine($"public static Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> {choiceName}Async(");
+        indent.AppendLine($"public static Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> Try{choiceName}Async(");
         indent.Indent();
-        indent.AppendLine($"this {templateClassName}.Contract contract,");
+        indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.IContract)}<{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}>, {templateClassName}> contract,");
         indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         if (hasArg)
         {
@@ -221,7 +220,7 @@ internal sealed partial class ChoiceEmitter
         }
 
         indent.AppendLine();
-        indent.AppendLine($"return contract.Id.{choiceName}Async(");
+        indent.AppendLine($"return contract.Id.Try{choiceName}Async(");
         indent.Indent();
         indent.AppendLine("client,");
         if (hasArg)

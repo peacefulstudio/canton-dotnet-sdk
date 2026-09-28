@@ -339,7 +339,7 @@ public static class StreamerSnapshot
                     throw LedgerOperationException.FromStreamFault(
                         $"The active-contract-set snapshot for {typeof(T).Name} faulted after {rows.Count} "
                         + $"contract(s): {error.Message}. Use SubscribeActiveAsync for value-shaped fault handling.",
-                        error.StatusCode,
+                        error.Status,
                         error.Category,
                         error.SourceException,
                         error.ErrorId);

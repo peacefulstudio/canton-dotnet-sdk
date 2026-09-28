@@ -11,7 +11,7 @@ using static Daml.Codegen.CSharp.Tests.TestHelpers.GeneratorFactory;
 namespace Daml.Codegen.CSharp.Tests;
 
 /// <summary>
-/// Codegen-shape tests for typed CreateAsync / &lt;Choice&gt;Async with one
+/// Codegen-shape tests for typed TryCreateAsync / Try&lt;Choice&gt;Async with one
 /// parameter per signatory / controller. The static analyzer in the
 /// <c>DarReader</c> namespace walks the Daml-LF expression tree; in unit
 /// tests we pre-build the analysis directly on the model classes (bypassing
@@ -90,10 +90,10 @@ public class NamedSubmitterTests
         };
     }
 
-    #region CreateAsync — payload-derived signatories
+    #region TryCreateAsync — payload-derived signatories
 
     [Fact]
-    public void CreateAsync_with_payload_derived_signatories_omits_actAs_parameter()
+    public void TryCreateAsync_with_payload_derived_signatories_omits_actAs_parameter()
     {
         var module = MakeAgreementModule(DamlPartyAnalysis.Static(
         [
@@ -105,9 +105,9 @@ public class NamedSubmitterTests
         var files = CreateGenerator().Generate(CreateDar(module));
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
 
-        // Public surface: extension class, payload-only CreateAsync.
+        // Public surface: extension class, payload-only TryCreateAsync.
         content.Should().Contain("public static class AgreementSubmissionExtensions");
-        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Agreement>>> CreateAsync(");
+        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Agreement>>> TryCreateAsync(");
         content.Should().Contain("this ILedgerWriter client,");
         content.Should().Contain("Agreement payload,");
         // No explicit actAs parameter — the payload is sufficient.
@@ -115,7 +115,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void CreateAsync_with_payload_derived_signatories_unions_payload_party_fields_into_submitter()
+    public void TryCreateAsync_with_payload_derived_signatories_unions_payload_party_fields_into_submitter()
     {
         var module = MakeAgreementModule(DamlPartyAnalysis.Static(
         [
@@ -139,7 +139,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void CreateAsync_with_single_payload_derived_signatory_passes_party_directly()
+    public void TryCreateAsync_with_single_payload_derived_signatory_passes_party_directly()
     {
         // Single-signatory templates don't allocate a HashSet — the wrapper
         // passes the Party value, relying on the implicit conversion to
@@ -158,7 +158,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void CreateAsync_with_dynamic_signatories_keeps_explicit_submitter_parameter()
+    public void TryCreateAsync_with_dynamic_signatories_keeps_explicit_submitter_parameter()
     {
         // Dynamic = the analyzer couldn't resolve the signatory expression to
         // payload-field references. Codegen falls back to an explicit
@@ -169,14 +169,14 @@ public class NamedSubmitterTests
         var files = CreateGenerator().Generate(CreateDar(module));
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Agreement>>> CreateAsync(");
+        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Agreement>>> TryCreateAsync(");
         content.Should().Contain("SubmitterInfo submitter,");
         // No payload-derived `var submitter = ...` line.
         content.Should().NotContain("payload.Platform,");
     }
 
     [Fact]
-    public void CreateAsync_with_unresolvable_payload_field_falls_back_to_dynamic()
+    public void TryCreateAsync_with_unresolvable_payload_field_falls_back_to_dynamic()
     {
         // Analyzer claims `payload.unknownField` but no such field exists.
         // Codegen must demote to Dynamic — emitting `payload.UnknownField`
@@ -195,7 +195,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void CreateAsync_emits_extension_method_taking_ILedgerWriter_as_this()
+    public void TryCreateAsync_emits_extension_method_taking_ILedgerWriter_as_this()
     {
         var module = MakeAgreementModule(DamlPartyAnalysis.Static(
         [
@@ -206,16 +206,16 @@ public class NamedSubmitterTests
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
 
         // The wrapper is an extension method on ILedgerWriter — the call site
-        // reads `client.CreateAsync(payload)`.
+        // reads `client.TryCreateAsync(payload)`.
         content.Should().Contain("this ILedgerWriter client");
     }
 
     #endregion
 
-    #region <Choice>Async — payload-derived controllers
+    #region Try<Choice>Async — payload-derived controllers
 
     [Fact]
-    public void ChoiceAsync_with_single_payload_derived_controller_emits_one_party_parameter()
+    public void TryChoiceAsync_with_single_payload_derived_controller_emits_one_party_parameter()
     {
         // The typed-controller <Choice>Async surface is emitted on the
         // sibling <TemplateName>Extensions class (CSharpCodeGenerator.ChoiceResults.cs)
@@ -279,7 +279,7 @@ public class NamedSubmitterTests
         // ergonomic wrapper carries one named Party parameter — no string actAs.
         // A readAs-capable SubmitterInfo overload is emitted alongside it, so a
         // submitter that must read contracts it does not act as stays expressible.
-        offer.Should().Contain("public static async Task<ExerciseOutcome<AcceptResult>> AcceptAsync(");
+        offer.Should().Contain("public static async Task<ExerciseOutcome<AcceptResult>> TryAcceptAsync(");
         offer.Should().Contain("Party counterparty,");
         offer.Should().NotContain("string actAs,");
         offer.Should().Contain("SubmitterInfo submitter,");
@@ -290,7 +290,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void ChoiceAsync_with_multiple_payload_derived_controllers_emits_one_party_per_controller()
+    public void TryChoiceAsync_with_multiple_payload_derived_controllers_emits_one_party_per_controller()
     {
         // A choice declared `controller initiator, counterparty` should accept
         // both parties as separate Party arguments. The typed-result
@@ -361,7 +361,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void ChoiceAsync_with_dynamic_controllers_keeps_explicit_submitter_parameter()
+    public void TryChoiceAsync_with_dynamic_controllers_keeps_explicit_submitter_parameter()
     {
         // When the analyzer can't resolve controllers (e.g. they reference the
         // choice argument), codegen falls back to an explicit SubmitterInfo
@@ -408,7 +408,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void ChoiceAsync_for_archive_choice_is_emitted()
+    public void TryChoiceAsync_for_archive_choice_is_emitted()
     {
         var module = new DamlModule
         {
@@ -451,18 +451,18 @@ public class NamedSubmitterTests
         var content = files.First(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal)).Content;
 
         content.Should().Contain("public static class AssetSubmissionExtensions");
-        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Asset>>> CreateAsync(");
+        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Asset>>> TryCreateAsync(");
         content.Should().Contain("public static class AssetNonContractExtensions");
-        content.Should().Contain("ArchiveAsync(");
+        content.Should().Contain("TryArchiveAsync(");
         content.Should().Contain("DamlRecord.Create()");
     }
 
     #endregion
 
-    #region <Choice>Async — Contract&lt;T&gt; sibling overload
+    #region Try<Choice>Async — Contract&lt;T&gt; sibling overload
 
     [Fact]
-    public void ChoiceAsync_with_static_controllers_emits_contract_sibling_overload()
+    public void TryChoiceAsync_with_static_controllers_emits_contract_sibling_overload()
     {
         var module = MakeAgreementWithObservers(
             signatories: DamlPartyAnalysis.Static([new DamlPartyPayloadField("platform")]),
@@ -474,8 +474,8 @@ public class NamedSubmitterTests
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
 
         content.Should().Contain("this ContractId<Agreement> contractId,");
-        content.Should().Contain("this Agreement.Contract contract,");
-        content.Should().Contain("return contract.Id.RenewAsync(");
+        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        content.Should().Contain("return contract.Id.TryRenewAsync(");
         content.Should().Contain("ArgumentNullException.ThrowIfNull(client);");
         content.Should().Contain("contract.Data.Platform,");
         content.Should().Contain("contract.Data.Holder,");
@@ -486,7 +486,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void ChoiceAsync_contract_sibling_passes_command_id_through()
+    public void TryChoiceAsync_contract_sibling_passes_command_id_through()
     {
         var module = MakeAgreementWithObservers(
             signatories: DamlPartyAnalysis.Static([new DamlPartyPayloadField("platform")]),
@@ -497,9 +497,9 @@ public class NamedSubmitterTests
         var files = CreateGenerator().Generate(CreateDar(module));
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("this Agreement.Contract contract,");
-        var idxContractParam = content.IndexOf("this Agreement.Contract contract,", StringComparison.Ordinal);
-        var idxDelegate = content.IndexOf("return contract.Id.RenewAsync(", StringComparison.Ordinal);
+        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        var idxContractParam = content.IndexOf("this IContract<ContractId<Agreement>, Agreement> contract,", StringComparison.Ordinal);
+        var idxDelegate = content.IndexOf("return contract.Id.TryRenewAsync(", StringComparison.Ordinal);
         idxDelegate.Should().BeGreaterThan(0);
         content[idxContractParam..idxDelegate].Should().Contain("CommandId? commandId = null,");
         var delegateBody = content[idxDelegate..];
@@ -511,7 +511,7 @@ public class NamedSubmitterTests
     }
 
     [Fact]
-    public void ChoiceAsync_with_dynamic_controllers_does_not_emit_contract_sibling_overload()
+    public void TryChoiceAsync_with_dynamic_controllers_does_not_emit_contract_sibling_overload()
     {
         var module = MakeAgreementWithObservers(
             signatories: DamlPartyAnalysis.Static([new DamlPartyPayloadField("platform")]),
@@ -523,11 +523,11 @@ public class NamedSubmitterTests
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
 
         content.Should().Contain("this ContractId<Agreement> contractId,");
-        content.Should().NotContain("this Agreement.Contract contract,");
+        content.Should().NotContain("this IContract<ContractId<Agreement>, Agreement> contract,");
     }
 
     [Fact]
-    public void ChoiceAsync_contract_sibling_passes_choice_argument_through()
+    public void TryChoiceAsync_contract_sibling_passes_choice_argument_through()
     {
         var module = new DamlModule
         {
@@ -579,10 +579,10 @@ public class NamedSubmitterTests
         var files = CreateGenerator().Generate(CreateDar(module));
         var content = files.First(f => f.RelativePath.EndsWith("Offer.cs", StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("this Offer.Contract contract,");
+        content.Should().Contain("this IContract<ContractId<Offer>, Offer> contract,");
         content.Should().Contain("Offer.Accept argument,");
         content.Should().Contain("ArgumentNullException.ThrowIfNull(argument);");
-        var idxArg = content.IndexOf("return contract.Id.AcceptAsync(", StringComparison.Ordinal);
+        var idxArg = content.IndexOf("return contract.Id.TryAcceptAsync(", StringComparison.Ordinal);
         idxArg.Should().BeGreaterThan(0);
         var delegateBody = content[idxArg..];
         delegateBody.Should().Contain("argument,");
@@ -827,11 +827,11 @@ public class NamedSubmitterTests
         content.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
         var contractIdOverloads = content
-            .Split("RenewAsync(\n        this ContractId<Agreement> contractId,")
+            .Split("TryRenewAsync(\n        this ContractId<Agreement> contractId,")
             .Length - 1;
         contractIdOverloads.Should().Be(2);
-        content.Should().Contain("public static Task<ExerciseOutcome<RenewResult>> RenewAsync(");
-        content.Should().Contain("public static async Task<ExerciseOutcome<RenewResult>> RenewAsync(");
+        content.Should().Contain("public static Task<ExerciseOutcome<RenewResult>> TryRenewAsync(");
+        content.Should().Contain("public static async Task<ExerciseOutcome<RenewResult>> TryRenewAsync(");
     }
 
     [Fact]

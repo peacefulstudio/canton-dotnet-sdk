@@ -115,8 +115,6 @@ public class EmittedNamespacePrefixWithDependenciesCompilesTests
         var money = files.Single(f => f.RelativePath.EndsWith("/Money.cs", StringComparison.Ordinal));
         money.RelativePath.Should().Be("Dep/Types/Money.cs");
         money.Content.Should().Contain("namespace Dep.Types;");
-        files.Select(f => f.RelativePath).Should().Contain("Dep/Types/ContractIdentifiers.cs")
-            .And.Contain("Consumer/Bindings/Acme/Orders/ContractIdentifiers.cs");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(

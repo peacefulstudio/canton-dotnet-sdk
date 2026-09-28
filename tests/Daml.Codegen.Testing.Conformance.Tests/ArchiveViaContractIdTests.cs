@@ -41,7 +41,7 @@ public class ArchiveViaContractIdTests
                     ContractId: contractId,
                     TemplateId: templateId,
                     InterfaceId: interfaceId,
-                    ChoiceName: "Archive",
+                    ChoiceName: new ChoiceName("Archive"),
                     ChoiceArgument: DamlRecord.Create(),
                     ExerciseResult: DamlUnit.Instance,
                     Consuming: true,
@@ -81,12 +81,12 @@ public class ArchiveViaContractIdTests
     }
 
     [Fact]
-    public async Task ArchiveAsync_submits_the_empty_record_argument_for_the_target_contract_id()
+    public async Task TryArchiveAsync_submits_the_empty_record_argument_for_the_target_contract_id()
     {
         using var client = new FakeLedgerClient(
             _ => new ExerciseOutcome<TransactionResult>.One(ArchivingTransaction("marker-cid", Marker.TemplateId)));
 
-        await MarkerCid.ArchiveAsync(client, new Party("alice"),
+        await MarkerCid.TryArchiveAsync(client, new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var command = client.LastSubmission!.Commands.Should().ContainSingle().Which
@@ -97,16 +97,16 @@ public class ArchiveViaContractIdTests
     }
 
     [Fact]
-    public async Task ArchiveAsync_on_an_interface_contract_id_targets_the_interface_id()
+    public async Task TryArchiveAsync_on_an_interface_contract_id_targets_the_interface_id()
     {
         using var client = new FakeLedgerClient(
             _ => new ExerciseOutcome<TransactionResult>.One(
                 ArchivingTransaction("holding-cid", ConcreteHoldingTemplateId, IHolding.InterfaceId)));
 
-        var outcome = await HoldingCid.ArchiveAsync(client, new Party("alice"),
+        var outcome = await HoldingCid.TryArchiveAsync(client, new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<Unit>.One>();
+        outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.One>();
         var command = client.LastSubmission!.Commands.Should().ContainSingle().Which
             .Should().BeOfType<ExerciseCommand>().Subject;
         command.TemplateId.Should().Be(IHolding.InterfaceId);

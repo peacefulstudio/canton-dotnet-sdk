@@ -134,7 +134,7 @@ public class ChoiceEmitterCrossPackageChoiceTests
         var output = EmitInterfaceExtensions(iface, "ITransferable", new StubResolver("Other.Pkg.TransferRequest"));
 
         output.Should().Contain("public static class ITransferableExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> TransferAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(");
         output.Should().Contain("Other.Pkg.TransferRequest argument,");
         output.Should().Contain("argument.ToRecord()");
     }
@@ -161,7 +161,7 @@ public class ChoiceEmitterCrossPackageChoiceTests
         var output = EmitInterfaceExtensions(iface, "IQuotable", new StubResolver());
 
         output.Should().Contain("public static class IQuotableExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> QuoteAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryQuoteAsync(");
         output.Should().Contain("string argument,");
         output.Should().NotContain("QuoteArg argument,");
     }

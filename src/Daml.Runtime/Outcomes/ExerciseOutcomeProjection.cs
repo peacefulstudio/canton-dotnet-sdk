@@ -12,7 +12,7 @@ namespace Daml.Runtime.Outcomes;
 /// <c>ILedgerWriter.TrySubmitAndWaitForTransactionAsync</c>) onto a typed result outcome,
 /// running a caller-supplied projector over the committed transaction while propagating every
 /// non-committed outcome faithfully. Centralises the outcome-mapping switch that codegen-emitted
-/// <c>&lt;Choice&gt;Async</c> exercisers would otherwise each inline, so the exhaustive handling of
+/// <c>Try&lt;Choice&gt;Async</c> exercisers would otherwise each inline, so the exhaustive handling of
 /// every <see cref="ExerciseOutcome{T}"/> variant lives — and is unit-tested — in one place.
 /// </summary>
 public static class ExerciseOutcomeProjection
@@ -53,7 +53,7 @@ public static class ExerciseOutcomeProjection
             ExerciseOutcome<TransactionResult>.None => new ExerciseOutcome<TProjected>.None(),
             ExerciseOutcome<TransactionResult>.Many many => new ExerciseOutcome<TProjected>.Many(many.ContractIds),
             ExerciseOutcome<TransactionResult>.DamlError e => new ExerciseOutcome<TProjected>.DamlError(e.Category, e.ErrorId, e.Message, e.Metadata),
-            ExerciseOutcome<TransactionResult>.InfraError e => new ExerciseOutcome<TProjected>.InfraError(e.StatusCode, e.Message, e.Category, e.SourceException),
+            ExerciseOutcome<TransactionResult>.InfraError e => new ExerciseOutcome<TProjected>.InfraError(e.Status, e.Message, e.Category, e.SourceException),
             ExerciseOutcome<TransactionResult>.CommittedUndecodable e => new ExerciseOutcome<TProjected>.CommittedUndecodable(e.UpdateId, e.Message, e.SourceException),
             _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name} from TrySubmitAndWaitForTransactionAsync."),
         };

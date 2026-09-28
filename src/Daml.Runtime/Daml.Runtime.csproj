@@ -11,4 +11,10 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Daml.Runtime.Tests" />
+    <InternalsVisibleTo Include="Daml.Codegen.CSharp" />
+    <InternalsVisibleTo Include="Daml.Codegen.CSharp.Tests" />
+  </ItemGroup>
+
 </Project>

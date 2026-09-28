@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Daml.Runtime.Commands;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Serialization;
 using IouContract = Iou.Iou;
@@ -53,7 +54,7 @@ Console.WriteLine($"   Template: {createCmd.TemplateId.FullyQualifiedName}");
 Console.WriteLine($"   Type: {createCmd.CommandType}\n");
 
 Console.WriteLine("5. Building an ExerciseCommand (Transfer):");
-var contractId = new IouContract.ContractId("00abc123");
+var contractId = new ContractId<IouContract>("00abc123");
 var exerciseCmd = ExerciseCommand.For(
     contractId,
     IouContract.ChoiceTransfer.Name,
@@ -79,11 +80,11 @@ Console.WriteLine($"   Owner: {reconstructed.Owner}");
 Console.WriteLine($"   Match: {iou == reconstructed}\n");
 
 Console.WriteLine("8. PQS-style fully qualified template identifier:");
-Console.WriteLine($"   {Iou.ContractIdentifiers.Iou}\n");
+Console.WriteLine($"   {TemplateExtensions.GetTemplateId<IouContract>()}\n");
 
 Console.WriteLine("Done!");
 Console.WriteLine();
-Console.WriteLine("The code under Generated/ is unmodified `daml-codegen-csharp` output");
+Console.WriteLine("The code under Generated/ is unmodified `canton-dotnet-sdk` output");
 Console.WriteLine("for the Daml model in daml/Iou.daml. Against a live ledger, the generated");
-Console.WriteLine("IouSubmissionExtensions.CreateAsync and IouExtensions.TransferAsync");
+Console.WriteLine("IouSubmissionExtensions.TryCreateAsync and IouExtensions.TryTransferAsync");
 Console.WriteLine("extension methods submit these commands through an ILedgerClient.");

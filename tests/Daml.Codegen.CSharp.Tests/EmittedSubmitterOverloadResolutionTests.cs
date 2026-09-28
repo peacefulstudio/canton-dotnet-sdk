@@ -16,7 +16,7 @@ namespace Daml.Codegen.CSharp.Tests;
 /// Compiles the emitted surface together with hand-written call sites that pass a
 /// multi-party <c>SubmitterInfo</c> to every generated <c>&lt;Choice&gt;Async</c>
 /// flavour — the create-bearing <c>ContractId&lt;T&gt;</c> exerciser, its
-/// <c>T.Contract</c> sibling, the value-returning exerciser, and the interface
+/// <c>IContract&lt;ContractId&lt;T&gt;, T&gt;</c> sibling, the value-returning exerciser, and the interface
 /// exerciser. A missing overload fails the compilation with CS1503/CS1501, and an
 /// overload that collides with the ergonomic named-<c>Party</c> shape fails it with
 /// CS0121 — neither of which a string-shape assertion or a declaration-only compile
@@ -141,16 +141,16 @@ public class EmittedSubmitterOverloadResolutionTests
                     readAs: new HashSet<Party> { new Party("bob") });
 
                 internal static Task SubmitterPositional_CreateBearingByContractId(ILedgerWriter client, ContractId<Offer> contractId) =>
-                    contractId.AcceptAsync(client, ReadAsBearing());
+                    contractId.TryAcceptAsync(client, ReadAsBearing());
 
-                internal static Task SubmitterPositional_CreateBearingByContract(ILedgerWriter client, Offer.Contract contract) =>
-                    contract.AcceptAsync(client, ReadAsBearing());
+                internal static Task SubmitterPositional_CreateBearingByContract(ILedgerWriter client, Contract<Offer> contract) =>
+                    contract.TryAcceptAsync(client, ReadAsBearing());
 
                 internal static Task SubmitterPositional_ValueReturning(ILedgerWriter client, ContractId<Offer> contractId) =>
-                    contractId.DescribeAsync(client, ReadAsBearing());
+                    contractId.TryDescribeAsync(client, ReadAsBearing());
 
                 internal static Task SubmitterPositional_InterfaceChoice(ILedgerWriter client, ContractId<ICustody> contractId) =>
-                    contractId.TransferAsync(client, ReadAsBearing());
+                    contractId.TryTransferAsync(client, ReadAsBearing());
             }
             """);
 
@@ -165,22 +165,22 @@ public class EmittedSubmitterOverloadResolutionTests
             internal static class NamedPartyCallSites
             {
                 internal static Task PartyPositional_CreateBearingByContractId(ILedgerWriter client, ContractId<Offer> contractId) =>
-                    contractId.AcceptAsync(client, new Party("alice"));
+                    contractId.TryAcceptAsync(client, new Party("alice"));
 
-                internal static Task PartyPositional_CreateBearingByContract(ILedgerWriter client, Offer.Contract contract) =>
-                    contract.AcceptAsync(client);
+                internal static Task PartyPositional_CreateBearingByContract(ILedgerWriter client, Contract<Offer> contract) =>
+                    contract.TryAcceptAsync(client);
 
                 internal static Task PartyPositional_ValueReturning(ILedgerWriter client, ContractId<Offer> contractId) =>
-                    contractId.DescribeAsync(client, new Party("alice"));
+                    contractId.TryDescribeAsync(client, new Party("alice"));
 
                 internal static Task PartyPositional_InterfaceChoice(ILedgerWriter client, ContractId<ICustody> contractId) =>
-                    contractId.TransferAsync(client, new Party("alice"));
+                    contractId.TryTransferAsync(client, new Party("alice"));
 
                 internal static Task PartyPositional_ObserverBearing_AllPartiesNamed(ILedgerWriter client, ContractId<Offer> contractId) =>
-                    contractId.RenewAsync(client, new Party("alice"), new Party("bob"));
+                    contractId.TryRenewAsync(client, new Party("alice"), new Party("bob"));
 
                 internal static Task PartyPositional_ObserverBearing_ControllerOnly(ILedgerWriter client, ContractId<Offer> contractId) =>
-                    contractId.RenewAsync(client, new Party("alice"));
+                    contractId.TryRenewAsync(client, new Party("alice"));
             }
             """);
 

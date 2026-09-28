@@ -54,11 +54,7 @@ public static class TransactionTreeExtensions
     /// Exercise nodes do not. <see cref="ExercisedEvent"/> has no slot for
     /// <see cref="TreeEvent.Exercised.EventId"/> or <see cref="TreeEvent.Exercised.ChildEvents"/>;
     /// a caller that needs either walks
-    /// <see cref="TransactionTree.RootEvents"/> directly instead. Its
-    /// <see cref="ExercisedEvent.CaughtExceptions"/> is always empty here and walking the
-    /// tree does not recover it, because <see cref="TreeEvent.Exercised"/> carries no such
-    /// data at all — that field is populated only by a transport reading a ledger-effects
-    /// transaction.
+    /// <see cref="TransactionTree.RootEvents"/> directly instead.
     /// </para>
     /// <para>
     /// Hierarchy is flattened either way: the parent/child structure of the tree is not

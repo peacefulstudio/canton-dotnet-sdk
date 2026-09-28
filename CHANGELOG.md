@@ -37,6 +37,248 @@ because they are versioned in lockstep:
 
 ### Security
 
+## [0.6.0-preview.1] — 2026-09-28
+
+The first release of the combined Canton .NET SDK. Three changes dominate it.
+
+  - One SDK, one version. The `Canton.Ledger.*` client packages and `Daml.Runtime.Grpc` now ship from this repository alongside the `Daml.*` packages, and all 16 packages share one version and one release, starting here. The repository is renamed `canton-dotnet-sdk`; package ids are unchanged.
+  - Generated code is reshaped. A template has one contract-id type, `ContractId<T>`; every generated method that returns an `ExerciseOutcome<T>` is named `Try…Async`; Daml `()` is `DamlUnit` everywhere; and the generated `ContractIdentifiers` class is gone.
+  - Failures carry a typed `TransportStatus` instead of a bare `int StatusCode`, so a gRPC code, an HTTP status and "no response at all" can no longer be confused.
+
+This release breaks source compatibility for most consumers. Upgrade every package reference to `0.6.0-preview.1` together, regenerate your bindings with this release's codegen, then work through the migration section below, grouped by where the break lands. `Google.Protobuf` is pinned back to `3.35.1`; read the packaging notes before letting it float.
+
+### Changed — BREAKING
+
+#### Generated code
+
+Regenerate your bindings. Generated code from `0.5.0-preview.3` does not compile against this release's `Daml.Runtime`.
+
+Generated templates no longer nest a `{Template}.ContractId` or a `{Template}.Contract` record.
+
+  - Every contract id is the runtime `ContractId<T>`, which is now `sealed`. A nested id never compared equal to the `ContractId<T>` holding the same string, so "is this the contract I just created?" could silently answer `false`.
+  - **Replace `new Iou.ContractId(s)` with `new ContractId<Iou>(s)`.**
+  - **Replace `Iou.Contract.FromCreatedEvent(ev)` with `Contract<Iou>.FromCreatedEvent(ev, Iou.FromRecord)`**, or `Contract<Iou, IouKey>.FromCreatedEvent(ev, Iou.FromRecord)` for a keyed template.
+  - `IExercises<T>` and its `ExerciseArchive()` are removed. **Call the generated `contractId.ArchiveCommand()` instead.**
+  - Contract-receiver exercisers take `IContract<ContractId<T>, T>`, so they accept both `Contract<T>` and `Contract<T, TKey>`.
+  - A type deriving from `ContractId<T>` no longer compiles.
+  - Templates named `Contract` or `ContractId` now generate instead of being refused.
+
+Every generated method that returns `ExerciseOutcome<T>` is named `Try…Async`.
+
+  - `CreateAsync` becomes `TryCreateAsync`, `{Choice}Async` becomes `Try{Choice}Async` on contract ids, `Contract<T>` and interface contract ids, and `ArchiveAsync` becomes `TryArchiveAsync`.
+  - The prefix is added unconditionally, so a choice named `TryRedeem` generates `TryTryRedeemAsync`.
+  - **Rename the call.** For the throwing style, chain `OneOrThrowAsync` from `Canton.Ledger.Abstractions`: `await iouId.TryTransferAsync(client, argument, owner).OneOrThrowAsync("Transfer")`.
+
+Daml `()` is `DamlUnit` everywhere, and `Daml.Runtime.Stdlib.Unit` is removed.
+
+  - A unit-returning choice's exerciser returns `ExerciseOutcome<DamlUnit>`.
+  - `DamlUnit` keeps `Unit`'s JSON shape: it writes `{}` and reads `{}` back.
+  - **Replace `ExerciseOutcome<Unit>` with `ExerciseOutcome<DamlUnit>` and `Unit.Value` with `DamlUnit.Instance`.**
+
+The generated `ContractIdentifiers` class and the `--contract-identifiers` flag are removed.
+
+  - The flag defaulted to on, so every project generated through `dpm codegen-cs` loses the class. A script that still passes the flag fails with an unrecognized-option error.
+  - **Replace `ContractIdentifiers.Iou` with `TemplateExtensions.GetTemplateId<Iou>()`** (`Daml.Runtime.Contracts`), which returns the same `{packageName}:Module:Template` string.
+  - **Delete `--contract-identifiers` from your codegen invocations.**
+
+Generated Daml variants round-trip through `System.Text.Json`.
+
+  - A variant held as its abstract base type used to write only its tag and could not be read back. Each arm now writes as its own object with a leading `"$case"` discriminator, e.g. `{"$case":"Pending","Tag":"Pending"}`, and reads back as that arm without `AddDamlConverters()`.
+  - This is a .NET round-trip shape, not the Daml-LF JSON encoding; ledger and PQS payloads still decode through `DamlLfJsonReader`.
+  - Nothing written before could be read back, so there is no stored JSON to migrate.
+
+#### Daml.Runtime
+
+`Party.Id` and `SynchronizerId.Id` are renamed to `.Value`.
+
+  - This matches `CommandId`, `WorkflowId`, `ChoiceName` and `ContractId<T>`. The JSON shape is unchanged.
+  - **Replace `party.Id` with `party.Value` and `synchronizerId.Id` with `synchronizerId.Value`.**
+
+Event-record choice names are `ChoiceName`, not `string`.
+
+  - The change covers `ExercisedEvent.ChoiceName`, `TreeEvent.Exercised.ChoiceName`, `ContractStreamEvent.Exercised.ChoiceName` and `InterfaceStreamEvent.Exercised.ChoiceName`. They still serialize as a bare JSON string.
+  - **Compare against `new ChoiceName(...)`, or read `.Value` where you need the string.** A comparison against a bare string literal no longer compiles, or fails at runtime under a loosely typed assertion library.
+
+`ExercisedEvent.CaughtExceptions` and `CaughtException` are removed.
+
+  - No transport ever populated them, so no action is needed beyond deleting the reference.
+
+The reflection-based Daml-LF JSON reader is removed.
+
+  - Every entry point marked `DAMLRT0001` is gone: the `Type`-taking `ReadRecord` and `ReadValue` overloads, `ReadValue<T>`, and the `Type`-taking `DamlLfJsonDecoders.ReadRecord`, `ReadVariant` and `ReadEnum`.
+  - **Decode a record with `DamlLfJsonReader.ReadRecord<T>`, a variant with `DamlLfJsonReader.ReadVariant<T>`, an enum with its generated `{Enum}Extensions.__ReadDamlLfJson`,** and any other value with the composable readers on `DamlLfJsonDecoders` under `DamlLfJsonDecodeContext.Root(…)`.
+
+`DamlJsonDeserializationLimits` is a sealed record class, not a record struct.
+
+  - `new DamlJsonDeserializationLimits()` used to zero every limit and make the next decode throw. `new()` and `null` now both mean the hardened defaults, which `DamlJsonDeserializationLimits.Default` also names.
+  - Every overload that takes limits takes `DamlJsonDeserializationLimits?`.
+  - **Drop a bare `null` second argument to `DamlJsonSerializer.Deserialize` or `DeserializeRecord`.** It is now ambiguous (`CS0121`); omitting it keeps the same behavior.
+
+`RuntimeNamespaces` is now `internal`.
+
+  - It held the namespace strings the C# emitter uses and had no intended public use. Inline any string you referenced.
+
+#### Daml.Codegen.Intermediate
+
+Only code that reads or builds the intermediate model directly is affected.
+
+`IntermediateDarReader.Read` returns typed nodes for the applied builtins.
+
+  - A complete application of `List`, `Optional`, `TextMap`, `GenMap` or `ContractId` used to arrive as `DamlTypeApp(DamlPrimitiveType(…), arguments)`. It now arrives as `DamlListType`, `DamlOptionalType`, `DamlTextMapType`, `DamlGenMapType` or `DamlContractIdType`.
+  - **Match the typed node, or implement `IDamlTypeVisitor<TResult>` and dispatch through `DamlType.Accept`.**
+  - `Numeric n` keeps its `DamlTypeApp` shape.
+
+`DamlWrappedOptional`, `OptionalEncoding` and the `IsOptional` members are removed from the model.
+
+  - Choosing between `T?` and `Optional<T>` is now internal to the C# emitter.
+  - **Replace an `IsOptional` check with `type is DamlOptionalType`.**
+
+`DamlType` declares an abstract `Accept<TResult>(IDamlTypeVisitor<TResult>)`.
+
+  - A type outside the package that derives from `DamlType` no longer compiles (`CS0534`).
+  - **Model the shape with the existing nodes instead of subclassing `DamlType`.**
+
+#### Ledger client API
+
+Completion-stream and point-read offsets are `LedgerOffset`, not `long`.
+
+  - `CompletionStreamEvent.Checkpoint.Offset` and `Completion.Offset` are `LedgerOffset`. `CompletionStreamAsync` takes `LedgerOffset? beginExclusiveOffset`, where `null` means the beginning. `GetUpdateByOffsetAsync`, `GetUpdateTreeByOffsetAsync` and the matching `FakeLedgerClientBuilder` methods take a `LedgerOffset`.
+  - A stored checkpoint, a completion offset or `GetLedgerEndAsync`'s result now passes straight back in.
+  - **Wrap a stored `long` with `LedgerOffset.At(value)`, and read `.Value` where you need the number.**
+
+`Completion`'s deduplication period is one `DeduplicationPeriod?` union.
+
+  - `DeduplicationOffset` and `DeduplicationDuration` are replaced by `DeduplicationPeriod`, which is `DeduplicationPeriod.Offset(LedgerOffset Start)`, `DeduplicationPeriod.Duration(TimeSpan Length)`, or `null`.
+  - The union lives in `Daml.Runtime.Commands` and is the same type a submission sends. **Add `using Daml.Runtime.Commands;` where you name it.**
+  - **Switch on the arm instead of null-checking two members.**
+
+`IAdminClient` takes and returns `Party` and `SynchronizerId` instead of strings.
+
+  - `AllocatePartyAsync` takes a `SynchronizerId?`. `GetPartiesAsync` takes `IEnumerable<Party> parties`. `CreateUserAsync` takes a `Party?` primary party, where `null` means none (this used to be `""`).
+  - `PartyDetails.Party`, `UserRight.ActAs`/`ReadAs`/`ExecuteAs`, `VettedPackage.SynchronizerId` and `UserDetails.PrimaryParty` are typed; `PrimaryParty` is `null` when the user has none.
+  - **Wrap ids with `new Party(...)` / `new SynchronizerId(...)`, drop the wrapping you did on results, and pass `null` instead of `""`.**
+
+`IAdminClient` reports a rejected call as `LedgerOperationException` instead of `RpcException`, and chooses its own page size.
+
+  - The exception carries `Category`, `ErrorId` and `Metadata` when the participant attached a structured error, and `Status` otherwise. Cancellation is still `OperationCanceledException`, and an unknown user still returns `null`.
+  - `ListKnownPartiesAsync` and `ListUsersAsync` lose their `pageSize` parameter and still return the complete result.
+  - **Catch `LedgerOperationException` where you caught `RpcException`, and branch on `ErrorId` or `Category` where you branched on the gRPC status code.** A structured rejection carries no `Status`.
+  - **Drop the `pageSize:` argument.**
+
+`IAdminClient` is no longer `IDisposable`, and every client resolved from one container shares one gRPC channel.
+
+  - The container owns the channel and closes it when disposed. Disposing the ledger client no longer closes it. `FakeAdminClient.Dispose` is removed.
+  - **Stop disposing `IAdminClient`, and dispose the service provider where you relied on disposing the ledger client to close the connection.**
+
+`ConnectedSynchronizer`, `PartyDetails`, `UserDetails`, `PackageDetails`, `VettedPackage`, the seven `UserRight` subtypes, and `LedgerClientOptions`, `ClientCredentialsOptions`, `PqsClientOptions` and `RestLedgerClientOptions` are `sealed`.
+
+  - A subclass of any of them no longer compiles (`CS0509`).
+
+`RetryPipelineFactory`, `LedgerActivitySource` and `TokenProviderExtensions` in `Canton.Ledger.Kernel` are `internal`.
+
+  - They back the clients' retry pipeline, span naming and token resolution. A reference to any of them no longer compiles (`CS0122`).
+
+#### Transport and errors
+
+A failed call or stream carries a `TransportStatus Status` instead of an `int StatusCode`.
+
+  - This covers `ExerciseOutcome<T>.InfraError`, every `StreamError` arm, `CompletionStreamEvent.StreamError`, `ParsedLedgerError`, and `LedgerOperationException`, where `Status` is nullable.
+  - `TransportStatus` (`Daml.Runtime.Outcomes`) has four arms: `Grpc(GrpcStatusCode StatusCode)`, `Http(HttpStatusCode StatusCode)`, `NoResponse` and `UndecodableBody`. `GrpcStatusCode` mirrors `Grpc.Core.StatusCode` value for value.
+  - **Replace `error.StatusCode == (int)StatusCode.Unavailable` with `error.Status is TransportStatus.Grpc { StatusCode: GrpcStatusCode.Unavailable }`,** or keep calling `AsGrpcStatusCode()`, which still returns `Grpc.Core.StatusCode` for a gRPC status and throws `InvalidOperationException` for any other arm.
+  - **Build test doubles with `new TransportStatus.Grpc(GrpcStatusCode.Unavailable)` where you passed `14`,** including in `LedgerOutcomes.InfraError`, `LedgerEvents.StreamError` and `ContractEvents.StreamError`.
+  - `CompletionStatus.Code` is unchanged.
+
+The JSON client reports what actually happened instead of inventing an HTTP status.
+
+  - A connection failure, or a deadline that expires before the whole response arrives, reports `NoResponse` instead of 503 or 408. For `SubmitAsync` and `SubmitReassignmentAsync`, only a connection failure reports `NoResponse`; a per-call timeout still throws `OperationCanceledException`.
+  - A success response whose body cannot be decoded, when thrown as a `LedgerOperationException`, reports `UndecodableBody` instead of 500.
+  - A status the participant actually answered with arrives as `Http`.
+  - **Replace `== 503` / `== 408` checks with `is TransportStatus.NoResponse`.**
+
+The serialized and logged status changes shape.
+
+  - A serialized `StreamError` writes `"Status"` as a nested object, e.g. `{"$case":"Grpc","StatusCode":14}`, where it wrote an integer `"StatusCode"`. Under `AddDamlConverters`, a payload missing a non-nullable `TransportStatus` is refused.
+  - The gRPC completion-stream and subscribe-stream warnings and the JSON stream-window warning log `{Status}` where they logged `{StatusCode}`. **Update any structured-log query that reads it.**
+
+#### Packaging
+
+All 16 `Daml.*` and `Canton.Ledger.*` packages version together, starting with `0.6.0-preview.1`.
+
+  - One version and one release publish all of them, replacing the two families' separate version lines.
+  - Each `Canton.Ledger.*` package depends on `Daml.Runtime` and `Daml.Ledger.Abstractions` at `0.6.0-preview.1` or later.
+  - **Move every `Daml.*` and `Canton.Ledger.*` reference in a project to the same version.**
+
+Every package that depends on `Google.Protobuf` now depends on `3.35.1` instead of `3.36.2`.
+
+  - The affected packages are `Daml.Codegen.Intermediate`, `Daml.Codegen.CSharp`, `Daml.Runtime.Grpc`, `Canton.Ledger.Grpc` and `Canton.Ledger.Grpc.Client`.
+  - `Google.Protobuf` 3.36.0 through 3.36.2 has a thread-safety race in file-descriptor initialization ([upstream issue](https://github.com/protocolbuffers/protobuf/issues/29696)). When several threads first touch generated protobuf types at once, a generated `*Reflection` type can throw `TypeInitializationException` for the rest of the process. The upstream fix is not in any release as of this one.
+  - The dependency is a minimum, so NuGet can still resolve 3.36.x if something else asks for it. **Keep `Google.Protobuf` on `3.35.x`; if another dependency pulls in 3.36.0–3.36.2, pin `Google.Protobuf` to `3.35.1` in your own project.** Move past it only once an upstream release contains the fix.
+
+`Canton.Ledger.OpenTelemetry` no longer references `Npgsql.OpenTelemetry`.
+
+  - `AddCantonLedgerInstrumentation()` registers the PQS client's Postgres tracing through the `"Npgsql"` activity source directly, so a consumer tracing the ledger no longer pulls in Npgsql transitively.
+  - **Add your own `Npgsql.OpenTelemetry` reference if you relied on the transitive one.**
+
+### Added
+
+`DamlLfJsonReader.ReadVariant<T>` decodes a top-level Daml variant from Daml-LF JSON.
+
+  - It mirrors `ReadRecord<T>`: it takes a parsed `JsonElement` or JSON text, accepts optional `DamlJsonDeserializationLimits`, and enforces the same size and depth limits.
+  - Use it instead of a generated `__ReadDamlLfJson` when you decode a variant yourself, for example from a custom PQS query.
+
+`CommandsSubmission.WithDeduplicationPeriod` sets how long the participant rejects a resubmission as `DUPLICATE_COMMAND`.
+
+  - Pass `new DeduplicationPeriod.Duration(TimeSpan.FromMinutes(10))`, or `new DeduplicationPeriod.Offset(offset)` to deduplicate against everything after a completion offset. Both gRPC and REST send it.
+  - Leaving it unset sends no period, so the participant applies its configured maximum, as before. A negative `Duration` throws `ArgumentOutOfRangeException`.
+
+The shared Daml model in `Daml.Codegen.Intermediate` carries interface methods.
+
+  - `DamlInterface.Methods` lists each method as a `DamlInterfaceMethod(Name, ReturnType)`, in declaration order, and defaults to empty.
+  - `IntermediateDarReader.Read` fills it from the intermediate. The C# emitter does not emit anything for interface methods yet.
+
+`DamlPrimitiveCatalog` describes every Daml builtin type.
+
+  - One row per builtin records its `DamlPrimitive`, its arity, and whether it is a supported value type, signature-only, or unsupported, with the reason.
+  - `DamlPrimitive` gains `Arrow`, `Update`, `TypeRep`, `Any`, `AnyException` and `FailureCategory`. The C# emitter throws `NotSupportedException`, naming the builtin, if one reaches a data position.
+
+The model gains typed nodes for the applied builtins and a visitor over every node.
+
+  - `DamlListType`, `DamlOptionalType`, `DamlTextMapType`, `DamlGenMapType` and `DamlContractIdType` represent complete applications of `List`, `Optional`, `TextMap`, `GenMap` and `ContractId`.
+  - `IDamlTypeVisitor<TResult>` has exactly one method per node, and `DamlType.Accept` dispatches to it. A visitor that misses a node does not compile.
+  - `AppliedTypeFolding` exposes the folding the readers use: a builtin applied to its full arity becomes its typed node, and a partial application stays a `DamlTypeApp`.
+
+`AddRestLedgerClient` also registers an `IAdminClient` served over the JSON Ledger API, except `ListKnownPackagesAsync`, which throws `NotSupportedException` because the participant has no JSON route for it.
+
+CI: `daml-dar-to-proto-<version>.jar`, `intermediate_dar-<version>.proto` and a `SHA256SUMS` checksum file are now attached to the draft release a `v*` tag push creates, and the assembled jar's `--version` now reports the release version instead of the `0.0.0-dev` placeholder every release since 0.5.0-preview.1 shipped with (#49). This reverses the 0.5.0-preview.2 note that these assets are not published.
+
+CI: `intermediate-fixtures-<version>.tar.gz` is now attached alongside the jar/proto — a schema-only `.binpb` plus a canonical-JSON rendering per conformance-corpus DAR, with a `manifest.json` recording each DAR's and each output's SHA-256, so external SDKs (Rust first) can diff their own lowering against ours without a JVM (#51).
+
+### Changed
+
+Every package's repository and project URL point at `https://github.com/peacefulstudio/canton-dotnet-sdk`.
+
+  - Generated C# file headers and generated package `README.md` attribution links name `canton-dotnet-sdk`.
+  - The old repository names redirect, so existing links keep working.
+
+`IntermediateDarReader.Read` accepts the signature-only builtins instead of throwing.
+
+  - `Any`, `TypeRep`, `AnyException`, `Update`, `Arrow` and `FailureCategory` read with their real `DamlPrimitive`, so a signature position such as an interface-method return type survives the reader.
+  - `BigNumeric`, `RoundingMode` and `Scenario` still throw `NotSupportedException`, now with the reason in the message. A builtin value the reader does not know throws `InvalidDataException`.
+
+The `DamlJsonConverters` documentation no longer suggests copying `All` into your own `JsonSerializerOptions`.
+
+  - `All` carries only the converters, and misses the nullable-annotation and required-parameter settings. **Call `AddDamlConverters` on options you build yourself.**
+
+### Fixed
+
+`RestLedgerClient` submits a create or exercise argument that holds a `DA.Map` or an `Optional (Optional a)`.
+
+  - It used to throw `JsonException` before sending the request. A `DA.Map` now writes as an array of `[key, value]` pairs, and each level of a nested `Optional` as an array, matching what the participant accepts.
+
+A `Numeric 0` field read from the ledger decodes instead of failing.
+
+  - The participant writes it with a bare trailing dot, e.g. `"42."`, which `DamlNumeric.TryParseCanonical` rejected, so a payload holding one came back undecodable over both REST and gRPC.
+
 ## [0.5.0-preview.3] — 2026-09-18
 
 ### Added
@@ -3061,7 +3303,8 @@ the GitHub Packages NuGet feed
 (`nuget.pkg.github.com/peacefulstudio`) during development and have
 since been pruned. They are not supported.
 
-[Unreleased]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.5.0-preview.3...HEAD
+[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.1...HEAD
+[0.6.0-preview.1]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.5.0-preview.3...v0.6.0-preview.1
 [0.5.0-preview.3]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.5.0-preview.2...v0.5.0-preview.3
 [0.5.0-preview.2]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.5.0-preview.1...v0.5.0-preview.2
 [0.5.0-preview.1]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.4.1-preview.1...v0.5.0-preview.1

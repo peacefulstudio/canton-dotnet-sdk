@@ -12,7 +12,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterUnitReturnExerciserTests
 {
     private const string LocalPackageId = "pkg-id";
-    private const string StdlibNamespace = "Daml.Runtime.Stdlib";
 
     private sealed class StubResolver : ICrossPackageResolver
     {
@@ -72,79 +71,75 @@ public class ChoiceEmitterUnitReturnExerciserTests
     }
 
     [Fact]
-    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_emits_stdlib_unit_wrapper_for_unit_returning_choice()
+    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_returns_DamlUnit_for_a_unit_returning_choice()
     {
-        var (code, usings) = EmitNonContract(Template(Choice("DoNothing", new DamlPrimitiveType(DamlPrimitive.Unit))));
+        var (code, _) = EmitNonContract(Template(Choice("DoNothing", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<Unit>> DoNothingAsync(");
-        code.Should().Contain("var decoded = Unit.Value;");
-        code.Should().Contain("new ExerciseOutcome<Unit>.One(decoded)");
+        code.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryDoNothingAsync(");
+        code.Should().Contain("var decoded = Sink.ChoiceDoNothing.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().Contain("new ExerciseOutcome<DamlUnit>.One(decoded)");
         code.Should().Contain("CommittedUndecodable");
-        usings.Should().Contain(StdlibNamespace);
+        code.Should().NotContain("Unit.Value");
     }
 
     [Fact]
-    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_emits_stdlib_unit_wrapper_for_optional_unit_in_signature_and_decoder()
+    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_returns_DamlUnit_for_optional_unit()
     {
         var optionalUnit = new DamlTypeApp(
             new DamlPrimitiveType(DamlPrimitive.Optional),
             [new DamlPrimitiveType(DamlPrimitive.Unit)]);
 
-        var (code, usings) = EmitNonContract(Template(Choice("MaybeNothing", optionalUnit)));
+        var (code, _) = EmitNonContract(Template(Choice("MaybeNothing", optionalUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<Unit?>> MaybeNothingAsync(");
-        code.Should().Contain("new ExerciseOutcome<Unit?>.One(");
-        code.Should().Contain(".AsOptional().HasValue ? Unit.Value : null");
-        usings.Should().Contain(StdlibNamespace);
-        code.Should().NotContain("DamlUnit?");
+        code.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit?>> TryMaybeNothingAsync(");
+        code.Should().Contain("var decoded = Sink.ChoiceMaybeNothing.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().NotContain("Unit.Value");
     }
 
     [Fact]
-    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_emits_stdlib_unit_wrapper_for_list_of_unit()
+    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_returns_DamlUnit_for_list_of_unit()
     {
         var listOfUnit = new DamlTypeApp(
             new DamlPrimitiveType(DamlPrimitive.List),
             [new DamlPrimitiveType(DamlPrimitive.Unit)]);
 
-        var (code, usings) = EmitNonContract(Template(Choice("ListOfUnits", listOfUnit)));
+        var (code, _) = EmitNonContract(Template(Choice("ListOfUnits", listOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyList<Unit>>> ListOfUnitsAsync(");
-        code.Should().Contain(".As<DamlList>().Values.Select(x => Unit.Value).ToList()");
-        usings.Should().Contain(StdlibNamespace);
-        code.Should().NotContain("IReadOnlyList<DamlUnit>");
+        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyList<DamlUnit>>> TryListOfUnitsAsync(");
+        code.Should().Contain("var decoded = Sink.ChoiceListOfUnits.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().NotContain("Unit.Value");
     }
 
     [Fact]
-    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_emits_stdlib_unit_wrapper_for_textmap_of_unit()
+    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_returns_DamlUnit_for_textmap_of_unit()
     {
         var mapOfUnit = new DamlTypeApp(
             new DamlPrimitiveType(DamlPrimitive.TextMap),
             [new DamlPrimitiveType(DamlPrimitive.Unit)]);
 
-        var (code, usings) = EmitNonContract(Template(Choice("MapOfUnits", mapOfUnit)));
+        var (code, _) = EmitNonContract(Template(Choice("MapOfUnits", mapOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, Unit>>> MapOfUnitsAsync(");
-        code.Should().Contain(".As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => Unit.Value)");
-        usings.Should().Contain(StdlibNamespace);
+        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, DamlUnit>>> TryMapOfUnitsAsync(");
+        code.Should().Contain("var decoded = Sink.ChoiceMapOfUnits.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().NotContain("Unit.Value");
     }
 
     [Fact]
-    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_emits_stdlib_unit_wrapper_for_genmap_of_unit()
+    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_returns_DamlUnit_for_genmap_of_unit()
     {
         var genMapOfUnit = new DamlTypeApp(
             new DamlPrimitiveType(DamlPrimitive.GenMap),
             [new DamlPrimitiveType(DamlPrimitive.Text), new DamlPrimitiveType(DamlPrimitive.Unit)]);
 
-        var (code, usings) = EmitNonContract(Template(Choice("UnitsByText", genMapOfUnit)));
+        var (code, _) = EmitNonContract(Template(Choice("UnitsByText", genMapOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, Unit>>> UnitsByTextAsync(");
-        code.Should().Contain(".As<DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<DamlText>().Value, kv => Unit.Value)");
-        usings.Should().Contain(StdlibNamespace);
-        code.Should().NotContain("IReadOnlyDictionary<string, DamlUnit>");
+        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, DamlUnit>>> TryUnitsByTextAsync(");
+        code.Should().Contain("var decoded = Sink.ChoiceUnitsByText.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().NotContain("Unit.Value");
     }
 
     [Fact]
-    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_decodes_the_genmap_key_and_value_with_their_own_decoders()
+    public void ChoiceEmitterUnitReturnExerciser_non_contract_exerciser_returns_DamlUnit_nested_in_a_genmap_value()
     {
         var genMapOfListOfUnit = new DamlTypeApp(
             new DamlPrimitiveType(DamlPrimitive.GenMap),
@@ -153,12 +148,10 @@ public class ChoiceEmitterUnitReturnExerciserTests
                 new DamlTypeApp(new DamlPrimitiveType(DamlPrimitive.List), [new DamlPrimitiveType(DamlPrimitive.Unit)]),
             ]);
 
-        var (code, usings) = EmitNonContract(Template(Choice("UnitListsByParty", genMapOfListOfUnit)));
+        var (code, _) = EmitNonContract(Template(Choice("UnitListsByParty", genMapOfListOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<Party, IReadOnlyList<Unit>>>> UnitListsByPartyAsync(");
-        code.Should().Contain(
-            ".As<DamlGenMap>().Entries.ToDictionary(kv => Party.FromDamlValue(kv.Key.As<DamlParty>()), "
-            + "kv => kv.Value.As<DamlList>().Values.Select(x => Unit.Value).ToList())");
-        usings.Should().Contain(StdlibNamespace);
+        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<Party, IReadOnlyList<DamlUnit>>>> TryUnitListsByPartyAsync(");
+        code.Should().Contain("var decoded = Sink.ChoiceUnitListsByParty.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().NotContain("Unit.Value");
     }
 }

@@ -7,7 +7,8 @@
 // third-party SDK). Field numbers are append-only: they are never reused
 // or renumbered. The orderings and normalisations documented in comments
 // below are load-bearing for deterministic output and are part of the
-// contract. This file is not currently published as a release asset.
+// contract. See docs/public/intermediate-dar.md for how this proto, its
+// matching jar, and conformance fixtures are distributed and versioned.
 
 syntax = "proto3";
 

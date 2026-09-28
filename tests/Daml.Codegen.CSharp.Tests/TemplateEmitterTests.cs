@@ -450,23 +450,13 @@ public class TemplateEmitterTests
     }
 
     [Fact]
-    public void TemplateEmitter_emits_the_nested_ContractId_record()
+    public void TemplateEmitter_nests_no_contract_id_or_contract_record_of_its_own()
     {
         var output = EmitTemplate(Template("Token", [Field("issuer", DamlPrimitive.Party)]));
 
-        output.Should().Contain("public sealed record ContractId(string Value)");
-        output.Should().Contain(": ContractId<Token>(Value)");
-        output.Should().Contain("IExercises<Token>");
-    }
-
-    [Fact]
-    public void TemplateEmitter_emits_the_nested_Contract_record()
-    {
-        var output = EmitTemplate(Template("Holding", [Field("amount", DamlPrimitive.Numeric)]));
-
-        output.Should().Contain("public sealed record Contract(ContractId Id, Holding Data)");
-        output.Should().Contain(": IContract<ContractId, Holding>");
-        output.Should().Contain("public static Contract FromCreatedEvent(CreatedEvent @event)");
+        output.Should().NotContain("record ContractId(");
+        output.Should().NotContain("record Contract(");
+        output.Should().NotContain("IExercises");
     }
 
     [Fact]
@@ -588,23 +578,21 @@ public class TemplateEmitterTests
     }
 
     [Fact]
-    public void TemplateEmitter_puts_the_key_on_the_active_contract_not_the_payload()
+    public void TemplateEmitter_decodes_the_key_through_the_key_witness()
     {
         var output = EmitTemplate(
             Template("Keyed", [Field("owner", DamlPrimitive.Party)], key: new DamlPrimitiveType(DamlPrimitive.Party)));
 
-        output.Should().Contain("public sealed record Contract(ContractId Id, Keyed Data)");
-
-        output.Should().Contain("public required ContractKey<Party> Key { get; init; }");
-        output.Should().Contain("? new ContractKey<Party>(Party.FromDamlValue(contractKey.Value.As<DamlParty>()), contractKey.KeyHash)");
+        output.Should().Contain("IHasKey<Keyed, Party>");
+        output.Should().Contain("KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
     }
 
     [Fact]
-    public void TemplateEmitter_leaves_the_active_contract_of_a_key_less_template_with_two_parameters()
+    public void TemplateEmitter_leaves_a_key_less_template_without_a_key_witness()
     {
         var output = EmitTemplate(Template("Keyless", [Field("owner", DamlPrimitive.Party)]));
 
-        output.Should().Contain("public sealed record Contract(ContractId Id, Keyless Data) :");
+        output.Should().NotContain("IHasKey");
         output.Should().NotContain("ContractKey");
     }
 
@@ -645,7 +633,7 @@ public class TemplateEmitterTests
         var output = EmitTemplate(Template("Submittable", [Field("owner", DamlPrimitive.Party)]));
 
         output.Should().Contain("public static class SubmittableSubmissionExtensions");
-        output.Should().Contain("CreateAsync");
+        output.Should().Contain("public static Task<ExerciseOutcome<ContractId<Submittable>>> TryCreateAsync(");
     }
 
     [Fact]
@@ -659,9 +647,6 @@ public class TemplateEmitterTests
         output.Should().Contain("/// <summary>Gets the package ID.</summary>");
         output.Should().Contain("/// <summary>Gets the package name.</summary>");
         output.Should().Contain("/// <summary>Gets the package version.</summary>");
-        output.Should().Contain("/// <summary>Contract ID for Documented.</summary>");
-        output.Should().Contain("/// <summary>Active contract for Documented.</summary>");
-        output.Should().Contain("/// <summary>Creates a Contract from a CreatedEvent.</summary>");
     }
 
     [Fact]
@@ -676,15 +661,10 @@ public class TemplateEmitterTests
         output.Should().NotContain("Gets the package ID");
         output.Should().NotContain("Gets the package name");
         output.Should().NotContain("Gets the package version");
-        output.Should().NotContain("Contract ID for Documented");
-        output.Should().NotContain("Active contract for Documented");
-        output.Should().NotContain("Creates a Contract from a CreatedEvent");
 
         output.Should().Contain("public sealed partial record Documented");
         output.Should().Contain("public static Identifier TemplateId { get; }");
-        output.Should().Contain("public sealed record ContractId(string Value)");
-        output.Should().Contain("public sealed record Contract(ContractId Id, Documented Data)");
-        output.Should().Contain("public required ContractKey<Party> Key { get; init; }");
+        output.Should().Contain("IHasKey<Documented, Party>");
     }
 
     [Fact]

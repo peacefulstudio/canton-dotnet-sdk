@@ -52,6 +52,23 @@ public class DamlJsonSerializerTextInferenceTests
         record.GetRequiredField("note").Should().Be(new DamlText(text));
     }
 
+    public static TheoryData<string> TextWithNoDigitsAfterAnOptionalSign() => new()
+    {
+        "",
+        "-",
+    };
+
+    [Theory]
+    [MemberData(nameof(TextWithNoDigitsAfterAnOptionalSign))]
+    public void DeserializeRecord_should_keep_a_bare_sign_or_empty_string_as_DamlText(string text)
+    {
+        var json = JsonSerializer.Serialize(new Dictionary<string, string> { ["note"] = text });
+
+        var record = DamlJsonSerializer.DeserializeRecord(json);
+
+        record.GetRequiredField("note").Should().Be(new DamlText(text));
+    }
+
     public static TheoryData<string, DateTimeOffset> CanonicalLedgerTimestampShapes() => new()
     {
         { "2023-06-15T12:30:45Z", new DateTimeOffset(2023, 6, 15, 12, 30, 45, TimeSpan.Zero) },

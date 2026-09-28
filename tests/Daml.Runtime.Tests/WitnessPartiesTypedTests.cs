@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Daml.Runtime;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Serialization;
@@ -50,7 +51,7 @@ public class WitnessPartiesTypedTests
     {
         var ev = new ContractStreamEvent<TestTemplate>.Exercised(
             new ContractId<TestTemplate>("c1"),
-            "Accept",
+            new ChoiceName("Accept"),
             DamlUnit.Instance,
             DamlUnit.Instance,
             Consuming: true,

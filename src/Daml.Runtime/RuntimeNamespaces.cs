@@ -4,9 +4,10 @@
 namespace Daml.Runtime;
 
 /// <summary>
-/// Canonical <c>Daml.Runtime.*</c> namespace string literals, exposed for tooling (e.g. code generation) that emits references to them.
+/// Canonical <c>Daml.Runtime.*</c> namespace string literals, shared with the C# emitter
+/// (<c>Daml.Codegen.CSharp</c>) via <c>InternalsVisibleTo</c> so it can emit references to them.
 /// </summary>
-public static class RuntimeNamespaces
+internal static class RuntimeNamespaces
 {
     /// <summary>The <c>Daml.Runtime.Data</c> namespace.</summary>
     public const string Data = "Daml.Runtime.Data";

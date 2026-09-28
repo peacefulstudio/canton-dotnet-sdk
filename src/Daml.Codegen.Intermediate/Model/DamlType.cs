@@ -9,15 +9,24 @@ namespace Daml.Codegen.Intermediate.Model;
 public abstract record DamlType
 {
     /// <summary>
-    /// Gets whether this type is optional.
+    /// Dispatches this node to the arm of <paramref name="visitor"/> that handles its
+    /// concrete type — each node reaches exactly its own arm, never a shared default, so a
+    /// new node added to the algebra without extending a visitor fails the build at that
+    /// visitor instead of silently dispatching to a fallback at runtime.
     /// </summary>
-    public virtual bool IsOptional => false;
+    /// <typeparam name="TResult">The value the chosen arm produces.</typeparam>
+    /// <param name="visitor">The visitor whose matching arm handles this node.</param>
+    public abstract TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor);
 }
 
 /// <summary>
 /// A primitive Daml type.
 /// </summary>
-public sealed record DamlPrimitiveType(DamlPrimitive Primitive) : DamlType;
+public sealed record DamlPrimitiveType(DamlPrimitive Primitive) : DamlType
+{
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitPrimitive(this);
+}
 
 /// <summary>
 /// Enumeration of Daml primitive types.
@@ -65,23 +74,61 @@ public enum DamlPrimitive
     TextMap,
 
     /// <summary>Daml <c>GenMap k v</c> — takes the key and value types as arguments.</summary>
-    GenMap
+    GenMap,
+
+    /// <summary>
+    /// Daml <c>a -&gt; b</c> — the function type. A structural type-former that is legal in
+    /// type signatures but never a serializable data-field type; see <see cref="DamlPrimitiveCatalog"/>.
+    /// </summary>
+    Arrow,
+
+    /// <summary>
+    /// Daml <c>Update a</c> — the contract-update monad. Legal in type signatures (interface
+    /// method return types are typically <c>Update X</c>) but never a serializable data-field
+    /// type; see <see cref="DamlPrimitiveCatalog"/>.
+    /// </summary>
+    Update,
+
+    /// <summary>
+    /// Daml <c>TypeRep</c> — a runtime type representation. Signature-only structural
+    /// builtin; see <see cref="DamlPrimitiveCatalog"/>.
+    /// </summary>
+    TypeRep,
+
+    /// <summary>
+    /// Daml <c>Any</c> — the existential builtin. Signature-only structural builtin; see
+    /// <see cref="DamlPrimitiveCatalog"/>.
+    /// </summary>
+    Any,
+
+    /// <summary>
+    /// Daml <c>AnyException</c> — the catch-all exception context builtin. Signature-only
+    /// structural builtin; see <see cref="DamlPrimitiveCatalog"/>.
+    /// </summary>
+    AnyException,
+
+    /// <summary>
+    /// Daml <c>FailureCategory</c> — the exception failure classification builtin. Characterized
+    /// on the splice fixtures as signature-only (interned pools and value-definition signatures,
+    /// never a serializable data position); see <see cref="DamlPrimitiveCatalog"/>.
+    /// </summary>
+    FailureCategory
 }
 
 /// <summary>
 /// A reference to a user-defined type.
 /// </summary>
-public sealed record DamlTypeRef(string PackageId, string Module, string Name) : DamlType;
+public sealed record DamlTypeRef(string PackageId, string Module, string Name) : DamlType
+{
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitTypeRef(this);
+}
 
 /// <summary>
 /// A type application (generic type with arguments).
 /// </summary>
 public sealed record DamlTypeApp(DamlType Base, IReadOnlyList<DamlType> Arguments) : DamlType
 {
-    /// <summary>True when this application is <c>Optional a</c>, i.e. the base is the Optional primitive.</summary>
-    public override bool IsOptional =>
-        Base is DamlPrimitiveType { Primitive: DamlPrimitive.Optional };
-
     /// <summary>
     /// Compares by value, including <see cref="Arguments"/> element by element. The
     /// compiler-synthesized record equality would compare that list by reference, which
@@ -101,38 +148,84 @@ public sealed record DamlTypeApp(DamlType Base, IReadOnlyList<DamlType> Argument
         }
         return hash.ToHashCode();
     }
+
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitTypeApp(this);
 }
 
 /// <summary>
 /// A type variable.
 /// </summary>
-public sealed record DamlTypeVar(string Name) : DamlType;
-
-/// <summary>
-/// A Daml <c>Optional a</c> in a position C# nullable syntax cannot carry, emitted as the
-/// runtime wrapper rather than as <c>t?</c>. Produced only by the representation pre-pass,
-/// which is the sole owner of the rule deciding which positions those are.
-/// </summary>
-/// <param name="Argument">The type the optional carries.</param>
-/// <param name="Encoding">The wire encoding this position requires.</param>
-public sealed record DamlWrappedOptional(DamlType Argument, OptionalEncoding Encoding) : DamlType
+public sealed record DamlTypeVar(string Name) : DamlType
 {
     /// <inheritdoc />
-    public override bool IsOptional => true;
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitTypeVar(this);
 }
 
 /// <summary>
-/// The wire encoding a Daml <c>Optional</c> carries, which depends on its position rather
-/// than on its C# representation.
+/// A Daml <c>[a]</c> — a list of <paramref name="Element"/> values. The typed node for the
+/// wire's <c>TypeApp(List, [a])</c> application: the two spell the same Daml type, one as a
+/// first-class model node, the other as a generic application of the <see cref="DamlPrimitive.List"/>
+/// builtin.
 /// </summary>
-public enum OptionalEncoding
+/// <param name="Element">The type of the list's elements.</param>
+public sealed record DamlListType(DamlType Element) : DamlType
 {
-    /// <summary>JSON <c>null</c> when absent, the bare value when present.</summary>
-    Flat,
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitList(this);
+}
 
-    /// <summary>
-    /// JSON <c>[]</c> when absent, <c>[v]</c> when present — the form a participant requires
-    /// at every level of an Optional chain nested two or more levels deep.
-    /// </summary>
-    NestedChain
+/// <summary>
+/// A Daml <c>Optional a</c> — a value of <paramref name="Value"/> that may be absent. The
+/// typed node for the wire's <c>TypeApp(Optional, [a])</c> application: the two spell the
+/// same Daml type, one as a first-class model node, the other as a generic application of
+/// the <see cref="DamlPrimitive.Optional"/> builtin.
+/// </summary>
+/// <param name="Value">The type the optional carries when present.</param>
+public sealed record DamlOptionalType(DamlType Value) : DamlType
+{
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitOptional(this);
+}
+
+/// <summary>
+/// A Daml <c>TextMap a</c> — a map keyed by text. The typed node for the wire's
+/// <c>TypeApp(TextMap, [a])</c> application: the two spell the same Daml type, one as a
+/// first-class model node, the other as a generic application of the
+/// <see cref="DamlPrimitive.TextMap"/> builtin.
+/// </summary>
+/// <param name="Value">The type of the map's values.</param>
+public sealed record DamlTextMapType(DamlType Value) : DamlType
+{
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitTextMap(this);
+}
+
+/// <summary>
+/// A Daml <c>GenMap k v</c> — a map keyed by an arbitrary comparable type. The typed node
+/// for the wire's <c>TypeApp(GenMap, [k, v])</c> application: the two spell the same Daml
+/// type, one as a first-class model node, the other as a generic application of the
+/// <see cref="DamlPrimitive.GenMap"/> builtin. Key and value are positional: swapping them
+/// describes a different map.
+/// </summary>
+/// <param name="Key">The type of the map's keys.</param>
+/// <param name="Value">The type of the map's values.</param>
+public sealed record DamlGenMapType(DamlType Key, DamlType Value) : DamlType
+{
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitGenMap(this);
+}
+
+/// <summary>
+/// A Daml <c>ContractId a</c> — a reference to a contract of template type
+/// <paramref name="Payload"/>. The typed node for the wire's
+/// <c>TypeApp(ContractId, [a])</c> application: the two spell the same Daml type, one as a
+/// first-class model node, the other as a generic application of the
+/// <see cref="DamlPrimitive.ContractId"/> builtin.
+/// </summary>
+/// <param name="Payload">The template type the contract id refers to.</param>
+public sealed record DamlContractIdType(DamlType Payload) : DamlType
+{
+    /// <inheritdoc />
+    public override TResult Accept<TResult>(IDamlTypeVisitor<TResult> visitor) => visitor.VisitContractId(this);
 }
