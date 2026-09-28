@@ -30,7 +30,7 @@ namespace Daml.Runtime.Data;
 /// </para>
 /// <para>
 /// <c>default(SynchronizerId)</c> is never a valid representation of an absent id — it
-/// throws on any access to <see cref="Id"/>, as does the explicit conversion to
+/// throws on any access to <see cref="Value"/>, as does the explicit conversion to
 /// <see cref="string"/>; project an optional wire field through <see cref="FromWire"/>,
 /// which returns <see langword="null"/> for an absent value.
 /// </para>
@@ -44,8 +44,8 @@ public readonly record struct SynchronizerId
     /// <exception cref="InvalidOperationException">
     /// Thrown when accessed on a default-initialized value.
     /// </exception>
-    public string Id =>
-        _id ?? throw new InvalidOperationException("Cannot access Id of a default (uninitialized) SynchronizerId.");
+    public string Value =>
+        _id ?? throw new InvalidOperationException("Cannot access Value of a default (uninitialized) SynchronizerId.");
 
     /// <summary>Constructs a <see cref="SynchronizerId"/> from a non-empty wire string.</summary>
     /// <param name="id">The verbatim wire-format synchronizer id; stored opaque (non-null, non-whitespace).</param>
@@ -71,7 +71,7 @@ public readonly record struct SynchronizerId
     /// <remarks>
     /// The supported projection for an optional wire field — it never produces a default
     /// instance, so the absent case is observable as <see langword="null"/> rather than
-    /// as a value that throws on <see cref="Id"/>.
+    /// as a value that throws on <see cref="Value"/>.
     /// </remarks>
     /// <param name="id">The optional wire value.</param>
     public static SynchronizerId? FromWire(string? id) =>
@@ -97,5 +97,5 @@ internal sealed class SynchronizerIdJsonConverter : OpaqueStringIdJsonConverter<
     protected override SynchronizerId Parse(string id) => new(id);
 
     /// <inheritdoc/>
-    protected override string Format(SynchronizerId value) => value.Id;
+    protected override string Format(SynchronizerId value) => value.Value;
 }

@@ -33,6 +33,36 @@ public class DamlJsonSerializerStructuralTests
     }
 
     [Fact]
+    public void DeserializeRecord_with_limits_overload_should_reject_a_top_level_JSON_null()
+    {
+        var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 2);
+
+        var act = () => DamlJsonSerializer.DeserializeRecord("null", limits);
+
+        act.Should().Throw<JsonException>().WithMessage("Expected a JSON object for a Daml record but found null");
+    }
+
+    [Fact]
+    public void DeserializeRecord_with_limits_overload_should_reject_a_non_object_JSON_value()
+    {
+        var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 2);
+
+        var act = () => DamlJsonSerializer.DeserializeRecord("[1,2]", limits);
+
+        act.Should().Throw<JsonException>().WithMessage("Expected a JSON object for a Daml record but found Array");
+    }
+
+    [Fact]
+    public void DeserializeRecord_with_limits_overload_should_parse_a_JSON_object()
+    {
+        var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 2);
+
+        var record = DamlJsonSerializer.DeserializeRecord("""{"amount":"42"}""", limits);
+
+        record.Should().Be(DamlRecord.Create(DamlField.Create("amount", new DamlInt64(42))));
+    }
+
+    [Fact]
     public void Serialize_should_render_DamlGenMap_as_array_of_two_element_arrays()
     {
         var genMap = DamlGenMap.Create(

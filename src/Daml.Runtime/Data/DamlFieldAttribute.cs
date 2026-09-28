@@ -6,7 +6,7 @@ namespace Daml.Runtime.Data;
 /// <summary>
 /// Marks a generated property with the original Daml field name it was derived from,
 /// preserving the on-ledger name after C# member-name normalization. Emitted by
-/// daml-codegen-csharp on every record, template, and interface-view property so that
+/// canton-dotnet-sdk on every record, template, and interface-view property so that
 /// downstream tooling (such as the PQS field DSL) can map a C# property back to its
 /// Daml field.
 /// </summary>

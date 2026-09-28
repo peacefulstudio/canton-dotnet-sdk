@@ -276,7 +276,7 @@ public class ExerciseOutcomeTests
     {
         ExerciseOutcome<ContractId<FooBar>> outcome = ContractNotFoundWith(EmptyMetadata);
         ExerciseOutcome<ContractId<FooBar>> infra =
-            new ExerciseOutcome<ContractId<FooBar>>.InfraError(StatusCodes.Unavailable, "network down");
+            new ExerciseOutcome<ContractId<FooBar>>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "network down");
 
         outcome.Should().NotBe(infra);
         infra.Should().NotBe(outcome);
@@ -300,14 +300,13 @@ public class ExerciseOutcomeTests
     }
 
     [Fact]
-    public void InfraError_carries_status_code_message_and_source_exception()
+    public void InfraError_carries_status_message_and_source_exception()
     {
-        // StatusCode is `int` (cast `(int)Grpc.Core.StatusCode.DeadlineExceeded` at the
-        // gRPC client construction site) so this type stays free of any transport-library dep.
         var sourceException = new InvalidOperationException("transport failed");
-        var outcome = new ExerciseOutcome<ContractId<FooBar>>.InfraError(StatusCodes.DeadlineExceeded, "deadline", SourceException: sourceException);
+        var outcome = new ExerciseOutcome<ContractId<FooBar>>.InfraError(
+            new TransportStatus.Grpc(GrpcStatusCode.DeadlineExceeded), "deadline", SourceException: sourceException);
 
-        outcome.StatusCode.Should().Be(StatusCodes.DeadlineExceeded);
+        outcome.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.DeadlineExceeded));
         outcome.Message.Should().Be("deadline");
         outcome.SourceException.Should().BeSameAs(sourceException);
     }
@@ -315,7 +314,7 @@ public class ExerciseOutcomeTests
     [Fact]
     public void InfraError_leaves_the_category_null_when_it_is_not_supplied()
     {
-        var outcome = new ExerciseOutcome<TransactionResult>.InfraError(StatusCodes.Unavailable, "network down");
+        var outcome = new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "network down");
 
         outcome.Category.Should().BeNull();
     }
@@ -324,19 +323,19 @@ public class ExerciseOutcomeTests
     public void InfraError_carries_a_category_determined_without_a_structured_error()
     {
         var outcome = new ExerciseOutcome<TransactionResult>.InfraError(
-            StatusCodes.PermissionDenied, "permission denied", DamlErrorCategory.AuthorizationChecksFailed);
+            new TransportStatus.Grpc(GrpcStatusCode.PermissionDenied), "permission denied", DamlErrorCategory.AuthorizationChecksFailed);
 
         outcome.Category.Should().Be(DamlErrorCategory.AuthorizationChecksFailed);
-        outcome.StatusCode.Should().Be(StatusCodes.PermissionDenied);
+        outcome.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.PermissionDenied));
         outcome.SourceException.Should().BeNull();
     }
 
     [Fact]
     public void InfraError_works_for_transaction_result_payload()
     {
-        var outcome = new ExerciseOutcome<TransactionResult>.InfraError(StatusCodes.Unavailable, "network down");
+        var outcome = new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "network down");
 
-        outcome.StatusCode.Should().Be(StatusCodes.Unavailable);
+        outcome.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         outcome.Message.Should().Be("network down");
     }
 
@@ -367,7 +366,7 @@ public class ExerciseOutcomeTests
         ExerciseOutcome<ContractId<FooBar>> outcome = new ExerciseOutcome<ContractId<FooBar>>.CommittedUndecodable(
             "u1", "could not decode result", new InvalidOperationException());
         ExerciseOutcome<ContractId<FooBar>> infra =
-            new ExerciseOutcome<ContractId<FooBar>>.InfraError(StatusCodes.Unavailable, "network down");
+            new ExerciseOutcome<ContractId<FooBar>>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "network down");
 
         outcome.Should().NotBe(infra);
         infra.Should().NotBe(outcome);
@@ -396,7 +395,7 @@ public class ExerciseOutcomeTests
             new ExerciseOutcome<ContractId<FooBar>>.None(),
             new ExerciseOutcome<ContractId<FooBar>>.Many(["c1", "c2"]),
             new ExerciseOutcome<ContractId<FooBar>>.DamlError(DamlErrorCategory.Unknown, "X", "x", new Dictionary<string, string>()),
-            new ExerciseOutcome<ContractId<FooBar>>.InfraError(StatusCodes.Unavailable, "u"),
+            new ExerciseOutcome<ContractId<FooBar>>.InfraError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "u"),
             new ExerciseOutcome<ContractId<FooBar>>.CommittedUndecodable("u1", "bad", new InvalidOperationException()),
         ];
 
@@ -412,18 +411,6 @@ public class ExerciseOutcomeTests
         }).ToList();
 
         seen.Should().Equal("one", "none", "many", "daml-err", "infra-err", "committed-undecodable");
-    }
-
-    /// <summary>
-    /// Mirrors a subset of <c>Grpc.Core.StatusCode</c> values, kept as plain ints so this
-    /// test project doesn't take a gRPC dep just to construct an <c>InfraError</c>. Real
-    /// callers cast <c>(int)Grpc.Core.StatusCode.X</c> at the construction site.
-    /// </summary>
-    private static class StatusCodes
-    {
-        public const int Unavailable = 14;
-        public const int DeadlineExceeded = 4;
-        public const int PermissionDenied = 7;
     }
 
     private const DamlErrorCategory ContractNotFoundCategory = DamlErrorCategory.ContentionOnSharedResources;

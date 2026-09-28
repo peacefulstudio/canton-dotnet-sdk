@@ -9,9 +9,8 @@ namespace Daml.Runtime.Contracts;
 
 /// <summary>
 /// Non-generic, erased contract id: a validated ledger contract-id string with no
-/// static template witness. <see cref="ContractId{T}"/> is the only subtype declared
-/// here, though codegen derives a per-template <c>T.ContractId</c> from it; the base is
-/// abstract on purpose, so a typeless contract id can never be fabricated.
+/// static template witness. The sealed <see cref="ContractId{T}"/> is its only subtype;
+/// the base is abstract on purpose, so a typeless contract id can never be fabricated.
 /// </summary>
 /// <remarks>
 /// Construction is guarded — <see cref="ArgumentException.ThrowIfNullOrWhiteSpace"/>
@@ -54,7 +53,7 @@ public abstract record ContractId
 /// API payloads encode a contract id.
 /// </remarks>
 [JsonConverter(typeof(ContractIdJsonConverterFactory))]
-public record ContractId<T> : ContractId where T : IDamlType
+public sealed record ContractId<T> : ContractId where T : IDamlType
 {
     /// <summary>Constructs a typed contract id from a non-empty string.</summary>
     /// <param name="value">The ledger contract-id string; stored verbatim.</param>

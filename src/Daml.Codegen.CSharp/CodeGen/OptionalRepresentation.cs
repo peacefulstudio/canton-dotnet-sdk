@@ -11,6 +11,10 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// root — is this Optional inside another Optional, is it a type argument to a generic,
 /// is it a GenMap key — which a root-down walk has natively and the bottom-up
 /// recursive translator never does. Rewriting up front keeps the translator stateless.
+/// A rewriter over the typed nodes: each of the five has an arm carrying its children's
+/// path state, including the GenMap-key rule that forces the flat wrapper, and the
+/// legacy application spellings route to the same decisions so a hand-built model that
+/// never passed a reader is rewritten exactly like its normalized equivalent.
 /// </summary>
 internal static class OptionalRepresentation
 {
@@ -53,61 +57,109 @@ internal static class OptionalRepresentation
                 + "The type is too deeply nested to emit safely.");
         }
 
-        return type switch
-        {
-            DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var argument] } app =>
-                RewriteOptional(app, argument, localPackage, resolver, required, parentIsOptional, depth),
-            DamlWrappedOptional wrapped =>
-                wrapped with
-                {
-                    Argument = Rewrite(
-                        wrapped.Argument,
-                        localPackage,
-                        resolver,
-                        required: null,
-                        parentIsOptional: IsChainLevel(wrapped.Encoding),
-                        depth + 1),
-                },
-            DamlTypeApp { Base: DamlTypeRef typeRef } app =>
-                app with
-                {
-                    Arguments =
-                    [
-                        .. app.Arguments.Select((argument, index) =>
-                            RewriteGenericArgument(typeRef, argument, index, localPackage, resolver, depth)),
-                    ],
-                },
-            DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }, Arguments: [var key, var value] } app =>
-                app with { Arguments = RewriteGenMapArguments(key, value, localPackage, resolver, depth) },
-            DamlTypeApp app =>
-                app with
-                {
-                    Arguments =
-                    [
-                        .. app.Arguments.Select(argument =>
-                            Rewrite(argument, localPackage, resolver, required: null, parentIsOptional: false, depth + 1)),
-                    ],
-                },
-            _ => type,
-        };
+        return type is DamlWrappedOptional wrapped
+            ? wrapped with
+            {
+                Argument = Rewrite(
+                    wrapped.Argument,
+                    localPackage,
+                    resolver,
+                    required: null,
+                    parentIsOptional: IsChainLevel(wrapped.Encoding),
+                    depth + 1),
+            }
+            : type.Accept(new RewriteVisitor(localPackage, resolver, required, parentIsOptional, depth));
     }
 
-    private static DamlType RewriteOptional(
-        DamlTypeApp app,
-        DamlType argument,
+    /// <summary>
+    /// The rewriter's per-node arms: the five typed nodes carry their children's path state
+    /// (an Optional's child is parented by an Optional; a GenMap's key takes the flat
+    /// wrapper; a generic's arguments take the flat wrapper), the leaf nodes pass through,
+    /// and <see cref="VisitTypeApp"/> keeps the legacy application spellings alive — a
+    /// complete application of <c>Optional</c> or <c>GenMap</c> routes to the same decision
+    /// as its typed node, and every other application recurses into its arguments.
+    /// </summary>
+    private sealed class RewriteVisitor(
         DamlPackage localPackage,
         ICrossPackageResolver resolver,
         OptionalEncoding? required,
         bool parentIsOptional,
-        int depth)
+        int depth) : IDamlTypeVisitor<DamlType>
     {
-        var rewrittenArgument = Rewrite(argument, localPackage, resolver, required: null, parentIsOptional: true, depth + 1);
-        var encoding = parentIsOptional || IsOptional(argument)
-            ? OptionalEncoding.NestedChain
-            : required ?? (argument is DamlTypeVar ? OptionalEncoding.Flat : (OptionalEncoding?)null);
-        return encoding is { } chosen
-            ? new DamlWrappedOptional(rewrittenArgument, chosen)
-            : app with { Arguments = [rewrittenArgument] };
+        public DamlType VisitPrimitive(DamlPrimitiveType type) => type;
+
+        public DamlType VisitTypeRef(DamlTypeRef type) => type;
+
+        public DamlType VisitTypeVar(DamlTypeVar type) => type;
+
+        public DamlType VisitOptional(DamlOptionalType type) =>
+            RewrittenOptional(type.Value, rewritten => type with { Value = rewritten });
+
+        public DamlType VisitList(DamlListType type) =>
+            type with { Element = RewriteChild(type.Element) };
+
+        public DamlType VisitTextMap(DamlTextMapType type) =>
+            type with { Value = RewriteChild(type.Value) };
+
+        public DamlType VisitGenMap(DamlGenMapType type) => type with
+        {
+            Key = Rewrite(type.Key, localPackage, resolver, OptionalEncoding.Flat, parentIsOptional: false, depth + 1),
+            Value = Rewrite(type.Value, localPackage, resolver, required: null, parentIsOptional: false, depth + 1),
+        };
+
+        public DamlType VisitContractId(DamlContractIdType type) =>
+            type with { Payload = RewriteChild(type.Payload) };
+
+        public DamlType VisitTypeApp(DamlTypeApp type)
+        {
+            if (type.Base is DamlPrimitiveType { Primitive: DamlPrimitive.Optional }
+                && type.Arguments is [var argument])
+            {
+                return RewrittenOptional(argument, rewritten => type with { Arguments = [rewritten] });
+            }
+            if (type.Base is DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }
+                && type.Arguments is [var key, var value])
+            {
+                return type with
+                {
+                    Arguments = RewriteGenMapArguments(key, value, localPackage, resolver, depth),
+                };
+            }
+            if (type.Base is DamlTypeRef typeRef)
+            {
+                return type with
+                {
+                    Arguments =
+                    [
+                        .. type.Arguments.Select((argument, index) =>
+                            RewriteGenericArgument(typeRef, argument, index, localPackage, resolver, depth)),
+                    ],
+                };
+            }
+            return type with
+            {
+                Arguments =
+                [
+                    .. type.Arguments.Select(argument =>
+                        Rewrite(argument, localPackage, resolver, required: null, parentIsOptional: false, depth + 1)),
+                ],
+            };
+        }
+
+        private DamlType RewriteChild(DamlType child) =>
+            Rewrite(child, localPackage, resolver, required: null, parentIsOptional: false, depth + 1);
+
+        private DamlType RewrittenOptional(DamlType argument, Func<DamlType, DamlType> withoutWrapper)
+        {
+            var rewrittenArgument =
+                Rewrite(argument, localPackage, resolver, required: null, parentIsOptional: true, depth + 1);
+            var encoding = parentIsOptional || IsOptional(argument)
+                ? OptionalEncoding.NestedChain
+                : required ?? (argument is DamlTypeVar ? OptionalEncoding.Flat : (OptionalEncoding?)null);
+            return encoding is { } chosen
+                ? new DamlWrappedOptional(rewrittenArgument, chosen)
+                : withoutWrapper(rewrittenArgument);
+        }
     }
 
     /// <summary>
@@ -123,10 +175,10 @@ internal static class OptionalRepresentation
         DamlPackage localPackage,
         ICrossPackageResolver resolver,
         int depth) =>
-        [
-            Rewrite(key, localPackage, resolver, OptionalEncoding.Flat, parentIsOptional: false, depth + 1),
-            Rewrite(value, localPackage, resolver, required: null, parentIsOptional: false, depth + 1),
-        ];
+    [
+        Rewrite(key, localPackage, resolver, OptionalEncoding.Flat, parentIsOptional: false, depth + 1),
+        Rewrite(value, localPackage, resolver, required: null, parentIsOptional: false, depth + 1),
+    ];
 
     /// <summary>
     /// Rewrites one type argument of a generic — emitted or a parametric stdlib generic,
@@ -216,38 +268,107 @@ internal static class OptionalRepresentation
     /// Whether <paramref name="declaredType"/> puts <paramref name="parameter"/> directly
     /// beneath an Optional. Only an adjacent Optional matters: any other constructor between
     /// the two keeps the declaration's decision and the use site's decision independent, and
-    /// both are then locally right.
+    /// both are then locally right. Walks every node kind — the five typed nodes included,
+    /// since reader-fed declarations carry them — through
+    /// <see cref="ParameterWrapVisitor"/>.
     /// </summary>
     private static bool WrapsParameterInOptional(
         ICrossPackageResolver resolver,
         DamlPackage declaringPackage,
         DamlType declaredType,
         string parameter,
-        HashSet<string> visited) => declaredType switch
+        HashSet<string> visited) =>
+        declaredType.Accept(new ParameterWrapVisitor(resolver, declaringPackage, parameter, visited));
+
+    /// <summary>
+    /// The declaration-walk arms of <see cref="WrapsParameterInOptional"/>: an Optional
+    /// answers for the parameter it may carry directly, a generic application answers
+    /// through its slots, and the remaining constructors answer through their children.
+    /// </summary>
+    private sealed class ParameterWrapVisitor(
+        ICrossPackageResolver resolver,
+        DamlPackage declaringPackage,
+        string parameter,
+        HashSet<string> visited) : IDamlTypeVisitor<bool>
+    {
+        public bool VisitPrimitive(DamlPrimitiveType type) => false;
+
+        public bool VisitTypeRef(DamlTypeRef type) => false;
+
+        public bool VisitTypeVar(DamlTypeVar type) => false;
+
+        public bool VisitOptional(DamlOptionalType type) =>
+            IsParameterBeneathOptionals(type.Value, parameter)
+            || WrapsParameterInOptional(resolver, declaringPackage, type.Value, parameter, visited);
+
+        public bool VisitList(DamlListType type) =>
+            WrapsParameterInOptional(resolver, declaringPackage, type.Element, parameter, visited);
+
+        public bool VisitTextMap(DamlTextMapType type) =>
+            WrapsParameterInOptional(resolver, declaringPackage, type.Value, parameter, visited);
+
+        public bool VisitGenMap(DamlGenMapType type) =>
+            WrapsParameterInOptional(resolver, declaringPackage, type.Key, parameter, visited)
+            || WrapsParameterInOptional(resolver, declaringPackage, type.Value, parameter, visited);
+
+        public bool VisitContractId(DamlContractIdType type) =>
+            WrapsParameterInOptional(resolver, declaringPackage, type.Payload, parameter, visited);
+
+        public bool VisitTypeApp(DamlTypeApp type)
         {
-            DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var argument] } =>
-                IsParameterBeneathOptionals(argument, parameter)
-                || WrapsParameterInOptional(resolver, declaringPackage, argument, parameter, visited),
-            DamlTypeApp { Base: DamlTypeRef nested } app =>
-                app.Arguments
+            if (type.Base is DamlPrimitiveType { Primitive: DamlPrimitive.Optional }
+                && type.Arguments is [var argument])
+            {
+                return IsParameterBeneathOptionals(argument, parameter)
+                    || WrapsParameterInOptional(resolver, declaringPackage, argument, parameter, visited);
+            }
+            if (type.Base is DamlTypeRef nested)
+            {
+                return type.Arguments
                     .Select((argument, index) => (Argument: argument, Index: index))
                     .Any(slot =>
                         WrapsParameterInOptional(resolver, declaringPackage, slot.Argument, parameter, visited)
                         || (IsParameterBeneathOptionals(slot.Argument, parameter)
-                            && OptionalWrappedParameter(resolver, declaringPackage, nested, slot.Index, visited) is not null)),
-            DamlTypeApp app =>
-                app.Arguments.Any(argument =>
-                    WrapsParameterInOptional(resolver, declaringPackage, argument, parameter, visited)),
-            _ => false,
-        };
+                            && OptionalWrappedParameter(resolver, declaringPackage, nested, slot.Index, visited) is not null));
+            }
+            return type.Arguments.Any(argument =>
+                WrapsParameterInOptional(resolver, declaringPackage, argument, parameter, visited));
+        }
+    }
 
-    private static bool IsParameterBeneathOptionals(DamlType declaredType, string parameter) => declaredType switch
+    /// <summary>
+    /// Whether <paramref name="declaredType"/> is the type parameter <paramref name="parameter"/>
+    /// itself, or sits beneath Optional-only nesting — any other constructor between the
+    /// Optional and the parameter disqualifies, and so does every node kind that is not an
+    /// Optional.
+    /// </summary>
+    private static bool IsParameterBeneathOptionals(DamlType declaredType, string parameter) =>
+        declaredType.Accept(new ParameterBeneathOptionalsVisitor(parameter));
+
+    private sealed class ParameterBeneathOptionalsVisitor(string parameter) : IDamlTypeVisitor<bool>
     {
-        DamlTypeVar typeVar => typeVar.Name == parameter,
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var argument] } =>
-            IsParameterBeneathOptionals(argument, parameter),
-        _ => false,
-    };
+        public bool VisitTypeVar(DamlTypeVar type) => type.Name == parameter;
+
+        public bool VisitOptional(DamlOptionalType type) => type.Value.Accept(this);
+
+        public bool VisitTypeApp(DamlTypeApp type) =>
+            type.Base is DamlPrimitiveType { Primitive: DamlPrimitive.Optional }
+            && type.Arguments is [var argument]
+                ? argument.Accept(this)
+                : false;
+
+        public bool VisitPrimitive(DamlPrimitiveType type) => false;
+
+        public bool VisitTypeRef(DamlTypeRef type) => false;
+
+        public bool VisitList(DamlListType type) => false;
+
+        public bool VisitTextMap(DamlTextMapType type) => false;
+
+        public bool VisitGenMap(DamlGenMapType type) => false;
+
+        public bool VisitContractId(DamlContractIdType type) => false;
+    }
 
     /// <remarks>
     /// A switch, not an equality test, so a newly added <see cref="OptionalEncoding"/> is a
@@ -264,5 +385,6 @@ internal static class OptionalRepresentation
 
     private static bool IsOptional(DamlType type) =>
         type is DamlWrappedOptional
-            or DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } };
+            or DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } }
+            or DamlOptionalType;
 }

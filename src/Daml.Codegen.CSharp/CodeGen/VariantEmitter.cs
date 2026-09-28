@@ -40,6 +40,7 @@ internal sealed class VariantEmitter(
         var delegates = EmitterHelpers.ConverterNameMap(dataType.TypeParams);
 
         var variantInterface = InterfaceDeclaration(dataType.TypeParams, className);
+        indent.AppendLine("[global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]");
         indent.AppendLine($"public abstract record {fullClassName}{variantInterface}{typeParamConstraints}");
         indent.AppendLine("{");
         indent.Indent();

@@ -20,7 +20,7 @@ namespace Daml.Runtime.Stdlib;
 /// <c>"$case"</c> discriminator — <c>{"$case":"Some","Value":"c"}</c> or
 /// <c>{"$case":"None"}</c> — rather than as the flat Daml-LF <c>null</c>-or-value encoding
 /// <see cref="ToValue"/> uses, because that path is a CLR round-trip contract rather than a wire
-/// one (ADR 0028): a declared-abstract <see cref="Optional{T}"/> slot writes only the base's
+/// one: a declared-abstract <see cref="Optional{T}"/> slot writes only the base's
 /// members and cannot be read back at all without a converter, whatever shape it picks. The
 /// discriminator keeps a nested <c>Optional&lt;Optional&lt;T&gt;&gt;</c> unambiguous, which a bare
 /// <c>null</c>-for-<see cref="None"/> encoding is not: the outer <see cref="None"/> and a

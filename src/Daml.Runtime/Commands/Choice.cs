@@ -9,28 +9,6 @@ using Daml.Runtime.Serialization;
 namespace Daml.Runtime.Commands;
 
 /// <summary>
-/// Provides a fluent interface for building exercise commands.
-/// </summary>
-/// <typeparam name="T">
-/// The choice owner: a concrete template or a Daml interface marker. Constrained on the
-/// shared <see cref="IDamlType"/> marker so an interface-typed contract id can build
-/// exercise commands the same way a template-typed one does.
-/// </typeparam>
-public interface IExercises<T> where T : IDamlType
-{
-    /// <summary>
-    /// Gets the contract ID for this exercisable.
-    /// </summary>
-    ContractId<T> ContractId { get; }
-
-    /// <summary>
-    /// Exercises the Archive choice (available on all templates).
-    /// </summary>
-    ExerciseCommand ExerciseArchive() =>
-        ExerciseCommand.For(ContractId, new ChoiceName("Archive"), DamlRecord.Create());
-}
-
-/// <summary>
 /// Non-generic facet of <see cref="Choice{TOwner, TArg, TResult}"/>, letting
 /// <see cref="Contracts.IHasChoices{TSelf}.Choices"/> enumerate a type's choices
 /// without knowing each choice's argument and result types at the call site.

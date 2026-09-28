@@ -81,7 +81,7 @@ internal sealed partial class ChoiceEmitter
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Static <c>&lt;Choice&gt;Async</c> extension methods for the <c>{iface.Name}</c> Daml interface.");
+            indent.AppendLine($"/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for the <c>{iface.Name}</c> Daml interface.");
             indent.AppendLine("/// One method per choice; each submits an interface-typed");
             indent.AppendLine($"/// <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> built via");
             indent.AppendLine($"/// <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand.For{{TOwner}}(global::Daml.Runtime.Contracts.ContractId{{TOwner}},global::Daml.Runtime.Commands.ChoiceName,global::Daml.Runtime.Data.DamlValue)\"/>");
@@ -136,7 +136,7 @@ internal sealed partial class ChoiceEmitter
     {
         var choiceName = SanitizeIdentifier(choice.Name);
         var commandMethodName = $"{choiceName}Command";
-        var methodName = $"{choiceName}Async";
+        var methodName = $"Try{choiceName}Async";
         var (argTypeName, hasArg) = ResolveInterfaceChoiceArgType(choice);
         var requiresArgumentNullCheck = hasArg && choice.ArgumentType is DamlTypeRef;
         var argExpr = hasArg
@@ -218,7 +218,7 @@ internal sealed partial class ChoiceEmitter
         ChoiceSubmitterParameter submitter)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var returnType = MapNonContractReturnType(choice.ReturnType);
+        var returnType = mapper.MapType(choice.ReturnType);
 
         if (options.GenerateXmlDocs)
         {
@@ -226,9 +226,7 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine($"/// Exercises the <c>{choice.Name}</c> interface choice on this contract id, submitting the");
             indent.AppendLine("/// resulting <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> through");
             indent.AppendLine("/// <see cref=\"global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync\"/>");
-            indent.AppendLine(ReturnTypeNeedsStdlibUnitDecoder(choice.ReturnType)
-                ? "/// and returning the committed result as the stdlib Unit singleton."
-                : $"/// and decoding the committed result through <c>Choice{choiceName}.ResultDecoder</c>.");
+            indent.AppendLine($"/// and decoding the committed result through <c>Choice{choiceName}.ResultDecoder</c>.");
             indent.AppendLine("/// </summary>");
             indent.AppendLine("/// <param name=\"contractId\">The interface-typed contract id to exercise on.</param>");
             indent.AppendLine("/// <param name=\"client\">The ledger client.</param>");
@@ -284,12 +282,7 @@ internal sealed partial class ChoiceEmitter
     ///   as grounds to resubmit.</item>
     /// </list>
     /// Throws <see cref="InvalidOperationException"/> when no matching exercise event is found,
-    /// the same cardinality contract <see cref="WriteExerciseProjector"/> uses. A return type that
-    /// carries <c>Unit</c> (bare or nested in Optional/List/TextMap/GenMap) decodes via the same
-    /// <see cref="ReturnTypeNeedsStdlibUnitDecoder"/>/<see cref="RenderNonContractReturnDecoder"/>
-    /// path <see cref="WriteExerciseProjector"/> uses, bypassing <c>ResultDecoder</c> so the
-    /// stdlib <see cref="Daml.Runtime.Stdlib.Unit"/> singleton reaches the call site instead of the
-    /// wire-level <c>Daml.Runtime.Data.DamlUnit</c> the descriptor decodes to.
+    /// the same cardinality contract <see cref="WriteExerciseProjector"/> uses.
     /// </summary>
     private void WriteInterfaceChoiceExerciseProjector(
         IndentWriter indent,
@@ -297,8 +290,7 @@ internal sealed partial class ChoiceEmitter
         string interfaceName)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var returnType = MapNonContractReturnType(choice.ReturnType);
-        var needsStdlibUnitDecoder = ReturnTypeNeedsStdlibUnitDecoder(choice.ReturnType);
+        var returnType = mapper.MapType(choice.ReturnType);
 
         indent.AppendLine($"private static {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnType}> Project{choiceName}Result({context.Qualifier.Qualify(RuntimeTypeNames.TransactionResult)} tx, string contractId)");
         indent.AppendLine("{");
@@ -311,22 +303,14 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine("    && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)");
         indent.AppendLine($"    && string.Equals(interfaceId.ModuleName, {interfaceName}.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)");
         indent.AppendLine($"    && string.Equals(interfaceId.EntityName, {interfaceName}.InterfaceId.EntityName, global::System.StringComparison.Ordinal)");
-        indent.AppendLine($"    && string.Equals(exercised.ChoiceName, \"{choice.Name}\", global::System.StringComparison.Ordinal))");
+        indent.AppendLine($"    && string.Equals(exercised.ChoiceName.Value, \"{choice.Name}\", global::System.StringComparison.Ordinal))");
         indent.AppendLine("{");
         indent.Indent();
 
         indent.AppendLine("try");
         indent.AppendLine("{");
         indent.Indent();
-        if (needsStdlibUnitDecoder)
-        {
-            var decoderExpr = RenderNonContractReturnDecoder(choice.ReturnType, "exercised.ExerciseResult");
-            indent.AppendLine($"var decoded = {decoderExpr};");
-        }
-        else
-        {
-            indent.AppendLine($"var decoded = {interfaceName}.Choice{choiceName}.ResultDecoder!(exercised.ExerciseResult);");
-        }
+        indent.AppendLine($"var decoded = {interfaceName}.Choice{choiceName}.ResultDecoder!(exercised.ExerciseResult);");
         indent.AppendLine($"return new {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnType}>.One(decoded);");
         indent.Dedent();
         indent.AppendLine("}");

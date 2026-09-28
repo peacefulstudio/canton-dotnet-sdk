@@ -30,7 +30,7 @@ public class ContractKeyOnStreamRowTests
         var key = new AccountKey(Custodian, "savings");
 
         var created = new ContractStreamEvent<Account>.Created(
-            new Account.ContractId("contract-1"),
+            new ContractId<Account>("contract-1"),
             payload,
             new ContractKey(key.ToRecord(), Account.TemplateId) { KeyHash = LedgerKeyHash },
             LedgerOffset.At(1),
@@ -51,7 +51,7 @@ public class ContractKeyOnStreamRowTests
         var payload = new Steward(Custodian, "charter");
 
         var assigned = new ContractStreamEvent<Steward>.Assigned(
-            new Steward.ContractId("contract-1"),
+            new ContractId<Steward>("contract-1"),
             payload,
             new ContractKey(Custodian.ToDamlValue(), Steward.TemplateId) { KeyHash = LedgerKeyHash },
             LedgerOffset.At(4),

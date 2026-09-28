@@ -35,6 +35,16 @@
     <Content Include="Snapshots\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!--
+      The Quickstart sample's vendored intermediate.binpb (refreshed by
+      scripts/refresh-quickstart-sample.sh) is copied alongside the test assembly so the
+      DamlPrimitiveCatalog corpus-freedom test can enumerate every shipped
+      intermediate.binpb — the 12 snapshot families plus this one — without depending on
+      the repo source layout at runtime.
+    -->
+    <Content Include="QuickstartSample\intermediate.binpb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

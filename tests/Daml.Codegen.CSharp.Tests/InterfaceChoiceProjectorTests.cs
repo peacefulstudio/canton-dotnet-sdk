@@ -129,7 +129,7 @@ public class InterfaceChoiceProjectorTests
             ContractId: contractId,
             TemplateId: ConcreteTemplateId,
             InterfaceId: interfaceIdOverride ?? OracleInterfaceId,
-            ChoiceName: choiceName,
+            ChoiceName: new Daml.Runtime.Commands.ChoiceName(choiceName),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: exerciseResult,
             Consuming: false,
@@ -147,7 +147,7 @@ public class InterfaceChoiceProjectorTests
             ContractId: contractId,
             TemplateId: ConcreteTemplateId,
             InterfaceId: null,
-            ChoiceName: ChoiceName,
+            ChoiceName: new Daml.Runtime.Commands.ChoiceName(ChoiceName),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: exerciseResult,
             Consuming: false,
@@ -277,22 +277,22 @@ public class InterfaceChoiceProjectorTests
     }
 
     [Fact]
-    public void InterfaceChoiceProjector_emits_stdlib_Unit_signature_for_a_Unit_returning_choice()
+    public void InterfaceChoiceProjector_emits_DamlUnit_signature_for_a_Unit_returning_choice()
     {
-        WrapperCode.Should().Contain($"public static async Task<ExerciseOutcome<Unit>> {TouchChoiceName}Async(");
-        WrapperCode.Should().Contain($"private static ExerciseOutcome<Unit> Project{TouchChoiceName}Result(");
-        WrapperCode.Should().Contain("var decoded = Unit.Value;");
-        WrapperCode.Should().NotContain($"ExerciseOutcome<DamlUnit>> {TouchChoiceName}Async(");
+        WrapperCode.Should().Contain($"public static async Task<ExerciseOutcome<DamlUnit>> Try{TouchChoiceName}Async(");
+        WrapperCode.Should().Contain($"private static ExerciseOutcome<DamlUnit> Project{TouchChoiceName}Result(");
+        WrapperCode.Should().Contain($"var decoded = {InterfaceClassName}.Choice{TouchChoiceName}.ResultDecoder!(exercised.ExerciseResult);");
+        WrapperCode.Should().NotContain("Unit.Value");
     }
 
     [Fact]
-    public void InterfaceChoiceProjector_projector_decodes_a_Unit_returning_choice_to_the_stdlib_singleton_without_a_cast_failure()
+    public void InterfaceChoiceProjector_projector_decodes_a_Unit_returning_choice_to_the_DamlUnit_singleton_without_a_cast_failure()
     {
         var tx = TransactionWith(InterfaceExercised("contract-1", TouchChoiceName, DamlUnit.Instance));
 
-        var outcome = InvokeProjector<Unit>(WrapperAssembly, TouchChoiceName, tx, "contract-1");
+        var outcome = InvokeProjector<DamlUnit>(WrapperAssembly, TouchChoiceName, tx, "contract-1");
 
-        var one = outcome.Should().BeOfType<ExerciseOutcome<Unit>.One>().Subject;
-        one.Result.Should().Be(Unit.Value);
+        var one = outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.One>().Subject;
+        one.Result.Should().Be(DamlUnit.Instance);
     }
 }

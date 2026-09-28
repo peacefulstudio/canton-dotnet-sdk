@@ -37,11 +37,7 @@ public class TimestampWireShapeAgreementTests
     [MemberData(nameof(ToleratedWireTimestampShapes))]
     public void ReadRecord_should_decode_every_tolerated_wire_timestamp_shape(string wire, DateTimeOffset expectedInstant, TimeSpan expectedOffset)
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord($$"""{"recordedAt":"{{wire}}"}""", recordType: typeof(RecordedAtHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<RecordedAtHolder>($$"""{"recordedAt":"{{wire}}"}""");
 
         var timestamp = record.GetRequiredField("recordedAt").Should().BeOfType<DamlTimestamp>().Which.Value;
         timestamp.Should().Be(expectedInstant);
@@ -63,11 +59,7 @@ public class TimestampWireShapeAgreementTests
     [MemberData(nameof(WireTimestampShapesOutsideTheGrammar))]
     public void ReadRecord_should_reject_a_wire_timestamp_outside_the_tolerated_shapes(string wire)
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord($$"""{"recordedAt":"{{wire}}"}""", recordType: typeof(RecordedAtHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<RecordedAtHolder>($$"""{"recordedAt":"{{wire}}"}""");
 
         act.Should().Throw<JsonException>();
     }

@@ -1,0 +1,566 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using System.CodeDom.Compiler;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Reflection;
+using AwesomeAssertions;
+using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Authentication;
+using Canton.Ledger.Kernel.Authentication.TokenGeneration;
+using Canton.Ledger.Kernel.Resilience;
+using Canton.Ledger.Kernel.Security;
+using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Rest.Client.Raw;
+using Daml.Ledger.Abstractions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Xunit;
+
+#pragma warning disable CANTONREST001
+
+namespace Canton.Ledger.Rest.Client.Tests;
+
+public class ServiceCollectionExtensionsTests
+{
+    private static ServiceProvider BuildRawProvider(Action<IServiceCollection>? customize = null)
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerRawApis(options => options.HttpAddress = "http://ledger.example:7575");
+        customize?.Invoke(services);
+        return services.BuildServiceProvider();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_resolves_ILedgerReader_as_the_RestLedgerClient_adapter()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetService<ILedgerReader>().Should().BeOfType<RestLedgerClient>();
+        provider.GetRequiredService<ITokenProvider>().Should().BeSameAs(ITokenProvider.None);
+
+        using var httpClient = provider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient(ServiceCollectionExtensions.HttpClientName);
+        httpClient.BaseAddress.Should().Be(new Uri("http://ledger.example:7575"));
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_resolves_ILedgerStreamer_and_ILedgerClient_as_the_RestLedgerClient_adapter()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetService<ILedgerStreamer>().Should().BeOfType<RestLedgerClient>();
+        provider.GetService<ILedgerClient>().Should().BeOfType<RestLedgerClient>();
+    }
+
+    [Fact]
+    public async Task AddCantonStaticAuth_replaces_unauthenticated_fallback_registered_by_AddRestLedgerClient()
+    {
+        const string httpAddress = "http://ledger.example:7575";
+        const string staticToken = "static-token";
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = httpAddress);
+
+        services.AddCantonStaticAuth(staticToken);
+
+        using var provider = services.BuildServiceProvider();
+        var token = await provider.GetRequiredService<ITokenProvider>()
+            .GetTokenAsync(TestContext.Current.CancellationToken);
+        token.Should().Be(staticToken);
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_resolves_ICantonLedgerClient_as_the_RestLedgerClient_adapter()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetService<Canton.Ledger.Abstractions.ICantonLedgerClient>().Should().BeOfType<RestLedgerClient>();
+    }
+
+    [Fact]
+    public void AddRestLedgerRawApis_registers_the_raw_surface_but_not_the_ILedgerReader_adapter()
+    {
+        using var provider = BuildRawProvider();
+
+        provider.GetService<IStateServiceApi>().Should().NotBeNull();
+        provider.GetService<ILedgerReader>().Should().BeNull();
+        provider.GetService<RestLedgerClient>().Should().BeNull();
+    }
+
+    public static TheoryData<Type> RefitterGeneratedInterfaces() =>
+        [.. typeof(IVersionServiceApi).Assembly
+            .GetTypes()
+            .Where(type => type.IsInterface
+                && type.IsPublic
+                && type.GetCustomAttribute<GeneratedCodeAttribute>()?.Tool == "Refitter")];
+
+    [Theory]
+    [MemberData(nameof(RefitterGeneratedInterfaces))]
+    public void AddRestLedgerRawApis_registers_every_Refitter_generated_service_interface(Type apiInterface)
+    {
+        using var provider = BuildRawProvider();
+
+        provider.GetService(apiInterface).Should().NotBeNull(
+            $"the generated interface {apiInterface.Name} must be registered; " +
+            "a regen probably added a service — add it to ServiceCollectionExtensions");
+    }
+
+    [Fact]
+    public void AddRestLedgerRawApis_registers_the_hand_authored_off_spec_interfaces()
+    {
+        using var provider = BuildRawProvider();
+
+        provider.GetService<IAuthenticatedUserApi>().Should().NotBeNull();
+        provider.GetService<IDarApi>().Should().NotBeNull();
+        provider.GetService<IHealthApi>().Should().NotBeNull();
+        provider.GetService<IInteractiveSubmissionApi>().Should().NotBeNull();
+        provider.GetService<IPackageApi>().Should().NotBeNull();
+        provider.GetService<IPartyManagementApi>().Should().NotBeNull();
+        provider.GetService<IUserManagementApi>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddRestLedgerRawApis_binds_options_from_configuration()
+    {
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["HttpAddress"] = "http://ledger.example:7575"
+            })
+            .Build();
+
+        services.AddRestLedgerRawApis(config);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IOptions<RestLedgerClientOptions>>()
+            .Value.HttpAddress.Should().Be("http://ledger.example:7575");
+    }
+
+    [Fact]
+    public void AddRestLedgerRawApis_fails_validation_when_HttpAddress_is_missing()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerRawApis(new ConfigurationBuilder().Build());
+
+        using var provider = services.BuildServiceProvider();
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>();
+    }
+
+    [Fact]
+    public void Validate_rejects_configured_Tls_with_plaintext_HttpAddress()
+    {
+        var options = new RestLedgerClientOptions
+        {
+            HttpAddress = "http://ledger.example:7575",
+            Tls = new TlsOptions { CertificateAuthorityBundlePemPath = "ca.pem" }
+        };
+
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(
+            options, new ValidationContext(options), results, validateAllProperties: true);
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().BeEquivalentTo(
+                nameof(RestLedgerClientOptions.Tls),
+                nameof(RestLedgerClientOptions.HttpAddress));
+    }
+
+    [Fact]
+    public void Validate_accepts_unconfigured_Tls_with_plaintext_HttpAddress()
+    {
+        var options = new RestLedgerClientOptions { HttpAddress = "http://ledger.example:7575" };
+
+        var results = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(
+            options, new ValidationContext(options), results, validateAllProperties: true);
+
+        isValid.Should().BeTrue();
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AddRestLedgerRawApis_wires_the_bearer_token_and_base_address_into_resolved_apis()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponse(System.Net.HttpStatusCode.OK, """{"version":"3.5.9"}""");
+        var services = new ServiceCollection();
+        services.AddCantonStaticAuth("static-token");
+        services.AddRestLedgerRawApis(options => options.HttpAddress = "http://ledger.example:7575");
+        services.AddHttpClient(ServiceCollectionExtensions.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(() => transport);
+        using var provider = services.BuildServiceProvider();
+
+        var api = provider.GetRequiredService<IVersionServiceApi>();
+        await api.GetLedgerApiVersion(TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.RequestUri!.ToString().Should().Be("http://ledger.example:7575/v2/version");
+        transport.LastRequest.Headers.Authorization!.Scheme.Should().Be("Bearer");
+        transport.LastRequest.Headers.Authorization.Parameter.Should().Be("static-token");
+    }
+
+    [Fact]
+    public async Task AddRestLedgerRawApis_sends_no_Authorization_header_when_no_token_provider_is_registered()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponse(System.Net.HttpStatusCode.OK, """{"version":"3.5.9"}""");
+        using var provider = BuildRawProvider(services =>
+            services.AddHttpClient(ServiceCollectionExtensions.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => transport));
+
+        var api = provider.GetRequiredService<IVersionServiceApi>();
+        await api.GetLedgerApiVersion(TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.Headers.Authorization.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddRestLedgerRawApis_called_twice_does_not_stack_duplicate_message_handlers()
+    {
+        const string isolatedHttpAddress = "http://dedup-pipeline-test.ledger.example:7575";
+
+        var ownRequestActivities = new List<System.Diagnostics.Activity>();
+        bool CapturesOwnRequest(System.Diagnostics.Activity activity) =>
+            activity.GetTagItem(RestActivityHandler.UrlFull) is string url
+            && url.StartsWith(isolatedHttpAddress, System.StringComparison.Ordinal);
+
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == LedgerActivitySourceNames.RestLedgerClient,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity =>
+            {
+                if (CapturesOwnRequest(activity)) ownRequestActivities.Add(activity);
+            },
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+        var transport = new RecordingHttpHandler()
+            .WithResponse(System.Net.HttpStatusCode.OK, """{"version":"3.5.9"}""");
+        var services = new ServiceCollection();
+        services.AddRestLedgerRawApis(options => options.HttpAddress = isolatedHttpAddress);
+        services.AddRestLedgerRawApis(options => options.HttpAddress = isolatedHttpAddress);
+        services.AddHttpClient(ServiceCollectionExtensions.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(() => transport);
+        using var provider = services.BuildServiceProvider();
+
+        var api = provider.GetRequiredService<IVersionServiceApi>();
+        await api.GetLedgerApiVersion(TestContext.Current.CancellationToken);
+
+        ownRequestActivities.Should().ContainSingle("registering twice must not stack a second handler pipeline");
+    }
+
+    [Fact]
+    public void AddRestLedgerOptions_first_caller_wins_when_both_entry_points_are_combined_with_different_addresses()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerRawApis(options => options.HttpAddress = "http://first.example:7575");
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://second.example:9999");
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IOptions<RestLedgerClientOptions>>()
+            .Value.HttpAddress.Should().Be("http://first.example:7575");
+    }
+
+    [Fact]
+    public async Task AddRestLedgerRawApis_rewrites_ListUsers_paging_query_to_camelCase_end_to_end()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(System.Net.HttpStatusCode.OK, """{"users":[]}""");
+        using var provider = BuildRawProvider(services =>
+            services.AddHttpClient(ServiceCollectionExtensions.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => transport));
+
+        var api = provider.GetRequiredService<IUserManagementServiceApi>();
+        await api.ListUsers(
+            pageToken: null!,
+            pageSize: 1,
+            identityProviderId: null!,
+            TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.RequestUri!.Query.Should().Be("?pageSize=1");
+    }
+
+    [Fact]
+    public void AddRestLedgerRawApis_with_auth_configuration_registers_a_token_provider()
+    {
+        var services = new ServiceCollection();
+        var ledgerConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["HttpAddress"] = "http://ledger.example:7575"
+            })
+            .Build();
+        var authConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["TokenEndpoint"] = "https://auth.example/token",
+                ["ClientId"] = "client",
+                ["ClientSecret"] = "secret"
+            })
+            .Build();
+
+        services.AddRestLedgerRawApis(ledgerConfig, authConfig);
+
+        using var provider = services.BuildServiceProvider();
+        var tokenProvider = provider.GetRequiredService<ITokenProvider>();
+        tokenProvider.Should().NotBeSameAs(ITokenProvider.None);
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_fails_at_startup_when_Retry_MaxRetryAttempts_negative()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "http://localhost:7575";
+            options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = -1 };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>()
+            .WithMessage("*MaxRetryAttempts*");
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_fails_at_startup_when_Retry_Delay_negative()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "http://localhost:7575";
+            options.Retry = new RetryOptions { Enabled = true, Delay = TimeSpan.FromMilliseconds(-1) };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>()
+            .WithMessage("*Delay*");
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_starts_when_Retry_configured_with_nonnegative_values()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "http://localhost:7575";
+            options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 5, Delay = TimeSpan.FromMilliseconds(200) };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_fails_at_startup_when_ledger_tls_is_configured_and_auth_tls_is_not()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>()
+            .WithMessage("*ClientCredentialsOptions.Tls*");
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_starts_when_ledger_tls_and_auth_tls_are_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "auth-client.pem" };
+        });
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_starts_when_ledger_tls_is_configured_with_static_auth()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonStaticAuth("static-token");
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_options_validation_does_not_resolve_preexisting_scoped_ITokenProvider()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<ITokenProvider>(static _ =>
+            throw new InvalidOperationException("The scoped token provider must not be resolved."));
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_starts_with_ledger_tls_when_preexisting_ITokenProvider_wins_over_AddCantonAuth()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonStaticAuth("static-token");
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<ITokenProvider>().Should().BeOfType<StaticTokenProvider>();
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_starts_when_ledger_tls_and_auth_tls_are_unconfigured()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        services.AddRestLedgerClient(options => options.HttpAddress = "https://ledger.example:7575");
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_fails_at_startup_when_ledger_tls_is_configured_and_auth_tls_is_not_reversed_order()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<ITokenProvider>().Should().BeOfType<ClientCredentialsProvider>();
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>()
+            .WithMessage("*ClientCredentialsOptions.Tls*");
+    }
+
+    [Theory]
+    [InlineData(typeof(ILedgerReader))]
+    [InlineData(typeof(ILedgerWriter))]
+    [InlineData(typeof(ILedgerStreamer))]
+    [InlineData(typeof(ILedgerClient))]
+    [InlineData(typeof(ICantonLedgerClient))]
+    public void AddRestLedgerClient_registers_the_transport_neutral_surface_as_transient(Type serviceType)
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+
+        services.Should().ContainSingle(descriptor => descriptor.ServiceType == serviceType)
+            .Which.Lifetime.Should().Be(ServiceLifetime.Transient);
+    }
+
+    [Theory]
+    [InlineData(typeof(ILedgerReader))]
+    [InlineData(typeof(ILedgerWriter))]
+    [InlineData(typeof(ILedgerStreamer))]
+    [InlineData(typeof(ILedgerClient))]
+    [InlineData(typeof(ICantonLedgerClient))]
+    public void AddRestLedgerClient_resolves_the_transport_neutral_surface_as_the_RestLedgerClient_adapter(Type serviceType)
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService(serviceType).Should().BeOfType<RestLedgerClient>();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_keeps_a_consumer_registration_made_before_it()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ILedgerReader>(static _ => throw new UnreachableException());
+
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+
+        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(ILedgerReader))
+            .Which.Lifetime.Should().Be(ServiceLifetime.Singleton);
+    }
+}

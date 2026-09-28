@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -16,7 +17,7 @@ namespace Daml.Runtime.Tests;
 /// <summary>
 /// Pins the <see cref="System.Text.Json"/> contract for <see cref="ContractStreamEvent{T}"/>: a
 /// <c>"$case"</c>-discriminated object that reads back as the arm that wrote it. The contract is
-/// a CLR round trip, not a Daml-LF wire decode — see ADR 0028 — so what the tests assert is that
+/// a CLR round trip, not a Daml-LF wire decode, so what the tests assert is that
 /// a value survives the trip. <see cref="ContractStreamEvent{T}"/>'s own converter is zero-config,
 /// but an arm carrying a <see cref="DamlValue"/> field (<c>Exercised</c>'s choice argument and
 /// result, and a keyed <c>Created</c>/<c>Assigned</c>'s <see cref="ContractKey.Value"/>) round-trips
@@ -75,7 +76,7 @@ public class ContractStreamEventJsonTests
     public void Exercised_reads_its_own_write_back()
     {
         ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.Exercised(
-            Id, "Accept", new DamlText("go"), new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
+            Id, new ChoiceName("Accept"), new DamlText("go"), new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
 
         var written = JsonSerializer.Serialize(value, Options);
 
@@ -90,7 +91,7 @@ public class ContractStreamEventJsonTests
     public void Exercised_writes_the_choice_argument_and_result_at_their_canonical_DamlLF_shape()
     {
         ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.Exercised(
-            Id, "Accept", DamlUnit.Instance, new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
+            Id, new ChoiceName("Accept"), DamlUnit.Instance, new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
 
         var json = JsonSerializer.Serialize(value, Options);
 
@@ -147,7 +148,7 @@ public class ContractStreamEventJsonTests
     public void StreamError_reads_its_own_write_back_with_full_fields()
     {
         ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.StreamError(
-            10, "the stream authorization is stale", DamlErrorCategory.ContentionOnSharedResources, "STALE_STREAM_AUTHORIZATION");
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted), "the stream authorization is stale", DamlErrorCategory.ContentionOnSharedResources, "STALE_STREAM_AUTHORIZATION");
 
         var written = JsonSerializer.Serialize(value);
 
@@ -157,7 +158,7 @@ public class ContractStreamEventJsonTests
     [Fact]
     public void StreamError_reads_its_own_write_back_with_only_the_required_fields()
     {
-        ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.StreamError(14, "unavailable");
+        ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
 
         var written = JsonSerializer.Serialize(value);
 
@@ -168,13 +169,13 @@ public class ContractStreamEventJsonTests
     public void StreamError_writes_and_reads_back_when_SourceException_is_set()
     {
         ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.StreamError(
-            14, "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE", new InvalidOperationException("transport reset"));
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE", new InvalidOperationException("transport reset"));
 
         var written = JsonSerializer.Serialize(value);
         var read = JsonSerializer.Deserialize<ContractStreamEvent<TestTemplate>>(written);
 
         read.Should().Be(
-            new ContractStreamEvent<TestTemplate>.StreamError(14, "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE"),
+            new ContractStreamEvent<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE"),
             "SourceException carries JsonIgnoreAttribute: a real caught exception has a TargetSite, "
             + "and System.Text.Json's reflection-based writer throws NotSupportedException trying to "
             + "serialize System.Reflection.MethodBase through it, so writing succeeds by dropping the "
@@ -186,12 +187,25 @@ public class ContractStreamEventJsonTests
     public void StreamError_omits_SourceException_from_the_written_JSON()
     {
         ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.StreamError(
-            14, "unavailable", SourceException: new InvalidOperationException("transport reset"));
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", SourceException: new InvalidOperationException("transport reset"));
 
         var json = JsonSerializer.Serialize(value);
 
         using var document = JsonDocument.Parse(json);
         document.RootElement.TryGetProperty("SourceException", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void StreamError_writes_its_transport_status_as_a_nested_case_discriminated_object()
+    {
+        ContractStreamEvent<TestTemplate> value = new ContractStreamEvent<TestTemplate>.StreamError(
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
+
+        var json = JsonSerializer.Serialize(value);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("Status").GetRawText().Should().Be("""{"$case":"Grpc","StatusCode":14}""");
+        document.RootElement.TryGetProperty("StatusCode", out _).Should().BeFalse();
     }
 
     [Fact]

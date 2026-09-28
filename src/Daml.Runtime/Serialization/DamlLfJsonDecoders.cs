@@ -22,18 +22,16 @@ namespace Daml.Runtime.Serialization;
 public delegate DamlValue DamlLfElementReader(JsonElement json, DamlLfJsonDecodeContext context);
 
 /// <summary>
-/// Composable building blocks for decoding LF-JSON against an explicit shape, rather than a
-/// reflected CLR <see cref="Type"/>. Generated code composes these to decode a value whose
-/// element optionality a bare <see cref="Type"/> cannot carry — a top-level generic Daml type
-/// family such as <c>List</c>, <c>Optional</c>, <c>TextMap</c>, <c>GenMap</c>, a tuple, an
-/// <c>Either</c>, or a choice or key type built from them.
+/// Composable building blocks for decoding LF-JSON against an explicit shape. Generated code
+/// composes these to decode every Daml value, including one whose element optionality a bare
+/// CLR type cannot carry — a generic Daml type family such as <c>List</c>, <c>Optional</c>,
+/// <c>TextMap</c>, <c>GenMap</c>, a tuple, an <c>Either</c>, or a choice or key type built from them.
 /// </summary>
 /// <remarks>
 /// Every reader here returns a <see cref="DamlValue"/> — the same intermediate representation
 /// <see cref="DamlLfJsonReader"/> produces — for the generated <c>FromValue</c>/<c>FromRecord</c>
-/// conversions to consume. <see cref="DamlLfJsonReader"/> shares these readers' scalar, shape, and
-/// error primitives rather than duplicating them: it is the reflection-driven front end, this is
-/// the shared decoding core.
+/// conversions to consume. <see cref="DamlLfJsonReader"/> is the top-level front end that applies
+/// the decode limits to a whole document; this is the shared decoding core.
 /// </remarks>
 public static class DamlLfJsonDecoders
 {
@@ -181,79 +179,12 @@ public static class DamlLfJsonDecoders
         T.__ReadDamlLfJson(json, context);
 
     /// <summary>
-    /// Decodes a generated Daml record by delegating to the shape-reflected reader for
-    /// <paramref name="recordType"/>.
-    /// </summary>
-    /// <exception cref="JsonException">The JSON does not match the shape of <paramref name="recordType"/>, or a decode limit is exceeded.</exception>
-    /// <exception cref="NotSupportedException"><paramref name="recordType"/> is not a generated Daml record, or one of its CLR property types lies outside the Daml type mapping.</exception>
-    [Obsolete(
-        "Type-keyed Daml-LF JSON decoding is superseded by the emitted decoders reached through "
-        + "DamlLfJsonDecoders.ReadRecord<T>/ReadVariant<T>; this overload keeps preview.2 behaviour, "
-        + "including its NotSupportedException for shapes a CLR Type cannot express. "
-        + "Scheduled for removal once every record/variant/enum/template/view has an emitted "
-        + "decoder and the reflection reader retires.",
-        DiagnosticId = "DAMLRT0001")]
-    public static DamlRecord ReadRecord(JsonElement json, Type recordType, DamlLfJsonDecodeContext context) =>
-        DamlLfJsonReader.ReadRecordValue(json, recordType, context.Limits, context.Depth, context.Path);
-
-    /// <summary>
     /// Decodes a generated Daml variant through its own emitted <c>__ReadDamlLfJson</c>.
     /// </summary>
     /// <exception cref="JsonException">The JSON does not match the shape of <typeparamref name="T"/>, or a decode limit is exceeded.</exception>
     public static DamlVariant ReadVariant<T>(JsonElement json, DamlLfJsonDecodeContext context)
         where T : IDamlVariant<T> =>
         T.__ReadDamlLfJson(json, context);
-
-    /// <summary>
-    /// Decodes a generated Daml variant by delegating to the shape-reflected reader for
-    /// <paramref name="variantType"/>.
-    /// </summary>
-    /// <exception cref="JsonException">The JSON does not match the shape of <paramref name="variantType"/>, or a decode limit is exceeded.</exception>
-    /// <exception cref="NotSupportedException"><paramref name="variantType"/> does not implement <see cref="IDamlVariant"/>, one of its arms is not a generated variant arm, or a CLR property type it carries lies outside the Daml type mapping.</exception>
-    [Obsolete(
-        "Type-keyed Daml-LF JSON decoding is superseded by the emitted decoders reached through "
-        + "DamlLfJsonDecoders.ReadRecord<T>/ReadVariant<T>; this overload keeps preview.2 behaviour, "
-        + "including its NotSupportedException for shapes a CLR Type cannot express. "
-        + "Scheduled for removal once every record/variant/enum/template/view has an emitted "
-        + "decoder and the reflection reader retires.",
-        DiagnosticId = "DAMLRT0001")]
-    public static DamlVariant ReadVariant(JsonElement json, Type variantType, DamlLfJsonDecodeContext context) =>
-        typeof(IDamlVariant).IsAssignableFrom(variantType)
-            ? DamlLfJsonReader.ReadVariant(json, variantType, context.Limits, context.Depth, context.Path)
-            : throw DamlLfJsonReader.NotAGeneratedVariant(variantType, context.Path);
-
-    /// <summary>
-    /// Decodes a generated Daml enum by delegating to the shape-reflected reader for
-    /// <typeparamref name="T"/>.
-    /// </summary>
-    /// <exception cref="JsonException">The JSON does not name one of <typeparamref name="T"/>'s wire constructors.</exception>
-    /// <exception cref="NotSupportedException"><typeparamref name="T"/> is not a generated Daml enum.</exception>
-    [Obsolete(
-        "Type-keyed Daml-LF JSON decoding is superseded by the emitted {Enum}Extensions.__ReadDamlLfJson; "
-        + "this overload keeps preview.2 behaviour, including its NotSupportedException for shapes a CLR "
-        + "Type cannot express. Scheduled for removal once every record/variant/enum/template/view "
-        + "has an emitted decoder and the reflection reader retires.",
-        DiagnosticId = "DAMLRT0001")]
-    public static DamlEnum ReadEnum<T>(JsonElement json, DamlLfJsonDecodeContext context)
-        where T : struct, Enum =>
-        ReadEnum(json, typeof(T), context);
-
-    /// <summary>
-    /// Decodes a generated Daml enum by delegating to the shape-reflected reader for
-    /// <paramref name="enumType"/>.
-    /// </summary>
-    /// <exception cref="JsonException">The JSON does not name one of <paramref name="enumType"/>'s wire constructors.</exception>
-    /// <exception cref="NotSupportedException"><paramref name="enumType"/> is not a generated Daml enum.</exception>
-    [Obsolete(
-        "Type-keyed Daml-LF JSON decoding is superseded by the emitted {Enum}Extensions.__ReadDamlLfJson; "
-        + "this overload keeps preview.2 behaviour, including its NotSupportedException for shapes a CLR "
-        + "Type cannot express. Scheduled for removal once every record/variant/enum/template/view "
-        + "has an emitted decoder and the reflection reader retires.",
-        DiagnosticId = "DAMLRT0001")]
-    public static DamlEnum ReadEnum(JsonElement json, Type enumType, DamlLfJsonDecodeContext context) =>
-        DamlLfJsonReader.IsGeneratedDamlEnum(enumType)
-            ? DamlLfJsonReader.ReadEnum(json, enumType, context.Path)
-            : throw DamlLfJsonReader.NotAGeneratedEnum(enumType, context.Path);
 
     /// <summary>Decodes a Daml <c>List</c>, applying <paramref name="elementReader"/> to each element.</summary>
     /// <exception cref="JsonException">The JSON is not an array, or exceeds the configured array-breadth limit.</exception>

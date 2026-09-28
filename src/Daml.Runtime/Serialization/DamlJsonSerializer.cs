@@ -14,11 +14,24 @@ namespace Daml.Runtime.Serialization;
 /// <summary>
 /// Input hardening limits applied by <see cref="DamlJsonSerializer"/> before materializing JSON into Daml values.
 /// </summary>
+/// <remarks>
+/// A record class, not a record struct: a struct always carries a compiler-synthesized
+/// parameterless constructor that zeroes every field instead of applying the primary
+/// constructor's default arguments, so <c>new DamlJsonDeserializationLimits()</c> and
+/// <c>default(DamlJsonDeserializationLimits)</c> would silently produce a limits value that
+/// rejects every input. A record class has no such constructor, so <c>new()</c> always
+/// resolves to the primary constructor below, defaults and all; <see cref="Default"/> names
+/// the same instance for callers who want it by reference rather than by construction.
+/// </remarks>
 /// <param name="MaxInputCharacters">Maximum accepted JSON string length in UTF-16 code units.</param>
 /// <param name="MaxArrayElements">Maximum accepted element count for any single JSON array.</param>
-public readonly record struct DamlJsonDeserializationLimits(
+public sealed record DamlJsonDeserializationLimits(
     int MaxInputCharacters = 16 * 1024 * 1024,
-    int MaxArrayElements = 100_000);
+    int MaxArrayElements = 100_000)
+{
+    /// <summary>The hardened default limits: 16 MiB of input, 100,000 elements per array.</summary>
+    public static DamlJsonDeserializationLimits Default { get; } = new();
+}
 
 /// <summary>
 /// Serializes and deserializes Daml values to/from JSON format compatible with the Ledger API.
@@ -33,15 +46,8 @@ public static class DamlJsonSerializer
     internal const DateTimeStyles UtcNormalizingTimestampParseStyles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
     internal const int MaximumNestingDepth = 128;
     private const int JsonReaderWriterMaxDepth = 4 * MaximumNestingDepth;
-    /// <remarks>
-    /// The values repeat the defaults on <see cref="DamlJsonDeserializationLimits"/>' primary
-    /// constructor. <c>new()</c> cannot stand in: for a readonly record struct the parameterless
-    /// constructor zeroes every field instead of applying the primary constructor's default
-    /// arguments, which CA1805 correctly flags.
-    /// </remarks>
-    internal static readonly DamlJsonDeserializationLimits DefaultDeserializationLimits = new(
-        16 * 1024 * 1024,
-        100_000);
+    internal static readonly DamlJsonDeserializationLimits DefaultDeserializationLimits =
+        DamlJsonDeserializationLimits.Default;
 
     private static readonly JsonSerializerOptions DefaultOptions = new()
     {
@@ -170,12 +176,18 @@ public static class DamlJsonSerializer
     /// <summary>
     /// Deserializes JSON to a DamlValue with caller-supplied input-size and array-breadth limits.
     /// </summary>
-    public static DamlValue Deserialize(string json, DamlJsonDeserializationLimits limits)
+    /// <remarks>
+    /// A <see langword="null"/> <paramref name="limits"/>, including <c>default(DamlJsonDeserializationLimits)</c>,
+    /// applies <see cref="DamlJsonDeserializationLimits.Default"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limits"/> is not a valid limit configuration.</exception>
+    public static DamlValue Deserialize(string json, DamlJsonDeserializationLimits? limits)
     {
-        EnsureWithinInputLimit(json, limits);
+        var effectiveLimits = limits ?? DefaultDeserializationLimits;
+        EnsureWithinInputLimit(json, effectiveLimits);
         var node = JsonNode.Parse(json, nodeOptions: null, DocumentOptions)
             ?? throw new JsonException("Null JSON not supported");
-        return JsonNodeToValue(node, limits, depth: 0);
+        return JsonNodeToValue(node, effectiveLimits, depth: 0);
     }
 
     /// <summary>
@@ -196,16 +208,22 @@ public static class DamlJsonSerializer
     /// <summary>
     /// Deserializes JSON to a DamlRecord with caller-supplied input-size and array-breadth limits.
     /// </summary>
-    public static DamlRecord DeserializeRecord(string json, DamlJsonDeserializationLimits limits)
+    /// <remarks>
+    /// A <see langword="null"/> <paramref name="limits"/>, including <c>default(DamlJsonDeserializationLimits)</c>,
+    /// applies <see cref="DamlJsonDeserializationLimits.Default"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limits"/> is not a valid limit configuration.</exception>
+    public static DamlRecord DeserializeRecord(string json, DamlJsonDeserializationLimits? limits)
     {
-        EnsureWithinInputLimit(json, limits);
+        var effectiveLimits = limits ?? DefaultDeserializationLimits;
+        EnsureWithinInputLimit(json, effectiveLimits);
         var node = JsonNode.Parse(json, nodeOptions: null, DocumentOptions)
             ?? throw new JsonException("Expected a JSON object for a Daml record but found null");
         if (node is not JsonObject obj)
         {
             throw new JsonException($"Expected a JSON object for a Daml record but found {node.GetValueKind()}");
         }
-        return JsonObjectToRecord(obj, limits, depth: 0);
+        return JsonObjectToRecord(obj, effectiveLimits, depth: 0);
     }
 
     internal static void ValidateLimits(DamlJsonDeserializationLimits limits)

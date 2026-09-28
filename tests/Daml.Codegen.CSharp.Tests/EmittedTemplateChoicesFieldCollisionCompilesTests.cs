@@ -631,9 +631,6 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
         vault.Should().Contain(
             "KeyDecoder = value => global::Test.Module.Detail.FromRecord(value.As<global::Daml.Runtime.Data.DamlRecord>()),",
             "a record-typed template key decoder must be root-qualified for the same reason");
-        vault.Should().Contain(
-            "global::Test.Module.Detail.FromRecord(contractKey.Value.As<global::Daml.Runtime.Data.DamlRecord>())",
-            "the Contract class's FromCreatedEvent key decode must be root-qualified for the same reason");
         vault.Should().NotContain(
             ".As<DamlRecord>()",
             "no unqualified DamlRecord cast should survive anywhere in the template body once the nested choice-arg record shadows it");

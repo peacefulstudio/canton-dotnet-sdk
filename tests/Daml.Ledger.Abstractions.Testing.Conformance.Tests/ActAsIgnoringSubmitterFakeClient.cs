@@ -39,7 +39,7 @@ internal sealed class ActAsIgnoringSubmitterFakeClient(Party authorized) : NotSu
         {
             return Task.FromResult<ExerciseOutcome<TransactionResult>>(new ExerciseOutcome<TransactionResult>.DamlError(
                 DamlErrorCategory.AuthorizationChecksFailed, "UNAUTHORIZED",
-                $"party {authorized.Id} did not authorize this submission", new Dictionary<string, string>()));
+                $"party {authorized.Value} did not authorize this submission", new Dictionary<string, string>()));
         }
 
         return Task.FromResult<ExerciseOutcome<TransactionResult>>(new ExerciseOutcome<TransactionResult>.One(
@@ -54,7 +54,7 @@ internal sealed class ActAsIgnoringSubmitterFakeClient(Party authorized) : NotSu
         if (!IsAuthorized(submission))
         {
             throw new LedgerOperationException(
-                $"party {authorized.Id} did not authorize this submission",
+                $"party {authorized.Value} did not authorize this submission",
                 DamlErrorCategory.AuthorizationChecksFailed, "UNAUTHORIZED", new Dictionary<string, string>());
         }
     }

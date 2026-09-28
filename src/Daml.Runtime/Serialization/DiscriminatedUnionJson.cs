@@ -33,8 +33,8 @@ internal interface IDiscriminatedUnionJsonConverterFactory;
 /// would otherwise reject every read of every arm on the one member none of them declare. A
 /// payload nested inside another instance of the same union —
 /// <c>Optional&lt;Optional&lt;T&gt;&gt;</c> — is unambiguous: each level carries its own
-/// discriminator. This is the CLR round-trip contract ADR 0028 describes, not the Daml-LF wire
-/// encoding; a generated record's own field still reads and writes under its C# member names via
+/// discriminator. This is a CLR round-trip contract, not the Daml-LF wire encoding; a generated
+/// record's own field still reads and writes under its C# member names via
 /// <see cref="Daml.Runtime.Serialization.DamlLfJsonReader"/> for the ledger, unrelated to this
 /// shape.
 /// </remarks>
@@ -216,10 +216,14 @@ internal static class DiscriminatedUnionJson
         var configuredMaxDepth = EffectiveMaxDepth(options);
         var maxDepth = Math.Min(configuredMaxDepth, MaxSafeWriteDepth);
         var effectiveDepth = t_depthBaseline + writer.CurrentDepth;
-        if (effectiveDepth >= maxDepth || !RuntimeHelpers.TryEnsureSufficientExecutionStack())
+        var stackLow = !RuntimeHelpers.TryEnsureSufficientExecutionStack();
+        if (effectiveDepth >= maxDepth || stackLow)
         {
+            var trigger = effectiveDepth < maxDepth
+                ? $"failed because the native call stack is running low at union nesting depth {effectiveDepth} (enforced limit: {maxDepth})"
+                : $"exceeded the maximum union nesting depth of {maxDepth}";
             throw new JsonException(
-                $"{typeName} exceeded the maximum union nesting depth of {maxDepth} while writing case "
+                $"{typeName} {trigger} while writing case "
                 + $"\"{armType.Name}\": each nested union re-enters JsonSerializer.SerializeToNode as a "
                 + "fresh operation, so System.Text.Json's own MaxDepth guard only runs once the whole "
                 + "node tree is already built in memory and cannot be relied on to catch this before "
@@ -228,8 +232,8 @@ internal static class DiscriminatedUnionJson
                 + "is running low, even short of the counted depth above, rather than let a "
                 + "platform-specific stack budget be the thing that decides whether this throws a "
                 + "JsonException or crashes the process. The depth enforced here is "
-                + $"Math.Min({configuredMaxDepth}, {MaxSafeWriteDepth}) — the smaller of the caller's "
-                + "own configured (or default) JsonSerializerOptions.MaxDepth and a fixed internal "
+                + $"{maxDepth} — the smaller of the caller's configured (or default) "
+                + $"JsonSerializerOptions.MaxDepth ({configuredMaxDepth}) and a fixed internal "
                 + "safety ceiling that a caller cannot raise past, because the real per-level native "
                 + "stack cost that motivates this ceiling does not shrink just because MaxDepth was "
                 + "raised.");

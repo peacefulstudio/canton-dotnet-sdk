@@ -119,6 +119,28 @@ internal static class StdlibPackages
     {
         switch (type)
         {
+            case DamlListType list:
+                indent.Require("System.Collections.Generic");
+                indent.Require("System.Linq");
+                RequireForRewrittenType(resolver, indent, list.Element);
+                break;
+            case DamlOptionalType optional:
+                RequireForRewrittenType(resolver, indent, optional.Value);
+                break;
+            case DamlTextMapType textMap:
+                indent.Require("System.Collections.Generic");
+                indent.Require("System.Linq");
+                RequireForRewrittenType(resolver, indent, textMap.Value);
+                break;
+            case DamlGenMapType genMap:
+                indent.Require("System.Collections.Generic");
+                indent.Require("System.Linq");
+                RequireForRewrittenType(resolver, indent, genMap.Key);
+                RequireForRewrittenType(resolver, indent, genMap.Value);
+                break;
+            case DamlContractIdType:
+                indent.Require(RuntimeNamespaces.Contracts);
+                break;
             case DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List } } app:
                 indent.Require("System.Collections.Generic");
                 indent.Require("System.Linq");

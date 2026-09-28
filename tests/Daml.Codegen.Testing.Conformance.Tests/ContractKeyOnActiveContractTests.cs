@@ -11,10 +11,11 @@ using Xunit;
 namespace Daml.Codegen.Testing.Conformance.Tests;
 
 /// <summary>
-/// The key travels on the created event, so the generated active contract — not the
-/// template payload a caller constructs locally — is where it lands. These tests run
-/// against the corpus's own generated types for a record key, a record key built by a
-/// helper in another module, and a bare <c>Party</c> key.
+/// The key travels on the created event, so the keyed <c>Contract&lt;T, TKey&gt;</c> — not the
+/// template payload a caller constructs locally — is where it lands, decoded through the
+/// template's generated key witness. These tests run against the corpus's own generated types
+/// for a record key, a record key built by a helper in another module, and a bare
+/// <c>Party</c> key.
 /// </summary>
 public class ContractKeyOnActiveContractTests
 {
@@ -39,8 +40,8 @@ public class ContractKeyOnActiveContractTests
         var payload = new Account(Custodian, "savings", 42);
         var key = new AccountKey(Custodian, "savings");
 
-        var contract = Account.Contract.FromCreatedEvent(
-            CreatedEvent(Account.TemplateId, payload.ToRecord(), key.ToRecord()));
+        var contract = Contract<Account, AccountKey>.FromCreatedEvent(
+            CreatedEvent(Account.TemplateId, payload.ToRecord(), key.ToRecord()), Account.FromRecord);
 
         contract.Key.Value.Should().Be(key);
         contract.Data.Should().Be(payload);
@@ -52,8 +53,8 @@ public class ContractKeyOnActiveContractTests
     {
         var payload = new Steward(Custodian, "charter");
 
-        var contract = Steward.Contract.FromCreatedEvent(
-            CreatedEvent(Steward.TemplateId, payload.ToRecord(), Custodian.ToDamlValue()));
+        var contract = Contract<Steward, Party>.FromCreatedEvent(
+            CreatedEvent(Steward.TemplateId, payload.ToRecord(), Custodian.ToDamlValue()), Steward.FromRecord);
 
         contract.Key.Value.Should().Be(Custodian);
     }
@@ -64,8 +65,8 @@ public class ContractKeyOnActiveContractTests
         var payload = new Schedule(new ScheduleView(Custodian, "2026-Q1"));
         var key = new ScheduleKey(Custodian, "2026-Q1");
 
-        var contract = Schedule.Contract.FromCreatedEvent(
-            CreatedEvent(Schedule.TemplateId, payload.ToRecord(), key.ToRecord()));
+        var contract = Contract<Schedule, ScheduleKey>.FromCreatedEvent(
+            CreatedEvent(Schedule.TemplateId, payload.ToRecord(), key.ToRecord()), Schedule.FromRecord);
 
         contract.Key.Value.Should().Be(key);
     }
@@ -80,11 +81,11 @@ public class ContractKeyOnActiveContractTests
             ContractKey = new ContractKey(key.ToRecord()) { KeyHash = LedgerKeyHash },
         };
 
-        var contract = Account.Contract.FromCreatedEvent(createdEvent);
+        var contract = Contract<Account, AccountKey>.FromCreatedEvent(createdEvent, Account.FromRecord);
 
         contract.Key.Hash.Should().Be(
             LedgerKeyHash,
-            "the hash is Canton-computed over the key and the template id, so a generated contract "
+            "the hash is Canton-computed over the key and the template id, so a keyed contract "
             + "that drops it leaves the caller unable to address the contract by key");
     }
 
@@ -93,42 +94,12 @@ public class ContractKeyOnActiveContractTests
     {
         var payload = new Account(Custodian, "savings", 42);
 
-        var decoding = () => Account.Contract.FromCreatedEvent(
-            CreatedEvent(Account.TemplateId, payload.ToRecord(), key: null));
+        var decoding = () => Contract<Account, AccountKey>.FromCreatedEvent(
+            CreatedEvent(Account.TemplateId, payload.ToRecord(), key: null), Account.FromRecord);
 
         decoding.Should().Throw<InvalidOperationException>(
-            "a keyed template's generated contract declares a non-nullable key, so an event that "
+            "a keyed template's Contract<T, TKey> declares a non-nullable key, so an event that "
             + "carries none has to fail loudly rather than reach a caller through that shape")
             .WithMessage("*carried no contract key*");
-    }
-
-    [Fact]
-    public void Constructing_a_contract_has_to_name_the_key_slot()
-    {
-        var key = new AccountKey(Custodian, "savings");
-
-        var contract = new Account.Contract(new Account.ContractId("contract-1"), new Account(Custodian, "savings", 42))
-        {
-            Key = new ContractKey<AccountKey>(key, null),
-        };
-
-        contract.Key.Value.Should().Be(
-            key,
-            "the slot is required, so the key is a choice the call site states rather than a default it inherits");
-    }
-
-    [Fact]
-    public void Deconstructing_a_contract_stays_source_compatible()
-    {
-        var contract = new Account.Contract(new Account.ContractId("contract-1"), new Account(Custodian, "savings", 42))
-        {
-            Key = new ContractKey<AccountKey>(new AccountKey(Custodian, "savings"), null),
-        };
-
-        var (id, data) = contract;
-
-        id.Value.Should().Be("contract-1");
-        data.Should().Be(new Account(Custodian, "savings", 42),
-            "moving the key off the positional list leaves Deconstruct at two parameters, so var (id, data) = contract still compiles");
     }
 }

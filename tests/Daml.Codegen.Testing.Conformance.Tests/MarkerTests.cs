@@ -60,7 +60,7 @@ public class MarkerTests
             Observers: [],
             ContractKey: null);
 
-        var contract = Marker.Contract.FromCreatedEvent(@event);
+        var contract = Contract<Marker>.FromCreatedEvent(@event, Marker.FromRecord);
 
         contract.Id.Value.Should().Be("cid-1");
         contract.Data.Should().Be(payload);

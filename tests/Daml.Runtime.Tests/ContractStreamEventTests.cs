@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Daml.Runtime;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -212,11 +213,11 @@ public class ContractStreamEventTests
         [
             new ContractStreamEvent<TestTemplate>.Created(new ContractId<TestTemplate>("c1"), new TestTemplate("alice"), null, LedgerOffset.At(1), new SynchronizerId("sync"), [new Party("alice")]),
             new ContractStreamEvent<TestTemplate>.Archived(new ContractId<TestTemplate>("c1"), LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]),
-            new ContractStreamEvent<TestTemplate>.Exercised(new ContractId<TestTemplate>("c1"), "Accept", DamlUnit.Instance, DamlUnit.Instance, true, LedgerOffset.At(3), new SynchronizerId("sync"), [new Party("alice")]),
+            new ContractStreamEvent<TestTemplate>.Exercised(new ContractId<TestTemplate>("c1"), new ChoiceName("Accept"), DamlUnit.Instance, DamlUnit.Instance, true, LedgerOffset.At(3), new SynchronizerId("sync"), [new Party("alice")]),
             new ContractStreamEvent<TestTemplate>.Assigned(new ContractId<TestTemplate>("c1"), new TestTemplate("alice"), null, LedgerOffset.At(4), new SynchronizerId("src"), new SynchronizerId("tgt"), "reassignment-1", 7L, [new Party("alice")]),
             new ContractStreamEvent<TestTemplate>.Unassigned(new ContractId<TestTemplate>("c1"), LedgerOffset.At(5), new SynchronizerId("src"), new SynchronizerId("tgt"), "reassignment-1", 7L, [new Party("alice")]),
             new ContractStreamEvent<TestTemplate>.Checkpoint(LedgerOffset.At(6)),
-            new ContractStreamEvent<TestTemplate>.StreamError(14, "unavailable"),
+            new ContractStreamEvent<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable"),
             new ContractStreamEvent<TestTemplate>.Unclassified(LedgerOffset.At(7), UnclassifiedKind.Unknown, "TopologyEvent"),
         ];
 
@@ -253,22 +254,21 @@ public class ContractStreamEventTests
     }
 
     [Fact]
-    public void StreamError_StatusCode_is_int_so_no_transport_dep_leaks()
+    public void StreamError_Status_is_a_closed_TransportStatus_union()
     {
-        var err = new ContractStreamEvent<TestTemplate>.StreamError(14, "transient");
+        var err = new ContractStreamEvent<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "transient");
 
-        err.StatusCode.Should().BeOfType(
-            typeof(int),
-            "holding the status code as an int is what spares every consumer a dependency on " +
-            "Grpc.Core, or any other transport library, merely to switch on it");
-        err.StatusCode.Should().Be(14);
+        err.Status.Should().BeOfType<TransportStatus.Grpc>(
+            "the closed TransportStatus union is what spares every consumer from misreading a gRPC, " +
+            "HTTP, no-response, or undecodable-body fault as the same bare integer");
+        err.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
     }
 
     [Fact]
     public void StreamError_carries_the_classification_the_transport_determined()
     {
         var err = new ContractStreamEvent<TestTemplate>.StreamError(
-            14, "transient", DamlErrorCategory.TransientServerFailure);
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "transient", DamlErrorCategory.TransientServerFailure);
 
         err.Category.Should().Be(DamlErrorCategory.TransientServerFailure);
     }
@@ -276,7 +276,7 @@ public class ContractStreamEventTests
     [Fact]
     public void StreamError_leaves_the_classification_null_when_the_transport_determined_none()
     {
-        var err = new ContractStreamEvent<TestTemplate>.StreamError(14, "transient");
+        var err = new ContractStreamEvent<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "transient");
 
         err.Category.Should().BeNull();
     }
@@ -285,7 +285,7 @@ public class ContractStreamEventTests
     public void StreamError_carries_the_error_id_the_transport_parsed()
     {
         var err = new ContractStreamEvent<TestTemplate>.StreamError(
-            10,
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted),
             "the stream authorization is stale",
             DamlErrorCategory.ContentionOnSharedResources,
             "STALE_STREAM_AUTHORIZATION");
@@ -299,7 +299,7 @@ public class ContractStreamEventTests
     [Fact]
     public void StreamError_leaves_the_error_id_null_when_no_structured_error_was_attached()
     {
-        var err = new ContractStreamEvent<TestTemplate>.StreamError(14, "transient");
+        var err = new ContractStreamEvent<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "transient");
 
         err.ErrorId.Should().BeNull(
             "a transport that decoded no structured error has to say so, rather than invent a sentinel "
@@ -310,18 +310,18 @@ public class ContractStreamEventTests
     public void StreamError_distinguishes_two_faults_sharing_a_status_and_a_category()
     {
         var selfClearing = new ContractStreamEvent<TestTemplate>.StreamError(
-            10,
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted),
             "the stream authorization is stale",
             DamlErrorCategory.ContentionOnSharedResources,
             "STALE_STREAM_AUTHORIZATION");
         var reproducible = new ContractStreamEvent<TestTemplate>.StreamError(
-            10,
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted),
             "the maximum number of list elements was reached",
             DamlErrorCategory.ContentionOnSharedResources,
             "JSON_API_MAXIMUM_LIST_ELEMENTS_NUMBER_REACHED");
 
         selfClearing.Category.Should().Be(reproducible.Category);
-        selfClearing.StatusCode.Should().Be(reproducible.StatusCode);
+        selfClearing.Status.Should().Be(reproducible.Status);
         selfClearing.ErrorId.Should().NotBe(
             reproducible.ErrorId,
             "reopening resolves the first fault and reproduces the second, and the error id is the only "

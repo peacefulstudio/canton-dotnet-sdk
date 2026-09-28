@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Runtime.Commands;
 using Daml.Runtime.Data;
 
 namespace Daml.Runtime.Contracts;
@@ -93,80 +94,6 @@ public sealed record ArchivedEvent(
     EquatableArray<Party> WitnessParties);
 
 /// <summary>
-/// Represents a Daml exception caught by a <c>try</c>/<c>catch</c> block during
-/// choice interpretation. Transport-neutral and wire-format-agnostic — the
-/// Canton ledger client owns translating the gRPC exception representation
-/// into this shape.
-/// </summary>
-/// <param name="ErrorId">The identifier of the caught exception (e.g. its
-/// qualified Daml type name or the ledger's error code).</param>
-/// <param name="Message">The human-readable message carried by the exception.</param>
-/// <param name="Metadata">Additional key-value context associated with the
-/// exception, as provided by the ledger.</param>
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Naming",
-    "CA1711:Identifiers should not have incorrect suffix",
-    Justification = "This is the projected shape of a Daml exception caught by the ledger, not a throwable; the name matches the Daml vocabulary consumers already read in transaction trees.")]
-public sealed record CaughtException(
-    string ErrorId,
-    string Message,
-    IReadOnlyDictionary<string, string> Metadata)
-{
-    private readonly IReadOnlyDictionary<string, string> _metadata =
-        EventCollections.Copy(Metadata, nameof(Metadata));
-
-    /// <summary>
-    /// Additional key-value context associated with the exception, as provided by the
-    /// ledger. Copied at construction and on <c>init</c>, so a producer that retains the
-    /// dictionary it supplied cannot change this value's equality or hash code afterwards.
-    /// </summary>
-    public IReadOnlyDictionary<string, string> Metadata
-    {
-        get => _metadata;
-        init => _metadata = EventCollections.Copy(value, nameof(Metadata));
-    }
-
-    /// <summary>
-    /// Compares two caught exceptions by content, comparing <see cref="Metadata"/> key by
-    /// key and independently of insertion order. The record-synthesized equality compares
-    /// the backing <see cref="IReadOnlyDictionary{TKey,TValue}"/> by reference — a footgun
-    /// for a value type — so we override it, as <see cref="Data.DamlTextMap"/> already does
-    /// for the same shape.
-    /// </summary>
-    /// <param name="other">The caught exception to compare against.</param>
-    /// <returns><c>true</c> when both describe the same caught exception.</returns>
-    public bool Equals(CaughtException? other)
-    {
-        if (other is null
-            || ErrorId != other.ErrorId
-            || Message != other.Message
-            || Metadata.Count != other.Metadata.Count)
-        {
-            return false;
-        }
-        foreach (var (key, value) in Metadata)
-        {
-            if (!other.Metadata.TryGetValue(key, out var otherValue) || value != otherValue)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /// <inheritdoc/>
-    public override int GetHashCode()
-    {
-        var hash = HashCode.Combine(ErrorId, Message, Metadata.Count);
-        foreach (var (key, value) in Metadata)
-        {
-            hash ^= HashCode.Combine(key, value);
-        }
-        return hash;
-    }
-}
-
-/// <summary>
 /// Represents a choice-exercise event observed in a transaction. Carries the
 /// wire-level <see cref="ExerciseResult"/> so codegen-emitted choice wrappers
 /// can deserialize the choice's typed return value (e.g. project a
@@ -190,18 +117,9 @@ public sealed record ExercisedEvent(
     string ContractId,
     Identifier TemplateId,
     Identifier? InterfaceId,
-    string ChoiceName,
+    ChoiceName ChoiceName,
     DamlValue ChoiceArgument,
     DamlValue ExerciseResult,
     bool Consuming,
     EquatableArray<Party> ActingParties,
-    EquatableArray<Party> WitnessParties)
-{
-    /// <summary>
-    /// Daml exceptions caught by a <c>try</c>/<c>catch</c> block during this
-    /// choice's interpretation. Defaults to empty — populated by
-    /// ledger-client transport implementations from the gRPC exception
-    /// status on the exercise node.
-    /// </summary>
-    public EquatableArray<CaughtException> CaughtExceptions { get; init; }
-}
+    EquatableArray<Party> WitnessParties);

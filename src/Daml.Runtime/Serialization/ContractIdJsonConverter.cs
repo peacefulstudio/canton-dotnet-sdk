@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daml.Runtime.Contracts;
@@ -11,8 +10,7 @@ namespace Daml.Runtime.Serialization;
 
 /// <summary>
 /// Supplies the <see cref="System.Text.Json"/> converter for any closed
-/// <see cref="ContractId{T}"/> and for the per-template contract-id types codegen
-/// derives from it. PQS rows and the JSON Ledger API encode a contract id as a raw
+/// <see cref="ContractId{T}"/>. PQS rows and the JSON Ledger API encode a contract id as a raw
 /// JSON string; without this factory the default object contract writes
 /// <c>{"Value":"..."}</c> and cannot read a bare string back, so every consumer ends up
 /// hand-rolling the same reflective factory.
@@ -20,25 +18,11 @@ namespace Daml.Runtime.Serialization;
 /// <remarks>
 /// <para>
 /// <see cref="ContractId{T}"/> carries this factory as a
-/// <see cref="JsonConverterAttribute"/>, so a property declared as the closed generic —
-/// which is how generated template payloads declare their contract-id fields — converts
-/// with no registration. <see cref="System.Text.Json"/> reads
-/// <see cref="JsonConverterAttribute"/> off the declared type and does not walk its base
-/// chain, so the emitted <c>T.ContractId</c> (including <c>T.Contract.Id</c>) carries the
-/// attribute of its own, written by the codegen onto the generated record — it converts
-/// unregistered too. A <em>hand-written</em> type deriving from <see cref="ContractId{T}"/>
-/// carries no such attribute and does need registration: directly, or through
-/// <see cref="DamlJsonConverters.AddDamlConverters"/>, which is also what makes the
+/// <see cref="JsonConverterAttribute"/>, and is sealed, so every contract id — a generated
+/// payload field, a <see cref="Contract{T}.Id"/>, or a property on a consumer-authored DTO —
+/// converts with no registration. Registering it anyway, directly or through
+/// <see cref="DamlJsonConverters.AddDamlConverters"/>, keeps the
 /// <see cref="JsonSerializerOptions"/> converter list self-describing.
-/// </para>
-/// <para>
-/// Codegen emits a <c>T.ContractId</c> record deriving from <see cref="ContractId{T}"/>
-/// for every template, and that derived type — not the open generic — is what a
-/// consumer-authored DTO usually declares. Matching only the exact closed generic would
-/// leave those properties on the default object contract, so one value would take two
-/// wire shapes depending on the type it was declared as. The match therefore walks the
-/// base chain, and <see cref="ContractIdJsonConverter{TContractId}"/> reads back the
-/// concrete derived type rather than its base.
 /// </para>
 /// <para>
 /// <b>AOT / trimming incompatibility:</b> <see cref="CreateConverter"/> uses
@@ -55,52 +39,31 @@ public sealed class ContractIdJsonConverterFactory : JsonConverterFactory
 {
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert) =>
-        !IsAbstract(typeToConvert) && ClosedContractIdBaseOf(typeToConvert) is not null;
+        typeToConvert is { IsGenericType: true }
+        && typeToConvert.GetGenericTypeDefinition() == typeof(ContractId<>);
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentException">
-    /// <paramref name="typeToConvert"/> is neither a closed <see cref="ContractId{T}"/>
-    /// nor a constructible type derived from one.
+    /// <paramref name="typeToConvert"/> is not a closed <see cref="ContractId{T}"/>.
     /// </exception>
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         if (!CanConvert(typeToConvert))
         {
             throw new ArgumentException(
-                $"'{typeToConvert}' is neither a closed {typeof(ContractId<>).Name} nor a constructible type derived from one.",
+                $"'{typeToConvert}' is not a closed {typeof(ContractId<>).Name}.",
                 nameof(typeToConvert));
         }
 
         return (JsonConverter)Activator.CreateInstance(
-            typeof(ContractIdJsonConverter<>).MakeGenericType(typeToConvert))!;
-    }
-
-    private static bool IsAbstract(Type typeToConvert) => typeToConvert is { IsAbstract: true };
-
-    private static Type? ClosedContractIdBaseOf(Type typeToConvert)
-    {
-        for (var candidate = typeToConvert; candidate is not null; candidate = candidate.BaseType)
-        {
-            if (candidate is { IsGenericType: true }
-                && candidate.GetGenericTypeDefinition() == typeof(ContractId<>))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
+            typeof(ContractIdJsonConverter<>).MakeGenericType(typeToConvert.GetGenericArguments()))!;
     }
 }
 
-internal sealed class ContractIdJsonConverter<TContractId> : JsonConverter<TContractId>
-    where TContractId : ContractId
+internal sealed class ContractIdJsonConverter<T> : JsonConverter<ContractId<T>>
+    where T : IDamlType
 {
-    private static readonly ConstructorInfo FromContractIdString =
-        typeof(TContractId).GetConstructor([typeof(string)])
-        ?? throw new InvalidOperationException(
-            $"'{typeof(TContractId)}' has no public constructor taking a single contract-id string.");
-
-    private static readonly string TypeName = DescribeContractIdType(typeof(TContractId));
+    private static readonly string TypeName = $"ContractId<{typeof(T).Name}>";
 
     /// <remarks>
     /// The reference-type member of the identity-converter family cannot police null the way
@@ -113,7 +76,7 @@ internal sealed class ContractIdJsonConverter<TContractId> : JsonConverter<TCont
     /// </remarks>
     public override bool HandleNull => false;
 
-    public override TContractId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override ContractId<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.String)
         {
@@ -123,49 +86,30 @@ internal sealed class ContractIdJsonConverter<TContractId> : JsonConverter<TCont
         return ParseChecked(reader.GetString());
     }
 
-    public override void Write(Utf8JsonWriter writer, TContractId value, JsonSerializerOptions options) =>
+    public override void Write(Utf8JsonWriter writer, ContractId<T> value, JsonSerializerOptions options) =>
         writer.WriteStringValue(value.Value);
 
     /// <summary>
-    /// Reads a <typeparamref name="TContractId"/> used as a JSON object's property name — the
+    /// Reads a <see cref="ContractId{T}"/> used as a JSON object's property name — the
     /// shape a <c>Map (ContractId T) v</c> field takes, e.g. <c>{"00abc":1}</c>. Property names
     /// are always JSON strings, so the token-type guard <see cref="Read"/> needs does not apply
     /// here; the blank/parse checks are otherwise identical.
     /// </summary>
     /// <inheritdoc/>
-    public override TContractId ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+    public override ContractId<T> ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
         ParseChecked(reader.GetString());
 
     /// <summary>
-    /// Writes a <typeparamref name="TContractId"/> used as a JSON object's property name. See
+    /// Writes a <see cref="ContractId{T}"/> used as a JSON object's property name. See
     /// <see cref="ReadAsPropertyName"/>.
     /// </summary>
     /// <inheritdoc/>
-    public override void WriteAsPropertyName(Utf8JsonWriter writer, TContractId value, JsonSerializerOptions options) =>
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, ContractId<T> value, JsonSerializerOptions options) =>
         writer.WritePropertyName(value.Value);
 
-    private static TContractId ParseChecked(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new JsonException(
-                $"Invalid contract id for {TypeName}: contract ids must be non-null and non-whitespace.");
-        }
-
-        try
-        {
-            return (TContractId)FromContractIdString.Invoke([value]);
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is ArgumentException inner)
-        {
-            throw new JsonException($"Invalid contract id for {TypeName}: {inner.Message}", inner);
-        }
-    }
-
-    private static string DescribeContractIdType(Type type) => type switch
-    {
-        { IsGenericType: true } => $"ContractId<{type.GetGenericArguments()[0].Name}>",
-        { DeclaringType: not null } => $"{type.DeclaringType.Name}.{type.Name}",
-        _ => type.Name,
-    };
+    private static ContractId<T> ParseChecked(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? throw new JsonException(
+                $"Invalid contract id for {TypeName}: contract ids must be non-null and non-whitespace.")
+            : new ContractId<T>(value);
 }

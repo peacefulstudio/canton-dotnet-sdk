@@ -216,7 +216,7 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
                             Name = "Touch",
                             Consuming = true,
                             ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
-                            ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                            ReturnType = ContractIdOf("Acme.Choice", "Asset"),
                             Controllers = DamlPartyAnalysis.Static([new DamlPartyPayloadField("owner")]),
                             Observers = DamlPartyAnalysis.Static([]),
                         },
@@ -260,10 +260,7 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             " Choice<",
             "no bare Choice<> head should survive in the shadowing namespace");
         asset.Content.Should().Contain(
-            "IExercises<Asset>",
-            "IExercises<> is routed through the qualifier; with no .IExercises namespace collision it stays bare (collision-aware no-op)");
-        asset.Content.Should().Contain(
-            "IContract<ContractId, Asset>",
+            "IContract<ContractId<Asset>, Asset>",
             "IContract<> is routed through the qualifier; with no .IContract namespace collision it stays bare (collision-aware no-op)");
 
         var diagnostics = CompileEmittedFiles(files);
@@ -285,7 +282,18 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
                 {
                     Name = "Asset",
                     Signatories = DamlPartyAnalysis.Static([new DamlPartyPayloadField("owner")]),
-                    Choices = [],
+                    Choices =
+                    [
+                        new DamlChoice
+                        {
+                            Name = "Touch",
+                            Consuming = true,
+                            ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                            ReturnType = ContractIdOf("Acme.IContract", "Asset"),
+                            Controllers = DamlPartyAnalysis.Static([new DamlPartyPayloadField("owner")]),
+                            Observers = DamlPartyAnalysis.Static([]),
+                        },
+                    ],
                 },
             ],
             DataTypes =
@@ -539,7 +547,6 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             EnableNullableReferenceTypes = true,
             UseFileScopedNamespaces = true,
             GenerateXmlDocs = true,
-            GenerateContractIdentifiers = true,
             IncludeDependencies = true,
         };
         var files = CreateGenerator(options).Generate(dar);
@@ -703,7 +710,6 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             EnableNullableReferenceTypes = true,
             UseFileScopedNamespaces = true,
             GenerateXmlDocs = true,
-            GenerateContractIdentifiers = true,
             IncludeDependencies = true,
             NamespacePrefix = "Corp",
         };
@@ -804,7 +810,6 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             EnableNullableReferenceTypes = true,
             UseFileScopedNamespaces = true,
             GenerateXmlDocs = true,
-            GenerateContractIdentifiers = true,
             IncludeDependencies = true,
         };
         var files = CreateGenerator(options).Generate(dar);
@@ -942,7 +947,7 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             "string.Equals(interfaceId.EntityName, IOracle.InterfaceId.EntityName, global::System.StringComparison.Ordinal)",
             "the projector's entity-name comparison must be global::-qualified when a Daml record named StringComparison shares the emitted namespace");
         iOracle.Content.Should().Contain(
-            "string.Equals(exercised.ChoiceName, \"GetCount\", global::System.StringComparison.Ordinal))",
+            "string.Equals(exercised.ChoiceName.Value, \"GetCount\", global::System.StringComparison.Ordinal))",
             "the projector's choice-name comparison must be global::-qualified when a Daml record named StringComparison shares the emitted namespace");
 
         var diagnostics = CompileEmittedFiles(files);

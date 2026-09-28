@@ -732,31 +732,6 @@ public class StdlibTests
 
     #endregion
 
-    #region Unit
-
-    [Fact]
-    public void Unit_Value_should_be_a_singleton()
-    {
-        // Mirrors System.ValueTuple semantics: every reference to Unit.Value is the
-        // same instance. Codegen relies on this invariant when emitting
-        // `new ExerciseOutcome<Unit>.One(Unit.Value)` for `()`-returning choices.
-        Unit.Value.Should().BeSameAs(Unit.Value);
-    }
-
-    [Fact]
-    public void Unit_should_be_value_equal()
-    {
-        // Unit is a sealed class (not a record) so `with`-expression clones can't
-        // break the singleton invariant. Equality / GetHashCode / == / != are
-        // overridden manually in Stdlib/Unit.cs so any two Unit references compare
-        // equal. Pinning it because consumers may switch on Unit in choice-result
-        // projections.
-        Unit.Value.Should().Be(Unit.Value);
-        (Unit.Value == Unit.Value).Should().BeTrue();
-    }
-
-    #endregion
-
     #region Either
 
     private static DamlValue Either_ToText(string value) => new DamlText(value);

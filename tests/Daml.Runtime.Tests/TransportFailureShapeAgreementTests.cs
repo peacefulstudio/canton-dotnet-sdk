@@ -110,7 +110,7 @@ public class TransportFailureShapeAgreementTests
     [Fact]
     public void TransportFailureShapeAgreement_a_renamed_parameter_stops_agreeing()
     {
-        var renamedDeclaration = new StatusCodeRenamed(14, "unavailable").GetType();
+        var renamedDeclaration = new StatusCodeRenamed(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable").GetType();
 
         DeclaredShape(renamedDeclaration).Should().NotBe(
             DeclaredShape(SnapshotStreamError),
@@ -121,7 +121,7 @@ public class TransportFailureShapeAgreementTests
     [Fact]
     public void TransportFailureShapeAgreement_a_parameter_name_that_extends_a_pinned_one_stops_agreeing()
     {
-        var extendedDeclaration = new MessageRenamedToMessageDetail(14, "unavailable").GetType();
+        var extendedDeclaration = new MessageRenamedToMessageDetail(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable").GetType();
 
         DeclaredParameters(extendedDeclaration).Should().HaveSameCount(
             DeclaredParameters(SnapshotStreamError),
@@ -168,10 +168,10 @@ public class TransportFailureShapeAgreementTests
     private static string NullableMarker(NullabilityInfoContext nullability, ParameterInfo parameter) =>
         nullability.Create(parameter).WriteState == NullabilityState.Nullable ? "?" : string.Empty;
 
-    private sealed record StatusCodeRenamed(int Status, string Message);
+    private sealed record StatusCodeRenamed(TransportStatus StatusCode, string Message);
 
     private sealed record MessageRenamedToMessageDetail(
-        int StatusCode,
+        TransportStatus Status,
         string MessageDetail,
         DamlErrorCategory? Category = null,
         string? ErrorId = null,

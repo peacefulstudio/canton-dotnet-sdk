@@ -7,59 +7,9 @@ namespace Daml.Codegen.CSharp.CodeGen;
 
 internal sealed partial class ChoiceEmitter
 {
-    private string MapNonContractReturnType(DamlType returnType) => returnType switch
-    {
-        DamlPrimitiveType { Primitive: DamlPrimitive.Unit } => context.Qualifier.Qualify(RuntimeTypeNames.Unit),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional },
-                      Arguments: [DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } } or DamlTypeVar] } =>
-            mapper.MapType(returnType),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var arg] } =>
-            $"{MapNonContractReturnType(arg)}?",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List }, Arguments: [var arg] } =>
-            $"{context.Qualifier.Qualify("IReadOnlyList")}<{MapNonContractReturnType(arg)}>",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap }, Arguments: [var arg] } =>
-            $"{context.Qualifier.Qualify("IReadOnlyDictionary")}<string, {MapNonContractReturnType(arg)}>",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }, Arguments: [var keyArg, var valueArg] } =>
-            $"{context.Qualifier.Qualify("IReadOnlyDictionary")}<{MapNonContractReturnType(keyArg)}, {MapNonContractReturnType(valueArg)}>",
-        _ => mapper.MapType(returnType),
-    };
-
-    private static bool ReturnTypeNeedsStdlibUnitDecoder(DamlType type) => type switch
-    {
-        DamlPrimitiveType { Primitive: DamlPrimitive.Unit } => true,
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var arg] } =>
-            ReturnTypeNeedsStdlibUnitDecoder(arg),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List }, Arguments: [var arg] } =>
-            ReturnTypeNeedsStdlibUnitDecoder(arg),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap }, Arguments: [var arg] } =>
-            ReturnTypeNeedsStdlibUnitDecoder(arg),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }, Arguments: [var keyArg, var valueArg] } =>
-            ReturnTypeNeedsStdlibUnitDecoder(keyArg) || ReturnTypeNeedsStdlibUnitDecoder(valueArg),
-        _ => false,
-    };
-
-    private string RenderNonContractReturnDecoder(
-        DamlType returnType,
-        string valueExpr) => returnType switch
-    {
-        DamlPrimitiveType { Primitive: DamlPrimitive.Unit } => context.Qualifier.Qualify(RuntimeTypeNames.Unit) + ".Value",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional },
-                      Arguments: [DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } } or DamlTypeVar] } =>
-            mapper.FromValue(returnType, valueExpr),
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var arg] } =>
-            $"{valueExpr}.AsOptional().HasValue ? {RenderNonContractReturnDecoder(arg, $"{valueExpr}.AsOptional().Value!")} : null",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List }, Arguments: [var arg] } =>
-            $"{valueExpr}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlList)}>().Values.Select(x => {RenderNonContractReturnDecoder(arg, "x")}).ToList()",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.TextMap }, Arguments: [var arg] } =>
-            $"{valueExpr}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlTextMap)}>().Values.ToDictionary(kv => kv.Key, kv => {RenderNonContractReturnDecoder(arg, "kv.Value")})",
-        DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.GenMap }, Arguments: [var keyArg, var valueArg] } =>
-            $"{valueExpr}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlGenMap)}>().Entries.ToDictionary(kv => {RenderNonContractReturnDecoder(keyArg, "kv.Key")}, kv => {RenderNonContractReturnDecoder(valueArg, "kv.Value")})",
-        _ => mapper.FromValue(returnType, valueExpr),
-    };
-
     /// <summary>
     /// Emits a static <c>&lt;TemplateName&gt;NonContractExtensions</c> class
-    /// with one <c>&lt;Choice&gt;Async</c> extension per non-CID-returning
+    /// with one <c>Try&lt;Choice&gt;Async</c> extension per non-CID-returning
     /// choice on <paramref name="template"/>, plus a private projector helper
     /// per choice that walks <c>tx.ExercisedEvents</c> and runs the choice's
     /// <c>ResultDecoder</c>. Returns <c>true</c> when at least one extension
@@ -131,7 +81,7 @@ internal sealed partial class ChoiceEmitter
         ChoiceSubmitterParameter submitter)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var returnTypeName = MapNonContractReturnType(choice.ReturnType);
+        var returnTypeName = mapper.MapType(choice.ReturnType);
         var argument = GetChoiceArgumentInfo(choice, dataTypes);
         var hasArg = argument.HasArgument;
 
@@ -154,7 +104,7 @@ internal sealed partial class ChoiceEmitter
             WriteSubmissionParameterDocs(indent);
         }
 
-        indent.AppendLine($"public static async Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> {choiceName}Async(");
+        indent.AppendLine($"public static async Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> Try{choiceName}Async(");
         indent.Indent();
         indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
         indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
@@ -206,8 +156,7 @@ internal sealed partial class ChoiceEmitter
         string templateClassName)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var returnTypeName = MapNonContractReturnType(choice.ReturnType);
-        var needsStdlibUnitDecoder = ReturnTypeNeedsStdlibUnitDecoder(choice.ReturnType);
+        var returnTypeName = mapper.MapType(choice.ReturnType);
 
         indent.AppendLine($"private static {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}> Project{choiceName}Result({context.Qualifier.Qualify(RuntimeTypeNames.TransactionResult)} tx, string contractId)");
         indent.AppendLine("{");
@@ -219,24 +168,14 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine($"if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)");
         indent.AppendLine($"    && string.Equals(exercised.TemplateId.ModuleName, {templateClassName}.TemplateId.ModuleName, StringComparison.Ordinal)");
         indent.AppendLine($"    && string.Equals(exercised.TemplateId.EntityName, {templateClassName}.TemplateId.EntityName, StringComparison.Ordinal)");
-        indent.AppendLine($"    && string.Equals(exercised.ChoiceName, \"{choice.Name}\", StringComparison.Ordinal))");
+        indent.AppendLine($"    && string.Equals(exercised.ChoiceName.Value, \"{choice.Name}\", StringComparison.Ordinal))");
         indent.AppendLine("{");
         indent.Indent();
 
         indent.AppendLine("try");
         indent.AppendLine("{");
         indent.Indent();
-        if (needsStdlibUnitDecoder)
-        {
-            var decoderExpr = RenderNonContractReturnDecoder(
-                choice.ReturnType,
-                "exercised.ExerciseResult");
-            indent.AppendLine($"var decoded = {decoderExpr};");
-        }
-        else
-        {
-            indent.AppendLine($"var decoded = {templateClassName}.Choice{choiceName}.ResultDecoder!(exercised.ExerciseResult);");
-        }
+        indent.AppendLine($"var decoded = {templateClassName}.Choice{choiceName}.ResultDecoder!(exercised.ExerciseResult);");
         indent.AppendLine($"return new {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>.One(decoded);");
         indent.Dedent();
         indent.AppendLine("}");

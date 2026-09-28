@@ -64,7 +64,6 @@ public class CliErrorReportingTests : IDisposable
             IncludeDependencies: false,
             TargetFramework: "net10.0",
             RuntimePackageVersion: null,
-            GenerateContractIdentifiers: true,
             EmitterCounter: 0,
             ReleaseCountersFile: null,
             CodegenVersion: null,
@@ -95,6 +94,21 @@ public class CliErrorReportingTests : IDisposable
         stderr.Should().Contain("--version-suffix");
         stderr.Should().Contain("bad suffix",
             "the error must name the rejected value so the operator can see what was wrong");
+    }
+
+    [Fact]
+    public async Task CliErrorReporting_the_removed_contract_identifiers_flag_is_an_unrecognized_option()
+    {
+        var (exit, stderr) = await RunCapturingStdErr(() => Program.Main(
+        [
+            "--intermediate", FixtureIntermediatePath,
+            "-o", _workspace,
+            "--contract-identifiers", "true"
+        ]));
+
+        exit.Should().NotBe(0,
+            "a build script still passing the flag must fail loudly rather than silently lose the helper class");
+        stderr.Should().Contain("--contract-identifiers");
     }
 
     private static async Task<(int Exit, string StdErr)> RunCapturingStdErr(Func<Task<int>> run)

@@ -229,7 +229,7 @@ public partial class ProjectFileGeneratorTests
         file.Content.Should().Contain("`splice-amulet`");
         file.Content.Should().Contain("1.2.3");
         file.Content.Should().Contain("MIT");
-        file.Content.Should().Contain("https://github.com/peacefulstudio/daml-codegen-csharp");
+        file.Content.Should().Contain("https://github.com/peacefulstudio/canton-dotnet-sdk");
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public partial class ProjectFileGeneratorTests
         var file = generator.GenerateReadme(package);
 
         file.Content.Should().Contain(
-            "[Daml.Codegen.CSharp]: https://github.com/peacefulstudio/daml-codegen-csharp",
+            "[Daml.Codegen.CSharp]: https://github.com/peacefulstudio/canton-dotnet-sdk",
             "the attribution link identifies the generator tool, not the consumer's repository");
     }
 }

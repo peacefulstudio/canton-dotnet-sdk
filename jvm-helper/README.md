@@ -12,7 +12,7 @@ for the domain terms. This component is invoked as a child process by the
 
 - `src/main/scala/.../Decode.scala` — CLI entry point; parses `--dar`/`--out`, orchestrates the pipeline. Free of `daml-lf-archive` types.
 - `src/main/scala/.../SchemaDecoder.scala` — reads the `.dar`, decodes each package with `onlySerializableDataDefs = true`, then erases expression bodies (schema mode).
-- `src/main/scala/.../SignatureErasure.scala` — `Ast.Package` → `Ast.PackageSignature`. One of two files coupled to DA-internal case classes.
+- `src/main/scala/.../SignatureErasure.scala` — `Ast.Package` → `Ast.PackageSignature`. One of two files coupled to Digital Asset's own case classes.
 - `src/main/scala/.../AstToIntermediate.scala` — `Ast.PackageSignature` → `IntermediateDar` protobuf. The other half of the DA-coupled surface.
 
 When DA renames an internal case class in `daml-lf-archive`, only

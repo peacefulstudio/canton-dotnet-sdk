@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Canton.Ledger.Grpc.Client</PackageId>
+    <Description>High-level gRPC client for the Canton Ledger API with integration to Daml.Runtime types.</Description>
+    <PackageTags>canton;daml;ledger;grpc;blockchain;smart-contracts;client</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Client.Parity.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\Daml.Runtime\Daml.Runtime.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Kernel\Canton.Ledger.Kernel.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Grpc\Canton.Ledger.Grpc.csproj" />
+    <ProjectReference Include="..\Daml.Runtime.Grpc\Daml.Runtime.Grpc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

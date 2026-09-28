@@ -55,29 +55,25 @@ public class NewFeaturesCodeGenTests
     }
 
     [Fact]
-    public void Generate_should_put_a_primitive_key_on_the_active_contract()
+    public void Generate_should_decode_a_primitive_key_through_the_key_witness()
     {
         var code = EmitKeyed("AssetWithKey", new DamlPrimitiveType(DamlPrimitive.Text));
 
-        code.Should().Contain("public sealed record Contract(ContractId Id, AssetWithKey Data)");
-
-        code.Should().Contain("public required ContractKey<string> Key { get; init; }");
-        code.Should().Contain("? new ContractKey<string>(contractKey.Value.As<DamlText>().Value, contractKey.KeyHash)");
+        code.Should().Contain("IHasKey<AssetWithKey, string>");
+        code.Should().Contain("KeyDecoder = value => value.As<DamlText>().Value,");
     }
 
     [Fact]
-    public void Generate_should_put_a_party_key_on_the_active_contract()
+    public void Generate_should_decode_a_party_key_through_the_key_witness()
     {
         var code = EmitKeyed("UserProfile", new DamlPrimitiveType(DamlPrimitive.Party));
 
-        code.Should().Contain("public sealed record Contract(ContractId Id, UserProfile Data)");
-
-        code.Should().Contain("public required ContractKey<Party> Key { get; init; }");
-        code.Should().Contain("? new ContractKey<Party>(Party.FromDamlValue(contractKey.Value.As<DamlParty>()), contractKey.KeyHash)");
+        code.Should().Contain("IHasKey<UserProfile, Party>");
+        code.Should().Contain("KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
     }
 
     [Fact]
-    public void Generate_should_put_a_record_key_on_the_active_contract()
+    public void Generate_should_decode_a_record_key_through_the_key_witness()
     {
         var code = EmitKeyed(
             "CompositeKeyTemplate",
@@ -94,10 +90,8 @@ public class NewFeaturesCodeGenTests
                 }
             ]);
 
-        code.Should().Contain("public sealed record Contract(ContractId Id, CompositeKeyTemplate Data)");
-
-        code.Should().Contain("public required ContractKey<global::Test.Module.AssetKey> Key { get; init; }");
-        code.Should().Contain("? new ContractKey<global::Test.Module.AssetKey>(global::Test.Module.AssetKey.FromRecord(contractKey.Value.As<DamlRecord>()), contractKey.KeyHash)");
+        code.Should().Contain("IHasKey<CompositeKeyTemplate, global::Test.Module.AssetKey>");
+        code.Should().Contain("KeyDecoder = value => global::Test.Module.AssetKey.FromRecord(value.As<DamlRecord>()),");
     }
 
     [Fact]
@@ -109,9 +103,7 @@ public class NewFeaturesCodeGenTests
                 new DamlPrimitiveType(DamlPrimitive.List),
                 [new DamlPrimitiveType(DamlPrimitive.Text)]));
 
-        code.Should().Contain("public sealed record Contract(ContractId Id, ListKeyTemplate Data)");
-
-        code.Should().Contain("public required ContractKey<IReadOnlyList<string>> Key { get; init; }");
+        code.Should().Contain("IHasKey<ListKeyTemplate, IReadOnlyList<string>>");
         code.Should().NotMatchRegex(@"cref=""[^""]*<[^""]*""",
             "a cref must render angle brackets as {{ }}, or a consumer building with GenerateDocumentationFile and TreatWarningsAsErrors fails on malformed XML");
     }
@@ -121,9 +113,7 @@ public class NewFeaturesCodeGenTests
     {
         var code = EmitKeyed("AssetWithKey", new DamlPrimitiveType(DamlPrimitive.Text));
 
-        var payload = code[..code.IndexOf("public sealed record ContractId(", StringComparison.Ordinal)];
-
-        payload.Should().NotMatchRegex(@"\bpublic\s+(?!static\b)[^;{=]+?\s+Key\b",
+        code.Should().NotMatchRegex(@"\bpublic\s+(?!static\b)[^;{=]+?\s+Key\b",
             "the payload is what a caller constructs locally, so it cannot know the key of a contract it has not created yet");
     }
 
@@ -162,7 +152,6 @@ public class NewFeaturesCodeGenTests
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
-        code.Should().Contain("public sealed record Contract(ContractId Id, NoKeyTemplate Data) :");
         code.Should().NotContain("IHasKey");
         code.Should().NotContain("ContractKey");
     }
@@ -582,8 +571,7 @@ public class NewFeaturesCodeGenTests
 
         code.Should().Contain("ITemplate");
         code.Should().Contain("IUpgradeable");
-        code.Should().Contain("public sealed record Contract(ContractId Id, FullFeaturedTemplate Data)");
-        code.Should().Contain("public required ContractKey<string> Key { get; init; }");
+        code.Should().Contain("IHasKey<FullFeaturedTemplate, string>");
     }
 
     #endregion
@@ -650,8 +638,7 @@ public class NewFeaturesCodeGenTests
         // Template should exist with key and upgrade support
         var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
         assetFile.Should().NotBeNull();
-        assetFile!.Content.Should().Contain("public sealed record Contract(ContractId Id, Asset Data)");
-        assetFile!.Content.Should().Contain("public required ContractKey<Party> Key { get; init; }");
+        assetFile!.Content.Should().Contain("IHasKey<Asset, Party>");
         assetFile.Content.Should().Contain("IUpgradeable");
 
         // Generic data type should exist

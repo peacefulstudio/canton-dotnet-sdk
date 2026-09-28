@@ -1,0 +1,8 @@
+# Copyright 2026 Peaceful Studio OÜ
+# SPDX-License-Identifier: Apache-2.0
+#
+# Paths whose licence headers belong to a third party and must not be rewritten
+# to this repository's holder. One path prefix per line, relative to the root.
+
+src/Daml.Codegen.DarParser/Proto/
+src/Canton.Ledger.Rest/spec/openapi.yaml

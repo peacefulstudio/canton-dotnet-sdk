@@ -21,7 +21,8 @@ internal sealed class FakeLedgerClient : NotSupportedLedgerClient
         Func<CommandsSubmission, ExerciseOutcome<TransactionResult>>? transaction = null,
         Func<object, ExerciseOutcome<object>>? create = null)
     {
-        _transaction = transaction ?? (_ => new ExerciseOutcome<TransactionResult>.InfraError(0, "unset"));
+        _transaction = transaction
+            ?? (_ => new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.UndecodableBody(), "unset"));
         _create = create;
     }
 
@@ -46,7 +47,7 @@ internal sealed class FakeLedgerClient : NotSupportedLedgerClient
     {
         LastCreateSubmitter = submitter;
         var projected = _create is null
-            ? new ExerciseOutcome<ContractId<TTemplate>>.InfraError(0, "unset")
+            ? new ExerciseOutcome<ContractId<TTemplate>>.InfraError(new TransportStatus.UndecodableBody(), "unset")
             : Project<TTemplate>(_create(payload!));
         return Task.FromResult(projected);
     }
@@ -60,7 +61,7 @@ internal sealed class FakeLedgerClient : NotSupportedLedgerClient
             ExerciseOutcome<object>.DamlError e =>
                 new ExerciseOutcome<ContractId<TTemplate>>.DamlError(e.Category, e.ErrorId, e.Message, e.Metadata),
             ExerciseOutcome<object>.InfraError e =>
-                new ExerciseOutcome<ContractId<TTemplate>>.InfraError(e.StatusCode, e.Message, e.Category, e.SourceException),
+                new ExerciseOutcome<ContractId<TTemplate>>.InfraError(e.Status, e.Message, e.Category, e.SourceException),
             _ => new ExerciseOutcome<ContractId<TTemplate>>.None(),
         };
 }
