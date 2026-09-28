@@ -19,12 +19,15 @@
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <TestingPlatformCommandLineArguments>--coverage --coverage-output-format cobertura --coverage-output $(MSBuildProjectName).cobertura.xml --coverage-settings $(MSBuildThisFileDirectory)../coverage.settings.xml</TestingPlatformCommandLineArguments>
   </PropertyGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseMicrosoftTestingPlatformRunner)' == 'true'">
     <Compile Include="$(MSBuildThisFileDirectory)Shared\TestNamingConventionTests.cs" Link="Shared\TestNamingConventionTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     <PackageReference Include="AwesomeAssertions" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="CantonVersion" Value="$(CantonVersion)" />
   </ItemGroup>
 </Project>

@@ -144,7 +144,7 @@ public abstract record ExerciseOutcome<T>
         /// Compares two structured errors by content, comparing <see cref="Metadata"/> key by
         /// key and independently of insertion order. The record-synthesized equality compares
         /// the backing <see cref="IReadOnlyDictionary{TKey,TValue}"/> by reference — a footgun
-        /// for a value type — so we override it, as <see cref="Contracts.CaughtException"/>
+        /// for a value type — so we override it, as <see cref="Data.DamlTextMap"/>
         /// already does for the same shape.
         /// </summary>
         /// <param name="other">The structured error to compare against.</param>
@@ -190,15 +190,14 @@ public abstract record ExerciseOutcome<T>
     /// cancellation via the same channel as a genuine infrastructure failure (e.g. a
     /// gRPC <c>Cancelled</c> status).
     /// </summary>
-    /// <param name="StatusCode">Transport status code from the failed call. For gRPC this is
-    /// <c>(int)Grpc.Core.StatusCode</c>; consumers that want the typed enum cast back. Held as
-    /// <c>int</c> so this type stays free of any transport-library dep.</param>
+    /// <param name="Status">What the transport reported for the failed call: a gRPC status, an
+    /// HTTP status, no response at all, or a response whose body could not be decoded.</param>
     /// <param name="Message">Status detail / message from the participant or transport.</param>
     /// <param name="Category">Classification of the transport failure when the transport could determine
     /// one without a structured Canton error attached; <c>null</c> when the failure was not classified.</param>
     /// <param name="SourceException">Transport exception that caused the infrastructure failure, when available.</param>
     public sealed record InfraError(
-        int StatusCode,
+        TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
         Exception? SourceException = null) : ExerciseOutcome<T>;

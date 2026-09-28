@@ -105,7 +105,7 @@ public readonly record struct SubmitterInfo
     /// </exception>
     public SubmitterInfo(Party singleActAs, IReadOnlySet<Party>? readAs = null)
     {
-        _ = singleActAs.Id;
+        _ = singleActAs.Value;
         _actAs = FrozenSet.Create(singleActAs);
         _readAs = readAs is null || readAs.Count == 0
             ? null
@@ -118,7 +118,7 @@ public readonly record struct SubmitterInfo
         {
             try
             {
-                _ = party.Id;
+                _ = party.Value;
             }
             catch (InvalidOperationException ex)
             {

@@ -11,16 +11,23 @@ a ledger.
 
 Unlike `samples/QuickstartExample` (which references the `src` projects), this
 sample references the **published NuGet surface**: the V2 API packages plus
-`Daml.Runtime` / `Daml.Ledger.Abstractions`, resolved from a local feed. It is
-deliberately excluded from `Daml.Codegen.CSharp.slnx` and from central package
-management (`ManagePackageVersionsCentrally=false`) so the tool's own build
-never tries to restore not-yet-published packages, and so package versions can
-float on the release-time counter segment.
+`Daml.Runtime` / `Daml.Ledger.Abstractions`. It is deliberately excluded from
+`Daml.Codegen.CSharp.slnx` and from central package management
+(`ManagePackageVersionsCentrally=false`) so the tool's own build never tries to
+restore not-yet-published packages, and so package versions can float on the
+release-time counter segment.
 
-To build it, populate `local-feed/` with the packed V2 `.nupkg` files and the
-packed `Daml.Runtime` / `Daml.Ledger.Abstractions`, then `dotnet build`. CI does
-this automatically in the Splice publish pipeline, building the sample against
-the freshly packed feed as a focused V2 compile-gate before publishing.
+By default, `dotnet restore samples/TokenStandardV2` uses `NuGet.config` and
+resolves `Daml.*` / `Splice.*` from nuget.org like any other consumer — no
+local feed required. To test against packages that have not been published
+yet, populate `local-feed/` with the packed V2 `.nupkg` files and the packed
+`Daml.Runtime` / `Daml.Ledger.Abstractions`, then restore with the opt-in
+config: `dotnet restore samples/TokenStandardV2 --configfile
+samples/TokenStandardV2/NuGet.local-feed.config`, followed by `dotnet build
+--no-restore`. Internal CI does this automatically in
+`.github/scripts/verify-sample-tokenstandard-v2.sh`, building the sample
+against the freshly packed feed as a focused V2 compile-gate before
+publishing.
 
 ## Isolated package cache
 
@@ -36,13 +43,15 @@ for every other project on the machine. Keep the pin, and keep
 
 The `Splice.*` references float `1.*-*` and the `Daml.*` references float
 `0.*-*` — the widest prerelease pattern within each package's current major —
-rather than pinning a specific minor/patch. The publish pipeline and
-`verify-sample-tokenstandard-v2.sh` pack these into a private `local-feed`, and
-`NuGet.config`'s package-source mapping resolves every `Splice.*` / `Daml.*`
-package **only** from that feed. So the float always resolves whatever this repo
-just packed — a `-preview.N` build today or a stable `M.m.p` build at GA — which
-keeps the V2 compile-gate stable across the repo's own version bumps instead of
-breaking each time `Directory.Build.props` moves to a new preview minor.
+rather than pinning a specific minor/patch. Against the default
+`NuGet.config`, the float resolves the newest matching prerelease already
+published to nuget.org. Against `NuGet.local-feed.config`, `verify-sample-tokenstandard-v2.sh`
+packs the in-progress build into a private `local-feed`, and that config's
+package-source mapping resolves every `Splice.*` / `Daml.*` package **only**
+from that feed — so the float resolves whatever this repo just packed — a
+`-preview.N` build today or a stable `M.m.p` build at GA — which keeps the V2
+compile-gate stable across the repo's own version bumps instead of breaking
+each time `Directory.Build.props` moves to a new preview minor.
 
 ## Why it references the whole V2 family
 

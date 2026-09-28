@@ -446,9 +446,15 @@ public class EmittedRecordFieldCompilesTests
         // `object` for. `object` has no ToRecord(), so the emitted body was CS1061.
         // The fallback-producing shape is a higher-kinded application (`f a` where
         // the base is a type var), which no other MapType arm names. (Arrow types
-        // like DA.Monoid.Types.Endo's `appEndo : a -> a` do not reach here: the
-        // DarParser path maps BUILTIN_TYPE_ARROW to Unit, and the proto path throws.)
-        // `f a` is the parser-independent reproduction.
+        // like DA.Monoid.Types.Endo's `appEndo : a -> a` no longer reach here
+        // either: since the builtin catalog, both producer paths carry ARROW with
+        // its real `DamlPrimitive.Arrow` identity, and DamlTypeMapper fails loudly
+        // with NotSupportedException when a bare or applied signature-only builtin
+        // reaches a data position — no cataloged builtin shape maps to `object`
+        // anymore.) `f a` is the parser-independent reproduction of the remaining,
+        // deliberate fallback: an application whose base is a type variable, which
+        // no catalog row describes, still maps to `object` and emits the throwing
+        // GenericStub.NotImplemented stubs pinned below.
         var module = new DamlModule
         {
             Name = "Test.Module",

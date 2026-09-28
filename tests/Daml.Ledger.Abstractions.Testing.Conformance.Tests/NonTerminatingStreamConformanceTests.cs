@@ -240,7 +240,7 @@ public sealed class NonTerminatingStreamConformanceTests
                 new ContractId<T>("c1"), T.FromRecord(DamlRecord.Create()), null, LedgerOffset.At(1),
                 new SynchronizerId("sync"), [new Party("alice")]));
             yield return (2, new ContractStreamEvent<T>.Exercised(
-                new ContractId<T>("c1"), "Archive", DamlUnit.Instance, DamlUnit.Instance, true,
+                new ContractId<T>("c1"), new ChoiceName("Archive"), DamlUnit.Instance, DamlUnit.Instance, true,
                 LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
         }
 

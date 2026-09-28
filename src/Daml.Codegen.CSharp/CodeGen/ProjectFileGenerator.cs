@@ -14,7 +14,7 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// </summary>
 public sealed class ProjectFileGenerator
 {
-    private const string CodegenToolUrl = "https://github.com/peacefulstudio/daml-codegen-csharp";
+    private const string CodegenToolUrl = "https://github.com/peacefulstudio/canton-dotnet-sdk";
 
     private readonly CodeGenOptions _options;
 

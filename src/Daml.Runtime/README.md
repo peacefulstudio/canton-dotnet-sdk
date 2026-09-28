@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation. This package provides the base type
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime
+dotnet add package Daml.Runtime --prerelease
 ```
 
 ## Usage
@@ -33,6 +33,7 @@ C# namespace is the Daml module name, so the `Iou` module's template is
 ```csharp
 using System;
 using Daml.Runtime.Commands;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using IouContract = Iou.Iou;
 
@@ -48,7 +49,7 @@ var iou = new IouContract(
 
 var createCmd = CreateCommand.For(iou);
 
-var contractId = new IouContract.ContractId("00abc123");
+var contractId = new ContractId<IouContract>("00abc123");
 var exerciseCmd = ExerciseCommand.For(
     contractId,
     IouContract.ChoiceTransfer.Name,
@@ -57,8 +58,12 @@ var exerciseCmd = ExerciseCommand.For(
 var submission = CommandsSubmission.Single(createCmd)
     .WithActAs(alice)
     .WithWorkflowId(new WorkflowId("iou-issuance"))
-    .WithCommandId(new CommandId(Guid.NewGuid().ToString()));
+    .WithCommandId(new CommandId(Guid.NewGuid().ToString()))
+    .WithDeduplicationPeriod(new DeduplicationPeriod.Duration(TimeSpan.FromMinutes(10)));
 ```
+
+`WithDeduplicationPeriod` sets how long the participant rejects a resubmission of the same
+command id as a duplicate. Leave it unset to use the participant's configured maximum.
 
 ### Projecting Transaction Results
 
@@ -168,15 +173,12 @@ using IouContract = Iou.Iou;
 var iou = IouContract.FromRecord(DamlLfJsonReader.ReadRecord<IouContract>(pqsRowJson));
 ```
 
-`System.Text.Json` reads `[JsonConverter]` off the declared type and does not walk its
-base chain, so a derived contract id needs the attribute of its own. The emitted
-`T.ContractId` — including `T.Contract.Id` — is given it by the codegen, so it converts
-with no setup either. A hand-written type deriving from `ContractId<T>` is not, and still
-writes `{"Value":"..."}` until it is registered.
+`ContractId<T>` is sealed and carries its converter the same way, so every contract id the
+codegen hands out — a choice result, `Contract<T>.Id`, a stream row's id — converts with no
+setup either.
 
-Register explicitly for that case, and whenever a host builds its own
-`JsonSerializerOptions` and wants the Daml conversions listed explicitly rather than
-inherited from attributes:
+Register explicitly whenever a host builds its own `JsonSerializerOptions` and wants the Daml
+conversions listed explicitly rather than inherited from attributes:
 
 ```csharp
 using System.Text.Json;

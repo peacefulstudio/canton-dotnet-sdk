@@ -9,6 +9,7 @@ using PbDar = Daml.Codegen.Intermediate.IntermediateDar;
 using PbDataType = Daml.Codegen.Intermediate.DataType;
 using PbField = Daml.Codegen.Intermediate.Field;
 using PbInterface = Daml.Codegen.Intermediate.Interface;
+using PbInterfaceMethod = Daml.Codegen.Intermediate.InterfaceMethod;
 using PbModule = Daml.Codegen.Intermediate.IntermediateModule;
 using PbPackage = Daml.Codegen.Intermediate.IntermediatePackage;
 using PbPartyAnalysis = Daml.Codegen.Intermediate.PartyAnalysis;
@@ -236,11 +237,41 @@ public static partial class IntermediateDarReader
         new()
         {
             Name = RequireDottedIdentifier(iface.Name, "interface name"),
+            Methods = iface.Methods.Select(ConvertInterfaceMethod).ToList(),
             Choices = iface.Choices.Select(ConvertChoice).ToList(),
             ViewType = iface.ViewType is not null ? ConvertType(iface.ViewType) : null,
         };
 
-    private static DamlType ConvertType(PbType type)
+    /// <summary>
+    /// Maps a proto <c>InterfaceMethod</c> entry into the model, preserving the
+    /// wire order of the enclosing list (callers convert the repeated field in
+    /// sequence). An interface produced without the <c>methods</c> field never
+    /// reaches here — proto3 repeated-field absence reads as an empty list, which
+    /// the model's default mirrors.
+    /// </summary>
+    private static DamlInterfaceMethod ConvertInterfaceMethod(PbInterfaceMethod method)
+    {
+        if (method.ReturnType is null)
+            throw new InvalidDataException(
+                $"IntermediateDar InterfaceMethod '{method.Name}' is missing return_type — every interface method must declare its return type.");
+        return new DamlInterfaceMethod(
+            RequireIdentifier(method.Name, "interface method name"),
+            ConvertType(method.ReturnType));
+    }
+
+    /// <summary>
+    /// Converts a complete type expression — the type of every field, variant constructor,
+    /// choice argument and result, interface view, and interface method. The raw conversion
+    /// keeps every application generic (flattening curried ones), then
+    /// <see cref="AppliedTypeFolding.FoldComplete"/> folds the finished tree's applications
+    /// of the five folding builtins into their typed nodes with the catalog arity as the
+    /// oracle: folding at the complete-type boundary is what lets a curried chain accumulate
+    /// its arguments before the arity is checked.
+    /// </summary>
+    private static DamlType ConvertType(PbType type) =>
+        AppliedTypeFolding.FoldComplete(ConvertTypeUnresolved(type));
+
+    private static DamlType ConvertTypeUnresolved(PbType type)
     {
         ArgumentNullException.ThrowIfNull(type);
 
@@ -264,14 +295,20 @@ public static partial class IntermediateDarReader
         if (type.TypeApp.Function is null)
             throw new InvalidDataException(
                 "IntermediateDar TypeApp is missing function — every type application must declare the head type being applied.");
-        var head = ConvertType(type.TypeApp.Function);
+        var head = ConvertTypeUnresolved(type.TypeApp.Function);
         var args = type.TypeApp.Arguments.Select(arg =>
         {
             if (arg is null)
                 throw new InvalidDataException(
                     "IntermediateDar TypeApp has a null entry in arguments — every type-app argument must be a populated Type.");
-            return ConvertType(arg);
+            return ConvertTypeUnresolved(arg);
         }).ToList();
+        if (head is DamlTypeApp curried)
+        {
+            return new DamlTypeApp(
+                curried.Base,
+                [.. curried.Arguments, .. args]);
+        }
         return new DamlTypeApp(head, args);
     }
 
@@ -284,29 +321,34 @@ public static partial class IntermediateDarReader
             JoinValidatedSegments(tcn.ModuleNameSegments, "type-constructor module segment"),
             JoinValidatedSegments(tcn.NameSegments, "type-constructor name segment"));
 
-    private static DamlPrimitive ConvertBuiltin(PbBuiltin builtin) => builtin switch
+    /// <summary>
+    /// Resolves a proto <see cref="PbBuiltin"/> through the
+    /// <see cref="DamlPrimitiveCatalog"/>: <see cref="DamlPrimitiveDisposition.SupportedValue"/>
+    /// and <see cref="DamlPrimitiveDisposition.SignatureOnly"/> rows resolve to their real
+    /// <see cref="DamlPrimitive"/> identity, and <see cref="DamlPrimitiveDisposition.Unsupported"/>
+    /// rows throw — the reader has no mapping of its own and no silent fall-through for any
+    /// proto value.
+    /// </summary>
+    private static DamlPrimitive ConvertBuiltin(PbBuiltin builtin)
     {
-        PbBuiltin.Unit => DamlPrimitive.Unit,
-        PbBuiltin.Bool => DamlPrimitive.Bool,
-        PbBuiltin.Int64 => DamlPrimitive.Int64,
-        PbBuiltin.Text => DamlPrimitive.Text,
-        PbBuiltin.Numeric => DamlPrimitive.Numeric,
-        PbBuiltin.Party => DamlPrimitive.Party,
-        PbBuiltin.Date => DamlPrimitive.Date,
-        PbBuiltin.Timestamp => DamlPrimitive.Timestamp,
-        PbBuiltin.List => DamlPrimitive.List,
-        PbBuiltin.Optional => DamlPrimitive.Optional,
-        PbBuiltin.TextMap => DamlPrimitive.TextMap,
-        PbBuiltin.GenMap => DamlPrimitive.GenMap,
-        PbBuiltin.ContractId => DamlPrimitive.ContractId,
-        PbBuiltin.Unspecified => throw new InvalidDataException(
-            "IntermediateDar BuiltinType is BUILTIN_TYPE_UNSPECIFIED — every BuiltinType must be set to a defined value by the producer."),
-        _ => throw new NotSupportedException(
-            $"IntermediateDar BuiltinType '{builtin}' has no C# mapping yet. " +
-            "Add the mapping in IntermediateDarReader.ConvertBuiltin, the DamlPrimitive enum (Model/DamlType.cs), " +
-            "the emitter type mapping (CSharpCodeGenerator), the runtime value types (Daml.Runtime/Data/DamlPrimitives.cs), " +
-            "and DamlJsonSerializer."),
-    };
+        if (!System.Enum.IsDefined(builtin))
+            throw new InvalidDataException(
+                $"IntermediateDar BuiltinType '{builtin}' is not a defined proto BuiltinType value — " +
+                "the intermediate was produced against a newer proto schema than this reader understands. " +
+                "Add the value's row in DamlPrimitiveCatalog alongside the proto schema and the JVM helper.");
+        if (builtin == PbBuiltin.Unspecified)
+            throw new InvalidDataException(
+                "IntermediateDar BuiltinType is BUILTIN_TYPE_UNSPECIFIED — every BuiltinType must be set to a defined value by the producer.");
+
+        var row = DamlPrimitiveCatalog.Get(builtin);
+        return row.Disposition switch
+        {
+            DamlPrimitiveDisposition.SupportedValue or DamlPrimitiveDisposition.SignatureOnly =>
+                row.Primitive!.Value,
+            _ => throw new NotSupportedException(
+                $"IntermediateDar BuiltinType '{builtin}' is cataloged as Unsupported — {row.Rationale}"),
+        };
+    }
 
     private static Version ParseVersion(string raw) =>
         PackageVersionParser.Parse(raw);

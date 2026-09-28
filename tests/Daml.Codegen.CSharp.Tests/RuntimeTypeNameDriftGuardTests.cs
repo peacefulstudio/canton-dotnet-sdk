@@ -11,8 +11,8 @@ namespace Daml.Codegen.CSharp.Tests;
 /// <summary>
 /// Drift guard for the runtime type-name string literals that cannot be
 /// <c>nameof</c>-backed. <see cref="RuntimeTypeNames.Contract"/>,
-/// <see cref="RuntimeTypeNames.IContract"/>, <see cref="RuntimeTypeNames.Choice"/>,
-/// <see cref="RuntimeTypeNames.IExercises"/> and <see cref="RuntimeTypeNames.IImplements"/>
+/// <see cref="RuntimeTypeNames.IContract"/>, <see cref="RuntimeTypeNames.Choice"/>
+/// and <see cref="RuntimeTypeNames.IImplements"/>
 /// are blocked by CS8920 (they name generic types constrained by <c>ITemplate</c>'s
 /// or <c>IDamlInterface</c>'s static-abstract members, which makes the concrete type
 /// unusable as a <c>nameof</c> type argument from the codegen project).
@@ -39,7 +39,6 @@ public class RuntimeTypeNameDriftGuardTests
     [InlineData(nameof(RuntimeTypeNames.Contract))]
     [InlineData(nameof(RuntimeTypeNames.IContract))]
     [InlineData(nameof(RuntimeTypeNames.Choice))]
-    [InlineData(nameof(RuntimeTypeNames.IExercises))]
     [InlineData(nameof(RuntimeTypeNames.IImplements))]
     public void RuntimeTypeNameDriftGuard_the_cs8920_blocked_template_generic_literals_name_a_real_runtime_type(string constantFieldName)
     {

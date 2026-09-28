@@ -28,7 +28,7 @@ namespace Daml.Runtime.Stdlib;
 /// element type at the call site and inlines the appropriate conversion lambdas.
 /// </para>
 /// <para>
-/// <see cref="System.Text.Json"/> serialization is a separate, CLR-only contract (see ADR 0028)
+/// <see cref="System.Text.Json"/> serialization is a separate, CLR-only round-trip contract
 /// carried by <see cref="NonEmptyJsonConverterFactory"/>: a null <see cref="Hd"/> or tail element
 /// reached through <see cref="JsonSerializer.Deserialize{TValue}(string, JsonSerializerOptions?)"/>
 /// surfaces as a <see cref="JsonException"/> naming the offending slot, on bare

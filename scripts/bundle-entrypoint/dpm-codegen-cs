@@ -84,7 +84,7 @@ if ! command -v java >/dev/null 2>&1; then
 fi
 
 if [[ -n "${PUBLISH_NUGET}" ]]; then
-  if ! printf '%s\0' "${EMITTER_ARGS[@]}" | grep -qz -- '--generate-project'; then
+  if ! grep -qz -- '--generate-project' < <(printf '%s\0' "${EMITTER_ARGS[@]}"); then
     EMITTER_ARGS+=("--generate-project")
   fi
   if [[ ! " ${EMITTER_ARGS[*]} " =~ [[:space:]]--runtime-version([[:space:]]|=) ]]; then

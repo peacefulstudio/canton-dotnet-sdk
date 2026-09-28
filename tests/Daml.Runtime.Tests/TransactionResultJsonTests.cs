@@ -70,4 +70,33 @@ public class TransactionResultJsonTests
 
         restored.Should().Be(unattributed);
     }
+
+    [Fact]
+    public void ExercisedEvents_ChoiceName_serializes_as_the_same_bare_JSON_string_a_plain_string_field_would()
+    {
+        var withExercise = Result with
+        {
+            ExercisedEvents = EquatableArray.Create(
+            [
+                new ExercisedEvent(
+                    "contract-1",
+                    new Identifier("cafe", "Asset", "Token"),
+                    null,
+                    new ChoiceName("Transfer"),
+                    new DamlText("ping"),
+                    new DamlNumeric(42.5m),
+                    true,
+                    [Alice],
+                    [Alice]),
+            ]),
+        };
+
+        var json = JsonSerializer.Serialize(withExercise, Options);
+
+        json.Should().Contain("\"ChoiceName\":\"Transfer\"");
+
+        var restored = JsonSerializer.Deserialize<TransactionResult>(json, Options);
+
+        restored.Should().Be(withExercise);
+    }
 }

@@ -4,7 +4,7 @@
 namespace Daml.Codegen.CSharp.CodeGen;
 
 /// <summary>
-/// The submitter parameter an emitted <c>&lt;Choice&gt;Async</c> method carries: the
+/// The submitter parameter an emitted <c>Try&lt;Choice&gt;Async</c> method carries: the
 /// <c>SubmitterInfo</c> shape, which expresses both <c>actAs</c> and <c>readAs</c>, so a
 /// submitter that must read contracts it does not act as stays expressible through the
 /// generated surface instead of dropping to a hand-built <c>ExerciseCommand</c>. A single

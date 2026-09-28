@@ -9,7 +9,7 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// <summary>
 /// Emits the C# that <em>exercises</em> a choice: the
 /// <c>Choice&lt;Template, Arg, Result&gt;</c> descriptor with its
-/// result decoder, the typed <c>&lt;Choice&gt;Async</c> exercisers (both the
+/// result decoder, the typed <c>Try&lt;Choice&gt;Async</c> exercisers (both the
 /// contract-id-returning and the value-returning flavour), and the interface-choice
 /// extensions. Constructed once per package over the package's
 /// <see cref="PackageEmitContext"/>, the DAR-scoped <see cref="ICrossPackageResolver"/>,
@@ -240,6 +240,10 @@ internal sealed partial class ChoiceEmitter(
                 var contractType = activeMapper.MapType(arg);
                 indent.AppendLine($"ResultDecoder = val => new {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{contractType}>(val.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlContractId)}>().Value),");
                 return;
+            case DamlContractIdType typedContractId:
+                var typedContractType = activeMapper.MapType(typedContractId.Payload);
+                indent.AppendLine($"ResultDecoder = val => new {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{typedContractType}>(val.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlContractId)}>().Value),");
+                return;
         }
 
         var expr = activeMapper.FromValue(returnType, "val", nestedArgTypeNames: nestedArgTypeNames);
@@ -348,7 +352,7 @@ internal sealed partial class ChoiceEmitter(
     /// Emits the <c>&lt;Choice&gt;Command(this ContractId&lt;TemplateName&gt; contractId, ...)</c>
     /// builder that constructs the choice's <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/>
     /// without submitting it. The single command builder shared by every generated
-    /// <c>&lt;Choice&gt;Async</c> exerciser — the create-projecting ContractId overloads (see
+    /// <c>Try&lt;Choice&gt;Async</c> exerciser — the create-projecting ContractId overloads (see
     /// <c>WriteSingleChoiceAsyncExerciser</c> / <c>WriteSubmitterInfoChoiceAsyncExerciser</c>) and the
     /// non-contract exerciser (see <c>WriteSingleNonContractChoiceAsyncExerciser</c>) alike — they
     /// exercise the identical choice on the identical <c>ContractId&lt;T&gt;</c> type and therefore
@@ -516,10 +520,10 @@ internal sealed partial class ChoiceEmitter(
     }
 
     /// <summary>
-    /// Maps the contract-key slot. The template record nests <c>Contract</c> / <c>ContractId</c>
-    /// records and one argument record per choice, any of which binds ahead of a package type the
-    /// key names, so every in-package name in the key slot is resolved <c>global::</c>-qualified —
-    /// the same treatment the active contract's <c>Key</c> member gets.
+    /// Maps the contract-key slot. The template record nests one argument record per choice, any
+    /// of which binds ahead of a package type the key names, so every in-package name in the key
+    /// slot is resolved <c>global::</c>-qualified — the same treatment the template's <c>Key</c>
+    /// witness gets.
     /// </summary>
     private DamlTypeMapper PackageQualifiedMapper =>
         _packageQualifiedMapper ??= new DamlTypeMapper(context, new PackageQualifiedResolver(resolver));

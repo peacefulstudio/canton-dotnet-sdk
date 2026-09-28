@@ -219,6 +219,23 @@ public class DamlValueStructuralEqualityTests
     }
 
     [Fact]
+    public void DamlTextMap_differs_when_entry_counts_differ()
+    {
+        var left = DamlTextMap.Create(("k1", new DamlInt64(1)), ("k2", new DamlInt64(2)));
+        var right = DamlTextMap.Create(("k1", new DamlInt64(1)));
+
+        left.Should().NotBe(right);
+    }
+
+    [Fact]
+    public void DamlTextMap_differs_from_null()
+    {
+        var left = DamlTextMap.Create(("k1", new DamlInt64(1)));
+
+        left.Equals((DamlTextMap?)null).Should().BeFalse();
+    }
+
+    [Fact]
     public void DamlGenMap_equals_another_map_with_equal_entries()
     {
         var left = DamlGenMap.Create((new DamlText("k"), new DamlInt64(1)));

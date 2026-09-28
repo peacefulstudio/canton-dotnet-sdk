@@ -13,7 +13,7 @@ namespace Daml.Ledger.Abstractions;
 /// <see cref="ExerciseOutcome{T}.InfraError"/> / <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>
 /// outcome so catch sites keep access to the detail the structured API exposes; a classified
 /// infrastructure failure carries its <see cref="Category"/> alongside its
-/// <see cref="StatusCode"/>, and a committed-but-undecodable failure carries its
+/// <see cref="Status"/>, and a committed-but-undecodable failure carries its
 /// <see cref="UpdateId"/> so a catch site can read the transaction without resubmitting.
 /// Derives from <see cref="InvalidOperationException"/> because the convenience wrappers
 /// previously threw <see cref="InvalidOperationException"/> directly; the base
@@ -49,10 +49,10 @@ public sealed class LedgerOperationException : InvalidOperationException
     public IReadOnlyDictionary<string, string>? Metadata { get; }
 
     /// <summary>
-    /// Transport status code when the failed outcome was an
-    /// <see cref="ExerciseOutcome{T}.InfraError"/>; otherwise <c>null</c>.
+    /// What the transport reported when the failed outcome was an
+    /// <see cref="ExerciseOutcome{T}.InfraError"/> or a faulted stream; otherwise <c>null</c>.
     /// </summary>
-    public int? StatusCode { get; }
+    public TransportStatus? Status { get; }
 
     /// <summary>
     /// The committed transaction's update id when the failed outcome was a
@@ -145,24 +145,24 @@ public sealed class LedgerOperationException : InvalidOperationException
     /// </summary>
     public LedgerOperationException(
         string message,
-        int statusCode,
+        TransportStatus status,
         DamlErrorCategory? category = null,
         Exception? innerException = null,
         string? errorId = null)
-        : this(message, statusCode, category, innerException, errorId, CommitState.Unknown)
+        : this(message, status, category, innerException, errorId, CommitState.Unknown)
     {
     }
 
     private LedgerOperationException(
         string message,
-        int statusCode,
+        TransportStatus status,
         DamlErrorCategory? category,
         Exception? innerException,
         string? errorId,
         CommitState commitState)
         : base(message, innerException)
     {
-        StatusCode = statusCode;
+        Status = status;
         Category = category;
         ErrorId = errorId;
         CommitState = commitState;
@@ -194,9 +194,9 @@ public sealed class LedgerOperationException : InvalidOperationException
     /// </summary>
     internal static LedgerOperationException FromStreamFault(
         string message,
-        int statusCode,
+        TransportStatus status,
         DamlErrorCategory? category,
         Exception? innerException,
         string? errorId) =>
-        new(message, statusCode, category, innerException, errorId, CommitState.NotCommitted);
+        new(message, status, category, innerException, errorId, CommitState.NotCommitted);
 }

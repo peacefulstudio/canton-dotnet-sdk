@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Net;
 using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
 using Xunit;
@@ -21,7 +22,7 @@ public class LedgerOperationExceptionTests
         exception.Category.Should().BeNull();
         exception.ErrorId.Should().BeNull();
         exception.Metadata.Should().BeNull();
-        exception.StatusCode.Should().BeNull();
+        exception.Status.Should().BeNull();
     }
 
     [Fact]
@@ -36,16 +37,17 @@ public class LedgerOperationExceptionTests
         exception.Category.Should().BeNull();
         exception.ErrorId.Should().BeNull();
         exception.Metadata.Should().BeNull();
-        exception.StatusCode.Should().BeNull();
+        exception.Status.Should().BeNull();
         exception.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]
     public void LedgerOperationException_infra_error_constructor_leaves_category_null_when_omitted()
     {
-        var exception = new LedgerOperationException("transport failed", 503);
+        var exception = new LedgerOperationException(
+            "transport failed", new TransportStatus.Http(HttpStatusCode.ServiceUnavailable));
 
-        exception.StatusCode.Should().Be(503);
+        exception.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.ServiceUnavailable));
         exception.Category.Should().BeNull();
         exception.ErrorId.Should().BeNull();
         exception.Metadata.Should().BeNull();
@@ -59,11 +61,11 @@ public class LedgerOperationExceptionTests
 
         var exception = new LedgerOperationException(
             "transport failed",
-            400,
+            new TransportStatus.Http(HttpStatusCode.BadRequest),
             DamlErrorCategory.InvalidIndependentOfSystemState,
             inner);
 
-        exception.StatusCode.Should().Be(400);
+        exception.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.BadRequest));
         exception.Category.Should().Be(DamlErrorCategory.InvalidIndependentOfSystemState);
         exception.InnerException.Should().BeSameAs(inner);
         exception.ErrorId.Should().BeNull();
@@ -74,7 +76,7 @@ public class LedgerOperationExceptionTests
     {
         var exception = new LedgerOperationException(
             "the snapshot faulted",
-            10,
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted),
             DamlErrorCategory.ContentionOnSharedResources,
             errorId: "STALE_STREAM_AUTHORIZATION");
 
@@ -127,7 +129,7 @@ public class LedgerOperationExceptionTests
         exception.Category.Should().BeNull();
         exception.ErrorId.Should().BeNull();
         exception.Metadata.Should().BeNull();
-        exception.StatusCode.Should().BeNull();
+        exception.Status.Should().BeNull();
     }
 
     [Fact]
@@ -157,7 +159,8 @@ public class LedgerOperationExceptionTests
     [Fact]
     public void LedgerOperationException_infra_error_constructor_sets_CommitState_Unknown()
     {
-        var exception = new LedgerOperationException("transport failed", 503);
+        var exception = new LedgerOperationException(
+            "transport failed", new TransportStatus.Http(HttpStatusCode.ServiceUnavailable));
 
         exception.CommitState.Should().Be(
             CommitState.Unknown,

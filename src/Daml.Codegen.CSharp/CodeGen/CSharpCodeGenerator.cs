@@ -18,8 +18,6 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// </param>
 public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<CSharpCodeGenerator>? logger = null)
 {
-    private const string ContractIdentifiersClassName = "ContractIdentifiers";
-
     private readonly ILogger _log = logger ?? NullLogger<CSharpCodeGenerator>.Instance;
 
     private readonly Regex? _rootFilter = options.RootFilter is not null
@@ -32,9 +30,15 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
     /// Generates C# code for all types in the DAR. Every module of every emitted package is
     /// mapped to its namespace first and the map is checked as a whole — two modules sharing
     /// a namespace, or a namespace spelled like an emitted type — before any file is produced.
+    /// The readers deliver applied builtins as typed nodes, and the emitter consumes them
+    /// natively through <see cref="IDamlTypeVisitor{TResult}"/> arms; a hand-built legacy
+    /// application of one of the five folding builtins folds into its typed node at the
+    /// visitor, so both representations map identically.
     /// </summary>
     public IReadOnlyList<GeneratedFile> Generate(IDarSource dar)
     {
+        ArgumentNullException.ThrowIfNull(dar);
+
         var files = new List<GeneratedFile>();
 
         var resolver = new DarCrossPackageResolver(dar, options, _log);
@@ -94,28 +98,14 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
     /// <summary>
     /// Whether <paramref name="typeName"/> in <paramref name="moduleName"/> passes
     /// <see cref="CodeGenOptions.RootFilter"/> — the single place that answers this question, so
-    /// every file kind (template, its nested choice-argument types, interface,
-    /// <c>ContractIdentifiers</c> entry) is filtered by the same rule instead of by copies that
-    /// could drift apart. An absent filter admits everything.
+    /// every file kind (template, its nested choice-argument types, interface) is filtered by the
+    /// same rule instead of by copies that could drift apart. An absent filter admits everything.
     /// </summary>
     private bool IsIncludedByRootFilter(string moduleName, string typeName) =>
         _rootFilter is null || _rootFilter.IsMatch($"{moduleName}:{typeName}");
 
-    private IReadOnlyList<DamlTemplate> IncludedTemplates(DamlModule module) =>
-        module.Templates.Where(template => IsIncludedByRootFilter(module.Name, template.Name)).ToList();
-
-    private bool EmitsContractIdentifiers(DamlModule module) =>
-        options.GenerateContractIdentifiers && IncludedTemplates(module).Count > 0;
-
-    private EmittedModule EmittedModuleOf(PackageEmitContext context)
-    {
-        var topLevelTypeNames = new HashSet<string>(context.TopLevelTypeNames, StringComparer.Ordinal);
-        if (EmitsContractIdentifiers(context.Module))
-        {
-            topLevelTypeNames.Add(ContractIdentifiersClassName);
-        }
-        return new EmittedModule(context.Package.Name, context.Module.Name, context.Namespace, topLevelTypeNames);
-    }
+    private static EmittedModule EmittedModuleOf(PackageEmitContext context) =>
+        new(context.Package.Name, context.Module.Name, context.Namespace, context.TopLevelTypeNames);
 
     /// <summary>
     /// Generates C# code for a single package, one module at a time: every file of a module
@@ -239,11 +229,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
             yield return GeneratedFile.Text(path, code);
         }
-
-        if (EmitsContractIdentifiers(module))
-        {
-            yield return GenerateContractIdentifiersFile(module, IncludedTemplates(module), moduleNamespace);
-        }
     }
 
     /// <summary>
@@ -304,62 +289,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
             RequireCommonNamespaces(indent);
             interfaceEmitter.WriteInterfaceType(indent, package, module, iface);
         });
-
-    /// <summary>
-    /// Generates the module's <c>ContractIdentifiers</c> helper class — fully qualified
-    /// identifiers for every template the module declares — written into the module's own
-    /// namespace and directory. A template belongs to exactly one module, so the bare
-    /// template names stay unambiguous within the class.
-    /// </summary>
-    private GeneratedFile GenerateContractIdentifiersFile(
-        DamlModule module,
-        IReadOnlyList<DamlTemplate> templates,
-        string moduleNamespace)
-    {
-        var content = EmitFile(moduleNamespace, indent =>
-        {
-            indent.Require(RuntimeNamespaces.Contracts);
-            indent.Require($"static {RuntimeNamespaces.Contracts}.TemplateExtensions");
-
-            if (options.GenerateXmlDocs)
-            {
-                indent.AppendLine("/// <summary>");
-                indent.AppendLine("/// Provides fully qualified contract identifiers for all templates in this module.");
-                indent.AppendLine("/// These identifiers can be used for PQS queries.");
-                indent.AppendLine("/// </summary>");
-            }
-
-            indent.AppendLine($"public static class {ContractIdentifiersClassName}");
-            indent.AppendLine("{");
-            indent.Indent();
-
-            for (int i = 0; i < templates.Count; i++)
-            {
-                var template = templates[i];
-                var templateClassName = EmitterHelpers.SanitizeIdentifier(template.Name);
-
-                if (options.GenerateXmlDocs)
-                {
-                    indent.AppendLine("/// <summary>");
-                    indent.AppendLine($"/// Gets the fully qualified template identifier for {template.Name} contracts.");
-                    indent.AppendLine($"/// Format: {{packageName}}:{module.Name}:{template.Name}");
-                    indent.AppendLine("/// </summary>");
-                }
-
-                indent.AppendLine($"public static string {templateClassName} {{ get; }} = GetTemplateId<{templateClassName}>();");
-
-                if (i < templates.Count - 1)
-                {
-                    indent.AppendLine();
-                }
-            }
-
-            indent.Dedent();
-            indent.AppendLine("}");
-        });
-
-        return GeneratedFile.Text(RelativeFilePath(moduleNamespace, $"{ContractIdentifiersClassName}.cs"), content);
-    }
 
     private static string RelativeFilePath(string dottedNamespace, string fileName) =>
         $"{dottedNamespace.Replace('.', '/')}/{fileName}";

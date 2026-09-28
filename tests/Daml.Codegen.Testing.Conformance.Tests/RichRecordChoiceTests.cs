@@ -67,16 +67,16 @@ public class RichRecordChoiceTests
             Observers: [],
             ContractKey: null);
 
-        var contract = RichRecord.Contract.FromCreatedEvent(@event);
+        var contract = Contract<RichRecord>.FromCreatedEvent(@event, RichRecord.FromRecord);
 
         contract.Id.Value.Should().Be("rich-cid");
         contract.Data.Label.Should().Be("l");
     }
 
     [Fact]
-    public void RichRecordChoice_contract_identifiers_expose_template_ids_for_pqs_queries()
+    public void GetTemplateId_exposes_the_template_ids_raw_pqs_queries_filter_on()
     {
-        ContractIdentifiers.Marker.Should().Contain("RichTypes:Marker");
-        ContractIdentifiers.RichRecord.Should().Contain("RichTypes:RichRecord");
+        TemplateExtensions.GetTemplateId<Marker>().Should().EndWith(":RichTypes:Marker");
+        TemplateExtensions.GetTemplateId<RichRecord>().Should().EndWith(":RichTypes:RichRecord");
     }
 }

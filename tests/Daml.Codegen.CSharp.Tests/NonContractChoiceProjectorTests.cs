@@ -154,7 +154,7 @@ public class NonContractChoiceProjectorTests
             ContractId: contractId,
             TemplateId: templateId ?? OracleTemplateId,
             InterfaceId: null,
-            ChoiceName: ChoiceName,
+            ChoiceName: new Daml.Runtime.Commands.ChoiceName(ChoiceName),
             ChoiceArgument: DamlUnit.Instance,
             ExerciseResult: new DamlInt64(result),
             Consuming: false,

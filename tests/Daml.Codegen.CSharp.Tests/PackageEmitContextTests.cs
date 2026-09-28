@@ -92,15 +92,15 @@ public class PackageEmitContextTests
         var contexts = PackageEmitContext.ForPackage(
             Package(
                 "p",
-                Module("A", dataTypes: [Record("Unit")]),
+                Module("A", dataTypes: [Record("Either")]),
                 Module("A.B", dataTypes: [Record("Widget")]),
                 Module("C", dataTypes: [Record("Party")])),
             Options(),
             isMainPackage: true);
 
         var child = contexts.Single(context => context.Module.Name == "A.B");
-        child.Qualifier.DeclaredTypeNames.Should().BeEquivalentTo("Unit", "Widget");
-        child.Qualifier.Qualify("Unit").Should().Be("global::Daml.Runtime.Stdlib.Unit");
+        child.Qualifier.DeclaredTypeNames.Should().BeEquivalentTo("Either", "Widget");
+        child.Qualifier.Qualify("Either").Should().Be("global::Daml.Runtime.Stdlib.Either");
         child.Qualifier.Qualify("Party").Should().Be("Party");
     }
 

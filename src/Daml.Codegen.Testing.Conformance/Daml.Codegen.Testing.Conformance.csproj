@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageId>Daml.Codegen.Testing.Conformance</PackageId>
     <RootNamespace>Daml.Codegen.Testing.Conformance</RootNamespace>
-    <Description>Conformance corpus for daml-codegen-csharp: compiled generated types plus the DAR they were generated from, for live-ledger round-trip testing by consumers. Not for production use.</Description>
+    <Description>Conformance corpus for canton-dotnet-sdk: compiled generated types plus the DAR they were generated from, for live-ledger round-trip testing by consumers. Not for production use.</Description>
     <PackageTags>daml;canton;codegen;testing;conformance</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

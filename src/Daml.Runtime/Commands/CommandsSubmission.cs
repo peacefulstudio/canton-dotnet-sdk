@@ -52,6 +52,8 @@ public sealed record CommandsSubmission(
     private readonly IReadOnlyList<DisclosedContract>? _disclosedContracts =
         CopiedOrNull(DisclosedContracts, nameof(DisclosedContracts));
 
+    private readonly DeduplicationPeriod? _deduplicationPeriod;
+
     /// <summary>
     /// The commands to submit. Copied at construction and on <c>init</c>, so a caller that
     /// retains the list it supplied cannot change the submission, its equality or its hash
@@ -94,6 +96,27 @@ public sealed record CommandsSubmission(
     {
         get => _disclosedContracts;
         init => _disclosedContracts = CopiedOrNull(value, nameof(DisclosedContracts));
+    }
+
+    /// <summary>
+    /// The period over which the participant deduplicates this submission against earlier ones
+    /// carrying the same change id (<see cref="CommandId"/>, <see cref="ActAs"/> and user id),
+    /// projected onto the <c>Commands.deduplication_period</c> oneof — or <see langword="null"/>
+    /// to leave the oneof unset, so the participant applies its configured maximum
+    /// deduplication duration.
+    /// </summary>
+    /// <remarks>
+    /// Unset by default: no submission derives a period from a retry policy's horizon. A caller
+    /// that retries for longer than the participant's default window sets one explicitly.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The period is a <see cref="Commands.DeduplicationPeriod.Duration"/> whose length is
+    /// negative, which the Ledger API rejects.
+    /// </exception>
+    public DeduplicationPeriod? DeduplicationPeriod
+    {
+        get => _deduplicationPeriod;
+        init => _deduplicationPeriod = NonNegative(value, nameof(DeduplicationPeriod));
     }
 
     /// <summary>
@@ -180,6 +203,23 @@ public sealed record CommandsSubmission(
         this with { MinLedgerTime = minLedgerTime };
 
     /// <summary>
+    /// Sets the period over which the participant deduplicates this submission. Passing
+    /// <see langword="null"/> clears it, leaving the participant's configured maximum
+    /// deduplication duration in force.
+    /// </summary>
+    /// <param name="deduplicationPeriod">
+    /// The period — <see cref="Commands.DeduplicationPeriod.Duration"/> or
+    /// <see cref="Commands.DeduplicationPeriod.Offset"/> — or <see langword="null"/> for the
+    /// participant default.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="deduplicationPeriod"/> is a <see cref="Commands.DeduplicationPeriod.Duration"/>
+    /// whose length is negative.
+    /// </exception>
+    public CommandsSubmission WithDeduplicationPeriod(DeduplicationPeriod? deduplicationPeriod) =>
+        this with { DeduplicationPeriod = deduplicationPeriod };
+
+    /// <summary>
     /// Applies a <see cref="SubmitterInfo"/> — sets both <see cref="ActAs"/> and
     /// <see cref="ReadAs"/> from the submitter's party sets in a single call. The
     /// preferred way for code-generated and library callers to project a typed
@@ -221,6 +261,7 @@ public sealed record CommandsSubmission(
         && CommandId == other.CommandId
         && SynchronizerId == other.SynchronizerId
         && Equals(MinLedgerTime, other.MinLedgerTime)
+        && Equals(DeduplicationPeriod, other.DeduplicationPeriod)
         && Commands.SequenceEqual(other.Commands)
         && ContentsEqual(ActAs, other.ActAs)
         && ContentsEqual(ReadAs, other.ReadAs)
@@ -234,12 +275,21 @@ public sealed record CommandsSubmission(
         hash.Add(CommandId);
         hash.Add(SynchronizerId);
         hash.Add(MinLedgerTime);
+        hash.Add(DeduplicationPeriod);
         hash.Add(ContentsHash(Commands));
         hash.Add(ContentsHash(ActAs));
         hash.Add(ContentsHash(ReadAs));
         hash.Add(ContentsHash(DisclosedContracts));
         return hash.ToHashCode();
     }
+
+    private static DeduplicationPeriod? NonNegative(DeduplicationPeriod? period, string parameterName) =>
+        period is DeduplicationPeriod.Duration { Length: var length } && length < TimeSpan.Zero
+            ? throw new ArgumentOutOfRangeException(
+                parameterName,
+                length,
+                "A deduplication duration must be non-negative.")
+            : period;
 
     private static IReadOnlyList<T>? CopiedOrNull<T>(IReadOnlyList<T>? values, string parameterName) =>
         values is null ? null : EventCollections.Copy(values, parameterName);

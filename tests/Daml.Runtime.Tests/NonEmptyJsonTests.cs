@@ -15,7 +15,7 @@ namespace Daml.Runtime.Tests;
 /// Pins the <see cref="System.Text.Json"/> contract for <see cref="NonEmpty{T}"/>: the object
 /// <see cref="System.Text.Json"/> derives from its <c>Hd</c> and <c>Tl</c> members, read back as the
 /// list that wrote it. The contract is a CLR round trip, not the Daml-LF record the ledger encoding
-/// uses — see ADR 0028. What <see cref="DamlJsonConverters.AddDamlConverters"/> adds on top is
+/// uses. What <see cref="DamlJsonConverters.AddDamlConverters"/> adds on top is
 /// requiredness: a member the payload omits is refused rather than bound to a null the slot forbids.
 /// </summary>
 public class NonEmptyJsonTests
@@ -67,6 +67,32 @@ public class NonEmptyJsonTests
     private sealed record TextGroup(string Name, NonEmpty<string> Members);
 
     private sealed record VoteTally(string Name, NonEmpty<long> Members);
+
+    private sealed record Boom(int Value);
+
+    private sealed class ThrowingBoomConverter : JsonConverter<Boom>
+    {
+        public override Boom Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            reader.Skip();
+            throw new InvalidOperationException("boom on Hd");
+        }
+
+        public override void Write(Utf8JsonWriter writer, Boom value, JsonSerializerOptions options) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class ThrowingBoomListConverter : JsonConverter<IReadOnlyList<Boom>>
+    {
+        public override IReadOnlyList<Boom> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            reader.Skip();
+            throw new InvalidOperationException("boom on Tl");
+        }
+
+        public override void Write(Utf8JsonWriter writer, IReadOnlyList<Boom> value, JsonSerializerOptions options) =>
+            throw new NotSupportedException();
+    }
 
     private sealed class SentinelTlConverter : JsonConverter<IReadOnlyList<string>>
     {
@@ -399,5 +425,51 @@ public class NonEmptyJsonTests
         committee!.Members.Should().BeNull(
             "the modifier that marks the member required rides on AddDamlConverters, and options "
             + "that register nothing never install it");
+    }
+
+    [Fact]
+    public void NonEmpty_rejects_a_non_object_token()
+    {
+        var act = () => JsonSerializer.Deserialize<NonEmpty<Boom>>("[1]");
+
+        act.Should().Throw<JsonException>().WithMessage(
+            "Expected object token for NonEmpty<NonEmptyJsonTests.Boom>, got StartArray.");
+    }
+
+    [Fact]
+    public void NonEmpty_skips_an_unmapped_member_when_unmapped_members_are_not_disallowed()
+    {
+        var group = JsonSerializer.Deserialize<NonEmpty<string>>(
+            """{"Hd":"alice","Tl":[],"Bogus":1}""");
+
+        group.Should().Be(new NonEmpty<string>("alice", []));
+    }
+
+    [Fact]
+    public void NonEmpty_wraps_a_non_JsonException_thrown_while_reading_Hd()
+    {
+        var options = new JsonSerializerOptions { Converters = { new ThrowingBoomConverter() } };
+
+        var act = () => JsonSerializer.Deserialize<NonEmpty<Boom>>(
+            """{"Hd":{"Value":1},"Tl":[]}""", options);
+
+        act.Should().Throw<JsonException>()
+            .WithMessage("Cannot read NonEmpty<NonEmptyJsonTests.Boom>.Hd: boom on Hd")
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("boom on Hd");
+    }
+
+    [Fact]
+    public void NonEmpty_wraps_a_non_JsonException_thrown_while_reading_Tl()
+    {
+        var options = new JsonSerializerOptions { Converters = { new ThrowingBoomListConverter() } };
+
+        var act = () => JsonSerializer.Deserialize<NonEmpty<Boom>>(
+            """{"Hd":{"Value":1},"Tl":[]}""", options);
+
+        act.Should().Throw<JsonException>()
+            .WithMessage("Cannot read NonEmpty<NonEmptyJsonTests.Boom>.Tl: boom on Tl")
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("boom on Tl");
     }
 }

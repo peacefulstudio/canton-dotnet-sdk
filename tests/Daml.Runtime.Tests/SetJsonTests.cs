@@ -15,7 +15,7 @@ namespace Daml.Runtime.Tests;
 /// <summary>
 /// Pins the <see cref="System.Text.Json"/> contract for <see cref="Set{T}"/>: a bare JSON array
 /// that reads back as the set that wrote it. The contract is a CLR round trip, not the Daml-LF
-/// record <c>{"map":[["alice",{}]]}</c> the ledger encoding uses — see ADR 0028 — so what the
+/// record <c>{"map":[["alice",{}]]}</c> the ledger encoding uses, so what the
 /// tests assert is that a value survives the trip, on the bare options a host builds for itself as
 /// much as on <see cref="DamlJsonConverters.AddDamlConverters"/>.
 /// </summary>
@@ -66,7 +66,7 @@ public class SetJsonTests
         using var document = JsonDocument.Parse(json);
         document.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
         document.RootElement.EnumerateArray().Select(element => element.GetString())
-            .Should().BeEquivalentTo([Alice.Id, Bob.Id]);
+            .Should().BeEquivalentTo([Alice.Value, Bob.Value]);
     }
 
     [Fact]

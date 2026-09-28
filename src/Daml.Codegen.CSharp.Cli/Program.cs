@@ -16,7 +16,7 @@ internal static partial class Program
     {
         var rootCommand = BuildRootCommand();
         var parseResult = rootCommand.Parse(args);
-        return await parseResult.InvokeAsync();
+        return await parseResult.InvokeAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -114,12 +114,6 @@ internal static partial class Program
             }
         });
 
-        var contractIdentifiersOption = new Option<bool>("--contract-identifiers")
-        {
-            Description = "Generate a ContractIdentifiers helper class per module, in that module's directory, for PQS queries",
-            DefaultValueFactory = _ => true
-        };
-
         var emitterCounterOption = new Option<int>("--emitter-counter")
         {
             Description = "4th segment of the generated NuGet version (Major.Minor.Patch.Generation). Defaults to 0; set a monotonic counter to distinguish republished builds of the same source. Overridden by --release-counters, which resolves the segment as a codegen-generation ordinal.",
@@ -210,7 +204,6 @@ internal static partial class Program
         rootCommand.Options.Add(includeDepsOption);
         rootCommand.Options.Add(targetFrameworkOption);
         rootCommand.Options.Add(runtimeVersionOption);
-        rootCommand.Options.Add(contractIdentifiersOption);
         rootCommand.Options.Add(emitterCounterOption);
         rootCommand.Options.Add(releaseCountersOption);
         rootCommand.Options.Add(codegenVersionOption);
@@ -231,7 +224,6 @@ internal static partial class Program
                     parseResult.GetValue(includeDepsOption),
                     parseResult.GetValue(targetFrameworkOption)!,
                     parseResult.GetValue(runtimeVersionOption),
-                    parseResult.GetValue(contractIdentifiersOption),
                     parseResult.GetValue(emitterCounterOption),
                     parseResult.GetValue(releaseCountersOption),
                     parseResult.GetValue(codegenVersionOption),
@@ -263,7 +255,7 @@ internal static partial class Program
                 LogCreatedOutputDirectory(logger, args.OutputDirectory.FullName);
             }
 
-            await GenerateFromIntermediate(args.IntermediateFile, args, logger, cancellationToken);
+            await GenerateFromIntermediate(args.IntermediateFile, args, logger, cancellationToken).ConfigureAwait(false);
             return 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -291,7 +283,8 @@ internal static partial class Program
     {
         LogReadingIntermediate(logger, file.Name);
         IntermediateDar proto;
-        await using (var stream = file.OpenRead())
+        var stream = file.OpenRead();
+        await using (stream.ConfigureAwait(false))
         {
             proto = IntermediateDar.Parser.ParseFrom(stream);
         }
@@ -308,7 +301,7 @@ internal static partial class Program
 
         var generator = new CSharpCodeGenerator(BuildOptions(args, effectiveCounter), logger);
         var generatedFiles = generator.Generate(dar);
-        await WriteGeneratedFiles(generatedFiles, args, logger, cancellationToken);
+        await WriteGeneratedFiles(generatedFiles, args, logger, cancellationToken).ConfigureAwait(false);
     }
 
     private static string ResolveCodegenVersion(CodegenArgs args) =>
@@ -343,7 +336,6 @@ internal static partial class Program
             IncludeDependencies = args.IncludeDependencies,
             TargetFramework = args.TargetFramework,
             RuntimePackageVersion = args.RuntimePackageVersion,
-            GenerateContractIdentifiers = args.GenerateContractIdentifiers,
             EmitterCounter = emitterCounter,
             PackageLicenseExpression = args.PackageLicenseExpression,
             VersionSuffix = args.VersionSuffix,
@@ -364,11 +356,11 @@ internal static partial class Program
 
             if (file.IsBinary)
             {
-                await File.WriteAllBytesAsync(filePath, file.BinaryContent!, cancellationToken);
+                await File.WriteAllBytesAsync(filePath, file.BinaryContent!, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                await File.WriteAllTextAsync(filePath, file.Content, cancellationToken);
+                await File.WriteAllTextAsync(filePath, file.Content, cancellationToken).ConfigureAwait(false);
             }
             LogGeneratedFile(logger, file.RelativePath);
         }
@@ -431,7 +423,6 @@ internal sealed record CodegenArgs(
     bool IncludeDependencies,
     string TargetFramework,
     string? RuntimePackageVersion,
-    bool GenerateContractIdentifiers,
     int EmitterCounter,
     FileInfo? ReleaseCountersFile,
     string? CodegenVersion,

@@ -145,12 +145,12 @@ public sealed class StreamerSnapshotTests
     {
         var streamer = new FakeStreamer(
             Created("cid-1", "alice", 1),
-            new AcsSnapshotEntry<Probe>.StreamError(14, "unavailable"));
+            new AcsSnapshotEntry<Probe>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable"));
 
         var snapshot = async () => await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: TestContext.Current.CancellationToken);
 
         var thrown = await snapshot.Should().ThrowAsync<LedgerOperationException>();
-        thrown.Which.StatusCode.Should().Be(14);
+        thrown.Which.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         thrown.Which.Message.Should().Contain("unavailable");
     }
 
@@ -159,7 +159,7 @@ public sealed class StreamerSnapshotTests
     {
         var streamer = new FakeStreamer(
             Created("cid-1", "alice", 1),
-            new AcsSnapshotEntry<Probe>.StreamError(14, "unavailable"));
+            new AcsSnapshotEntry<Probe>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable"));
 
         var snapshot = async () => await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -176,7 +176,7 @@ public sealed class StreamerSnapshotTests
         var streamer = new FakeStreamer(
             Created("cid-1", "alice", 1),
             new AcsSnapshotEntry<Probe>.StreamError(
-                14, "unavailable", DamlErrorCategory.TransientServerFailure));
+                new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure));
 
         var snapshot = async () => await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -186,8 +186,8 @@ public sealed class StreamerSnapshotTests
             "a classification the transport determined is discarded unless this branch forwards it, "
             + "leaving a caller who catches the exception unable to tell a retryable transient fault "
             + "from a permanent one with only the status code to go on");
-        thrown.Which.StatusCode.Should().Be(
-            14,
+        thrown.Which.Status.Should().Be(
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable),
             "the classification has to arrive alongside the status code, not in place of it");
     }
 
@@ -198,7 +198,7 @@ public sealed class StreamerSnapshotTests
         var streamer = new FakeStreamer(
             Created("cid-1", "alice", 1),
             new AcsSnapshotEntry<Probe>.StreamError(
-                14, "unavailable", DamlErrorCategory.TransientServerFailure, SourceException: transportFault));
+                new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure, SourceException: transportFault));
 
         var snapshot = async () => await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -215,7 +215,7 @@ public sealed class StreamerSnapshotTests
         var streamer = new FakeStreamer(
             Created("cid-1", "alice", 1),
             new AcsSnapshotEntry<Probe>.StreamError(
-                10,
+                new TransportStatus.Grpc(GrpcStatusCode.Aborted),
                 "the stream authorization is stale",
                 DamlErrorCategory.ContentionOnSharedResources,
                 "STALE_STREAM_AUTHORIZATION"));
@@ -292,7 +292,7 @@ public sealed class StreamerSnapshotTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var streamer = FakeStreamer.IgnoringCancellation(new AcsSnapshotEntry<Probe>.StreamError(1, "CANCELLED"));
+        var streamer = FakeStreamer.IgnoringCancellation(new AcsSnapshotEntry<Probe>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "CANCELLED"));
 
         var snapshot = async () => await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: cts.Token);
 

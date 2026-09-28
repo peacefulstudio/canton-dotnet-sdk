@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Data;
 
 namespace Daml.Runtime.Contracts;
@@ -139,7 +140,7 @@ public abstract record TreeEvent
         string ContractId,
         Identifier TemplateId,
         Identifier? InterfaceId,
-        string ChoiceName,
+        ChoiceName ChoiceName,
         DamlValue ChoiceArgument,
         DamlValue ExerciseResult,
         bool Consuming,

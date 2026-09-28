@@ -81,7 +81,7 @@ public class ChoiceEmitterValueReturnExerciserTests
         var output = EmitNonContract(template);
 
         output.Should().Contain("public static class OracleNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<decimal>> GetTrailingTwapAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<decimal>> TryGetTrailingTwapAsync(");
         output.Should().Contain("this ContractId<Oracle> contractId,");
         output.Should().Contain("ILedgerWriter client,");
         output.Should().Contain("SubmitterInfo submitter,");
@@ -120,7 +120,7 @@ public class ChoiceEmitterValueReturnExerciserTests
         var output = EmitNonContract(template);
 
         output.Should().Contain("public static class ReporterNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Report>> ComputeReportAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<Report>> TryComputeReportAsync(");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class ChoiceEmitterValueReturnExerciserTests
 
         var output = EmitNonContract(template);
 
-        output.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyList<decimal>>> RecentTwapsAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyList<decimal>>> TryRecentTwapsAsync(");
     }
 
     [Fact]
@@ -182,8 +182,8 @@ public class ChoiceEmitterValueReturnExerciserTests
 
         var emitted = EmitNonContract(template);
 
-        emitted.Should().Contain("FromChainValue(");
-        emitted.Should().NotContain(".AsOptional().Value!.AsOptional()");
+        emitted.Should().Contain("ExerciseOutcome<Optional<Optional<DamlUnit>>> ProjectMaybeMaybeUnitResult(");
+        emitted.Should().Contain("var decoded = Sink.ChoiceMaybeMaybeUnit.ResultDecoder!(exercised.ExerciseResult);");
     }
 
     [Fact]

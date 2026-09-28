@@ -8,7 +8,7 @@ by itself.
 This kit is for *implementers* of `ILedgerClient`. To unit-test
 *application code* that consumes an `ILedgerClient`, don't hand-roll a fake
 — use `Canton.Ledger.Testing` (published from
-[`canton-ledger-api-csharp`](https://github.com/peacefulstudio/canton-ledger-api-csharp)):
+[`canton-dotnet-sdk`](https://github.com/peacefulstudio/canton-dotnet-sdk)):
 its `FakeLedgerClient` is a stageable in-memory implementation, with
 builders for the fiddly event/result types and no mocking framework
 required.

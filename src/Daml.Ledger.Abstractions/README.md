@@ -14,7 +14,7 @@ A transport implements the split interfaces (and therefore `ILedgerClient`);
 a consumer that only needs to read or stream can depend on `ILedgerReader` or
 `ILedgerStreamer` alone. Implementations live in their own packages,
 published to NuGet.org from
-[`canton-ledger-api-csharp`](https://github.com/peacefulstudio/canton-ledger-api-csharp):
+[`canton-dotnet-sdk`](https://github.com/peacefulstudio/canton-dotnet-sdk):
 
 - `Canton.Ledger.Grpc.Client` — gRPC client for Canton participants
 - `Canton.Ledger.Rest.Client` — HTTP client for the Canton JSON Ledger API
@@ -66,7 +66,7 @@ call-site guards re-checking the token after a failed call; on
 
 Ledger positions are the `LedgerOffset` value type, never a raw `long`.
 
-Generated codegen output (`<Choice>Async` extensions, projector helpers)
+Generated codegen output (`Try<Choice>Async` extensions, projector helpers)
 references this package — never a transport-specific one — so consumers
 that only need projectors do not transitively depend on a gRPC stack.
 
@@ -74,9 +74,7 @@ Versioned in lockstep with `Daml.Runtime` and `Daml.Codegen.CSharp`. The
 `Canton.Ledger.*` transport packages track this line by minor: a client
 `0.N.x` embeds `Daml.* 0.N.x`, so the package version alone tells you which
 Daml line a transport carries, while patch and `-preview.N` counters evolve
-independently per repo. The convention is recorded in the ledger repo's
-ADR 0013 (`docs/adr/0013-package-version-tracks-daml-line.md` in
-[`canton-ledger-api-csharp`](https://github.com/peacefulstudio/canton-ledger-api-csharp)).
+independently per repo.
 
 Interface-only package. `Daml.Ledger.Abstractions.Testing.Conformance` ships the
 shared behavioral conformance kit — a transport implementation subclasses it

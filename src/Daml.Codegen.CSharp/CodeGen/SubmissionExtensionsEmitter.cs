@@ -10,7 +10,7 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// <c>&lt;TemplateName&gt;SubmissionExtensions</c> static class with:
 ///
 /// <list type="bullet">
-///   <item>One <c>CreateAsync</c> overload that takes the template payload (and
+///   <item>One <c>TryCreateAsync</c> overload that takes the template payload (and
 ///   any extra parties that the analyzer flagged as not derivable from the
 ///   payload) and submits a Create command via
 ///   <c>ILedgerWriter.TryCreateAsync</c>. When every signatory is a payload
@@ -75,7 +75,7 @@ internal sealed class SubmissionExtensionsEmitter(
         {
             indent.AppendLine("/// <summary>");
             indent.AppendLine($"/// Typed-submitter extensions for <see cref=\"{className}\"/>. The");
-            indent.AppendLine("/// <see cref=\"CreateAsync\"/> overload derives the <c>actAs</c> parties");
+            indent.AppendLine("/// <see cref=\"TryCreateAsync\"/> overload derives the <c>actAs</c> parties");
             indent.AppendLine("/// from the template payload (for signatories that are payload-field");
             indent.AppendLine("/// references) and from the caller's explicit arguments (for signatories");
             indent.AppendLine("/// the static analyzer could not resolve). When the template's");
@@ -87,7 +87,7 @@ internal sealed class SubmissionExtensionsEmitter(
         indent.AppendLine("{");
         indent.Indent();
 
-        WriteCreateAsync(indent, template.Name, className, signatories);
+        WriteTryCreateAsync(indent, template.Name, className, signatories);
         TryWriteObserversHelper(indent, template.Name, className, observers);
 
         indent.Dedent();
@@ -97,7 +97,7 @@ internal sealed class SubmissionExtensionsEmitter(
     }
 
     /// <summary>
-    /// Emits the <c>CreateAsync</c> extension. On the static path, the payload
+    /// Emits the <c>TryCreateAsync</c> extension. On the static path, the payload
     /// alone is enough to derive every signatory — the caller passes only the
     /// payload and an optional cancellation token, and the wrapper builds a
     /// <c>SubmitterInfo</c> from the payload's <c>Party</c> properties. On the
@@ -105,7 +105,7 @@ internal sealed class SubmissionExtensionsEmitter(
     /// <c>SubmitterInfo</c> directly (with implicit conversion from
     /// a single <c>Party</c> for the single-party ergonomic).
     /// </summary>
-    private void WriteCreateAsync(IndentWriter indent, string templateName, string className, DamlPartyAnalysis signatories)
+    private void WriteTryCreateAsync(IndentWriter indent, string templateName, string className, DamlPartyAnalysis signatories)
     {
         var staticParties = signatories.Source == DamlPartySource.Static
                             && signatories.Parties.Count > 0;
@@ -151,7 +151,7 @@ internal sealed class SubmissionExtensionsEmitter(
             indent.AppendLine("/// <param name=\"cancellationToken\">Cancellation token.</param>");
         }
 
-        indent.AppendLine($"public static Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}>>> CreateAsync(");
+        indent.AppendLine($"public static Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}>>> TryCreateAsync(");
         indent.Indent();
         indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         indent.AppendLine($"{className} payload,");
@@ -222,7 +222,7 @@ internal sealed class SubmissionExtensionsEmitter(
     /// (we can't know the answer at codegen time) or when it's a static empty
     /// list (the helper would always return <c>[]</c> — emitting it would be
     /// noise). Static-empty observers still register as a known-empty
-    /// contribution to <c>readAs</c> on the emitted <c>&lt;Choice&gt;Async</c>
+    /// contribution to <c>readAs</c> on the emitted <c>Try&lt;Choice&gt;Async</c>
     /// wrappers, which is handled in <c>ChoiceResults.cs</c>.
     /// </para>
     /// </summary>

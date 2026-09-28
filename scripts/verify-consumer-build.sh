@@ -16,13 +16,15 @@ End-to-end consumer-build proof for generated C#. For each input archive it:
   1. emits C# (JVM helper .dar -> .binpb when given --dar, then the CLI with
      --generate-project), greps the emitted .cs for unresolved-stdlib leaks
      (No.Package.Metadata.*),
-  2. packs Daml.Runtime + Daml.Ledger.Abstractions and every generated .csproj
+  2. writes <out>/NuGet.config (maps Daml.*, Splice.* and every generated
+     package id to the local feed) and <out>/Directory.Build.props (opts out
+     of Central Package Management so an --out inside the repo cannot leak it),
+  3. packs Daml.Runtime + Daml.Ledger.Abstractions and every generated .csproj
      (inputs are packed in the order given, so list a closure dependencies-first)
      into a local NuGet feed,
-  3. scaffolds a fresh 'dotnet new console', writes a NuGet.config that maps
-     Daml.*/Splice.* to the local feed, 'dotnet add package' the chosen
-     consume target, and 'dotnet build' to PROVE the generated code compiles
-     for a downstream consumer.
+  4. scaffolds a fresh 'dotnet new console', 'dotnet add package's the chosen
+     consume target, and 'dotnet build's it to PROVE the generated code
+     compiles for a downstream consumer.
 
 Inputs (one of --dar / --intermediate is required; both may be given):
   --dar <list>            Comma-separated .dar archives. Each is decoded by the
@@ -175,31 +177,25 @@ fi
 
 [[ ${#EMITTED_PROJECT_DIRS[@]} -gt 0 ]] || { echo "verify-consumer-build.sh: nothing emitted" >&2; exit 1; }
 
-echo "=== pack runtime + generated packages into $FEED ==="
-for runtime_proj in \
-  "$REPO_ROOT/src/Daml.Runtime/Daml.Runtime.csproj" \
-  "$REPO_ROOT/src/Daml.Ledger.Abstractions/Daml.Ledger.Abstractions.csproj"; do
-  [[ -f "$runtime_proj" ]] || { echo "verify-consumer-build.sh: runtime project not found: $runtime_proj" >&2; exit 1; }
-  echo "  pack  $(basename "$runtime_proj" .csproj)"
-  dotnet pack "$runtime_proj" -c Release -o "$FEED" /p:Version="$RUNTIME_VERSION"
-done
-
-declare -a CONSUMABLE_PACKAGE_IDS=()
+declare -a EMITTED_CSPROJS=() CONSUMABLE_PACKAGE_IDS=()
 for project_dir in "${EMITTED_PROJECT_DIRS[@]}"; do
   csproj="$(derive_csproj "$project_dir")"
   [[ -n "$csproj" ]] || { echo "verify-consumer-build.sh: no .csproj under $project_dir" >&2; exit 1; }
-  pkg_id="$(basename "$csproj" .csproj)"
-  echo "  pack  $pkg_id"
-  dotnet pack "$csproj" -c Release -o "$FEED"
-  CONSUMABLE_PACKAGE_IDS+=("$pkg_id")
+  EMITTED_CSPROJS+=("$csproj")
+  CONSUMABLE_PACKAGE_IDS+=("$(basename "$csproj" .csproj)")
 done
 
-echo "=== feed contents ==="
-ls -1 "$FEED"
-
-[[ -n "$CONSUME" ]] || CONSUME="${CONSUMABLE_PACKAGE_IDS[${#CONSUMABLE_PACKAGE_IDS[@]}-1]}"
-
+# The emitted projects and the consumer console live under $OUT, so their
+# NuGet.config and Directory.Build.props must exist BEFORE the first pack:
+# otherwise the emitted csproj resolves Daml.Runtime from nuget.org, whose
+# released runtime lacks the unreleased types the current emitter emits, and a
+# --out inside the repo leaks the repo's Central Package Management (NU1008) and
+# its Directory.Build.props into them. The nearest files win the upward walk.
 FEED_XML="$(printf '%s' "$FEED" | xml_escape)"
+GENERATED_PATTERNS=""
+for pkg_id in "${CONSUMABLE_PACKAGE_IDS[@]}"; do
+  GENERATED_PATTERNS+="      <package pattern=\"$(printf '%s' "$pkg_id" | xml_escape)\" />"$'\n'
+done
 
 cat >"$NUGET_CONFIG" <<XML
 <?xml version="1.0" encoding="utf-8"?>
@@ -213,13 +209,42 @@ cat >"$NUGET_CONFIG" <<XML
     <packageSource key="local-feed">
       <package pattern="Daml.*" />
       <package pattern="Splice.*" />
-    </packageSource>
+$GENERATED_PATTERNS    </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />
     </packageSource>
   </packageSourceMapping>
 </configuration>
 XML
+
+cat >"$OUT/Directory.Build.props" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <ImportDirectoryPackagesProps>false</ImportDirectoryPackagesProps>
+  </PropertyGroup>
+</Project>
+XML
+
+echo "=== pack runtime + generated packages into $FEED ==="
+for runtime_proj in \
+  "$REPO_ROOT/src/Daml.Runtime/Daml.Runtime.csproj" \
+  "$REPO_ROOT/src/Daml.Ledger.Abstractions/Daml.Ledger.Abstractions.csproj"; do
+  [[ -f "$runtime_proj" ]] || { echo "verify-consumer-build.sh: runtime project not found: $runtime_proj" >&2; exit 1; }
+  echo "  pack  $(basename "$runtime_proj" .csproj)"
+  dotnet pack "$runtime_proj" -c Release -o "$FEED" /p:Version="$RUNTIME_VERSION"
+done
+
+for csproj in "${EMITTED_CSPROJS[@]}"; do
+  echo "  pack  $(basename "$csproj" .csproj)"
+  dotnet pack "$csproj" -c Release -o "$FEED"
+done
+
+echo "=== feed contents ==="
+ls -1 "$FEED"
+
+[[ -n "$CONSUME" ]] || CONSUME="${CONSUMABLE_PACKAGE_IDS[${#CONSUMABLE_PACKAGE_IDS[@]}-1]}"
 
 echo "=== fresh consumer: dotnet new console + add $CONSUME + build ==="
 rm -rf "$CONSUMER_DIR"

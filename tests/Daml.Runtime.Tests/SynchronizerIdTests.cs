@@ -27,7 +27,7 @@ public class SynchronizerIdTests
     public void Construct_should_store_id_verbatim_for_3_4_shape()
     {
         var sid = new SynchronizerId(Canton34Id);
-        sid.Id.Should().Be(Canton34Id);
+        sid.Value.Should().Be(Canton34Id);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class SynchronizerIdTests
         // name/fingerprint/version — that would lock in a format that's already
         // changed once.
         var sid = new SynchronizerId(Canton35Id);
-        sid.Id.Should().Be(Canton35Id);
+        sid.Value.Should().Be(Canton35Id);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class SynchronizerIdTests
     public void Default_uninitialized_value_should_throw_on_Id_access()
     {
         var defaulted = default(SynchronizerId);
-        Action act = () => _ = defaulted.Id;
+        Action act = () => _ = defaulted.Value;
         act.Should().Throw<InvalidOperationException>();
     }
 
@@ -75,7 +75,7 @@ public class SynchronizerIdTests
     public void Explicit_conversion_from_string_should_construct()
     {
         var sid = (SynchronizerId)Canton34Id;
-        sid.Id.Should().Be(Canton34Id);
+        sid.Value.Should().Be(Canton34Id);
     }
 
     [Theory]
@@ -93,7 +93,7 @@ public class SynchronizerIdTests
         var sid = SynchronizerId.FromWire(Canton35Id);
 
         (sid is null).Should().BeFalse();
-        sid!.Value.Id.Should().Be(Canton35Id);
+        sid!.Value.Value.Should().Be(Canton35Id);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class SynchronizerIdTests
 
         var sid = SynchronizerId.FromWire(padded);
 
-        sid!.Value.Id.Should().Be(padded);
+        sid!.Value.Value.Should().Be(padded);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class SynchronizerIdTests
             wire.Length == 0 ? default : (SynchronizerId)wire;
 
         SynchronizerId? viaHelper = LegacyTransportHelper("");
-        Action readViaHelper = () => _ = viaHelper?.Id;
+        Action readViaHelper = () => _ = viaHelper?.Value;
 
         (viaHelper is null).Should().BeFalse();
         readViaHelper.Should().Throw<InvalidOperationException>();
@@ -176,7 +176,7 @@ public class SynchronizerIdTests
         var payload = JsonSerializer.Deserialize<ReassignmentPayload>(json, CaseInsensitiveOptions);
 
         payload.Should().NotBeNull();
-        payload!.Source.Id.Should().Be(Canton35Id);
+        payload!.Source.Value.Should().Be(Canton35Id);
         payload.Note.Should().Be("reassign-1");
     }
 
@@ -252,7 +252,7 @@ public class SynchronizerIdTests
 
         payload.Should().NotBeNull();
         payload!.Target.Should().NotBeNull();
-        payload!.Target!.Value.Id.Should().Be(Canton35Id);
+        payload!.Target!.Value.Value.Should().Be(Canton35Id);
     }
 
     [Fact]

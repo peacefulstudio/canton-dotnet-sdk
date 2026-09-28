@@ -25,6 +25,8 @@ public class EmitterMachineryApiSurfaceTests
             typeof(ICrossPackageResolver),
             typeof(DarCrossPackageResolver),
             typeof(PartyAnalysis),
+            typeof(DamlWrappedOptional),
+            typeof(OptionalEncoding),
         ];
 
     [Theory]

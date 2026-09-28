@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- snake_case test method names -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Peaceful.Canton.Localnet.Testing" />
+    <PackageReference Include="Splice.Amulet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Testing\Canton.Ledger.Testing.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Rest.Client\Canton.Ledger.Rest.Client.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Grpc.Client\Canton.Ledger.Grpc.Client.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Pqs.Client\Canton.Ledger.Pqs.Client.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Testing.Localnet\Canton.Ledger.Testing.Localnet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Canton.Ledger.Grpc.Client.Integration.Tests\RichTypesDar.cs"
+             Link="Shared\RichTypesDar.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Canton.Ledger.Rest.Client.Integration.Tests\LedgerApiVersionSkewGuard.cs"
+             Link="Shared\LedgerApiVersionSkewGuard.cs" />
+    <Compile Include="..\Canton.Ledger.Rest.Client.Integration.Tests\LedgerApiVersionSkewGuard.Live.cs"
+             Link="Shared\LedgerApiVersionSkewGuard.Live.cs" />
+  </ItemGroup>
+
+</Project>

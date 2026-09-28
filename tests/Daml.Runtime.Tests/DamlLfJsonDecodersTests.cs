@@ -126,6 +126,15 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
+    public void ReadNumeric_should_decode_the_participant_scale_zero_wire_string()
+    {
+        using var document = JsonDocument.Parse("\"42.\"");
+        var context = DamlLfJsonDecodeContext.Root("TypeCorners").Field("whole");
+
+        DamlLfJsonDecoders.ReadNumeric(document.RootElement, context).Should().Be(new DamlNumeric(42m));
+    }
+
+    [Fact]
     public void ReadNumeric_should_decode_a_canonical_wire_string()
     {
         using var document = JsonDocument.Parse("\"1.25\"");
@@ -309,50 +318,12 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void ReadRecord_generic_should_delegate_to_the_shape_reflected_reader()
-    {
-        using var document = JsonDocument.Parse("""{"count":"7"}""");
-        var context = DamlLfJsonDecodeContext.Root("WidgetRecord");
-
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var decoded = DamlLfJsonDecoders.ReadRecord(document.RootElement, typeof(WidgetRecord), context);
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-
-        decoded.Should().Be(DamlRecord.Create(DamlField.Create("count", new DamlInt64(7))));
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        decoded.Should().Be(DamlLfJsonReader.ReadRecord("""{"count":"7"}""", typeof(WidgetRecord)));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-    }
-
-    [Fact]
-    public void ReadRecord_by_type_should_delegate_to_the_shape_reflected_reader()
-    {
-        using var document = JsonDocument.Parse("""{"count":"9"}""");
-        var context = DamlLfJsonDecodeContext.Root("WidgetRecord");
-        var recordType = typeof(WidgetRecord);
-
-        #pragma warning disable DAMLRT0001
-        var decoded = DamlLfJsonDecoders.ReadRecord(document.RootElement, recordType, context);
-        #pragma warning restore DAMLRT0001
-
-        decoded.Should().Be(DamlRecord.Create(DamlField.Create("count", new DamlInt64(9))));
-    }
-
-    [Fact]
     public void ReadRecord_should_report_the_context_path_in_a_shape_mismatch()
     {
         using var document = JsonDocument.Parse("\"not-an-object\"");
         var context = DamlLfJsonDecodeContext.Root("WidgetRecord");
 
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonDecoders.ReadRecord(document.RootElement, typeof(WidgetRecord), context);
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonDecoders.ReadRecord<WidgetRecord>(document.RootElement, context);
 
         act.Should().Throw<JsonException>().WithMessage("Expected JSON Object at 'WidgetRecord' but found String");
     }
@@ -368,45 +339,9 @@ public class DamlLfJsonDecodersTests
         }
         context.Depth.Should().Be(127);
 
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var decoded = DamlLfJsonDecoders.ReadRecord(document.RootElement, typeof(WidgetRecord), context);
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var decoded = DamlLfJsonDecoders.ReadRecord<WidgetRecord>(document.RootElement, context);
 
         decoded.Should().Be(DamlRecord.Create(DamlField.Create("count", new DamlInt64(7))));
-    }
-
-    [Fact]
-    public void ReadVariant_generic_should_delegate_to_the_shape_reflected_reader()
-    {
-        using var document = JsonDocument.Parse("""{"tag":"Stars","value":"4"}""");
-        var context = DamlLfJsonDecodeContext.Root("Rating");
-
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var decoded = DamlLfJsonDecoders.ReadVariant(document.RootElement, typeof(Rating), context);
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-
-        decoded.Should().Be(DamlVariant.Create("Stars", new DamlInt64(4)));
-        #pragma warning disable DAMLRT0001
-        decoded.Should().Be(DamlLfJsonReader.ReadValue<Rating>("""{"tag":"Stars","value":"4"}"""));
-        #pragma warning restore DAMLRT0001
-    }
-
-    [Fact]
-    public void ReadVariant_by_type_should_delegate_to_the_shape_reflected_reader()
-    {
-        using var document = JsonDocument.Parse("""{"tag":"Unrated","value":{}}""");
-        var context = DamlLfJsonDecodeContext.Root("Rating");
-        var variantType = typeof(Rating);
-
-        #pragma warning disable DAMLRT0001
-        var decoded = DamlLfJsonDecoders.ReadVariant(document.RootElement, variantType, context);
-        #pragma warning restore DAMLRT0001
-
-        decoded.Should().Be(DamlVariant.Create("Unrated", DamlUnit.Instance));
     }
 
     [Fact]
@@ -415,29 +350,9 @@ public class DamlLfJsonDecodersTests
         using var document = JsonDocument.Parse("\"not-an-object\"");
         var context = DamlLfJsonDecodeContext.Root("Rating");
 
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonDecoders.ReadVariant(document.RootElement, typeof(Rating), context);
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonDecoders.ReadVariant<Rating>(document.RootElement, context);
 
         act.Should().Throw<JsonException>().WithMessage("Expected JSON Object at 'Rating' but found String");
-    }
-
-    [Fact]
-    public void ReadVariant_by_type_should_reject_a_type_that_does_not_implement_IDamlVariant()
-    {
-        using var document = JsonDocument.Parse("""{"tag":"Stars","value":"4"}""");
-        var context = DamlLfJsonDecodeContext.Root("Rating");
-        var variantType = typeof(WidgetRecord);
-
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonDecoders.ReadVariant(document.RootElement, variantType, context);
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>().WithMessage(
-            $"Type '{typeof(WidgetRecord)}' at 'Rating' is not a generated Daml variant; "
-            + $"pass a concrete type implementing {nameof(IDamlVariant)}.");
     }
 
     [Fact]
@@ -450,11 +365,8 @@ public class DamlLfJsonDecodersTests
             context = context.Field("f");
         }
         context.Depth.Should().Be(127);
-        var variantType = typeof(Rating);
 
-        #pragma warning disable DAMLRT0001
-        var decoded = DamlLfJsonDecoders.ReadVariant(document.RootElement, variantType, context);
-        #pragma warning restore DAMLRT0001
+        var decoded = DamlLfJsonDecoders.ReadVariant<Rating>(document.RootElement, context);
 
         decoded.Should().Be(DamlVariant.Create("Unrated", DamlUnit.Instance));
     }
@@ -469,94 +381,10 @@ public class DamlLfJsonDecodersTests
             context = context.Field("f");
         }
         context.Depth.Should().Be(128);
-        var variantType = typeof(Rating);
 
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonDecoders.ReadVariant(document.RootElement, variantType, context);
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonDecoders.ReadVariant<Rating>(document.RootElement, context);
 
         act.Should().Throw<JsonException>().WithMessage("Value nesting exceeds the maximum supported depth of 128");
-    }
-
-    [Fact]
-    public void ReadEnum_generic_should_delegate_to_the_shape_reflected_reader()
-    {
-        using var document = JsonDocument.Parse("\"Forward\"");
-        var context = DamlLfJsonDecodeContext.Root("Direction");
-
-        #pragma warning disable DAMLRT0001
-        var decoded = DamlLfJsonDecoders.ReadEnum<Direction>(document.RootElement, context);
-        #pragma warning restore DAMLRT0001
-
-        decoded.Should().Be(DamlEnum.Create("Forward"));
-        #pragma warning disable DAMLRT0001
-        decoded.Should().Be(DamlLfJsonReader.ReadValue<Direction>("\"Forward\""));
-        #pragma warning restore DAMLRT0001
-    }
-
-    [Fact]
-    public void ReadEnum_by_type_should_delegate_to_the_shape_reflected_reader()
-    {
-        using var document = JsonDocument.Parse("\"Forward\"");
-        var context = DamlLfJsonDecodeContext.Root("Direction");
-        var enumType = typeof(Direction);
-
-        #pragma warning disable DAMLRT0001
-        var decoded = DamlLfJsonDecoders.ReadEnum(document.RootElement, enumType, context);
-        #pragma warning restore DAMLRT0001
-
-        decoded.Should().Be(DamlEnum.Create("Forward"));
-    }
-
-    [Fact]
-    public void ReadEnum_should_report_the_context_path_in_an_unknown_constructor_error()
-    {
-        using var document = JsonDocument.Parse("\"Sideways\"");
-        var context = DamlLfJsonDecodeContext.Root("Direction");
-
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonDecoders.ReadEnum<Direction>(document.RootElement, context);
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<JsonException>().WithMessage(
-            "Unknown Daml enum constructor 'Sideways' at 'Direction'; expected one of Forward, U$u0020Turn");
-    }
-
-    public enum PlainMood
-    {
-        Content,
-        Restless
-    }
-
-    [Fact]
-    public void ReadEnum_by_type_should_reject_a_plain_CLR_enum_with_no_generated_companion()
-    {
-        using var document = JsonDocument.Parse("\"Content\"");
-        var context = DamlLfJsonDecodeContext.Root("Mood");
-        var enumType = typeof(PlainMood);
-
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonDecoders.ReadEnum(document.RootElement, enumType, context);
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>().WithMessage(
-            $"Type '{typeof(PlainMood)}' at 'Mood' is not a generated Daml enum; "
-            + "pass an enum whose companion type exposes a public static ToDamlEnum method returning DamlEnum.");
-    }
-
-    [Fact]
-    public void ReadEnum_generic_should_reject_a_plain_CLR_enum_with_no_generated_companion()
-    {
-        using var document = JsonDocument.Parse("\"Content\"");
-        var context = DamlLfJsonDecodeContext.Root("Mood");
-
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonDecoders.ReadEnum<PlainMood>(document.RootElement, context);
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>().WithMessage(
-            $"Type '{typeof(PlainMood)}' at 'Mood' is not a generated Daml enum; "
-            + "pass an enum whose companion type exposes a public static ToDamlEnum method returning DamlEnum.");
     }
 
     [Fact]
@@ -642,11 +470,7 @@ public class DamlLfJsonDecodersTests
         using var document = JsonDocument.Parse("""{"amounts":["1","2","3"]}""");
         var context = default(DamlLfJsonDecodeContext);
 
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var decoded = DamlLfJsonDecoders.ReadRecord(document.RootElement, typeof(BundleRecord), context);
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var decoded = DamlLfJsonDecoders.ReadRecord<BundleRecord>(document.RootElement, context);
 
         decoded.Should().Be(DamlRecord.Create(DamlField.Create(
             "amounts",
@@ -826,11 +650,7 @@ public class DamlLfJsonDecodersTests
         var decoded = DamlLfJsonDecoders.ReadGenMap(
             document.RootElement,
             context,
-            #pragma warning disable DAMLRT0001
-            #pragma warning disable CA2263
-            (element, elementContext) => DamlLfJsonDecoders.ReadRecord(element, typeof(PartyKeyRecord), elementContext),
-            #pragma warning restore CA2263
-            #pragma warning restore DAMLRT0001
+            DamlLfJsonDecoders.ReadRecord<PartyKeyRecord>,
             DamlLfJsonDecoders.ReadInt64);
 
         decoded.Should().Be(new DamlGenMap([
@@ -1333,6 +1153,18 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
+    public void DirectionExtensions_ReadDamlLfJson_should_report_the_context_path_in_an_unknown_constructor_error()
+    {
+        using var document = JsonDocument.Parse("\"Sideways\"");
+        var context = DamlLfJsonDecodeContext.Root("Direction");
+
+        var act = () => DirectionExtensions.__ReadDamlLfJson(document.RootElement, context);
+
+        act.Should().Throw<JsonException>().WithMessage(
+            "Unknown Daml enum constructor 'Sideways' at 'Direction'; expected one of Forward, U$u0020Turn");
+    }
+
+    [Fact]
     public void ReadEnumConstructor_should_reject_a_constructor_differing_only_by_case()
     {
         using var document = JsonDocument.Parse("\"hearts\"");
@@ -1586,35 +1418,6 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void The_reflection_path_should_decode_a_recursive_Optional_record_128_levels_deep()
-    {
-        using var document = JsonDocument.Parse(BuildNestedBranchJson(levels: 128), DeepChainDocumentOptions);
-
-#pragma warning disable DAMLRT0001
-#pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord(document.RootElement, typeof(Branch));
-#pragma warning restore CA2263
-#pragma warning restore DAMLRT0001
-
-        act.Should().NotThrow();
-    }
-
-    [Fact]
-    public void The_reflection_path_should_throw_decoding_a_recursive_Optional_record_129_levels_deep()
-    {
-        using var document = JsonDocument.Parse(BuildNestedBranchJson(levels: 129), DeepChainDocumentOptions);
-
-#pragma warning disable DAMLRT0001
-#pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord(document.RootElement, typeof(Branch));
-#pragma warning restore CA2263
-#pragma warning restore DAMLRT0001
-
-        act.Should().Throw<JsonException>().WithMessage(
-            "Value nesting exceeds the maximum supported depth of 128");
-    }
-
-    [Fact]
     public void The_emitted_path_should_decode_a_recursive_Optional_record_64_levels_deep()
     {
         using var document = JsonDocument.Parse(BuildNestedBranchJson(levels: 64), DeepChainDocumentOptions);
@@ -1637,22 +1440,6 @@ public class DamlLfJsonDecodersTests
             "Value nesting exceeds the maximum supported depth of 128");
     }
 
-    public sealed record NestedListDepth126Record : IDamlRecord
-    {
-        [DamlFieldAttribute("x")]
-        public required IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<long?>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> X { get; init; }
-
-        public DamlRecord ToRecord() => throw new NotSupportedException();
-    }
-
-    public sealed record NestedListDepth127Record : IDamlRecord
-    {
-        [DamlFieldAttribute("x")]
-        public required IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<IReadOnlyList<long?>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> X { get; init; }
-
-        public DamlRecord ToRecord() => throw new NotSupportedException();
-    }
-
     private static string BuildNestedListArrayJson(int layers, string leaf)
     {
         var json = leaf;
@@ -1663,27 +1450,10 @@ public class DamlLfJsonDecodersTests
         return json;
     }
 
-    private static string BuildNestedListRecordJson(int layers, string leaf) =>
-        "{\"x\":" + BuildNestedListArrayJson(layers, leaf) + "}";
-
     private static DamlValue ReadNestedListOfDepth(JsonElement json, DamlLfJsonDecodeContext context, int layers) =>
         layers == 0
             ? DamlLfJsonDecoders.ReadOptional(json, context, DamlLfJsonDecoders.ReadInt64)
             : DamlLfJsonDecoders.ReadList(json, context, (element, elementContext) => ReadNestedListOfDepth(element, elementContext, layers - 1));
-
-    [Fact]
-    public void The_reflection_path_should_decode_126_nested_lists_ending_in_a_present_Optional_leaf()
-    {
-        using var document = JsonDocument.Parse(BuildNestedListRecordJson(layers: 126, leaf: "\"1\""), DeepChainDocumentOptions);
-
-#pragma warning disable DAMLRT0001
-#pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord(document.RootElement, typeof(NestedListDepth126Record));
-#pragma warning restore CA2263
-#pragma warning restore DAMLRT0001
-
-        act.Should().NotThrow();
-    }
 
     [Fact]
     public void The_emitted_path_should_decode_126_nested_lists_ending_in_a_present_Optional_leaf()
@@ -1692,20 +1462,6 @@ public class DamlLfJsonDecodersTests
         var context = DamlLfJsonDecodeContext.Root("NestedListDepth126Record").Field("x");
 
         var act = () => ReadNestedListOfDepth(document.RootElement, context, layers: 126);
-
-        act.Should().NotThrow();
-    }
-
-    [Fact]
-    public void The_reflection_path_should_decode_127_nested_lists_ending_in_a_present_Optional_leaf_at_the_maximum_depth()
-    {
-        using var document = JsonDocument.Parse(BuildNestedListRecordJson(layers: 127, leaf: "\"1\""), DeepChainDocumentOptions);
-
-#pragma warning disable DAMLRT0001
-#pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord(document.RootElement, typeof(NestedListDepth127Record));
-#pragma warning restore CA2263
-#pragma warning restore DAMLRT0001
 
         act.Should().NotThrow();
     }
@@ -1720,20 +1476,6 @@ public class DamlLfJsonDecodersTests
 
         act.Should().Throw<JsonException>().WithMessage(
             "Value nesting exceeds the maximum supported depth of 128");
-    }
-
-    [Fact]
-    public void The_reflection_path_should_decode_127_nested_lists_ending_in_an_absent_Optional_leaf()
-    {
-        using var document = JsonDocument.Parse(BuildNestedListRecordJson(layers: 127, leaf: "null"), DeepChainDocumentOptions);
-
-#pragma warning disable DAMLRT0001
-#pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord(document.RootElement, typeof(NestedListDepth127Record));
-#pragma warning restore CA2263
-#pragma warning restore DAMLRT0001
-
-        act.Should().NotThrow();
     }
 
     [Fact]
@@ -2076,54 +1818,6 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void The_obsolete_preview_2_reflection_entry_points_should_all_carry_the_DAMLRT0001_diagnostic()
-    {
-        var readerObsolete = typeof(DamlLfJsonReader)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(method => method.GetCustomAttribute<ObsoleteAttribute>() is not null)
-            .ToArray();
-        var decodersObsolete = typeof(DamlLfJsonDecoders)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(method => method.GetCustomAttribute<ObsoleteAttribute>() is not null)
-            .ToArray();
-
-        var expectedReaderObsolete = new[]
-        {
-            typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadRecord), 0, [typeof(JsonElement), typeof(Type), typeof(DamlJsonDeserializationLimits?)]),
-            typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadRecord), 0, [typeof(string), typeof(Type), typeof(DamlJsonDeserializationLimits?)]),
-            typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadValue), 1, [typeof(JsonElement), typeof(DamlJsonDeserializationLimits?)]),
-            typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadValue), 1, [typeof(string), typeof(DamlJsonDeserializationLimits?)]),
-            typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadValue), 0, [typeof(JsonElement), typeof(Type), typeof(DamlJsonDeserializationLimits?)]),
-            typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadValue), 0, [typeof(string), typeof(Type), typeof(DamlJsonDeserializationLimits?)]),
-        };
-        var expectedDecodersObsolete = new[]
-        {
-            typeof(DamlLfJsonDecoders).GetMethod(
-                nameof(DamlLfJsonDecoders.ReadRecord), 0, [typeof(JsonElement), typeof(Type), typeof(DamlLfJsonDecodeContext)]),
-            typeof(DamlLfJsonDecoders).GetMethod(
-                nameof(DamlLfJsonDecoders.ReadVariant), 0, [typeof(JsonElement), typeof(Type), typeof(DamlLfJsonDecodeContext)]),
-            typeof(DamlLfJsonDecoders).GetMethod(
-                nameof(DamlLfJsonDecoders.ReadEnum), 1, [typeof(JsonElement), typeof(DamlLfJsonDecodeContext)]),
-            typeof(DamlLfJsonDecoders).GetMethod(
-                nameof(DamlLfJsonDecoders.ReadEnum), 0, [typeof(JsonElement), typeof(Type), typeof(DamlLfJsonDecodeContext)]),
-        };
-
-        expectedReaderObsolete.Should().NotContainNulls();
-        expectedDecodersObsolete.Should().NotContainNulls();
-        readerObsolete.Should().BeEquivalentTo(expectedReaderObsolete);
-        decodersObsolete.Should().BeEquivalentTo(expectedDecodersObsolete);
-        readerObsolete.Concat(decodersObsolete)
-            .Select(method => method.GetCustomAttribute<ObsoleteAttribute>()!.DiagnosticId)
-            .Should().AllBeEquivalentTo("DAMLRT0001");
-    }
-
-    [Fact]
     public void The_constrained_entry_points_should_not_carry_the_obsolete_diagnostic()
     {
         var constrainedEntryPoints = new[]
@@ -2133,9 +1827,9 @@ public class DamlLfJsonDecodersTests
             typeof(DamlLfJsonDecoders).GetMethod(
                 nameof(DamlLfJsonDecoders.ReadVariant), 1, [typeof(JsonElement), typeof(DamlLfJsonDecodeContext)]),
             typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadRecord), 1, [typeof(JsonElement), typeof(DamlJsonDeserializationLimits?)]),
+                nameof(DamlLfJsonReader.ReadRecord), 1, [typeof(JsonElement), typeof(DamlJsonDeserializationLimits)]),
             typeof(DamlLfJsonReader).GetMethod(
-                nameof(DamlLfJsonReader.ReadRecord), 1, [typeof(string), typeof(DamlJsonDeserializationLimits?)]),
+                nameof(DamlLfJsonReader.ReadRecord), 1, [typeof(string), typeof(DamlJsonDeserializationLimits)]),
         };
 
         constrainedEntryPoints.Should().NotContainNulls();

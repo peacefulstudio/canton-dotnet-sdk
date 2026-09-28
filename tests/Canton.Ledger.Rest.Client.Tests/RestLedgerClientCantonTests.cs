@@ -1,0 +1,665 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Daml.Runtime.Serialization;
+using System.Diagnostics;
+using System.Net;
+using System.Text.Json;
+using AwesomeAssertions;
+using Canton.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime;
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
+using Daml.Runtime.Streams;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Xunit;
+using RuntimeCommands = Daml.Runtime.Commands;
+using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
+
+namespace Canton.Ledger.Rest.Client.Tests;
+
+public sealed class RestLedgerClientCantonTests : IDisposable
+{
+    private static readonly Party Alice = new("party::alice");
+    private static readonly RuntimeCommands.SubmitterInfo AliceSubmitter =
+        new(new HashSet<Party> { Alice }, new HashSet<Party>());
+
+    private readonly List<StubHttpClientFactory> _factories = [];
+
+    public void Dispose()
+    {
+        foreach (var factory in _factories)
+        {
+            factory.Dispose();
+        }
+    }
+
+    private StubHttpClientFactory TrackedFactory(RecordingHttpHandler transport)
+    {
+        var factory = new StubHttpClientFactory(transport);
+        _factories.Add(factory);
+        return factory;
+    }
+
+    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
+    {
+        public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "CantonTemplate");
+        public static string PackageId => "pkg";
+        public static string PackageName => "pkg-name";
+        public static Version PackageVersion { get; } = new(0, 1, 0);
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+        public DamlRecord ToRecord() => new(TemplateId, [new DamlField("owner", Alice.ToDamlValue())]);
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
+            TestRecordReader.Read(
+                json,
+                context,
+                ("owner", DamlLfJsonDecoders.ReadParty));
+        public static TestTemplate FromRecord(DamlRecord record) =>
+            new();
+    }
+
+    private RestLedgerClient ClientWith(RecordingHttpHandler transport, string? userId = null) =>
+        new(TrackedFactory(transport), Options.Create(new RestLedgerClientOptions
+        {
+            HttpAddress = "http://localhost:7575",
+            UserId = userId,
+        }));
+
+    private const string ViewedInterfaceIdJson =
+        """{"packageId": "viewed-pkg", "moduleName": "Token.Api", "entityName": "IViewedHolding"}""";
+
+    private const string OkViewJson =
+        $$"""
+        {
+          "interfaceId": {{ViewedInterfaceIdJson}},
+          "viewStatus": {"code": 0, "message": ""},
+          "viewValue": {"amount": "42.5"}
+        }
+        """;
+
+    private static RecordingHttpHandler SnapshotTransport(string interfaceViewJson) =>
+        new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseForPath(
+                "/v2/state/active-contracts-page",
+                HttpStatusCode.OK,
+                ViewedActiveContractsPage("00impl", interfaceViewJson, nextPageToken: null));
+
+    private static string ViewedActiveContractsPage(string contractId, string interfaceViewJson, string? nextPageToken)
+    {
+        var nextPageTokenField = nextPageToken is null ? "" : $", \"nextPageToken\": \"{nextPageToken}\"";
+        return $$$"""
+            {"activeContracts": [{
+              "contractEntry": {
+                "JsActiveContract": {
+                  "createdEvent": {
+                    "offset": "9",
+                    "contractId": "{{{contractId}}}",
+                    "templateId": {"packageId": "impl-pkg", "moduleName": "Token.Impl", "entityName": "Asset"},
+                    "createArgument": {"amount": "999"},
+                    "interfaceViews": [{{{interfaceViewJson}}}],
+                    "witnessParties": ["party::alice"]
+                  },
+                  "synchronizerId": "sync-1",
+                  "reassignmentCounter": "0"
+                }
+              }
+            }]{{{nextPageTokenField}}}}
+            """;
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_decodes_the_participant_computed_interface_view_into_the_view_record()
+    {
+        ICantonLedgerClient client = ClientWith(SnapshotTransport(
+            $$$"""
+            {
+              "interfaceId": {{{ViewedInterfaceIdJson}}},
+              "viewStatus": {"code": 0, "message": ""},
+              "viewValue": {"amount": "42.5"}
+            }
+            """));
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Should().ContainSingle();
+        holdings[0].Contract.Id.Value.Should().Be("00impl");
+        holdings[0].Contract.View.Amount.Should().Be(42.5m);
+        holdings[0].LastUpdateOffset.Should().Be(LedgerOffset.At(9));
+        holdings[0].SynchronizerId.Should().Be((SynchronizerId)"sync-1");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_reads_every_page_of_an_interface_snapshot()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseSequence(
+                (HttpStatusCode.OK, ViewedActiveContractsPage("00impl-1", OkViewJson, nextPageToken: "page-2")),
+                (HttpStatusCode.OK, ViewedActiveContractsPage("00impl-2", OkViewJson, nextPageToken: null)));
+        ICantonLedgerClient client = ClientWith(transport);
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Select(holding => holding.Contract.Id.Value).Should().Equal("00impl-1", "00impl-2");
+        var pageRequests = transport.Requests
+            .Where(request => request.PathAndQuery == "/v2/state/active-contracts-page")
+            .ToList();
+        pageRequests.Should().HaveCount(2);
+        pageRequests[1].Body.Should().Contain("\"pageToken\":\"page-2\"");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_throws_LedgerOperationException_when_the_view_status_is_not_Ok()
+    {
+        ICantonLedgerClient client = ClientWith(SnapshotTransport(
+            $$$"""
+            {
+              "interfaceId": {{{ViewedInterfaceIdJson}}},
+              "viewStatus": {"code": 2, "message": "view computation failed"}
+            }
+            """));
+
+        var querying = async () => await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        (await querying.Should().ThrowAsync<LedgerOperationException>())
+            .Which.Message.Should().Contain(nameof(UnclassifiedKind.InterfaceViewUnavailable));
+    }
+
+    [Fact]
+    public async Task GetLedgerApiVersionAsync_binds_the_version_from_v2_version()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"version":"3.5.9"}""");
+        var client = ClientWith(transport);
+
+        var version = await client.GetLedgerApiVersionAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        version.Should().Be("3.5.9");
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/version");
+    }
+
+    [Fact]
+    public async Task GetLedgerApiVersionAsync_throws_a_LedgerOperationException_on_a_non_success_response()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.ServiceUnavailable, "{}");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetLedgerApiVersionAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<LedgerOperationException>();
+    }
+
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_maps_each_synchronizer_and_its_permission()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """
+            {
+              "connectedSynchronizers": [
+                {"synchronizerAlias": "sync-a", "synchronizerId": "sync-a::id", "permission": "PARTICIPANT_PERMISSION_SUBMISSION"},
+                {"synchronizerAlias": "sync-b", "synchronizerId": "sync-b::id", "permission": "PARTICIPANT_PERMISSION_OBSERVATION"}
+              ]
+            }
+            """);
+        var client = ClientWith(transport);
+
+        var synchronizers = await client.GetConnectedSynchronizersAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        synchronizers.Should().SatisfyRespectively(
+            first =>
+            {
+                first.SynchronizerAlias.Should().Be("sync-a");
+                first.SynchronizerId.Should().Be("sync-a::id");
+                first.Permission.Should().Be(SynchronizerPermissionLevel.Submission);
+            },
+            second =>
+            {
+                second.SynchronizerAlias.Should().Be("sync-b");
+                second.Permission.Should().Be(SynchronizerPermissionLevel.Observation);
+            });
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/state/connected-synchronizers");
+    }
+
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_scopes_the_query_by_party_and_participant_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, """{"connectedSynchronizers": []}""");
+        var client = ClientWith(transport);
+
+        await client.GetConnectedSynchronizersAsync(
+            Alice, "participant-1", cancellationToken: TestContext.Current.CancellationToken);
+
+        var query = transport.LastRequest!.RequestUri!.Query;
+        query.Should().Contain("party=party%3A%3Aalice").And.Contain("participantId=participant-1");
+    }
+
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_throws_JsonException_for_a_permission_value_outside_the_vendored_enum()
+    {
+        // The wire permission is a string enum (JsonStringEnumConverter has no fallback), so a
+        // value the vendored spec doesn't know about fails deserialization rather than degrading
+        // to SynchronizerPermissionLevel.Unrecognized -- unlike the retired int-ordinal encoding,
+        // where any out-of-range number bound successfully and MapPermission's default case
+        // caught it.
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"connectedSynchronizers": [{"synchronizerAlias": "a", "synchronizerId": "a::id", "permission": "PARTICIPANT_PERMISSION_SOME_FUTURE_VALUE"}]}""");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetConnectedSynchronizersAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<JsonException>();
+    }
+
+    [Fact]
+    public async Task GetUpdateByOffsetAsync_projects_the_transaction_at_the_offset()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, PointReadTransactionBody);
+        var client = ClientWith(transport);
+
+        var result = await client.GetUpdateByOffsetAsync(LedgerOffset.At(7), AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.UpdateId.Should().Be("upd-1");
+        result.CompletionOffset.Value.Should().Be(7L);
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/updates/update-by-offset");
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("offset").GetString().Should().Be("7");
+    }
+
+    [Fact]
+    public async Task GetUpdateByOffsetAsync_throws_ArgumentOutOfRangeException_for_the_Begin_offset()
+    {
+        var client = ClientWith(new RecordingHttpHandler());
+
+        var act = () => client.GetUpdateByOffsetAsync(LedgerOffset.Begin, AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public async Task GetUpdateByOffsetAsync_throws_InvalidOperationException_when_the_update_is_not_a_transaction()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, """{"update": {"Reassignment": {"value": {"offset": "7", "events": []}}}}""");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetUpdateByOffsetAsync(LedgerOffset.At(7), AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
+        thrown.Which.Message.Should().Contain("Reassignment");
+    }
+
+    [Fact]
+    public async Task GetUpdateByIdAsync_projects_the_transaction_by_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, PointReadTransactionBody);
+        var client = ClientWith(transport);
+
+        var result = await client.GetUpdateByIdAsync("upd-1", AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.UpdateId.Should().Be("upd-1");
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/updates/update-by-id");
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("updateId").GetString().Should().Be("upd-1");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetUpdateByIdAsync_throws_ArgumentException_for_a_blank_update_id(string updateId)
+    {
+        var client = ClientWith(new RecordingHttpHandler());
+
+        var act = () => client.GetUpdateByIdAsync(updateId, AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task SubmitAsync_fires_the_commands_and_returns_the_effective_command_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        var client = ClientWith(transport, userId: "test-user");
+        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice)
+            .WithCommandId(new RuntimeCommands.CommandId("cmd-fire"));
+
+        var commandId = await client.SubmitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        commandId.Value.Should().Be("cmd-fire");
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/commands/async/submit");
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("commandId").GetString().Should().Be("cmd-fire");
+        body.RootElement.GetProperty("userId").GetString().Should().Be("test-user");
+    }
+
+    [Fact]
+    public async Task SubmitAsync_mints_a_command_id_when_the_submission_omits_one()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        var client = ClientWith(transport);
+        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice);
+
+        var commandId = await client.SubmitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        commandId.Value.Should().NotBeNullOrWhiteSpace();
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("commandId").GetString().Should().Be(commandId.Value);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_throws_a_LedgerOperationException_on_a_non_success_response()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.BadRequest,
+            """{"code": 3, "message": "invalid", "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "INVALID_ARGUMENT", "metadata": {}}]}""");
+        var client = ClientWith(transport);
+        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice);
+
+        var act = () => client.SubmitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.ErrorId.Should().Be("INVALID_ARGUMENT");
+    }
+
+    [Fact]
+    public async Task SubmitReassignmentAsync_fires_the_reassignment_and_returns_the_effective_command_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        var client = ClientWith(transport, userId: "test-user");
+        var submission = ReassignmentSubmission
+            .Of(new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice)
+            .WithCommandId(new RuntimeCommands.CommandId("cmd-reassign"));
+
+        var commandId = await client.SubmitReassignmentAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        commandId.Value.Should().Be("cmd-reassign");
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/commands/async/submit-reassignment");
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        var commands = body.RootElement.GetProperty("reassignmentCommands");
+        commands.GetProperty("submitter").GetString().Should().Be("party::alice");
+        commands.GetProperty("commands")[0].GetProperty("command").GetProperty("UnassignCommand")
+            .GetProperty("value").GetProperty("contractId").GetString().Should().Be("00cid");
+    }
+
+    [Fact]
+    public async Task SubmitReassignmentAsync_throws_a_LedgerOperationException_on_a_non_success_response()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.BadRequest,
+            """{"code": 3, "message": "invalid", "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "INVALID_ARGUMENT", "metadata": {}}]}""");
+        var client = ClientWith(transport);
+        var submission = ReassignmentSubmission
+            .Of(new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+        var act = () => client.SubmitReassignmentAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.ErrorId.Should().Be("INVALID_ARGUMENT");
+    }
+
+    [Theory]
+    [InlineData(nameof(RestLedgerClient.SubmitAsync))]
+    [InlineData(nameof(RestLedgerClient.SubmitReassignmentAsync))]
+    public async Task Async_submission_reports_a_connection_failure_as_no_response(string operation)
+    {
+        var transport = new RecordingHttpHandler().WithTransportException(new HttpRequestException("connection refused"));
+        var client = ClientWith(transport);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        Func<Task> act = operation switch
+        {
+            nameof(RestLedgerClient.SubmitAsync) => () => client.SubmitAsync(
+                RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate())).WithActAs(Alice),
+                cancellationToken: cancellationToken),
+            _ => () => client.SubmitReassignmentAsync(
+                ReassignmentSubmission.Of(
+                    new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice),
+                cancellationToken: cancellationToken),
+        };
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.Which.Message.Should().Be("connection refused");
+    }
+
+    [Theory]
+    [InlineData(nameof(RestLedgerClient.SubmitAsync))]
+    [InlineData(nameof(RestLedgerClient.SubmitReassignmentAsync))]
+    [InlineData(nameof(RestLedgerClient.GetConnectedSynchronizersAsync))]
+    [InlineData(nameof(RestLedgerClient.GetLedgerApiVersionAsync))]
+    [InlineData(nameof(RestLedgerClient.GetUpdateByOffsetAsync))]
+    [InlineData(nameof(RestLedgerClient.GetUpdateByIdAsync))]
+    [InlineData(nameof(RestLedgerClient.GetUpdateTreeByOffsetAsync))]
+    public async Task RestLedgerClient_per_call_timeout_ends_a_request_the_participant_never_answers(string operation)
+    {
+        var client = ClientWith(new RecordingHttpHandler().WithNoAnswerUntilCancelled(), userId: "test-user");
+
+        var act = () => Invoke(
+            client, operation, TimeSpan.FromMilliseconds(50), TestContext.Current.CancellationToken);
+
+        var elapsed = Stopwatch.StartNew();
+        await act.Should().ThrowAsync<OperationCanceledException>(
+            "the per-call deadline is the only thing that can end a request the participant never answers, so a "
+            + "timeout the transport never sees would hang the caller for the HttpClient default instead");
+
+        elapsed.Elapsed.Should().BeLessThan(
+            TimeSpan.FromSeconds(30),
+            "a timeout the transport never sees still ends this request eventually, on HttpClient's own 100-second "
+            + "default — so only the elapsed time distinguishes an honoured per-call deadline from a dropped one");
+    }
+
+    [Theory]
+    [InlineData(nameof(RestLedgerClient.SubmitAsync))]
+    [InlineData(nameof(RestLedgerClient.SubmitReassignmentAsync))]
+    [InlineData(nameof(RestLedgerClient.GetConnectedSynchronizersAsync))]
+    [InlineData(nameof(RestLedgerClient.GetLedgerApiVersionAsync))]
+    [InlineData(nameof(RestLedgerClient.GetUpdateByOffsetAsync))]
+    [InlineData(nameof(RestLedgerClient.GetUpdateByIdAsync))]
+    [InlineData(nameof(RestLedgerClient.GetUpdateTreeByOffsetAsync))]
+    public async Task RestLedgerClient_leaves_a_request_alone_when_no_per_call_timeout_is_supplied(string operation)
+    {
+        var client = ClientWith(new RecordingHttpHandler().WithNoAnswerUntilCancelled(), userId: "test-user");
+        using var caller = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        var act = () => Invoke(client, operation, timeout: null, caller.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>(
+            "with no per-call deadline the caller's own token is what ends the request");
+    }
+
+    private static Task Invoke(
+        RestLedgerClient client, string operation, TimeSpan? timeout, CancellationToken cancellationToken) =>
+        operation switch
+        {
+            nameof(RestLedgerClient.SubmitAsync) =>
+                client.SubmitAsync(FireSubmission(), timeout, cancellationToken),
+            nameof(RestLedgerClient.SubmitReassignmentAsync) =>
+                client.SubmitReassignmentAsync(FireReassignment(), timeout, cancellationToken),
+            nameof(RestLedgerClient.GetConnectedSynchronizersAsync) =>
+                client.GetConnectedSynchronizersAsync(timeout: timeout, cancellationToken: cancellationToken),
+            nameof(RestLedgerClient.GetLedgerApiVersionAsync) =>
+                client.GetLedgerApiVersionAsync(timeout, cancellationToken),
+            nameof(RestLedgerClient.GetUpdateByOffsetAsync) =>
+                client.GetUpdateByOffsetAsync(LedgerOffset.At(7), AliceSubmitter, timeout, cancellationToken),
+            nameof(RestLedgerClient.GetUpdateByIdAsync) =>
+                client.GetUpdateByIdAsync("upd-1", AliceSubmitter, timeout, cancellationToken),
+            nameof(RestLedgerClient.GetUpdateTreeByOffsetAsync) =>
+                client.GetUpdateTreeByOffsetAsync(LedgerOffset.At(7), AliceSubmitter, timeout, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(operation), operation, "no per-call-deadline call is mapped for this operation"),
+        };
+
+    private static RuntimeCommands.CommandsSubmission FireSubmission() =>
+        RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice);
+
+    private static ReassignmentSubmission FireReassignment() =>
+        ReassignmentSubmission.Of(
+            new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_projects_the_unassigned_event()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """
+            {
+              "reassignment": {
+                "updateId": "upd-1",
+                "offset": "5",
+                "events": [
+                  {
+                    "JsUnassignedEvent": {
+                      "value": {
+                        "offset": "5",
+                        "reassignmentId": "reassign-1",
+                        "reassignmentCounter": "1",
+                        "contractId": "00cid",
+                        "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "CantonTemplate"},
+                        "source": "sync-a",
+                        "target": "sync-b",
+                        "witnessParties": ["party::alice"]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+        var client = ClientWith(transport);
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var one = outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.One>().Subject;
+        var unassigned = one.Result.Should().BeOfType<ContractStreamEvent<TestTemplate>.Unassigned>().Subject;
+        unassigned.ContractId.Value.Should().Be("00cid");
+        unassigned.ReassignmentId.Should().Be("reassign-1");
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/commands/submit-and-wait-for-reassignment");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_returns_a_DamlError_outcome_on_a_structured_error()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.Conflict,
+            """{"code": 9, "message": "rejected", "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "REASSIGNMENT_REJECTED", "metadata": {}}]}""");
+        var client = ClientWith(transport);
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.DamlError>()
+            .Which.ErrorId.Should().Be("REASSIGNMENT_REJECTED");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_returns_an_InfraError_outcome_when_the_transport_fails()
+    {
+        var transport = new RecordingHttpHandler().WithTransportException(new HttpRequestException("connection refused"));
+        var client = ClientWith(transport);
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.InfraError>()
+            .Which.Message.Should().Contain("connection refused");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_carries_the_caught_projection_failure_into_the_CommittedUndecodable_source_exception()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"reassignment": {"updateId": "upd-1", "offset": "not-an-offset", "events": []}}""");
+        var logger = new LoggerFailingOnItsFirstWrite();
+        var client = new RestLedgerClient(
+            TrackedFactory(transport),
+            Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575" }),
+            logger);
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var undecodable = outcome.Should()
+            .BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.CommittedUndecodable>().Subject;
+        undecodable.UpdateId.Should().Be("upd-1");
+        undecodable.Message.Should().StartWith("Could not decode the reassignment in the ledger response:");
+        undecodable.SourceException.Should().BeSameAs(logger.Failure);
+    }
+
+    private sealed class LoggerFailingOnItsFirstWrite : ILogger<RestLedgerClient>
+    {
+        private bool _hasFailed;
+
+        public InvalidOperationException Failure { get; } = new("the log sink rejected the write");
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (_hasFailed)
+            {
+                return;
+            }
+
+            _hasFailed = true;
+            throw Failure;
+        }
+    }
+
+    private const string PointReadTransactionBody =
+        """
+        {
+          "update": {
+            "Transaction": {
+              "value": {
+                "updateId": "upd-1",
+                "commandId": "cmd-1",
+                "offset": "7",
+                "events": [
+                  {
+                    "CreatedEvent": {
+                      "offset": "7",
+                      "contractId": "00holding",
+                      "nodeId": 0,
+                      "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "CantonTemplate"},
+                      "createArgument": {"owner": "party::alice"}
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+        """;
+}

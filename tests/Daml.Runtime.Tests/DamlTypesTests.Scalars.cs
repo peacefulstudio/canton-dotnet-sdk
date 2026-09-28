@@ -138,11 +138,31 @@ public partial class DamlTypesTests
     }
 
     [Theory]
+    [InlineData("42.", 42)]
+    [InlineData("-7.", -7)]
+    [InlineData("0.", 0)]
+    public void TryParseCanonical_reads_the_participant_scale_zero_form_with_a_bare_trailing_dot(string participantText, int expected)
+    {
+        DamlNumeric.TryParseCanonical(participantText, out var value).Should().BeTrue(
+            "Daml-LF 3.5.9's Numeric.toString writes a Numeric 0 as toPlainString plus a bare '.', as the participant sent for TypeCorners.whole in run 36402548934");
+        value.Value.Should().Be(expected);
+    }
+
+    [Theory]
     [InlineData("nope")]
     [InlineData("1e5")]
-    [InlineData("1.")]
+    [InlineData(".")]
+    [InlineData("-.")]
     [InlineData(".5")]
     [InlineData("")]
+    [InlineData("+42.")]
+    [InlineData("+1.5")]
+    [InlineData(" 42.")]
+    [InlineData("42. ")]
+    [InlineData("4.2e1")]
+    [InlineData("42.e1")]
+    [InlineData("42..")]
+    [InlineData("4 2.")]
     public void TryParseCanonical_rejects_non_canonical_text(string text)
     {
         DamlNumeric.TryParseCanonical(text, out var value).Should().BeFalse();
@@ -240,7 +260,7 @@ public partial class DamlTypesTests
         var party = (Party)"alice";
 
         // Assert
-        party.Id.Should().Be("alice");
+        party.Value.Should().Be("alice");
     }
 
     [Fact]
@@ -369,7 +389,7 @@ public partial class DamlTypesTests
         var party = default(Party);
 
         // Act
-        var act = () => party.Id;
+        var act = () => party.Value;
 
         // Assert
         act.Should().Throw<InvalidOperationException>();

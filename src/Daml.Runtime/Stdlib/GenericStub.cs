@@ -37,6 +37,6 @@ public static class GenericStub
     [DoesNotReturn]
     public static T NotImplemented<T>(string context) =>
         throw new NotImplementedException(
-            $"Generic type-parameter serialization for '{context}' is not yet supported by daml-codegen-csharp. "
+            $"Generic type-parameter serialization for '{context}' is not yet supported by canton-dotnet-sdk. "
             + "Workaround: instantiate the type with concrete arguments and write the conversion by hand.");
 }

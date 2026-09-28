@@ -1,0 +1,413 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Canton.Ledger.Abstractions;
+using Canton.Ledger.Grpc.Client.Raw;
+using Canton.Ledger.Kernel.Authentication;
+using Canton.Ledger.Kernel.Authentication.TokenGeneration;
+using Canton.Ledger.Kernel.DependencyInjection;
+using Daml.Ledger.Abstractions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace Canton.Ledger.Grpc.Client;
+
+/// <summary>
+/// Extension methods for registering Canton Ledger API clients with the dependency injection container.
+/// </summary>
+public static class ServiceCollectionExtensions
+{
+    /// <summary>
+    /// Convention-based registration for the ledger client and <see cref="IAdminClient"/> using canonical
+    /// <c>Canton:Ledger</c> and <c>Canton:Auth</c> configuration sections. The ledger client is a
+    /// <see cref="ServiceLifetime.Singleton"/> resolvable as <see cref="ICantonLedgerClient"/>,
+    /// <see cref="ILedgerClient"/>, <see cref="ILedgerReader"/>, <see cref="ILedgerWriter"/> and
+    /// <see cref="ILedgerStreamer"/> — all five hand back the same instance, so the gRPC channel is shared.
+    /// </summary>
+    /// <remarks>
+    /// Reads <c>Canton:Ledger</c> for <see cref="LedgerClientOptions"/>. Auth registration
+    /// is triggered when the <c>Canton:Auth</c> section has any populated child value: a
+    /// client-credentials <see cref="ITokenProvider"/> is registered and its options are
+    /// validated at startup, so half-configured auth (e.g. <c>ClientSecret</c> set without
+    /// <c>ClientId</c>) fails loudly instead of silently falling back to unauthenticated.
+    /// When no auth values are present the clients run unauthenticated via
+    /// <see cref="ITokenProvider.None"/>. The exact unkeyed <see cref="ITokenProvider.None"/>
+    /// fallback installed by an earlier client registration does not suppress auth binding.
+    /// Any other pre-existing unkeyed <see cref="ITokenProvider"/> registration (e.g. from
+    /// <c>AddCantonStaticAuth</c>) wins and suppresses <c>Canton:Auth</c> binding entirely, so
+    /// leftover auth config cannot fail startup when an explicit provider has been chosen.
+    /// Prefer this over the per-client overloads so consumers and their deployment config
+    /// (env vars, Helm charts, appsettings) agree on a single canonical wiring.
+    /// </remarks>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The root configuration (sections read by convention).</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddCantonLedger(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var auth = configuration.GetSection("Canton:Auth");
+        if (HasAnyConfiguredValue(auth) && !services.Any(d => d.ServiceType == typeof(ITokenProvider)
+            && !d.IsKeyedService
+            && !ReferenceEquals(d.ImplementationInstance, ITokenProvider.None)))
+            services.AddCantonAuth(auth);
+
+        AddLedgerOptions(services, configuration.GetSection("Canton:Ledger"));
+        AddLedgerClientRegistration(services);
+        AddAdminClientRegistration(services);
+
+        return services;
+    }
+
+    private static bool HasAnyConfiguredValue(IConfiguration section)
+    {
+        if (section is IConfigurationSection { Value: { } value } && !string.IsNullOrWhiteSpace(value))
+            return true;
+
+        foreach (var child in section.GetChildren())
+        {
+            if (HasAnyConfiguredValue(child))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Registers the ledger client as a <see cref="ServiceLifetime.Singleton"/> resolvable as
+    /// <see cref="ICantonLedgerClient"/>, <see cref="ILedgerClient"/>, <see cref="ILedgerReader"/>,
+    /// <see cref="ILedgerWriter"/> and <see cref="ILedgerStreamer"/> — all five hand back the same
+    /// instance, so the gRPC channel is shared — and binds <see cref="LedgerClientOptions"/>
+    /// from the provided configuration section. Options are validated at startup.
+    /// </summary>
+    /// <remarks>
+    /// Calling both <see cref="AddLedgerClient(IServiceCollection, IConfiguration)"/> and
+    /// <see cref="AddAdminClient(IServiceCollection, IConfiguration)"/> with the same configuration
+    /// section is safe — both share <see cref="LedgerClientOptions"/> and the binding delegates
+    /// will produce the same result.
+    /// </remarks>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// A configuration section containing <see cref="LedgerClientOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Ledger")</c>).
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLedgerClient(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        AddLedgerOptions(services, configuration);
+        AddLedgerClientRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the ledger client as a <see cref="ServiceLifetime.Singleton"/> resolvable as
+    /// <see cref="ICantonLedgerClient"/>, <see cref="ILedgerClient"/>, <see cref="ILedgerReader"/>,
+    /// <see cref="ILedgerWriter"/> and <see cref="ILedgerStreamer"/> — all five hand back the same
+    /// instance, so the gRPC channel is shared — and configures <see cref="LedgerClientOptions"/>
+    /// using the provided action delegate. Options are validated at startup.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">An action to configure <see cref="LedgerClientOptions"/>.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLedgerClient(this IServiceCollection services, Action<LedgerClientOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        AddLedgerOptions(services, configure);
+        AddLedgerClientRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the ledger client as a <see cref="ServiceLifetime.Singleton"/> resolvable as
+    /// <see cref="ICantonLedgerClient"/>, <see cref="ILedgerClient"/>, <see cref="ILedgerReader"/>,
+    /// <see cref="ILedgerWriter"/> and <see cref="ILedgerStreamer"/> — all five hand back the same
+    /// instance, so the gRPC channel is shared — binds <see cref="LedgerClientOptions"/>
+    /// from the provided configuration section, and auto-registers <see cref="ITokenProvider"/> as a
+    /// <see cref="Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsProvider"/> from the auth configuration section.
+    /// If an <see cref="ITokenProvider"/> is already registered, the existing registration is kept.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// A configuration section containing <see cref="LedgerClientOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Ledger")</c>).
+    /// </param>
+    /// <param name="authConfiguration">
+    /// A configuration section containing <see cref="Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Auth")</c>).
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLedgerClient(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IConfiguration authConfiguration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(authConfiguration);
+
+        services.AddCantonAuth(authConfiguration);
+        AddLedgerOptions(services, configuration);
+        AddLedgerClientRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IAdminClient"/> as a singleton and binds <see cref="LedgerClientOptions"/>
+    /// from the provided configuration section. Options are validated at startup.
+    /// It replaces the fallback <see cref="IAdminClient"/> the REST transport's <c>AddRestLedgerClient</c>
+    /// registers, whichever of the two is called first, and keeps any other admin client already registered.
+    /// </summary>
+    /// <remarks>
+    /// Calling both <see cref="AddLedgerClient(IServiceCollection, IConfiguration)"/> and
+    /// <see cref="AddAdminClient(IServiceCollection, IConfiguration)"/> with the same configuration
+    /// section is safe — both share <see cref="LedgerClientOptions"/> and the binding delegates
+    /// will produce the same result.
+    /// </remarks>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// A configuration section containing <see cref="LedgerClientOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Ledger")</c>).
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddAdminClient(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        AddLedgerOptions(services, configuration);
+        AddAdminClientRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IAdminClient"/> as a singleton, binds <see cref="LedgerClientOptions"/>
+    /// from the provided configuration section, and auto-registers <see cref="ITokenProvider"/> as a
+    /// <see cref="Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsProvider"/> from the auth configuration section.
+    /// If an <see cref="ITokenProvider"/> is already registered, the existing registration is kept.
+    /// It replaces the fallback <see cref="IAdminClient"/> the REST transport's <c>AddRestLedgerClient</c>
+    /// registers, whichever of the two is called first, and keeps any other admin client already registered.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// A configuration section containing <see cref="LedgerClientOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Ledger")</c>).
+    /// </param>
+    /// <param name="authConfiguration">
+    /// A configuration section containing <see cref="Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Auth")</c>).
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddAdminClient(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IConfiguration authConfiguration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(authConfiguration);
+
+        services.AddCantonAuth(authConfiguration);
+        AddLedgerOptions(services, configuration);
+        AddAdminClientRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IAdminClient"/> as a singleton and configures <see cref="LedgerClientOptions"/>
+    /// using the provided action delegate. Options are validated at startup.
+    /// It replaces the fallback <see cref="IAdminClient"/> the REST transport's <c>AddRestLedgerClient</c>
+    /// registers, whichever of the two is called first, and keeps any other admin client already registered.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">An action to configure <see cref="LedgerClientOptions"/>.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddAdminClient(this IServiceCollection services, Action<LedgerClientOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        AddLedgerOptions(services, configure);
+        AddAdminClientRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IGrpcCallInvokerFactory"/> from <c>Canton.Ledger.Grpc.Client.Raw</c> as a
+    /// <see cref="ServiceLifetime.Singleton"/> and binds <see cref="LedgerClientOptions"/> from the
+    /// provided configuration section. Options are validated at startup.
+    /// </summary>
+    /// <remarks>
+    /// This is the opt-in escape hatch for driving raw generated gRPC stubs the typed surfaces do not
+    /// cover; prefer <see cref="AddLedgerClient(IServiceCollection, IConfiguration)"/> and
+    /// <see cref="AddAdminClient(IServiceCollection, IConfiguration)"/> for everything they cover.
+    /// The factory runs on the one channel the container shares across every client it registers, built
+    /// from the same <see cref="LedgerClientOptions"/> the clients use, so it needs neither of them
+    /// registered and registration order does not matter. The container disposes that channel.
+    /// </remarks>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// A configuration section containing <see cref="LedgerClientOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Ledger")</c>).
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLedgerRawGrpc(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        AddLedgerOptions(services, configuration);
+        AddRawGrpcRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IGrpcCallInvokerFactory"/> from <c>Canton.Ledger.Grpc.Client.Raw</c> as a
+    /// <see cref="ServiceLifetime.Singleton"/>, binds <see cref="LedgerClientOptions"/> from the provided
+    /// configuration section, and auto-registers <see cref="ITokenProvider"/> as a
+    /// <see cref="Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsProvider"/> from the auth configuration section.
+    /// If an <see cref="ITokenProvider"/> is already registered, the existing registration is kept.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// A configuration section containing <see cref="LedgerClientOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Ledger")</c>).
+    /// </param>
+    /// <param name="authConfiguration">
+    /// A configuration section containing <see cref="Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsOptions"/> values
+    /// (e.g., <c>configuration.GetSection("Canton:Auth")</c>).
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLedgerRawGrpc(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IConfiguration authConfiguration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(authConfiguration);
+
+        services.AddCantonAuth(authConfiguration);
+        AddLedgerOptions(services, configuration);
+        AddRawGrpcRegistration(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IGrpcCallInvokerFactory"/> from <c>Canton.Ledger.Grpc.Client.Raw</c> as a
+    /// <see cref="ServiceLifetime.Singleton"/> and configures <see cref="LedgerClientOptions"/> using the
+    /// provided action delegate. Options are validated at startup.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">An action to configure <see cref="LedgerClientOptions"/>.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddLedgerRawGrpc(this IServiceCollection services, Action<LedgerClientOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        AddLedgerOptions(services, configure);
+        AddRawGrpcRegistration(services);
+
+        return services;
+    }
+
+    private static void AddRawGrpcRegistration(IServiceCollection services)
+    {
+        AddChannelProviderRegistration(services);
+        services.TryAddSingleton<IGrpcCallInvokerFactory>(static sp => new GrpcCallInvokerFactory(
+            sp.GetRequiredService<IOptions<LedgerClientOptions>>(),
+            sp.GetRequiredService<LedgerChannelProvider>(),
+            sp.GetRequiredService<ITokenProvider>(),
+            sp.GetService<ILogger<GrpcCallInvokerFactory>>()));
+    }
+
+    private static void AddAdminClientRegistration(IServiceCollection services)
+    {
+        AddChannelProviderRegistration(services);
+        services.TryAddAdminClientOverFallback(static sp => new AdminClient(
+            sp.GetRequiredService<IOptions<LedgerClientOptions>>(),
+            sp.GetRequiredService<LedgerChannelProvider>(),
+            sp.GetRequiredService<ITokenProvider>(),
+            sp.GetService<ILogger<AdminClient>>()));
+    }
+
+    private static void AddLedgerClientRegistration(IServiceCollection services)
+    {
+        AddChannelProviderRegistration(services);
+        services.AddLedgerAdapter(
+            static sp => new LedgerClient(
+                sp.GetRequiredService<IOptions<LedgerClientOptions>>(),
+                sp.GetRequiredService<LedgerChannelProvider>(),
+                sp.GetRequiredService<ITokenProvider>(),
+                sp.GetService<ILogger<LedgerClient>>()),
+            ServiceLifetime.Singleton);
+    }
+
+    private static void AddChannelProviderRegistration(IServiceCollection services) =>
+        services.TryAddSingleton<LedgerChannelProvider>();
+
+    private static void AddLedgerOptions(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddValidatedOptions<LedgerClientOptions>(configuration)
+            .ValidateDataAnnotations();
+
+        AddAuthTlsValidation(services);
+        services.TryAddSingleton(ITokenProvider.None);
+    }
+
+    private static void AddLedgerOptions(IServiceCollection services, Action<LedgerClientOptions> configure)
+    {
+        services.AddValidatedOptions<LedgerClientOptions>(configure)
+            .ValidateDataAnnotations();
+
+        AddAuthTlsValidation(services);
+        services.TryAddSingleton(ITokenProvider.None);
+    }
+
+    private static void AddAuthTlsValidation(IServiceCollection services)
+    {
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<LedgerClientOptions>, AuthTlsOptionsValidator>());
+    }
+
+    private sealed class AuthTlsOptionsValidator(
+        IServiceProvider serviceProvider,
+        IOptions<ClientCredentialsOptions> authOptions) : IValidateOptions<LedgerClientOptions>
+    {
+        public ValidateOptionsResult Validate(string? name, LedgerClientOptions options)
+        {
+            if (name != Options.DefaultName)
+                return ValidateOptionsResult.Skip;
+
+            if (serviceProvider.GetService<ClientCredentialsRegistration>() is null)
+                return ValidateOptionsResult.Success;
+
+            return options.Tls.IsConfigured
+                && !authOptions.Value.Tls.IsConfigured
+                    ? ValidateOptionsResult.Fail(
+                        "LedgerClientOptions.Tls is configured while client-credentials authentication "
+                        + "uses an unconfigured ClientCredentialsOptions.Tls. Configure TLS separately "
+                        + "for the token endpoint.")
+                    : ValidateOptionsResult.Success;
+        }
+    }
+}

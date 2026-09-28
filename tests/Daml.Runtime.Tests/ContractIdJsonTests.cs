@@ -42,7 +42,7 @@ public class ContractIdJsonTests
         var payload = JsonSerializer.Deserialize<TemplatePayload>(json);
 
         payload!.Marker.Value.Should().Be("00abc");
-        payload.Owner.Id.Should().Be("Alice::1220ab");
+        payload.Owner.Value.Should().Be("Alice::1220ab");
         JsonSerializer.Serialize(payload).Should().Be(json);
     }
 
@@ -135,7 +135,9 @@ public class ContractIdJsonTests
                 "EitherJsonConverterFactory",
                 "ContractStreamEventJsonConverterFactory",
                 "InterfaceStreamEventJsonConverterFactory",
-                "UnitJsonConverter",
+                "TransportStatusJsonConverterFactory",
+                "DamlUnitJsonConverter",
+                "DamlVariantJsonConverterFactory",
             ],
             "naming the converters is what catches one silently dropping out of DamlJsonConverters.All, "
             + "which a count compared against All itself cannot");
@@ -169,92 +171,6 @@ public class ContractIdJsonTests
             "the erased base is abstract, so there is nothing for Read to construct");
     }
 
-    [Fact]
-    public void Codegen_derived_ContractId_should_serialize_as_json_string()
-    {
-        var json = JsonSerializer.Serialize(new Marker.ContractId("00abc"), Registered);
-
-        json.Should().Be(
-            "\"00abc\"",
-            "codegen emits a per-template T.ContractId deriving from ContractId<T>, and that derived "
-            + "type is what a consumer DTO declares — matching only the exact closed generic would "
-            + "leave it on the default object contract and give one value two wire shapes");
-    }
-
-    [Fact]
-    public void Codegen_derived_ContractId_should_deserialize_from_json_string()
-    {
-        var contractId = JsonSerializer.Deserialize<Marker.ContractId>("\"00abc\"", Registered);
-
-        contractId.Should().BeOfType<Marker.ContractId>(
-            "reading must construct the derived record, not its base");
-        contractId!.Value.Should().Be("00abc");
-    }
-
-    [Fact]
-    public void Codegen_derived_ContractId_should_round_trip_inside_a_record_payload()
-    {
-        var json = "{\"Marker\":\"00abc\",\"Owner\":\"Alice::1220ab\"}";
-
-        var payload = JsonSerializer.Deserialize<DerivedContractIdPayload>(json, Registered);
-
-        payload!.Marker.Value.Should().Be("00abc");
-        JsonSerializer.Serialize(payload, Registered).Should().Be(json);
-    }
-
-    [Fact]
-    public void Codegen_derived_ContractId_should_reject_an_empty_string()
-    {
-        var deserialize = () => JsonSerializer.Deserialize<Marker.ContractId>("\"\"", Registered);
-
-        deserialize.Should().Throw<JsonException>();
-    }
-
-    [Fact]
-    public void Codegen_derived_ContractId_keeps_the_bare_string_shape_without_AddDamlConverters()
-    {
-        JsonSerializer.Serialize(new Marker.ContractId("00abc")).Should().Be(
-            "\"00abc\"",
-            "System.Text.Json reads [JsonConverter] off the type being converted and does not walk "
-            + "the base chain, so the attribute on ContractId<T> never reaches the derived record. "
-            + "The emitter now writes the attribute onto the generated T.ContractId, and this "
-            + "fixture mirrors that shape, so a consumer DTO declaring the derived type no longer "
-            + "needs AddDamlConverters to get one wire shape");
-    }
-
-    [Fact]
-    public void Generic_ContractId_declared_property_should_keep_the_bare_string_shape_for_a_derived_instance()
-    {
-        var payload = new TemplatePayload(new Marker.ContractId("00abc"), new Party("Alice::1220ab"));
-
-        JsonSerializer.Serialize(payload).Should().Be("{\"Marker\":\"00abc\",\"Owner\":\"Alice::1220ab\"}");
-    }
-
-    [Fact]
-    public void Derived_ContractId_rejecting_a_value_should_surface_as_JsonException()
-    {
-        var deserialize = () => JsonSerializer.Deserialize<FormatCheckedContractId>("\"ZZ\"", Registered);
-
-        deserialize.Should().Throw<JsonException>(
-            "the converter constructs the derived type reflectively, and ConstructorInfo.Invoke "
-            + "wraps a constructor throw in TargetInvocationException — a caller catching "
-            + "JsonException, which is the whole System.Text.Json contract, would otherwise miss it");
-    }
-
-    private sealed record DerivedContractIdPayload(Marker.ContractId Marker, Party Owner);
-
-    private sealed record FormatCheckedContractId : global::Daml.Runtime.Contracts.ContractId<Marker>
-    {
-        public FormatCheckedContractId(string value)
-            : base(value)
-        {
-            if (!value.StartsWith("00", StringComparison.Ordinal))
-            {
-                throw new ArgumentException("Contract ids start with '00'.", nameof(value));
-            }
-        }
-    }
-
     private sealed record Marker : ITemplate
     {
         public static Identifier TemplateId { get; } = new("pkg", "M", "Marker");
@@ -264,9 +180,5 @@ public class ContractIdJsonTests
         public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
 
         public DamlRecord ToRecord() => DamlRecord.Create();
-
-        [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.ContractIdJsonConverterFactory))]
-        public sealed record ContractId(string Value)
-            : global::Daml.Runtime.Contracts.ContractId<Marker>(Value);
     }
 }

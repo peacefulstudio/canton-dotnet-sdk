@@ -158,7 +158,7 @@ public class DiscriminatedUnionDepthTests
     [Fact]
     public void Optional_read_relies_on_System_Text_Json_own_reader_depth_guard_past_the_default_MaxDepth()
     {
-        var (_, declaredType) = BuildNestedOptional(NestingLevelsPastDefaultMaxDepth);
+        var (_, declaredType) = BuildNestedOptional(NestingLevelsPastDefaultMaxDepth - 1);
         var json = BuildNestedOptionalJson(NestingLevelsPastDefaultMaxDepth);
 
         var act = () => JsonSerializer.Deserialize(json, declaredType);

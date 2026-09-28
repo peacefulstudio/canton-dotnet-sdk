@@ -11,8 +11,8 @@ namespace Daml.Runtime.Data;
 /// copy taken at every entry point, the content comparison, and the hash code that reads the
 /// same content. Generated records call into these rather than carrying the loops inline, so a
 /// list field compares element by element and a map field compares key by key independently of
-/// insertion order — the semantics <see cref="DamlList"/>, <see cref="DamlTextMap"/> and
-/// <see cref="Daml.Runtime.Contracts.CaughtException"/> already settled on for the same shapes.
+/// insertion order — the semantics <see cref="DamlList"/> and <see cref="DamlTextMap"/>
+/// already settled on for the same shapes.
 /// </summary>
 /// <remarks>
 /// A read-only interface is a view, not an immutable collection: a producer that keeps the
