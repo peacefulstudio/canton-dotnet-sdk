@@ -31,6 +31,10 @@ because they are versioned in lockstep:
   checksum file are now attached to the draft release a `v*` tag push creates, and the
   assembled jar's `--version` now reports the release version instead of the `0.0.0-dev`
   placeholder every prior release shipped with (#49).
+- CI: `intermediate-fixtures-<version>.tar.gz` is now attached alongside the jar/proto —
+  a schema-only `.binpb` plus a canonical-JSON rendering per conformance-corpus DAR, with a
+  `manifest.json` recording each DAR's and each output's SHA-256, so external SDKs (Rust
+  first) can diff their own lowering against ours without a JVM (#51).
 
 ### Changed
 
