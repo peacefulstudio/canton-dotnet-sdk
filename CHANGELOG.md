@@ -27,15 +27,6 @@ because they are versioned in lockstep:
 
 ### Added
 
-- CI: `daml-dar-to-proto-<version>.jar`, `intermediate_dar-<version>.proto` and a `SHA256SUMS`
-  checksum file are now attached to the draft release a `v*` tag push creates, and the
-  assembled jar's `--version` now reports the release version instead of the `0.0.0-dev`
-  placeholder every prior release shipped with (#49).
-- CI: `intermediate-fixtures-<version>.tar.gz` is now attached alongside the jar/proto —
-  a schema-only `.binpb` plus a canonical-JSON rendering per conformance-corpus DAR, with a
-  `manifest.json` recording each DAR's and each output's SHA-256, so external SDKs (Rust
-  first) can diff their own lowering against ours without a JVM (#51).
-
 ### Changed
 
 ### Deprecated
@@ -46,7 +37,7 @@ because they are versioned in lockstep:
 
 ### Security
 
-## [0.6.0-preview.1] — 2026-09-26
+## [0.6.0-preview.1] — 2026-09-28
 
 The first release of the combined Canton .NET SDK. Three changes dominate it.
 
@@ -257,6 +248,10 @@ The model gains typed nodes for the applied builtins and a visitor over every no
   - `AppliedTypeFolding` exposes the folding the readers use: a builtin applied to its full arity becomes its typed node, and a partial application stays a `DamlTypeApp`.
 
 `AddRestLedgerClient` also registers an `IAdminClient` served over the JSON Ledger API, except `ListKnownPackagesAsync`, which throws `NotSupportedException` because the participant has no JSON route for it.
+
+CI: `daml-dar-to-proto-<version>.jar`, `intermediate_dar-<version>.proto` and a `SHA256SUMS` checksum file are now attached to the draft release a `v*` tag push creates, and the assembled jar's `--version` now reports the release version instead of the `0.0.0-dev` placeholder every release since 0.5.0-preview.1 shipped with (#49). This reverses the 0.5.0-preview.2 note that these assets are not published.
+
+CI: `intermediate-fixtures-<version>.tar.gz` is now attached alongside the jar/proto — a schema-only `.binpb` plus a canonical-JSON rendering per conformance-corpus DAR, with a `manifest.json` recording each DAR's and each output's SHA-256, so external SDKs (Rust first) can diff their own lowering against ours without a JVM (#51).
 
 ### Changed
 

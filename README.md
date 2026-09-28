@@ -478,10 +478,9 @@ The DAR to IntermediateDar decode is packaged for standalone publication as
 `daml-dar-to-proto`, a runnable jar emitting the schema defined in
 `proto/intermediate_dar.proto`.
 
-Its release assets are not published. No GitHub release attaches
-`daml-dar-to-proto-<version>.jar` or `intermediate_dar-<version>.proto`; the
-decode is reached through the `dpm codegen-cs` bundle. Whether those assets
-should be published, and in what shape, is still open.
+From `0.6.0-preview.1`, each `v*` GitHub release attaches
+`daml-dar-to-proto-<version>.jar`, `intermediate_dar-<version>.proto`,
+`SHA256SUMS` and `intermediate-fixtures-<version>.tar.gz`.
 
 The jar's own interface, for reference: `--dar` and `--out` select input and
 output, `--schema-only` opts into the patch-version-insensitive schema-mode
