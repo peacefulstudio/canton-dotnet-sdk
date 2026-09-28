@@ -29,7 +29,7 @@ internal sealed partial class ChoiceEmitter
 
     /// <summary>
     /// Emits the static <c>&lt;TemplateName&gt;Extensions</c> class containing one
-    /// <c>&lt;Choice&gt;Async(...)</c> exerciser per create-bearing choice. Lives at the
+    /// <c>Try&lt;Choice&gt;Async(...)</c> exerciser per create-bearing choice. Lives at the
     /// namespace level so the methods extend <c>ContractId&lt;TemplateName&gt;</c> in
     /// every consumer that imports the module's namespace. Skips emission entirely
     /// when no choice qualifies (avoids stranded empty classes).
@@ -74,7 +74,7 @@ internal sealed partial class ChoiceEmitter
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Static <c>&lt;Choice&gt;Async</c> extension methods for <see cref=\"{templateClassName}\"/>.");
+            indent.AppendLine($"/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref=\"{templateClassName}\"/>.");
             indent.AppendLine("/// One method per create-bearing choice; each delegates to");
             indent.AppendLine("/// <see cref=\"global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync\"/>");
             indent.AppendLine($"/// and projects success via <c>&lt;Choice&gt;Result.FromCreatedContracts</c>.");
@@ -204,7 +204,7 @@ internal sealed partial class ChoiceEmitter
         }
 
         var asyncModifier = staticControllers ? string.Empty : "async ";
-        indent.AppendLine($"public static {asyncModifier}Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> {choiceName}Async(");
+        indent.AppendLine($"public static {asyncModifier}Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> Try{choiceName}Async(");
         indent.Indent();
         indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
         indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
@@ -261,7 +261,7 @@ internal sealed partial class ChoiceEmitter
             }
 
             indent.AppendLine();
-            indent.AppendLine($"return contractId.{choiceName}Async(");
+            indent.AppendLine($"return contractId.Try{choiceName}Async(");
             indent.Indent();
             indent.AppendLine("client,");
             if (hasArg)

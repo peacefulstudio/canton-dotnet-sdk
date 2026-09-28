@@ -4,11 +4,32 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Core dependencies -->
-    <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
+    <!-- Google.Protobuf 3.36.0-3.36.2 cache depended extensions in a static, non-thread-safe
+         Dictionary the first time a generated descriptor initializes, so two threads racing
+         to touch a *Reflection type for the first time can corrupt it and throw
+         TypeInitializationException. 3.35.1 is the last release without that cache; bump once
+         a release ships a thread-safe fix. See GoogleProtobufFileDescriptorCacheRegressionTests
+         for the guard. -->
+    <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <!-- Grpc.Tools >= 2.69.0 ships a linux_arm64 protoc that segfaults (grpc/grpc#38538;
          fix attempt grpc/grpc#41994 shipped in 2.81.x without resolving it); 2.68.1 is the
          last release whose linux_arm64 protoc works. Bump only when grpc/grpc#38538 is closed. -->
     <PackageVersion Include="Grpc.Tools" Version="2.68.1" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.12" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
+    <PackageVersion Include="Polly.Core" Version="8.8.0" />
+    <PackageVersion Include="Refit" Version="16.1.0" />
+    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.8.3.2" />
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />

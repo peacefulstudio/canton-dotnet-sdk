@@ -148,7 +148,7 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<RenewResult>> RenewAsync(");
+        code.Should().Contain("public static async Task<ExerciseOutcome<RenewResult>> TryRenewAsync(");
         code.Should().Contain("this ContractId<Agreement> contractId");
         code.Should().Contain("ILedgerWriter client");
         // Dynamic-controller fallback shape: the wrapper takes a SubmitterInfo
@@ -276,14 +276,14 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<ExecuteSwapResult>> ExecuteSwapAsync(");
-        code.Should().Contain("public static async Task<ExerciseOutcome<CancelResult>> CancelAsync(");
+        code.Should().Contain("public static async Task<ExerciseOutcome<ExecuteSwapResult>> TryExecuteSwapAsync(");
+        code.Should().Contain("public static async Task<ExerciseOutcome<CancelResult>> TryCancelAsync(");
         // Non-creating choice (returns Int64, not a ContractId) is routed to the
         // NonContractExtensions class — not skipped — so it does emit
         // an async wrapper, just via the ExercisedEvents projector path. The
         // create-bearing AgreementExtensions class still excludes it.
         code.Should().Contain("public static class AgreementNonContractExtensions");
-        code.Should().Contain("public static async Task<ExerciseOutcome<long>> GetCountAsync(");
+        code.Should().Contain("public static async Task<ExerciseOutcome<long>> TryGetCountAsync(");
     }
 
     [Fact]

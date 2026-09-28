@@ -184,7 +184,5 @@ public class TemplateCodeGenTests
 
         code.Should().Contain("public sealed partial record SimpleTemplate");
         code.Should().Contain(": ITemplate");
-        code.Should().Contain("public sealed record ContractId(string Value)");
-        code.Should().Contain("public sealed record Contract(ContractId Id, SimpleTemplate Data)");
     }
 }

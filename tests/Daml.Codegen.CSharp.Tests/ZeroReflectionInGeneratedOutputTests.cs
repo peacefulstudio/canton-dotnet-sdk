@@ -12,7 +12,7 @@ using Xunit;
 namespace Daml.Codegen.CSharp.Tests;
 
 /// <summary>
-/// Pins F5.1, the acceptance gate for the CHANGELOG/ADR 0029 promise (E4) that generated bindings
+/// Pins F5.1, the acceptance gate for the CHANGELOG promise (E4) that generated bindings
 /// reach a Daml-LF JSON decoder without reflection. Scans the three committed generated trees the
 /// spec names — the Quickstart sample, the conformance corpus and the snapshot expectations — for
 /// the ten obsolete <see cref="Daml.Runtime.Serialization.DamlLfJsonReader"/>/

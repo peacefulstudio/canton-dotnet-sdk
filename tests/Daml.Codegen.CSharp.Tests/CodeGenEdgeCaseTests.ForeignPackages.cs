@@ -340,7 +340,7 @@ public partial class CodeGenEdgeCaseTests
         var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
 
         iface.Should().NotBeNull();
-        iface!.Content.Should().Contain("ArchiveAsync(");
+        iface!.Content.Should().Contain("TryArchiveAsync(");
         iface.Content.Should().Contain("DamlRecord.Create()");
         iface.Content.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance,");
         iface.Content.Should().NotContain("ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Archive\"), DamlUnit.Instance)");

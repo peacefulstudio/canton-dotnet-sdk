@@ -8,7 +8,7 @@ data types, and interfaces.
 ## Installation
 
 ```bash
-dotnet add package Daml.Codegen.CSharp
+dotnet add package Daml.Codegen.CSharp --prerelease
 ```
 
 ## Usage

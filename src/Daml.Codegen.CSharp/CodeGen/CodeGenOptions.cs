@@ -64,11 +64,6 @@ public sealed class CodeGenOptions
     public string? RuntimePackageVersion { get; init; }
 
     /// <summary>
-    /// Gets or sets whether to generate a ContractIdentifiers helper class.
-    /// </summary>
-    public bool GenerateContractIdentifiers { get; init; } = true;
-
-    /// <summary>
     /// Gets or sets the 4th-segment emitter counter for the generated NuGet
     /// version. The Daml package supplies segments 1–3
     /// (<c>Major.Minor.Patch</c>); segment 4 is a

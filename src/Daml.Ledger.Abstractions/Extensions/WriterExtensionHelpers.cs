@@ -44,8 +44,8 @@ internal static class WriterExtensionHelpers
             error.Category, error.ErrorId, error.Metadata);
 
     internal static LedgerOperationException ToException<T>(this ExerciseOutcome<T>.InfraError error) =>
-        new($"Infrastructure error [{error.StatusCode}]: {error.Message}",
-            error.StatusCode, error.Category, error.SourceException);
+        new($"Infrastructure error [{error.Status}]: {error.Message}",
+            error.Status, error.Category, error.SourceException);
 
     internal static LedgerOperationException ToException<T>(this ExerciseOutcome<T>.CommittedUndecodable error) =>
         new($"Committed but undecodable [{error.UpdateId ?? "unknown"}]: {error.Message}", error.UpdateId, error.SourceException);

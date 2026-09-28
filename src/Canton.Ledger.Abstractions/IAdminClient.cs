@@ -1,0 +1,324 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Daml.Runtime.Data;
+
+namespace Canton.Ledger.Abstractions;
+
+/// <summary>
+/// Client interface for Canton participant administration.
+/// Provides methods for managing parties, users, and packages.
+/// </summary>
+/// <remarks>
+/// Every member rejects a <see langword="null"/> reference argument with an
+/// <see cref="ArgumentNullException"/> naming the parameter, thrown synchronously. An identifier is
+/// additionally rejected for being empty or whitespace only when its underlying request field is
+/// Required and the Ledger API gives the empty string no meaning; where the field is Optional and the
+/// empty string carries a documented meaning, it is accepted and that meaning applies.
+/// <para>
+/// A call the participant rejects surfaces as a
+/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/> classified the way
+/// <see cref="ParsedLedgerError"/> classifies every other ledger failure, whatever the transport:
+/// with the error's category, id and metadata when the participant attached a structured error,
+/// and with the transport status code otherwise. A caller cancellation surfaces as an
+/// <see cref="OperationCanceledException"/>.
+/// </para>
+/// </remarks>
+public interface IAdminClient
+{
+    /// <summary>
+    /// Gets the participant ID.
+    /// </summary>
+    Task<string> GetParticipantIdAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Allocates a new party on the ledger.
+    /// </summary>
+    /// <param name="partyIdHint">
+    /// A hint for the party ID, which the participant may modify or ignore entirely. An empty string
+    /// gives no hint and lets the participant choose the party ID.
+    /// </param>
+    /// <param name="synchronizerId">
+    /// Optional id of the synchronizer to allocate the party on. Required when the participant
+    /// is connected to more than one synchronizer — otherwise Canton rejects the request with
+    /// <c>PARTY_ALLOCATION_CANNOT_DETERMINE_SYNCHRONIZER</c>. When <see langword="null"/> the
+    /// participant falls back to its single connected synchronizer (the prior behaviour).
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The allocated party details.</returns>
+    Task<PartyDetails> AllocatePartyAsync(
+        string partyIdHint,
+        SynchronizerId? synchronizerId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets details for the specified parties. Only parties the participant knows come back, so a
+    /// read of several parties can answer with fewer details than it asked for, and an unknown
+    /// party is an absence rather than an error.
+    /// </summary>
+    /// <remarks>
+    /// The two transports charge differently for this read. The gRPC Ledger API takes the parties as
+    /// a repeated request field and serves them in one round trip; the JSON Ledger API serves
+    /// <c>GET /v2/parties/{party}</c> one party at a time, so an implementation over it costs one
+    /// round trip per party. The result is the same either way — only the traffic differs.
+    /// </remarks>
+    Task<IReadOnlyList<PartyDetails>> GetPartiesAsync(
+        IEnumerable<Party> parties,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all known parties.
+    /// Transparently follows server pagination and returns the complete result set.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<PartyDetails>> ListKnownPartiesAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new user on the participant.
+    /// </summary>
+    /// <param name="userId">The id of the user to create.</param>
+    /// <param name="primaryParty">
+    /// The party the user reads and acts as by default, or <see langword="null"/> for a user
+    /// without a primary party, such as a participant administrator.
+    /// </param>
+    /// <param name="rights">The rights to grant the user on creation.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<UserDetails> CreateUserAsync(
+        string userId,
+        Party? primaryParty,
+        IEnumerable<UserRight>? rights = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets details for a user.
+    /// </summary>
+    /// <param name="userId">
+    /// The user whose details to retrieve. An empty string retrieves the authenticated user.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// The user's details, or <see langword="null"/> when the user does not exist.
+    /// </returns>
+    Task<UserDetails?> GetUserAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Grants rights to a user.
+    /// </summary>
+    Task GrantUserRightsAsync(
+        string userId,
+        IEnumerable<UserRight> rights,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes rights from a user.
+    /// </summary>
+    Task RevokeUserRightsAsync(
+        string userId,
+        IEnumerable<UserRight> rights,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the rights granted to a user.
+    /// </summary>
+    /// <param name="userId">
+    /// The user whose rights to list. An empty string lists the rights of the authenticated user.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// The rights granted to the user, or <see langword="null"/> when the user does not exist —
+    /// mirroring <see cref="GetUserAsync"/>.
+    /// </returns>
+    Task<IReadOnlyList<UserRight>?> ListUserRightsAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all users.
+    /// Transparently follows server pagination and returns the complete result set.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<UserDetails>> ListUsersAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all Daml-LF packages known to the participant.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<PackageDetails>> ListKnownPackagesAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Downloads the archive of a single package.
+    /// </summary>
+    /// <param name="packageId">The ID of the requested package.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The <c>daml_lf</c> archive payload together with its hash and hash function.</returns>
+    Task<PackageArchive> GetPackageAsync(
+        string packageId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the packages vetted on the participant's connected synchronizers.
+    /// Transparently follows server pagination and returns the complete result set.
+    /// </summary>
+    /// <param name="packageNamePrefixes">
+    /// Optional package name prefixes to filter by; a vetted package matches when its name
+    /// starts with at least one prefix. Null or empty returns all vetted packages.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<VettedPackage>> ListVettedPackagesAsync(
+        IEnumerable<string>? packageNamePrefixes = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Uploads a DAR file to the participant. By default the ledger also vets all packages
+    /// in the DAR (the underlying request's <c>vetting_change</c> defaults to
+    /// <c>VETTING_CHANGE_VET_ALL_PACKAGES</c>).
+    /// </summary>
+    /// <param name="darFile">The DAR file contents.</param>
+    /// <param name="submissionId">Optional unique submission identifier; the ledger generates one when null.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UploadDarAsync(
+        byte[] darFile,
+        string? submissionId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates a DAR file without persisting or vetting anything. A DAR the participant finds
+    /// invalid surfaces as a <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>.
+    /// </summary>
+    /// <param name="darFile">The DAR file contents.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task ValidateDarAsync(
+        byte[] darFile,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Details about a party.
+/// </summary>
+public sealed record PartyDetails(
+    Party Party,
+    bool IsLocal);
+
+/// <summary>
+/// Details about a user. Rights are not part of the underlying <c>User</c> proto;
+/// read them back with <see cref="IAdminClient.ListUserRightsAsync"/>.
+/// </summary>
+/// <param name="UserId">The user's id.</param>
+/// <param name="PrimaryParty">
+/// The party the user reads and acts as by default, or <see langword="null"/> when the user has none.
+/// </param>
+public sealed record UserDetails(
+    string UserId,
+    Party? PrimaryParty);
+
+/// <summary>
+/// Details about a Daml-LF package known to the participant.
+/// </summary>
+public sealed record PackageDetails(
+    string PackageId,
+    string Name,
+    string Version,
+    long PackageSize,
+    DateTimeOffset KnownSince);
+
+/// <summary>
+/// The hash function used to compute a <see cref="PackageArchive.Hash"/>.
+/// </summary>
+public enum HashFunction
+{
+    /// <summary>SHA-256.</summary>
+    Sha256,
+
+    /// <summary>
+    /// A hash function reported by the participant that this SDK version does not recognise.
+    /// </summary>
+    Unrecognized,
+}
+
+/// <summary>
+/// A package archive downloaded from the participant: the <c>daml_lf</c> payload
+/// together with its hash and the hash function used to compute it.
+/// </summary>
+public sealed record PackageArchive(
+    ReadOnlyMemory<byte> Payload,
+    string Hash,
+    HashFunction HashFunction)
+{
+    /// <inheritdoc />
+    public bool Equals(PackageArchive? other) =>
+        ReferenceEquals(this, other)
+        || (other is not null
+            && Payload.Span.SequenceEqual(other.Payload.Span)
+            && Hash == other.Hash
+            && HashFunction == other.HashFunction);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hashCode = new HashCode();
+        hashCode.AddBytes(Payload.Span);
+        hashCode.Add(Hash);
+        hashCode.Add(HashFunction);
+        return hashCode.ToHashCode();
+    }
+}
+
+/// <summary>
+/// A package vetted on a participant and synchronizer.
+/// </summary>
+public sealed record VettedPackage(
+    string PackageId,
+    string PackageName,
+    string PackageVersion,
+    string ParticipantId,
+    SynchronizerId SynchronizerId);
+
+/// <summary>
+/// A right that can be granted to a user.
+/// </summary>
+public abstract record UserRight
+{
+    /// <summary>
+    /// Right to act as a party.
+    /// </summary>
+    public sealed record ActAs(Party Party) : UserRight;
+
+    /// <summary>
+    /// Right to read as a party.
+    /// </summary>
+    public sealed record ReadAs(Party Party) : UserRight;
+
+    /// <summary>
+    /// Right to administer the participant.
+    /// </summary>
+    public sealed record ParticipantAdmin : UserRight;
+
+    /// <summary>
+    /// Right to administer an identity provider.
+    /// </summary>
+    public sealed record IdentityProviderAdmin : UserRight;
+
+    /// <summary>
+    /// Right to read ledger data visible to any party on the participant.
+    /// Intended for tools that consume the whole ledger, such as PQS.
+    /// </summary>
+    public sealed record ReadAsAnyParty : UserRight;
+
+    /// <summary>
+    /// Right to prepare and execute submissions as a party, without any read entitlement.
+    /// Combine with <see cref="ReadAs"/> when reading is also required; <see cref="ActAs"/>
+    /// implicitly contains this right.
+    /// </summary>
+    public sealed record ExecuteAs(Party Party) : UserRight;
+
+    /// <summary>
+    /// Right to prepare and execute submissions as any party on the participant.
+    /// Intended for users that perform interactive submissions on behalf of many parties.
+    /// </summary>
+    public sealed record ExecuteAsAnyParty : UserRight;
+}

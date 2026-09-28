@@ -48,7 +48,7 @@ public sealed class AcsSnapshotEntryTests
     public void StreamError_is_distinguishable_via_pattern_match()
     {
         AcsSnapshotEntry<TestTemplate> entry =
-            new AcsSnapshotEntry<TestTemplate>.StreamError(14, "unavailable");
+            new AcsSnapshotEntry<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
 
         var matched = entry switch
         {
@@ -63,12 +63,12 @@ public sealed class AcsSnapshotEntryTests
     }
 
     [Fact]
-    public void StreamError_StatusCode_is_int_so_no_transport_dep_leaks()
+    public void StreamError_Status_is_a_closed_TransportStatus_union()
     {
-        var error = new AcsSnapshotEntry<TestTemplate>.StreamError(14, "unavailable");
+        var error = new AcsSnapshotEntry<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
 
-        error.StatusCode.Should().BeOfType(typeof(int));
-        error.StatusCode.Should().Be(14);
+        error.Status.Should().BeOfType<TransportStatus.Grpc>();
+        error.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         error.Message.Should().Be("unavailable");
     }
 
@@ -76,7 +76,7 @@ public sealed class AcsSnapshotEntryTests
     public void StreamError_carries_the_classification_the_transport_determined()
     {
         var error = new AcsSnapshotEntry<TestTemplate>.StreamError(
-            14, "unavailable", DamlErrorCategory.TransientServerFailure);
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure);
 
         error.Category.Should().Be(DamlErrorCategory.TransientServerFailure);
     }
@@ -84,7 +84,7 @@ public sealed class AcsSnapshotEntryTests
     [Fact]
     public void StreamError_leaves_the_classification_null_when_the_transport_determined_none()
     {
-        var error = new AcsSnapshotEntry<TestTemplate>.StreamError(14, "unavailable");
+        var error = new AcsSnapshotEntry<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
 
         error.Category.Should().BeNull();
     }
@@ -93,7 +93,7 @@ public sealed class AcsSnapshotEntryTests
     public void StreamError_carries_the_error_id_the_transport_parsed()
     {
         var error = new AcsSnapshotEntry<TestTemplate>.StreamError(
-            10,
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted),
             "the stream authorization is stale",
             DamlErrorCategory.ContentionOnSharedResources,
             "STALE_STREAM_AUTHORIZATION");
@@ -107,7 +107,7 @@ public sealed class AcsSnapshotEntryTests
     [Fact]
     public void StreamError_leaves_the_error_id_null_when_no_structured_error_was_attached()
     {
-        var error = new AcsSnapshotEntry<TestTemplate>.StreamError(14, "unavailable");
+        var error = new AcsSnapshotEntry<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
 
         error.ErrorId.Should().BeNull(
             "a transport that decoded no structured error has to say so, rather than invent a sentinel "
@@ -117,8 +117,8 @@ public sealed class AcsSnapshotEntryTests
     [Fact]
     public void StreamError_with_same_payload_should_be_value_equal()
     {
-        var a = new AcsSnapshotEntry<TestTemplate>.StreamError(14, "unavailable");
-        var b = new AcsSnapshotEntry<TestTemplate>.StreamError(14, "unavailable");
+        var a = new AcsSnapshotEntry<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
+        var b = new AcsSnapshotEntry<TestTemplate>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
         a.Should().Be(b);
     }
 

@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -201,7 +202,7 @@ public abstract record InterfaceStreamEvent<TInterface, TView>
     /// <param name="WitnessParties">Parties that witnessed the exercise event.</param>
     public sealed record Exercised(
         ContractId<TInterface> ContractId,
-        string ChoiceName,
+        ChoiceName ChoiceName,
         DamlValue ChoiceArgument,
         DamlValue ExerciseResult,
         bool Consuming,
@@ -298,9 +299,8 @@ public abstract record InterfaceStreamEvent<TInterface, TView>
     /// mid-snapshot transport fault in-band as their own terminal
     /// <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}.StreamError"/> variant instead.
     /// </remarks>
-    /// <param name="StatusCode">Transport status code from the failed call. For gRPC streams
-    /// this is <c>(int)Grpc.Core.StatusCode</c>; consumers that want the typed enum cast back.
-    /// Held as <c>int</c> so this type stays free of any transport-library dep.</param>
+    /// <param name="Status">What the transport reported for the failed call: a gRPC status, an
+    /// HTTP status, no response at all, or a response whose body could not be decoded.</param>
     /// <param name="Message">Status detail / message from the participant or transport.</param>
     /// <param name="Category">Classification of the fault, whether the transport read it off
     /// the participant's structured Canton error or determined it without one; <c>null</c>
@@ -312,7 +312,7 @@ public abstract record InterfaceStreamEvent<TInterface, TView>
     /// the unstructured fault. <c>null</c> when the fault carried no structured error to decode;
     /// a transport that parsed none leaves it <c>null</c> rather than inventing a sentinel. Read
     /// it as an identity rather than parsing it: <see cref="Category"/> and
-    /// <see cref="StatusCode"/> are both too coarse to separate two faults that need opposite
+    /// <see cref="Status"/> are both too coarse to separate two faults that need opposite
     /// handling, and <see cref="Message"/> is participant prose rather than an API.</param>
     /// <param name="SourceException">Transport exception that caused the stream failure, when
     /// available. Carries <see cref="JsonIgnoreAttribute"/> and is excluded from the
@@ -325,7 +325,7 @@ public abstract record InterfaceStreamEvent<TInterface, TView>
     /// reconstructing the original exception, which the CLR type offers no JSON-constructible
     /// shape for in general anyway.</param>
     public sealed record StreamError(
-        int StatusCode,
+        TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
         string? ErrorId = null,

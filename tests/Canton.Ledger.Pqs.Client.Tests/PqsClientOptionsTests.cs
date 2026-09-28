@@ -1,0 +1,49 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using System.ComponentModel.DataAnnotations;
+using AwesomeAssertions;
+using Xunit;
+
+namespace Canton.Ledger.Pqs.Client.Tests;
+
+public class PqsClientOptionsTests
+{
+    [Fact]
+    public void PqsClientOptions_is_sealed()
+    {
+        typeof(PqsClientOptions).IsSealed.Should().BeTrue(
+            "an options POCO bound by the options pattern has no intended subtype");
+    }
+
+    [Fact]
+    public void ConnectionString_is_required_via_data_annotations()
+    {
+        var options = new PqsClientOptions { ConnectionString = null! };
+        var results = new List<ValidationResult>();
+
+        var isValid = Validator.TryValidateObject(
+            options,
+            new ValidationContext(options),
+            results,
+            validateAllProperties: true);
+
+        isValid.Should().BeFalse();
+        results.Should().Contain(r => r.MemberNames.Contains(nameof(PqsClientOptions.ConnectionString)));
+    }
+
+    [Fact]
+    public void ConnectionString_rejects_empty_string_via_data_annotations()
+    {
+        var options = new PqsClientOptions { ConnectionString = "" };
+        var results = new List<ValidationResult>();
+
+        var isValid = Validator.TryValidateObject(
+            options,
+            new ValidationContext(options),
+            results,
+            validateAllProperties: true);
+
+        isValid.Should().BeFalse();
+    }
+}

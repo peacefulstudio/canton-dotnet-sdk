@@ -1,0 +1,78 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Canton.Ledger.Abstractions;
+using Daml.Runtime.Outcomes;
+using Google.Protobuf;
+using Grpc.Core;
+using GrpcStatus = Google.Rpc.Status;
+
+namespace Canton.Ledger.Grpc.Client;
+
+internal static class DamlErrorParser
+{
+    private const string GrpcStatusDetailsBinKey = "grpc-status-details-bin";
+    private const string CategoryMetadataKey = "category";
+
+    private static readonly IReadOnlyDictionary<StatusCode, DamlErrorCategory> RedactedSecurityCategories =
+        new Dictionary<StatusCode, DamlErrorCategory>
+        {
+            [StatusCode.Unauthenticated] = DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials,
+            [StatusCode.PermissionDenied] = DamlErrorCategory.AuthorizationChecksFailed,
+        };
+
+    internal static ParsedLedgerError Parse(RpcException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var transportStatus = new TransportStatus.Grpc((GrpcStatusCode)exception.StatusCode);
+
+        var status = TryReadStatus(exception.Trailers);
+        if (status is null)
+        {
+            return new ParsedLedgerError.Unstructured(exception.Status.Detail, transportStatus);
+        }
+
+        var errorInfo = GrpcErrorDetails.FindErrorInfo(status);
+        if (errorInfo is null)
+        {
+            return WithoutErrorInfo(exception.StatusCode, status.Message, transportStatus);
+        }
+
+        var metadata = GrpcErrorDetails.ToMetadata(errorInfo);
+
+        return new ParsedLedgerError.Structured(
+            ParsedLedgerError.MapCategory(metadata.TryGetValue(CategoryMetadataKey, out var raw) ? raw : null),
+            ErrorId: errorInfo.Reason ?? string.Empty,
+            Message: status.Message ?? string.Empty,
+            Metadata: metadata,
+            Status: transportStatus);
+    }
+
+    private static ParsedLedgerError WithoutErrorInfo(
+        StatusCode statusCode, string? message, TransportStatus transportStatus) =>
+        new ParsedLedgerError.Unstructured(
+            message,
+            transportStatus,
+            RedactedSecurityCategories.TryGetValue(statusCode, out var category) ? category : null);
+
+    private static GrpcStatus? TryReadStatus(Metadata? trailers)
+    {
+        if (trailers is null)
+            return null;
+
+        var entry = trailers.FirstOrDefault(t =>
+            string.Equals(t.Key, GrpcStatusDetailsBinKey, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || !entry.IsBinary)
+            return null;
+
+        try
+        {
+            return GrpcStatus.Parser.ParseFrom(entry.ValueBytes);
+        }
+        catch (InvalidProtocolBufferException)
+        {
+            return null;
+        }
+    }
+}

@@ -67,7 +67,6 @@ internal static class RuntimeTypeNames
     public const string NonEmpty = nameof(Daml.Runtime.Stdlib.NonEmpty<object>);
     public const string RelTime = nameof(Daml.Runtime.Stdlib.RelTime);
     public const string DayOfWeek = nameof(Daml.Runtime.Stdlib.DayOfWeek);
-    public const string Unit = nameof(Daml.Runtime.Stdlib.Unit);
     public const string GenericStub = nameof(Daml.Runtime.Stdlib.GenericStub);
     public const string Optional = nameof(Daml.Runtime.Stdlib.Optional<object>);
 
@@ -79,7 +78,6 @@ internal static class RuntimeTypeNames
     public const string Contract = "Contract";
     public const string IContract = "IContract";
     public const string Choice = "Choice";
-    public const string IExercises = "IExercises";
     public const string IImplements = "IImplements";
 
     public const string ILedgerClient = nameof(Daml.Ledger.Abstractions.ILedgerClient);

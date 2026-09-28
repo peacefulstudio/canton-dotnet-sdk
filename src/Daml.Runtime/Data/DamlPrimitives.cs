@@ -158,7 +158,8 @@ public sealed record DamlNumeric : DamlValue
     }
 
     /// <summary>
-    /// Parses the exact canonical wire shape (<c>-?digits(.digits)?</c>, no exponent)
+    /// Parses the exact canonical wire shape (<c>-?digits(.digits?)?</c>, no exponent, where the
+    /// bare trailing dot is the participant's <c>Numeric 0</c> form, e.g. <c>42.</c>)
     /// into a <see cref="DamlNumeric"/> with zero precision loss, rejecting magnitudes
     /// or scales beyond the Daml-LF Numeric bound (38 significant digits, scale 0-37).
     /// </summary>
@@ -183,7 +184,7 @@ public sealed record DamlNumeric : DamlValue
         var dotIndex = text.IndexOf('.', digitsStart);
         var integerPart = dotIndex < 0 ? text[digitsStart..] : text[digitsStart..dotIndex];
         var fractionalPart = dotIndex < 0 ? string.Empty : text[(dotIndex + 1)..];
-        if (integerPart.Length == 0 || (dotIndex >= 0 && fractionalPart.Length == 0))
+        if (integerPart.Length == 0)
         {
             return false;
         }
@@ -292,11 +293,49 @@ public sealed record DamlBool(bool Value) : DamlValue
 /// <summary>
 /// Represents a Daml Unit value (empty tuple).
 /// </summary>
+/// <remarks>
+/// Through <see cref="System.Text.Json"/> it travels as an empty object, <c>{}</c>, and reads back
+/// as <see cref="Instance"/>, so an <c>ExerciseOutcome&lt;DamlUnit&gt;.One</c> round-trips on bare
+/// <see cref="JsonSerializerOptions"/>. The read skips any member of the object it is given rather
+/// than routing through the reflection contract, so neither
+/// <see cref="JsonSerializerOptions.UnmappedMemberHandling"/> nor
+/// <see cref="JsonSerializerOptions.ReferenceHandler"/> reaches it.
+/// </remarks>
+[JsonConverter(typeof(DamlUnitJsonConverter))]
 public sealed record DamlUnit : DamlValue
 {
     /// <summary>The single Unit value; Unit carries no data, so one shared instance suffices.</summary>
     public static readonly DamlUnit Instance = new();
     private DamlUnit() { }
+}
+
+/// <summary>
+/// Supplies the <see cref="System.Text.Json"/> converter for <see cref="DamlUnit"/>. Without it, the
+/// private constructor leaves the reflection-based serializer nothing to call, and a read of
+/// <c>{}</c> throws <see cref="NotSupportedException"/> instead of yielding <see cref="DamlUnit.Instance"/>.
+/// </summary>
+internal sealed class DamlUnitJsonConverter : JsonConverter<DamlUnit>
+{
+    public override DamlUnit Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException($"Expected a JSON object for {nameof(DamlUnit)}, got {reader.TokenType}.");
+        }
+
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            reader.Skip();
+        }
+
+        return DamlUnit.Instance;
+    }
+
+    public override void Write(Utf8JsonWriter writer, DamlUnit value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteEndObject();
+    }
 }
 
 /// <summary>
@@ -410,7 +449,7 @@ public sealed record DamlTimestamp(DateTimeOffset Value) : DamlValue
 /// Represents a first-class Daml Party identifier.
 /// Conversions to and from <see cref="string"/> are both explicit, so a party can
 /// never be silently mistaken for an arbitrary string (or vice versa); use
-/// <see cref="Id"/> or <see cref="ToString"/> for logging and interpolation.
+/// <see cref="Value"/> or <see cref="ToString"/> for logging and interpolation.
 /// </summary>
 [JsonConverter(typeof(PartyJsonConverter))]
 public readonly record struct Party
@@ -421,8 +460,8 @@ public readonly record struct Party
     /// The full party identifier string (e.g. "Alice::1220abcd..."); throws
     /// <see cref="InvalidOperationException"/> for a default-constructed Party.
     /// </summary>
-    public string Id =>
-        _id ?? throw new InvalidOperationException("Cannot access Id of a default (uninitialized) Party.");
+    public string Value =>
+        _id ?? throw new InvalidOperationException("Cannot access Value of a default (uninitialized) Party.");
 
     /// <summary>
     /// Creates a Party from its identifier string; rejects null or whitespace ids.
@@ -466,7 +505,7 @@ internal sealed class PartyJsonConverter : OpaqueStringIdJsonConverter<Party>
     protected override Party Parse(string id) => new(id);
 
     /// <inheritdoc/>
-    protected override string Format(Party value) => value.Id;
+    protected override string Format(Party value) => value.Value;
 }
 
 /// <summary>

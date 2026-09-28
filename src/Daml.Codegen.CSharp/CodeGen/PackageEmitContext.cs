@@ -649,6 +649,22 @@ internal sealed partial class PackageEmitContext
                 foreach (var arg in args)
                     CollectDecoderReceiverNames(arg, moduleName, moduleEnumNames, choiceArgToTemplate, names);
                 break;
+            case DamlOptionalType { Value: var optionalChild }:
+                CollectDecoderReceiverNames(optionalChild, moduleName, moduleEnumNames, choiceArgToTemplate, names);
+                break;
+            case DamlListType { Element: var listChild }:
+                CollectDecoderReceiverNames(listChild, moduleName, moduleEnumNames, choiceArgToTemplate, names);
+                break;
+            case DamlTextMapType { Value: var textMapChild }:
+                CollectDecoderReceiverNames(textMapChild, moduleName, moduleEnumNames, choiceArgToTemplate, names);
+                break;
+            case DamlContractIdType { Payload: var contractIdChild }:
+                CollectDecoderReceiverNames(contractIdChild, moduleName, moduleEnumNames, choiceArgToTemplate, names);
+                break;
+            case DamlGenMapType { Key: var genMapKey, Value: var genMapValue }:
+                CollectDecoderReceiverNames(genMapKey, moduleName, moduleEnumNames, choiceArgToTemplate, names);
+                CollectDecoderReceiverNames(genMapValue, moduleName, moduleEnumNames, choiceArgToTemplate, names);
+                break;
             case DamlWrappedOptional { Argument: var arg }:
                 CollectDecoderReceiverNames(arg, moduleName, moduleEnumNames, choiceArgToTemplate, names);
                 break;

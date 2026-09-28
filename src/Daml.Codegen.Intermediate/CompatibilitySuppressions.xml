@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:Daml.Codegen.Intermediate.Model.DamlWrappedOptional</Target>
+    <Left>lib/net10.0/Daml.Codegen.Intermediate.dll</Left>
+    <Right>lib/net10.0/Daml.Codegen.Intermediate.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:Daml.Codegen.Intermediate.Model.OptionalEncoding</Target>
+    <Left>lib/net10.0/Daml.Codegen.Intermediate.dll</Left>
+    <Right>lib/net10.0/Daml.Codegen.Intermediate.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Daml.Codegen.Intermediate.Model.DamlType.get_IsOptional</Target>
+    <Left>lib/net10.0/Daml.Codegen.Intermediate.dll</Left>
+    <Right>lib/net10.0/Daml.Codegen.Intermediate.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0005</DiagnosticId>
+    <Target>M:Daml.Codegen.Intermediate.Model.DamlType.Accept``1(Daml.Codegen.Intermediate.Model.IDamlTypeVisitor{``0})</Target>
+    <Left>lib/net10.0/Daml.Codegen.Intermediate.dll</Left>
+    <Right>lib/net10.0/Daml.Codegen.Intermediate.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+</Suppressions>

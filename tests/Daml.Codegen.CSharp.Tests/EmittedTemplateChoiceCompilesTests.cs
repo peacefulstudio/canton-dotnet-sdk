@@ -372,8 +372,8 @@ public class EmittedTemplateChoiceCompilesTests
         var files = CreateGenerator().Generate(dar);
 
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
-        content.Should().Contain("this Agreement.Contract contract,");
-        content.Should().Contain("return contract.Id.RenewAsync(");
+        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        content.Should().Contain("return contract.Id.TryRenewAsync(");
 
         var consumerHoldingFromCreatedEventResult = GeneratedFile.Text(
             "ReachabilityProbe.cs",
@@ -383,9 +383,9 @@ public class EmittedTemplateChoiceCompilesTests
                 internal static class ReachabilityProbe
                 {
                     internal static System.Threading.Tasks.Task Use(
-                        Agreement.Contract contract,
+                        global::Daml.Runtime.Contracts.Contract<Agreement> contract,
                         global::Daml.Ledger.Abstractions.ILedgerClient client) =>
-                        contract.RenewAsync(client);
+                        contract.TryRenewAsync(client);
                 }
             }
             """);
@@ -393,7 +393,7 @@ public class EmittedTemplateChoiceCompilesTests
         var diagnostics = CompileEmittedFiles([.. files, consumerHoldingFromCreatedEventResult]);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(
-            "the payload-bearing overload must be reachable from a nested Agreement.Contract (the type FromCreatedEvent returns), but got: {0}",
+            "the payload-bearing overload must be reachable from the runtime Contract<Agreement> (the type FromCreatedEvent returns), but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 
@@ -462,9 +462,9 @@ public class EmittedTemplateChoiceCompilesTests
         var files = CreateGenerator().Generate(dar);
 
         var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
-        content.Should().Contain("this Agreement.Contract contract,");
-        content.Should().Contain("return contract.Id.SettleAsync(");
-        var idxArg = content.IndexOf("return contract.Id.SettleAsync(", StringComparison.Ordinal);
+        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        content.Should().Contain("return contract.Id.TrySettleAsync(");
+        var idxArg = content.IndexOf("return contract.Id.TrySettleAsync(", StringComparison.Ordinal);
         var delegateBody = content[idxArg..];
         var idxArgument = delegateBody.IndexOf("argument,", StringComparison.Ordinal);
         var idxBuyer = delegateBody.IndexOf("contract.Data.Buyer,", StringComparison.Ordinal);
@@ -481,9 +481,9 @@ public class EmittedTemplateChoiceCompilesTests
                 internal static class ReachabilityProbe
                 {
                     internal static System.Threading.Tasks.Task Use(
-                        Agreement.Contract contract,
+                        global::Daml.Runtime.Contracts.Contract<Agreement> contract,
                         global::Daml.Ledger.Abstractions.ILedgerClient client) =>
-                        contract.SettleAsync(client, default!);
+                        contract.TrySettleAsync(client, default!);
                 }
             }
             """);
@@ -491,7 +491,7 @@ public class EmittedTemplateChoiceCompilesTests
         var diagnostics = CompileEmittedFiles([.. files, consumerHoldingFromCreatedEventResult]);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(
-            "the nested-Contract overload forwarding a record argument and multiple controllers should compile, but got: {0}",
+            "the contract overload forwarding a record argument and multiple controllers should compile, but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 
@@ -500,7 +500,7 @@ public class EmittedTemplateChoiceCompilesTests
     {
         // End-to-end: template with payload-derived signatories, controllers,
         // AND observers. The codegen should emit:
-        //   - SubmissionExtensions.CreateAsync (payload-only)
+        //   - SubmissionExtensions.TryCreateAsync (payload-only)
         //   - SubmissionExtensions.Observers(payload) doc helper
         //   - <Template>Extensions.<Choice>Async with Party params for both
         //     controllers (actAs) and non-controller observers (readAs)

@@ -173,7 +173,7 @@ public partial class CodeGenEdgeCaseTests
     // -------------------------------------------------------------------
     // Interface choice extension method tests — for every Daml interface
     // choice, codegen now emits a typed `<Choice>Async`-style helper on
-    // `ContractId<I>` so consumers can do `await cid.TransferAsync(arg)`
+    // `ContractId<I>` so consumers can do `await cid.TryTransferAsync(arg)`
     // without naming the concrete template. The generated extension class
     // sits beside the interface declaration in the same file.
     // -------------------------------------------------------------------
@@ -253,7 +253,7 @@ public partial class CodeGenEdgeCaseTests
         code.Should().Contain("public static class IHoldingExtensions");
 
         code.Should().Contain(
-            "public static async Task<ExerciseOutcome<Transfer_Result>> TransferAsync(",
+            "public static async Task<ExerciseOutcome<Transfer_Result>> TryTransferAsync(",
             "a record-argument choice returns ExerciseOutcome<Transfer_Result> — the choice's own return type, decoded through the choice descriptor's ResultDecoder rather than the raw ExerciseOutcome<TransactionResult>");
         code.Should().Contain("this ContractId<IHolding> contractId,");
         code.Should().Contain("ILedgerWriter client,");
@@ -267,7 +267,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Unit-argument choice: no `argument` parameter, DamlUnit.Instance is passed
         code.Should().Contain(
-            "public static async Task<ExerciseOutcome<Unit>> LockAsync(\n        this ContractId<IHolding> contractId,\n        ILedgerWriter client,\n        SubmitterInfo submitter,",
+            "public static async Task<ExerciseOutcome<DamlUnit>> TryLockAsync(\n        this ContractId<IHolding> contractId,\n        ILedgerWriter client,\n        SubmitterInfo submitter,",
             "a single-line signature assertion cannot tell one emitted parameter list from another, so it is pinned verbatim — a failure here means the exerciser signature changed or the emitter's indentation did, not that the assertion is wrong");
         code.Should().Contain("ExerciseCommand.For<IHolding>(contractId, new ChoiceName(\"Lock\"), DamlUnit.Instance)");
     }

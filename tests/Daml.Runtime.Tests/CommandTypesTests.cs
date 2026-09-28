@@ -193,36 +193,6 @@ public class CommandTypesTests
 
     private static DamlTypeDescriptor DamlTypeIdOf<T>() where T : IDamlType => T.DamlTypeId;
 
-    private sealed record ArchivableContract(ContractId<TestTemplate> ContractId) : IExercises<TestTemplate>;
-
-    [Fact]
-    public void ExerciseArchive_encodes_the_argument_as_an_empty_record_not_unit()
-    {
-        IExercises<TestTemplate> exercisable = new ArchivableContract(new ContractId<TestTemplate>("contract-id-123"));
-
-        var command = exercisable.ExerciseArchive();
-
-        command.Choice.Value.Should().Be("Archive");
-        command.ChoiceArgument.Should().BeOfType<DamlRecord>()
-            .Which.Fields.Should().BeEmpty();
-        command.ChoiceArgument.Should().NotBeOfType<DamlUnit>();
-    }
-
-    private sealed record ArchivableInterfaceContract(ContractId<TestInterfaceMarker> ContractId) : IExercises<TestInterfaceMarker>;
-
-    [Fact]
-    public void ExerciseArchive_works_for_an_interface_marker_owner()
-    {
-        IExercises<TestInterfaceMarker> exercisable = new ArchivableInterfaceContract(new ContractId<TestInterfaceMarker>("contract-789"));
-
-        var command = exercisable.ExerciseArchive();
-
-        command.TemplateId.Should().Be(DamlTypeIdOf<TestInterfaceMarker>().Identifier);
-        command.Choice.Value.Should().Be("Archive");
-        command.ChoiceArgument.Should().BeOfType<DamlRecord>()
-            .Which.Fields.Should().BeEmpty();
-    }
-
     [Fact]
     public void ExerciseByKeyCommand_should_have_correct_command_type()
     {

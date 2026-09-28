@@ -82,7 +82,7 @@ public class ChoiceEmitterNonContractExerciserTests
         var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
 
         output.Should().Contain("public static class VaultNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<decimal>> QuoteAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<decimal>> TryQuoteAsync(");
         output.Should().Contain("this ContractId<Vault> contractId,");
     }
 
@@ -96,11 +96,11 @@ public class ChoiceEmitterNonContractExerciserTests
     }
 
     [Fact]
-    public void ChoiceEmitterNonContractExerciser_unit_returning_choice_uses_the_stdlib_unit_decoder_path()
+    public void ChoiceEmitterNonContractExerciser_unit_returning_choice_returns_DamlUnit()
     {
         var output = Emit(Template(Choice("Touch", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        output.Should().Contain("public static async Task<ExerciseOutcome<Unit>> TouchAsync(");
+        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTouchAsync(");
         output.Should().Contain("ProjectTouchResult");
     }
 

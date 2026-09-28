@@ -13,9 +13,7 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// <see cref="Daml.Runtime.Contracts.ITemplate"/> facet (plus the optional
 /// <c>IUpgradeable</c> facet, plus one <c>IImplements</c> per implemented
 /// interface, plus <c>IHasKey</c> and its static <c>Key</c> witness when the
-/// template declares a contract key), the static template metadata, the nested <c>ContractId</c> /
-/// <c>Contract</c> records — the latter carrying the contract key read off the
-/// created event when the template declares one —
+/// template declares a contract key), the static template metadata,
 /// and the namespace-level choice / submission extension surface. The
 /// field-bearing serialization surface (constructor parameters, <c>ToRecord</c> /
 /// <c>FromRecord</c>) is delegated to the shared
@@ -41,8 +39,6 @@ internal sealed partial class TemplateEmitter(
     CodeGenOptions options,
     ILogger? logger = null)
 {
-    private const string NestedContractIdTypeName = "ContractId";
-    private const string NestedContractTypeName = "Contract";
     private const string KeyMemberName = "Key";
     private const string ChoicesMemberName = "Choices";
     private const string KeyEncoderMemberName = "KeyEncoder";
@@ -57,8 +53,7 @@ internal sealed partial class TemplateEmitter(
 
     /// <summary>
     /// Writes the template record, its static metadata,
-    /// the serialization round-trip, the nested <c>ContractId</c> / <c>Contract</c>
-    /// records, and the sibling choice / submission extension classes for
+    /// the serialization round-trip, and the sibling choice / submission extension classes for
     /// <paramref name="template"/> into <paramref name="indent"/>.
     /// </summary>
     internal void WriteTemplateType(
@@ -78,14 +73,6 @@ internal sealed partial class TemplateEmitter(
         }
 
         var className = EmitterHelpers.SanitizeIdentifier(template.Name);
-        if (className is NestedContractIdTypeName or NestedContractTypeName)
-        {
-            throw new CodegenException(
-                $"Daml template {module.Name}:{template.Name} maps to the C# type '{className}', which is also the name of a record this emitter nests inside it. "
-                + "A nested type may not share the name of its enclosing type (CS0542), so the generated code would not compile. "
-                + "Rename the template in the Daml model.");
-        }
-
         indent.CurrentTypeName = className;
 
         var nestedArgTypeNames = choiceEmitter.GetNestedChoiceArgumentTypeNames(template.Choices);
@@ -158,9 +145,6 @@ internal sealed partial class TemplateEmitter(
             nestedArgTypeNames: nestedArgTypeNames);
 
         choiceEmitter.WriteChoiceByKeyCommandBuilders(indent, template, className, dataTypes);
-
-        WriteContractIdClass(indent, className);
-        WriteContractClass(indent, className, template.Key, nestedArgTypeNames);
 
         indent.Dedent();
         indent.AppendLine("}");
@@ -373,90 +357,11 @@ internal sealed partial class TemplateEmitter(
         indent.AppendLine();
     }
 
-    private void WriteContractIdClass(IndentWriter indent, string className)
-    {
-        indent.Require(RuntimeNamespaces.Commands);
-        indent.Require(RuntimeNamespaces.Contracts);
-        if (options.GenerateXmlDocs)
-            indent.AppendLine($"/// <summary>Contract ID for {className}.</summary>");
-        indent.AppendLine("[global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.ContractIdJsonConverterFactory))]");
-        indent.AppendLine($"public sealed record {NestedContractIdTypeName}(string Value) : {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}>(Value), {context.Qualifier.Qualify(RuntimeTypeNames.IExercises)}<{className}>");
-        indent.AppendLine("{");
-        indent.Indent();
-
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}> {context.Qualifier.Qualify(RuntimeTypeNames.IExercises)}<{className}>.ContractId => this;");
-
-        indent.Dedent();
-        indent.AppendLine("}");
-        indent.AppendLine();
-    }
-
-    private void WriteContractClass(
-        IndentWriter indent,
-        string className,
-        DamlType? keyType,
-        IReadOnlySet<string>? nestedArgTypeNames)
-    {
-        indent.Require(RuntimeNamespaces.Contracts);
-        if (keyType is not null)
-        {
-            StdlibPackages.RequireForFieldType(resolver, context.Package, indent, keyType);
-        }
-
-        var contractKeyType = keyType is null
-            ? null
-            : $"{context.Qualifier.Qualify(RuntimeTypeNames.ContractKey)}<{PackageQualifiedMapper.MapType(keyType)}>";
-
-        if (options.GenerateXmlDocs)
-            indent.AppendLine($"/// <summary>Active contract for {className}.</summary>");
-        indent.AppendLine($"public sealed record {NestedContractTypeName}({NestedContractIdTypeName} Id, {className} Data) : {context.Qualifier.Qualify(RuntimeTypeNames.IContract)}<{NestedContractIdTypeName}, {className}>");
-        indent.AppendLine("{");
-        indent.Indent();
-
-        if (contractKeyType is not null)
-        {
-            if (options.GenerateXmlDocs)
-                indent.AppendLine("/// <summary>The contract key read off the created event, decoded and paired with the ledger's hash of it.</summary>");
-            indent.AppendLine($"public required {contractKeyType} Key {{ get; init; }}");
-            indent.AppendLine();
-        }
-
-        if (options.GenerateXmlDocs)
-            indent.AppendLine($"/// <summary>Creates a {NestedContractTypeName} from a CreatedEvent.</summary>");
-        indent.AppendLine($"public static {NestedContractTypeName} FromCreatedEvent({context.Qualifier.Qualify(RuntimeTypeNames.CreatedEvent)} @event) =>");
-        indent.Indent();
-        if (keyType is null)
-        {
-            indent.AppendLine($"new(new {NestedContractIdTypeName}(@event.ContractId), {context.QualifyInModule(className)}.FromRecord(@event.CreateArguments));");
-        }
-        else
-        {
-            indent.AppendLine("new(");
-            indent.Indent();
-            indent.AppendLine($"new {NestedContractIdTypeName}(@event.ContractId),");
-            indent.AppendLine($"{context.QualifyInModule(className)}.FromRecord(@event.CreateArguments))");
-            indent.Dedent();
-            indent.AppendLine("{");
-            indent.Indent();
-            indent.AppendLine($"Key = @event.ContractKey is {{ }} contractKey");
-            indent.Indent();
-            indent.AppendLine($"? new {contractKeyType}({PackageQualifiedMapper.FromValue(keyType, "contractKey.Value", nestedArgTypeNames: nestedArgTypeNames)}, contractKey.KeyHash)");
-            indent.AppendLine($": throw new global::System.InvalidOperationException(\"The created event for contract '\" + @event.ContractId + \"' of keyed template {className} carried no contract key, so the contract key cannot be populated.\"),");
-            indent.Dedent();
-            indent.Dedent();
-            indent.AppendLine("};");
-        }
-        indent.Dedent();
-
-        indent.Dedent();
-        indent.AppendLine("}");
-    }
-
     /// <summary>
-    /// Maps the contract-key slot and its decoder. The active contract nests <c>Contract</c>
-    /// and <c>ContractId</c> records and declares <c>Id</c> / <c>Data</c> / <c>Key</c>
-    /// members, any of which binds ahead of a package type the key names, so every in-package
-    /// name in the key slot is resolved <c>global::</c>-qualified.
+    /// Maps the contract-key slot and its decoder. The template record nests one argument record
+    /// per choice and declares <c>Key</c> / <c>Choices</c> members, any of which binds ahead of a
+    /// package type the key names, so every in-package name in the key slot is resolved
+    /// <c>global::</c>-qualified.
     /// </summary>
     private DamlTypeMapper PackageQualifiedMapper =>
         _packageQualifiedMapper ??= new DamlTypeMapper(context, new PackageQualifiedResolver(resolver));

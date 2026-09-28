@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -17,7 +18,7 @@ namespace Daml.Runtime.Tests;
 /// Pins the <see cref="System.Text.Json"/> contract for
 /// <see cref="InterfaceStreamEvent{TInterface, TView}"/>: a <c>"$case"</c>-discriminated object
 /// that reads back as the arm that wrote it. The contract is a CLR round trip, not a Daml-LF wire
-/// decode — see ADR 0028 — so what the tests assert is that a value survives the trip.
+/// decode, so what the tests assert is that a value survives the trip.
 /// <see cref="InterfaceStreamEvent{TInterface, TView}"/>'s own converter is zero-config, but an
 /// arm carrying a <see cref="DamlValue"/> field (<c>Exercised</c>'s choice argument and result,
 /// and a keyed <c>Created</c>/<c>Assigned</c>'s <see cref="ContractKey.Value"/>) round-trips only
@@ -76,7 +77,7 @@ public class InterfaceStreamEventJsonTests
     public void Exercised_reads_its_own_write_back()
     {
         InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.Exercised(
-            Id, "Accept", new DamlText("go"), new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
+            Id, new ChoiceName("Accept"), new DamlText("go"), new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
 
         var written = JsonSerializer.Serialize(value, Options);
 
@@ -91,7 +92,7 @@ public class InterfaceStreamEventJsonTests
     public void Exercised_writes_the_choice_argument_and_result_at_their_canonical_DamlLF_shape()
     {
         InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.Exercised(
-            Id, "Accept", DamlUnit.Instance, new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
+            Id, new ChoiceName("Accept"), DamlUnit.Instance, new DamlText("done"), true, LedgerOffset.At(3), Synchronizer, Witnesses);
 
         var json = JsonSerializer.Serialize(value, Options);
 
@@ -148,7 +149,7 @@ public class InterfaceStreamEventJsonTests
     public void StreamError_reads_its_own_write_back_with_full_fields()
     {
         InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.StreamError(
-            10, "the stream authorization is stale", DamlErrorCategory.ContentionOnSharedResources, "STALE_STREAM_AUTHORIZATION");
+            new TransportStatus.Grpc(GrpcStatusCode.Aborted), "the stream authorization is stale", DamlErrorCategory.ContentionOnSharedResources, "STALE_STREAM_AUTHORIZATION");
 
         var written = JsonSerializer.Serialize(value);
 
@@ -158,7 +159,7 @@ public class InterfaceStreamEventJsonTests
     [Fact]
     public void StreamError_reads_its_own_write_back_with_only_the_required_fields()
     {
-        InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.StreamError(14, "unavailable");
+        InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable");
 
         var written = JsonSerializer.Serialize(value);
 
@@ -169,13 +170,13 @@ public class InterfaceStreamEventJsonTests
     public void StreamError_writes_and_reads_back_when_SourceException_is_set()
     {
         InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.StreamError(
-            14, "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE", new InvalidOperationException("transport reset"));
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE", new InvalidOperationException("transport reset"));
 
         var written = JsonSerializer.Serialize(value);
         var read = JsonSerializer.Deserialize<InterfaceStreamEvent<TestInterface, TestView>>(written);
 
         read.Should().Be(
-            new InterfaceStreamEvent<TestInterface, TestView>.StreamError(14, "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE"),
+            new InterfaceStreamEvent<TestInterface, TestView>.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", DamlErrorCategory.TransientServerFailure, "STREAM_UNAVAILABLE"),
             "SourceException carries JsonIgnoreAttribute: a real caught exception has a TargetSite, "
             + "and System.Text.Json's reflection-based writer throws NotSupportedException trying to "
             + "serialize System.Reflection.MethodBase through it, so writing succeeds by dropping the "
@@ -187,7 +188,7 @@ public class InterfaceStreamEventJsonTests
     public void StreamError_omits_SourceException_from_the_written_JSON()
     {
         InterfaceStreamEvent<TestInterface, TestView> value = new InterfaceStreamEvent<TestInterface, TestView>.StreamError(
-            14, "unavailable", SourceException: new InvalidOperationException("transport reset"));
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "unavailable", SourceException: new InvalidOperationException("transport reset"));
 
         var json = JsonSerializer.Serialize(value);
 

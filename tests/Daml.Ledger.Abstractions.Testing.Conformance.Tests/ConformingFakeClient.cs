@@ -10,6 +10,7 @@ using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 
 namespace Daml.Ledger.Abstractions.Testing.Conformance.Tests;
@@ -37,7 +38,8 @@ internal sealed class ConformingFakeClient : NotSupportedLedgerClient
             yield return new AcsSnapshotEntry<T>.Created(
                 new ContractId<T>("c1"), T.FromRecord(DamlRecord.Create()), null, LedgerOffset.At(1),
                 new SynchronizerId("sync"), [new Party("alice")]);
-            yield return new AcsSnapshotEntry<T>.StreamError(14, "UNAVAILABLE: transport fault mid-snapshot");
+            yield return new AcsSnapshotEntry<T>.StreamError(
+                new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "UNAVAILABLE: transport fault mid-snapshot");
             yield break;
         }
 
@@ -124,7 +126,7 @@ internal sealed class ConformingFakeClient : NotSupportedLedgerClient
             new ContractId<T>("c1"), T.FromRecord(DamlRecord.Create()), null, LedgerOffset.At(1),
             new SynchronizerId("sync"), [new Party("alice")]));
         yield return (2, new ContractStreamEvent<T>.Exercised(
-            new ContractId<T>("c1"), "Archive", DamlUnit.Instance, DamlUnit.Instance, true,
+            new ContractId<T>("c1"), new ChoiceName("Archive"), DamlUnit.Instance, DamlUnit.Instance, true,
             LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
     }
 

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- snake_case test method names -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions.Testing.Conformance\Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Rest.Client\Canton.Ledger.Rest.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Canton.Ledger.Rest.Client.Integration.Tests\LedgerApiVersionSkewGuard.cs"
+             Link="Shared\LedgerApiVersionSkewGuard.cs" />
+    <Compile Include="..\Canton.Ledger.Rest.Client.Integration.Tests\ServedInt64SiteCoverage.cs"
+             Link="Shared\ServedInt64SiteCoverage.cs" />
+    <Compile Include="..\Canton.Ledger.Rest.Client.Integration.Tests\ServedOpenApiDocument.cs"
+             Link="Shared\ServedOpenApiDocument.cs" />
+    <Compile Include="..\Canton.Ledger.Rest.Client.Integration.Tests\YamlBlock.cs"
+             Link="Shared\YamlBlock.cs" />
+    <None Include="..\..\src\Canton.Ledger.Rest\spec\openapi.yaml"
+          Link="spec\openapi.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="..\Daml.Runtime.Tests\DamlLfJsonReaderWireSamplesTests.Corpus.cs"
+             Link="Shared\DamlLfJsonReaderWireSamplesTests.Corpus.cs" />
+    <Compile Include="..\Daml.Runtime.Tests\CapturedPayloadDisagreements.cs"
+             Link="Shared\CapturedPayloadDisagreements.cs" />
+    <None Include="..\wire-samples\data\*.json" LinkBase="wire-samples\data" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Canton.Ledger.Testing.Helpers\Canton.Ledger.Testing.Helpers.csproj" />
+    <Using Include="Canton.Ledger.Testing.Helpers" />
+  </ItemGroup>
+
+</Project>

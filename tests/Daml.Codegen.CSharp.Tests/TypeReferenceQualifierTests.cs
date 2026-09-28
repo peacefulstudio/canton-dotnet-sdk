@@ -105,7 +105,6 @@ public class TypeReferenceQualifierTests
     [InlineData("Set")]
     [InlineData("NonEmpty")]
     [InlineData("Map")]
-    [InlineData("Unit")]
     [InlineData("Optional")]
     [InlineData("GenericStub")]
     public void Qualify_global_qualifies_stdlib_names_when_a_namespace_segment_shadows_it(
@@ -125,7 +124,6 @@ public class TypeReferenceQualifierTests
     [InlineData("Set")]
     [InlineData("NonEmpty")]
     [InlineData("Map")]
-    [InlineData("Unit")]
     [InlineData("Optional")]
     [InlineData("GenericStub")]
     public void Qualify_leaves_stdlib_names_bare_when_no_namespace_segment_shadows_it(
@@ -138,12 +136,12 @@ public class TypeReferenceQualifierTests
     }
 
     [Fact]
-    public void Qualify_global_qualifies_unit_when_the_package_declares_its_own_unit_type()
+    public void Qualify_leaves_a_package_declared_unit_type_bare_because_the_runtime_has_no_stdlib_unit()
     {
         var qualifier = new TypeReferenceQualifier("Splice.Wallet.Payments", declaredTypeNames: ["Unit"]);
 
         qualifier.Qualify("Unit")
-            .Should().Be("global::Daml.Runtime.Stdlib.Unit");
+            .Should().Be("Unit");
     }
 
     [Fact]

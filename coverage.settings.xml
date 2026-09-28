@@ -6,12 +6,16 @@
         <ModulePath>.*\.Tests\.dll$</ModulePath>
         <ModulePath>.*[/\\]testhost\.dll$</ModulePath>
         <ModulePath>.*Daml\.Codegen\.CSharp\.MSBuild\.dll$</ModulePath>
+        <ModulePath>.*Daml\.Codegen\.CSharp\.MSBuild\.Standalone\.dll$</ModulePath>
+        <ModulePath>.*Canton\.Ledger\.Grpc\.dll$</ModulePath>
+        <ModulePath>.*Peaceful\.Canton\.Localnet\.Testing\.dll$</ModulePath>
       </Exclude>
     </ModulePaths>
     <Sources>
       <Exclude>
         <Source>.*[/\\]obj[/\\].*</Source>
         <Source>.*[/\\]Proto[/\\]com[/\\]digitalasset[/\\].*</Source>
+        <Source>.*[/\\]Daml\.Codegen\.Testing\.Conformance[/\\]Generated[/\\].*</Source>
       </Exclude>
     </Sources>
     <Attributes>

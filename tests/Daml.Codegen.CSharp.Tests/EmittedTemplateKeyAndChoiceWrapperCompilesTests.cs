@@ -192,7 +192,7 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
         // expected substrings, but only Roslyn catches missing qualifications,
         // shadowed type names, or missing imports. The shapes here mirror the
         // three return-type buckets Copilot called out: a primitive (Decimal),
-        // a record, and Unit (the singleton-via-Daml.Runtime.Stdlib.Unit path).
+        // a record, and Unit (the DamlUnit path).
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -362,7 +362,7 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
             .Contain("public static class ChoicelessAssetWithKeySubmissionExtensions",
                 "a choice-free template emits the typed-submitter surface and nothing that exercises a choice")
             .And.NotContain("using Daml.Ledger.Abstractions.Extensions;",
-                "the emitted CreateAsync calls ILedgerWriter.TryCreateAsync directly, so the typed-submitter surface needs no extension-method namespace");
+                "the emitted TryCreateAsync calls ILedgerWriter.TryCreateAsync directly, so the typed-submitter surface needs no extension-method namespace");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 

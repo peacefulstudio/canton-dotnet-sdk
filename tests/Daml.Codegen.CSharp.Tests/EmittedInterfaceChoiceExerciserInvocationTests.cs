@@ -14,6 +14,7 @@ using NSubstitute;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.EmittedCodeCompilesTestHelpers;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.GeneratorFactory;
+using DamlUnit = Daml.Runtime.Data.DamlUnit;
 using Party = Daml.Runtime.Data.Party;
 
 namespace Daml.Codegen.CSharp.Tests;
@@ -29,7 +30,7 @@ namespace Daml.Codegen.CSharp.Tests;
 /// </summary>
 public class EmittedInterfaceChoiceExerciserInvocationTests
 {
-    private const string ChoiceMethodName = "TransferAsync";
+    private const string ChoiceMethodName = "TryTransferAsync";
 
     private static readonly Assembly Emitted = EmitToAssembly(GenerateCustodyInterfacePackage());
 
@@ -60,10 +61,10 @@ public class EmittedInterfaceChoiceExerciserInvocationTests
 
         var returned = exerciser.Invoke(null, Arguments(client));
 
-        returned.Should().BeAssignableTo<Task<ExerciseOutcome<Unit>>>(
-            "the Transfer choice returns Unit, so the projected outcome is typed to the stdlib Unit rather than the untyped TransactionResult");
-        var outcome = await (Task<ExerciseOutcome<Unit>>)returned!;
-        outcome.Should().BeOfType<ExerciseOutcome<Unit>.None>(
+        returned.Should().BeAssignableTo<Task<ExerciseOutcome<DamlUnit>>>(
+            "the Transfer choice returns Unit, so the projected outcome is typed to DamlUnit rather than the untyped TransactionResult");
+        var outcome = await (Task<ExerciseOutcome<DamlUnit>>)returned!;
+        outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.None>(
             "ProjectCommitted re-wraps a non-committing outcome like None faithfully, without invoking the per-choice decode projector");
     }
 

@@ -1,0 +1,72 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Outcomes;
+
+namespace Canton.Ledger.Testing;
+
+/// <summary>
+/// Static factories for the <see cref="ExerciseOutcome{T}"/> variants a command path yields. Each
+/// thinly wraps the corresponding public record constructor. Pair these with
+/// <see cref="FakeLedgerClientBuilder.WithExerciseResult{TResult}"/>,
+/// <see cref="FakeLedgerClientBuilder.WithCreateResult{TTemplate}"/>, or
+/// <see cref="FakeLedgerClientBuilder.WithSubmissionOutcome"/>.
+/// </summary>
+public static class LedgerOutcomes
+{
+    /// <summary>Builds a successful <see cref="ExerciseOutcome{T}.One"/> outcome.</summary>
+    /// <typeparam name="T">The result type carried by the outcome.</typeparam>
+    /// <returns>The success outcome.</returns>
+    public static ExerciseOutcome<T> One<T>(T result) => new ExerciseOutcome<T>.One(result);
+
+    /// <summary>Builds an empty <see cref="ExerciseOutcome{T}.None"/> outcome.</summary>
+    /// <typeparam name="T">The result type the outcome is for.</typeparam>
+    /// <returns>The no-result outcome.</returns>
+    public static ExerciseOutcome<T> None<T>() => new ExerciseOutcome<T>.None();
+
+    /// <summary>Builds a <see cref="ExerciseOutcome{T}.Many"/> outcome.</summary>
+    /// <typeparam name="T">The result type the outcome is for.</typeparam>
+    /// <returns>The multiple-result outcome.</returns>
+    /// <exception cref="ArgumentException"><paramref name="contractIds"/> has fewer than two
+    /// entries — <c>Many</c> exists to report more than one match; use <see cref="One{T}"/> or
+    /// <see cref="None{T}"/> for zero or one.</exception>
+    public static ExerciseOutcome<T> Many<T>(EquatableArray<string> contractIds) =>
+        new ExerciseOutcome<T>.Many(contractIds);
+
+    /// <summary>Builds a structured <see cref="ExerciseOutcome{T}.DamlError"/> outcome.</summary>
+    /// <typeparam name="T">The result type the failed outcome is for.</typeparam>
+    /// <returns>The Daml-error outcome.</returns>
+    public static ExerciseOutcome<T> DamlError<T>(
+        DamlErrorCategory category,
+        string errorId,
+        string message,
+        IReadOnlyDictionary<string, string> metadata) =>
+        new ExerciseOutcome<T>.DamlError(category, errorId, message, metadata);
+
+    /// <summary>Builds a transport-level <see cref="ExerciseOutcome{T}.InfraError"/> outcome.</summary>
+    /// <typeparam name="T">The result type the failed outcome is for.</typeparam>
+    /// <returns>The infrastructure-error outcome.</returns>
+    public static ExerciseOutcome<T> InfraError<T>(
+        TransportStatus status,
+        string message,
+        DamlErrorCategory? category = null,
+        Exception? sourceException = null) =>
+        new ExerciseOutcome<T>.InfraError(status, message, category, sourceException);
+
+    /// <summary>
+    /// Builds a <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> outcome: the command committed,
+    /// but the participant's response could not be decoded.
+    /// </summary>
+    /// <typeparam name="T">The result type the outcome is for.</typeparam>
+    /// <param name="updateId">The committed transaction's update id, or <see langword="null"/> when the
+    /// decode failure happened before it was read.</param>
+    /// <param name="message">Description of the decode failure.</param>
+    /// <param name="sourceException">The exception the decode failure raised.</param>
+    /// <returns>The committed-but-undecodable outcome.</returns>
+    public static ExerciseOutcome<T> CommittedUndecodable<T>(
+        string? updateId,
+        string message,
+        Exception sourceException) =>
+        new ExerciseOutcome<T>.CommittedUndecodable(updateId, message, sourceException);
+}

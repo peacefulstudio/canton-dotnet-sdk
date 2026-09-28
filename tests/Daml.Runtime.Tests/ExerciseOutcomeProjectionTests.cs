@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Net;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
@@ -98,12 +99,13 @@ public class ExerciseOutcomeProjectionTests
     public void ProjectCommitted_maps_InfraError_preserving_status_code_message_and_source_exception()
     {
         var sourceException = new InvalidOperationException("transport failed");
-        var outcome = new ExerciseOutcome<TransactionResult>.InfraError(14, "network down", SourceException: sourceException);
+        var outcome = new ExerciseOutcome<TransactionResult>.InfraError(
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "network down", SourceException: sourceException);
 
         var result = outcome.ProjectCommitted<int>(_ => new ExerciseOutcome<int>.One(0));
 
         var infraError = result.Should().BeOfType<ExerciseOutcome<int>.InfraError>().Subject;
-        infraError.StatusCode.Should().Be(14);
+        infraError.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         infraError.Message.Should().Be("network down");
         infraError.SourceException.Should().BeSameAs(sourceException);
     }
@@ -112,7 +114,7 @@ public class ExerciseOutcomeProjectionTests
     public void ProjectCommitted_carries_the_InfraError_category_across_the_projection()
     {
         var outcome = new ExerciseOutcome<TransactionResult>.InfraError(
-            400, "bad request", DamlErrorCategory.InvalidIndependentOfSystemState);
+            new TransportStatus.Http(HttpStatusCode.BadRequest), "bad request", DamlErrorCategory.InvalidIndependentOfSystemState);
 
         var result = outcome.ProjectCommitted<int>(_ => new ExerciseOutcome<int>.One(0));
 

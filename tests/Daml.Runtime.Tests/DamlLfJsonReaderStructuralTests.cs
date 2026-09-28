@@ -33,11 +33,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_present_optional_field_from_its_bare_wire_value()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"note":"present"}""", recordType: typeof(NoteHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<NoteHolder>("""{"note":"present"}""");
 
         record.GetRequiredField("note").Should().BeOfType<DamlOptional>()
             .Which.Value.Should().BeOfType<DamlText>().Which.Value.Should().Be("present");
@@ -46,11 +42,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_absent_optional_field_from_json_null()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"note":null}""", recordType: typeof(NoteHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<NoteHolder>("""{"note":null}""");
 
         record.GetRequiredField("note").Should().BeOfType<DamlOptional>()
             .Which.Should().Be(DamlOptional.None);
@@ -78,11 +70,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_present_optional_value_type_field()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"level":"3"}""", recordType: typeof(LevelHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<LevelHolder>("""{"level":"3"}""");
 
         record.GetRequiredField("level").Should().BeOfType<DamlOptional>()
             .Which.Value.Should().BeOfType<DamlInt64>().Which.Value.Should().Be(3L);
@@ -91,11 +79,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_absent_optional_value_type_field()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"level":null}""", recordType: typeof(LevelHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<LevelHolder>("""{"level":null}""");
 
         record.GetRequiredField("level").Should().BeOfType<DamlOptional>()
             .Which.Should().Be(DamlOptional.None);
@@ -129,11 +113,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_optionals_nested_inside_a_list()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"notes":["present",null]}""", recordType: typeof(NoteListHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<NoteListHolder>("""{"notes":["present",null]}""");
 
         record.GetRequiredField("notes").Should().BeOfType<DamlList>()
             .Which.Values.Should().Equal(
@@ -175,11 +155,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_text_map_field_from_its_wire_object_form()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"attributes":{"a":"1"}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":{"a":"1"}}""");
 
         record.GetRequiredField("attributes").Should().BeOfType<DamlTextMap>()
             .Which.Should().Be(DamlTextMap.Create(("a", new DamlText("1"))));
@@ -188,11 +164,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_empty_text_map_field()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"attributes":{}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":{}}""");
 
         record.GetRequiredField("attributes").Should().BeOfType<DamlTextMap>()
             .Which.Values.Should().BeEmpty();
@@ -203,11 +175,7 @@ public class DamlLfJsonReaderStructuralTests
     {
         using var document = JsonDocument.Parse("""{"attributes":{"a":"1","a":"2"}}""");
 
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord(document.RootElement, recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>(document.RootElement);
 
         act.Should().Throw<JsonException>()
             .WithMessage("Duplicate key 'a' at 'AttributesHolder.attributes' in a Daml TextMap");
@@ -216,11 +184,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_bracket_the_map_key_when_reporting_an_error_inside_a_text_map_value()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"attributes":{"a.b":5}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":{"a.b":5}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON String at 'AttributesHolder.attributes['a.b']' but found Number");
@@ -229,11 +193,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_escape_a_quote_inside_a_bracketed_map_key()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"attributes":{"o'brien":5}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":{"o'brien":5}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage(@"Expected JSON String at 'AttributesHolder.attributes['o\'brien']' but found Number");
@@ -242,11 +202,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_escape_a_backslash_inside_a_bracketed_map_key()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"attributes":{"a\\b":5}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":{"a\\b":5}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage(@"Expected JSON String at 'AttributesHolder.attributes['a\\b']' but found Number");
@@ -255,11 +211,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_escape_a_backslash_that_precedes_a_quote_inside_a_bracketed_map_key()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"attributes":{"a\\'b":5}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":{"a\\'b":5}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage(@"Expected JSON String at 'AttributesHolder.attributes['a\\\'b']' but found Number");
@@ -270,11 +222,7 @@ public class DamlLfJsonReaderStructuralTests
     {
         var oversizedKey = new string('k', 70);
 
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord($$$"""{"attributes":{"{{{oversizedKey}}}":5}}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>($$$"""{"attributes":{"{{{oversizedKey}}}":5}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage(
@@ -316,11 +264,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_gen_map_field_from_its_wire_pair_array_form()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord($$"""{"genMap":[["{{WireParty}}","7"]]}""", recordType: typeof(GenMapHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<GenMapHolder>($$"""{"genMap":[["{{WireParty}}","7"]]}""");
 
         record.GetRequiredField("genMap").Should().BeOfType<DamlGenMap>()
             .Which.Should().Be(DamlGenMap.Create((new DamlParty(WireParty), new DamlInt64(7))));
@@ -329,11 +273,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_empty_gen_map_field()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"genMap":[]}""", recordType: typeof(GenMapHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<GenMapHolder>("""{"genMap":[]}""");
 
         record.GetRequiredField("genMap").Should().BeOfType<DamlGenMap>()
             .Which.Entries.Should().BeEmpty();
@@ -342,11 +282,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_gen_map_entry_that_is_not_a_key_value_pair()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord($$"""{"genMap":[["{{WireParty}}"]]}""", recordType: typeof(GenMapHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<GenMapHolder>($$"""{"genMap":[["{{WireParty}}"]]}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected a two-element key/value pair at 'GenMapHolder.genMap[0]' but found 1 element(s)");
@@ -355,11 +291,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_gen_map_with_a_duplicate_key()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord($$"""{"genMap":[["{{WireParty}}","1"],["{{WireParty}}","2"]]}""", recordType: typeof(GenMapHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<GenMapHolder>($$"""{"genMap":[["{{WireParty}}","1"],["{{WireParty}}","2"]]}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Duplicate key at 'GenMapHolder.genMap[1]' in a Daml GenMap");
@@ -368,11 +300,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_gen_map_entry_that_is_not_an_array()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"genMap":["nope"]}""", recordType: typeof(GenMapHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<GenMapHolder>("""{"genMap":["nope"]}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON Array at 'GenMapHolder.genMap[0]' but found String");
@@ -381,11 +309,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_gen_map_field_encoded_as_a_json_object()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"genMap":{"a":"1"}}""", recordType: typeof(GenMapHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<GenMapHolder>("""{"genMap":{"a":"1"}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON array of entry pairs (GenMap) at 'GenMapHolder.genMap' but found Object");
@@ -394,11 +318,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_name_both_map_wire_forms_when_rejecting_a_string_keyed_map()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"attributes":"nope"}""", recordType: typeof(AttributesHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<AttributesHolder>("""{"attributes":"nope"}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON object (TextMap) or array of entry pairs (GenMap) "
@@ -425,11 +345,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_unit_field_from_its_wire_empty_object_form()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"unitField":{}}""", recordType: typeof(UnitHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<UnitHolder>("""{"unitField":{}}""");
 
         record.GetRequiredField("unitField").Should().BeOfType<DamlUnit>()
             .Which.Should().BeSameAs(DamlUnit.Instance);
@@ -438,11 +354,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_unit_field_encoded_as_a_json_string()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"unitField":"nope"}""", recordType: typeof(UnitHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<UnitHolder>("""{"unitField":"nope"}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON Object at 'UnitHolder.unitField' but found String");
@@ -480,11 +392,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_enum_field_from_its_bare_wire_string()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"suit":"Hearts"}""", recordType: typeof(SuitHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<SuitHolder>("""{"suit":"Hearts"}""");
 
         record.GetRequiredField("suit").Should().BeOfType<DamlEnum>()
             .Which.Should().Be(DamlEnum.Create("Hearts"));
@@ -493,11 +401,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_an_unknown_enum_constructor()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"suit":"Wands"}""", recordType: typeof(SuitHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<SuitHolder>("""{"suit":"Wands"}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Unknown Daml enum constructor 'Wands' at 'SuitHolder.suit'; "
@@ -507,11 +411,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_an_enum_field_encoded_as_a_json_number()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"suit":2}""", recordType: typeof(SuitHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<SuitHolder>("""{"suit":2}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON String at 'SuitHolder.suit' but found Number");
@@ -547,11 +447,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_sort_the_expected_set_when_rejecting_an_unknown_enum_constructor()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"zigzag":"Zag"}""", recordType: typeof(ZigzagHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<ZigzagHolder>("""{"zigzag":"Zag"}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Unknown Daml enum constructor 'Zag' at 'ZigzagHolder.zigzag'; "
@@ -560,18 +456,56 @@ public class DamlLfJsonReaderStructuralTests
 
     public sealed record OutcomeWin(
         [property: DamlFieldAttribute("prize")] decimal Prize,
-        [property: DamlFieldAttribute("tier")] string Tier) : IDamlRecord
+        [property: DamlFieldAttribute("tier")] string Tier) : IDamlRecord<OutcomeWin>
     {
         public DamlRecord ToRecord() => DamlRecord.Create(
             DamlField.Create("prize", new DamlNumeric(Prize)),
             DamlField.Create("tier", new DamlText(Tier)));
+
+        public static OutcomeWin FromRecord(DamlRecord record) => new(
+            record.GetRequiredField("prize").As<DamlNumeric>().Value,
+            record.GetRequiredField("tier").As<DamlText>().Value);
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
+        {
+            DamlLfJsonDecoders.RequireObject(json, context);
+            return DamlRecord.Create(
+                DamlField.Create("prize", DamlLfJsonDecoders.ReadNumeric(
+                    DamlLfJsonDecoders.RequireField(json, context, "prize"), context.Field("prize"))),
+                DamlField.Create("tier", DamlLfJsonDecoders.ReadText(
+                    DamlLfJsonDecoders.RequireField(json, context, "tier"), context.Field("tier"))));
+        }
     }
 
-    public abstract record Outcome : IDamlVariant
+    public abstract record Outcome : IDamlVariant<Outcome>
     {
+        private static readonly string[] ExpectedConstructors = ["Pending", "Win"];
+
         public abstract string Tag { get; }
 
         public abstract DamlVariant ToVariant();
+
+        public static Outcome FromVariant(DamlVariant variant) =>
+            variant.Constructor switch
+            {
+                "Win" => new Win(OutcomeWin.FromRecord(variant.Value.As<DamlRecord>())),
+                "Pending" => new Pending(),
+                _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, null)
+            };
+
+        public static DamlVariant __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
+        {
+            var tag = DamlLfJsonDecoders.ReadVariantTag(json, context);
+            return tag switch
+            {
+                "Win" => DamlVariant.Create("Win", OutcomeWin.__ReadDamlLfJson(
+                    DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+                "Pending" => DamlVariant.Create("Pending", DamlLfJsonDecoders.ReadUnit(
+                    DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+                _ => throw DamlLfJsonDecoders.UnknownConstructor(
+                    "variant constructor", tag, context, ExpectedConstructors)
+            };
+        }
 
         public sealed record Win(OutcomeWin Value) : Outcome
         {
@@ -592,57 +526,22 @@ public class DamlLfJsonReaderStructuralTests
     {
         public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create("outcome", Outcome.ToVariant()));
 
-        public static OutcomeHolder FromRecord(DamlRecord record)
-        {
-            var variant = record.GetRequiredField("outcome").As<DamlVariant>();
-            Outcome outcome = variant.Constructor switch
-            {
-                "Win" => new Outcome.Win(new OutcomeWin(
-                    variant.Value.As<DamlRecord>().GetRequiredField("prize").As<DamlNumeric>().Value,
-                    variant.Value.As<DamlRecord>().GetRequiredField("tier").As<DamlText>().Value)),
-                "Pending" => new Outcome.Pending(),
-                _ => throw new ArgumentOutOfRangeException(nameof(record), variant.Constructor, null)
-            };
-            return new OutcomeHolder(outcome);
-        }
+        public static OutcomeHolder FromRecord(DamlRecord record) =>
+            new(Outcome.FromVariant(record.GetRequiredField("outcome").As<DamlVariant>()));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
             DamlLfJsonDecoders.RequireObject(json, context);
-            var outcomeJson = DamlLfJsonDecoders.RequireField(json, context, "outcome");
-            var outcomeContext = context.Field("outcome");
-            var tag = DamlLfJsonDecoders.ReadVariantTag(outcomeJson, outcomeContext);
-            var valueJson = DamlLfJsonDecoders.RequireVariantValue(outcomeJson, outcomeContext);
-            var valueContext = outcomeContext.Field("value");
-            DamlValue payload = tag switch
-            {
-                "Win" => ReadOutcomeWin(valueJson, valueContext),
-                "Pending" => DamlLfJsonDecoders.ReadUnit(valueJson, valueContext),
-                _ => throw DamlLfJsonDecoders.UnknownConstructor(
-                    "variant constructor", tag, outcomeContext, ["Pending", "Win"])
-            };
-            return DamlRecord.Create(DamlField.Create("outcome", DamlVariant.Create(tag, payload)));
-
-            static DamlRecord ReadOutcomeWin(JsonElement json, DamlLfJsonDecodeContext context)
-            {
-                DamlLfJsonDecoders.RequireObject(json, context);
-                return DamlRecord.Create(
-                    DamlField.Create("prize", DamlLfJsonDecoders.ReadNumeric(
-                        DamlLfJsonDecoders.RequireField(json, context, "prize"), context.Field("prize"))),
-                    DamlField.Create("tier", DamlLfJsonDecoders.ReadText(
-                        DamlLfJsonDecoders.RequireField(json, context, "tier"), context.Field("tier"))));
-            }
+            var outcome = DamlLfJsonDecoders.ReadVariant<Outcome>(
+                DamlLfJsonDecoders.RequireField(json, context, "outcome"), context.Field("outcome"));
+            return DamlRecord.Create(DamlField.Create("outcome", outcome));
         }
     }
 
     [Fact]
     public void ReadRecord_should_decode_a_tagged_variant_arm_with_its_record_payload()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"outcome":{"tag":"Win","value":{"prize":"1.25","tier":"gold"}}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"tag":"Win","value":{"prize":"1.25","tier":"gold"}}}""");
 
         var variant = record.GetRequiredField("outcome").Should().BeOfType<DamlVariant>().Which;
         variant.Constructor.Should().Be("Win");
@@ -654,11 +553,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_nullary_variant_arm_from_its_empty_object_value()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"outcome":{"tag":"Pending","value":{}}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"tag":"Pending","value":{}}}""");
 
         var variant = record.GetRequiredField("outcome").Should().BeOfType<DamlVariant>().Which;
         variant.Constructor.Should().Be("Pending");
@@ -668,11 +563,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_an_unknown_variant_constructor()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"outcome":{"tag":"Draw","value":{}}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"tag":"Draw","value":{}}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Unknown Daml variant constructor 'Draw' at 'OutcomeHolder.outcome'; "
@@ -682,11 +573,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_variant_without_a_tag()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"outcome":{"value":{}}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"value":{}}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Required Daml variant field 'OutcomeHolder.outcome.tag' is missing from the JSON object");
@@ -695,11 +582,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_variant_tag_that_is_not_a_string()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"outcome":{"tag":5,"value":{}}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"tag":5,"value":{}}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON String at 'OutcomeHolder.outcome.tag' but found Number");
@@ -708,11 +591,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_nullary_variant_value_that_is_not_an_object()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"outcome":{"tag":"Pending","value":"nope"}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"tag":"Pending","value":"nope"}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON Object at 'OutcomeHolder.outcome.value' but found String");
@@ -721,11 +600,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_variant_missing_its_value_field()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"outcome":{"tag":"Pending"}}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":{"tag":"Pending"}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Required Daml variant field 'OutcomeHolder.outcome.value' is missing from the JSON object");
@@ -734,11 +609,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_reject_a_variant_field_encoded_as_a_bare_string()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"outcome":"Pending"}""", recordType: typeof(OutcomeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<OutcomeHolder>("""{"outcome":"Pending"}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON Object at 'OutcomeHolder.outcome' but found String");
@@ -787,11 +658,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_nested_record_field_keyed_by_field_name()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"profile":{"nickname":"nick","level":"3"}}""", recordType: typeof(ProfileHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<ProfileHolder>("""{"profile":{"nickname":"nick","level":"3"}}""");
 
         record.GetRequiredField("profile").Should().BeOfType<DamlRecord>().Which.Fields.Should().Equal(
             new DamlField("nickname", new DamlText("nick")),
@@ -823,11 +690,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_list_field_from_its_wire_array_form()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"tags":["x","y"]}""", recordType: typeof(TagsHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<TagsHolder>("""{"tags":["x","y"]}""");
 
         record.GetRequiredField("tags").Should().BeOfType<DamlList>()
             .Which.Values.Should().Equal(new DamlText("x"), new DamlText("y"));
@@ -836,11 +699,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_empty_list_field()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"tags":[]}""", recordType: typeof(TagsHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<TagsHolder>("""{"tags":[]}""");
 
         record.GetRequiredField("tags").Should().BeOfType<DamlList>().Which.Values.Should().BeEmpty();
     }
@@ -873,11 +732,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_gen_map_keyed_by_a_record()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"tally":[[{"nickname":"nick","level":"3"},"7"]]}""", recordType: typeof(ProfileTallyHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<ProfileTallyHolder>("""{"tally":[[{"nickname":"nick","level":"3"},"7"]]}""");
 
         var entry = record.GetRequiredField("tally").Should().BeOfType<DamlGenMap>()
             .Which.Entries.Should().ContainSingle().Which;
@@ -937,11 +792,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_variant_arm_carrying_a_scalar_payload()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"reading":{"tag":"Measured","value":"1.25"}}""", recordType: typeof(ReadingHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<ReadingHolder>("""{"reading":{"tag":"Measured","value":"1.25"}}""");
 
         var variant = record.GetRequiredField("reading").Should().BeOfType<DamlVariant>().Which;
         variant.Constructor.Should().Be("Measured");
@@ -1007,11 +858,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_a_variant_arm_whose_csharp_name_was_disambiguated_from_its_wire_tag()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"shape":{"tag":"Shape","value":"round"}}""", recordType: typeof(ShapeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<ShapeHolder>("""{"shape":{"tag":"Shape","value":"round"}}""");
 
         var variant = record.GetRequiredField("shape").Should().BeOfType<DamlVariant>().Which;
         variant.Constructor.Should().Be("Shape");
@@ -1021,136 +868,11 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_list_wire_tags_rather_than_csharp_names_for_an_unknown_variant_constructor()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"shape":{"tag":"Round","value":{}}}""", recordType: typeof(ShapeHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<ShapeHolder>("""{"shape":{"tag":"Round","value":{}}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Unknown Daml variant constructor 'Round' at 'ShapeHolder.shape'; "
                 + "expected one of Blank, Shape");
-    }
-
-    public abstract record Armless : IDamlVariant
-    {
-        public abstract DamlVariant ToVariant();
-    }
-
-    public sealed record ArmlessHolder([property: DamlFieldAttribute("armless")] Armless Armless) : IDamlRecord<ArmlessHolder>
-    {
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create("armless", Armless.ToVariant()));
-
-        public static ArmlessHolder FromRecord(DamlRecord record) =>
-            throw new NotSupportedException("Reader-shape stand-ins in this suite are decode-only.");
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
-        {
-            DamlLfJsonDecoders.RequireObject(json, context);
-            var armlessContext = context.Field("armless");
-            throw new NotSupportedException(
-                $"Type '{typeof(Armless)}' at '{armlessContext.Path}' declares no variant arms; "
-                + "pass a generated variant whose constructors are nested types carrying a Tag property.");
-        }
-    }
-
-    [Fact]
-    public void ReadRecord_should_refuse_a_variant_type_that_declares_no_arms()
-    {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"armless":{"tag":"Whatever","value":{}}}""", recordType: typeof(ArmlessHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage($"Type '{typeof(Armless)}' at 'ArmlessHolder.armless' declares no variant arms; "
-                + "pass a generated variant whose constructors are nested types carrying a Tag property.");
-    }
-
-    public abstract record Untagged : IDamlVariant
-    {
-        public abstract DamlVariant ToVariant();
-
-        public sealed record Only : Untagged
-        {
-            public override DamlVariant ToVariant() => DamlVariant.Create("Only", DamlUnit.Instance);
-        }
-    }
-
-    public sealed record UntaggedHolder(
-        [property: DamlFieldAttribute("untagged")] Untagged Untagged) : IDamlRecord<UntaggedHolder>
-    {
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create("untagged", Untagged.ToVariant()));
-
-        public static UntaggedHolder FromRecord(DamlRecord record) =>
-            throw new NotSupportedException("Reader-shape stand-ins in this suite are decode-only.");
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
-        {
-            DamlLfJsonDecoders.RequireObject(json, context);
-            var untaggedContext = context.Field("untagged");
-            throw new NotSupportedException(
-                $"Variant arm '{typeof(Untagged.Only)}' at '{untaggedContext.Path}' exposes no readable "
-                + "Tag property, so its wire constructor cannot be determined; pass a generated variant.");
-        }
-    }
-
-    [Fact]
-    public void ReadRecord_should_refuse_a_variant_arm_that_carries_no_wire_tag()
-    {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"untagged":{"tag":"Only","value":{}}}""", recordType: typeof(UntaggedHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage($"Variant arm '{typeof(Untagged.Only)}' at 'UntaggedHolder.untagged' exposes no readable "
-                + "Tag property, so its wire constructor cannot be determined; pass a generated variant.");
-    }
-
-    public abstract record Cursed : IDamlVariant
-    {
-        public abstract DamlVariant ToVariant();
-
-        public sealed record Broken : Cursed
-        {
-            public string Tag => throw new InvalidOperationException("this fixture's tag getter always throws");
-
-            public override DamlVariant ToVariant() => DamlVariant.Create("Broken", DamlUnit.Instance);
-        }
-    }
-
-    public sealed record CursedHolder([property: DamlFieldAttribute("cursed")] Cursed Cursed) : IDamlRecord<CursedHolder>
-    {
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create("cursed", Cursed.ToVariant()));
-
-        public static CursedHolder FromRecord(DamlRecord record) =>
-            throw new NotSupportedException("Reader-shape stand-ins in this suite are decode-only.");
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
-        {
-            DamlLfJsonDecoders.RequireObject(json, context);
-            var cursedContext = context.Field("cursed");
-            throw new NotSupportedException(
-                $"Variant arm '{typeof(Cursed.Broken)}' at '{cursedContext.Path}' exposes no readable "
-                + "Tag property, so its wire constructor cannot be determined; pass a generated variant.");
-        }
-    }
-
-    [Fact]
-    public void ReadRecord_should_refuse_a_variant_arm_whose_tag_getter_throws()
-    {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"cursed":{"tag":"Broken","value":{}}}""", recordType: typeof(CursedHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage($"Variant arm '{typeof(Cursed.Broken)}' at 'CursedHolder.cursed' exposes no readable "
-                + "Tag property, so its wire constructor cannot be determined; pass a generated variant.");
     }
 
     public sealed record DirectionHolder(
@@ -1158,9 +880,6 @@ public class DamlLfJsonReaderStructuralTests
     {
         private static readonly IReadOnlyDictionary<string, Direction> ByConstructor = Enum.GetValues<Direction>()
             .ToDictionary(value => value.ToDamlEnum().Constructor);
-
-        private static readonly IReadOnlyList<string> KnownConstructors =
-            ByConstructor.Keys.Order(StringComparer.Ordinal).ToList();
 
         public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create("direction", Direction.ToDamlEnum()));
 
@@ -1172,7 +891,7 @@ public class DamlLfJsonReaderStructuralTests
             DamlLfJsonDecoders.RequireObject(json, context);
             var directionJson = DamlLfJsonDecoders.RequireField(json, context, "direction");
             var directionContext = context.Field("direction");
-            var direction = DamlLfJsonDecoders.ReadEnumConstructor(directionJson, directionContext, KnownConstructors);
+            var direction = DirectionExtensions.__ReadDamlLfJson(directionJson, directionContext);
             return DamlRecord.Create(DamlField.Create("direction", direction));
         }
     }
@@ -1180,11 +899,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_enum_constructor_whose_wire_name_differs_from_its_csharp_member()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"direction":"U$u0020Turn"}""", recordType: typeof(DirectionHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<DirectionHolder>("""{"direction":"U$u0020Turn"}""");
 
         record.GetRequiredField("direction").Should().BeOfType<DamlEnum>()
             .Which.Should().Be(DamlEnum.Create("U$u0020Turn"));
@@ -1193,11 +908,7 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_decode_an_enum_constructor_whose_wire_name_survives_sanitization()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var record = DamlLfJsonReader.ReadRecord("""{"direction":"Forward"}""", recordType: typeof(DirectionHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var record = DamlLfJsonReader.ReadRecord<DirectionHolder>("""{"direction":"Forward"}""");
 
         record.GetRequiredField("direction").Should().BeOfType<DamlEnum>()
             .Which.Should().Be(DamlEnum.Create("Forward"));
@@ -1206,71 +917,24 @@ public class DamlLfJsonReaderStructuralTests
     [Fact]
     public void ReadRecord_should_list_wire_constructors_rather_than_csharp_members_for_an_unknown_enum_constructor()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"direction":"Sideways"}""", recordType: typeof(DirectionHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
+        var act = () => DamlLfJsonReader.ReadRecord<DirectionHolder>("""{"direction":"Sideways"}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Unknown Daml enum constructor 'Sideways' at 'DirectionHolder.direction'; "
                 + "expected one of Forward, U$u0020Turn");
     }
 
-    public sealed record CadenceHolder(
-        [property: DamlFieldAttribute("cadence")] Cadence Cadence) : IDamlRecord<CadenceHolder>
+    private static DamlVariant ReadTopLevelVariant<T>(string json)
+        where T : IDamlVariant<T>
     {
-        public DamlRecord ToRecord() => DamlRecord.Create(DamlField.Create("cadence", Cadence.ToDamlEnum()));
-
-        public static CadenceHolder FromRecord(DamlRecord record) =>
-            throw new NotSupportedException("Reader-shape stand-ins in this suite are decode-only.");
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
-        {
-            DamlLfJsonDecoders.RequireObject(json, context);
-            var cadenceContext = context.Field("cadence");
-            foreach (var member in Enum.GetValues<Cadence>())
-            {
-                try
-                {
-                    _ = member.ToDamlEnum();
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    throw new NotSupportedException(
-                        $"Enum '{typeof(Cadence)}' at '{cadenceContext.Path}' has a companion whose ToDamlEnum fails "
-                        + $"for member '{member}', so its wire constructors cannot be determined; "
-                        + "pass a generated Daml enum.");
-                }
-            }
-            throw new InvalidOperationException(
-                "Unreachable: this fixture's CadenceExtensions.ToDamlEnum is expected to fail for Broken.");
-        }
+        using var document = JsonDocument.Parse(json);
+        return DamlLfJsonDecoders.ReadVariant<T>(document.RootElement, DamlLfJsonDecodeContext.Root(typeof(T).Name));
     }
 
     [Fact]
-    public void ReadRecord_should_refuse_an_enum_whose_companion_cannot_name_every_wire_constructor()
+    public void ReadVariant_should_decode_a_top_level_variant_arm_with_its_record_payload()
     {
-        #pragma warning disable DAMLRT0001
-        #pragma warning disable CA2263
-        var act = () => DamlLfJsonReader.ReadRecord("""{"cadence":"Steady"}""", recordType: typeof(CadenceHolder));
-        #pragma warning restore CA2263
-        #pragma warning restore DAMLRT0001
-
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage($"Enum '{typeof(Cadence)}' at 'CadenceHolder.cadence' has a companion whose ToDamlEnum "
-                + "fails for member 'Broken', so its wire constructors cannot be determined; "
-                + "pass a generated Daml enum.");
-    }
-
-    [Fact]
-    public void ReadValue_should_decode_a_top_level_variant_arm_with_its_record_payload()
-    {
-        #pragma warning disable DAMLRT0001
-        var variant = DamlLfJsonReader
-            .ReadValue<Outcome>("""{"tag":"Win","value":{"prize":"1.25","tier":"gold"}}""")
-            .Should().BeOfType<DamlVariant>().Which;
-        #pragma warning restore DAMLRT0001
+        var variant = ReadTopLevelVariant<Outcome>("""{"tag":"Win","value":{"prize":"1.25","tier":"gold"}}""");
 
         variant.Constructor.Should().Be("Win");
         variant.Value.Should().BeOfType<DamlRecord>().Which.Fields.Should().Equal(
@@ -1279,56 +943,62 @@ public class DamlLfJsonReaderStructuralTests
     }
 
     [Fact]
-    public void ReadValue_should_decode_a_top_level_nullary_variant_arm_from_its_empty_object_value()
+    public void ReadVariant_should_decode_a_top_level_nullary_variant_arm_from_its_empty_object_value()
     {
-        #pragma warning disable DAMLRT0001
-        var variant = DamlLfJsonReader.ReadValue<Outcome>("""{"tag":"Pending","value":{}}""")
-            .Should().BeOfType<DamlVariant>().Which;
-        #pragma warning restore DAMLRT0001
+        var variant = ReadTopLevelVariant<Outcome>("""{"tag":"Pending","value":{}}""");
 
         variant.Constructor.Should().Be("Pending");
         variant.Value.Should().BeSameAs(DamlUnit.Instance);
     }
 
     [Fact]
-    public void ReadValue_should_reject_an_unknown_top_level_variant_constructor()
+    public void ReadVariant_should_reject_an_unknown_top_level_variant_constructor()
     {
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonReader.ReadValue<Outcome>("""{"tag":"Draw","value":{}}""");
-        #pragma warning restore DAMLRT0001
+        var act = () => ReadTopLevelVariant<Outcome>("""{"tag":"Draw","value":{}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Unknown Daml variant constructor 'Draw' at 'Outcome'; expected one of Pending, Win");
     }
 
     [Fact]
-    public void ReadValue_should_reject_a_top_level_variant_missing_its_tag()
+    public void ReadVariant_should_reject_a_top_level_variant_missing_its_tag()
     {
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonReader.ReadValue<Outcome>("""{"value":{}}""");
-        #pragma warning restore DAMLRT0001
+        var act = () => ReadTopLevelVariant<Outcome>("""{"value":{}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Required Daml variant field 'Outcome.tag' is missing from the JSON object");
     }
 
     [Fact]
-    public void ReadValue_should_name_the_payload_path_of_a_top_level_variant_arm()
+    public void ReadVariant_should_name_the_payload_path_of_a_top_level_variant_arm()
     {
-        #pragma warning disable DAMLRT0001
-        var act = () => DamlLfJsonReader.ReadValue<Outcome>(
-            """{"tag":"Win","value":{"prize":"1.25","tier":42}}""");
-        #pragma warning restore DAMLRT0001
+        var act = () => ReadTopLevelVariant<Outcome>("""{"tag":"Win","value":{"prize":"1.25","tier":42}}""");
 
         act.Should().Throw<JsonException>()
             .WithMessage("Expected JSON String at 'Outcome.value.tier' but found Number");
     }
 
-    public abstract record Scribble : IDamlVariant
+    public abstract record Scribble : IDamlVariant<Scribble>
     {
+        private static readonly string[] ExpectedConstructors = ["Scrawled"];
+
         public abstract string Tag { get; }
 
         public abstract DamlVariant ToVariant();
+
+        public static DamlVariant __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
+        {
+            var tag = DamlLfJsonDecoders.ReadVariantTag(json, context);
+            return tag switch
+            {
+                "Scrawled" => DamlVariant.Create("Scrawled", DamlLfJsonDecoders.ReadOptional(
+                    DamlLfJsonDecoders.RequireVariantValue(json, context),
+                    context.Field("value"),
+                    DamlLfJsonDecoders.ReadText)),
+                _ => throw DamlLfJsonDecoders.UnknownConstructor(
+                    "variant constructor", tag, context, ExpectedConstructors)
+            };
+        }
 
         public sealed record Scrawled(string? Value) : Scribble
         {
@@ -1341,18 +1011,13 @@ public class DamlLfJsonReaderStructuralTests
     }
 
     [Fact]
-    public void ReadValue_should_keep_a_top_level_variant_arm_payload_optional_when_the_arm_declares_it_nullable()
+    public void ReadVariant_should_keep_a_top_level_variant_arm_payload_optional_when_the_arm_carries_an_optional()
     {
-        #pragma warning disable DAMLRT0001
-        DamlLfJsonReader.ReadValue<Scribble>("""{"tag":"Scrawled","value":null}""")
-            .Should().BeOfType<DamlVariant>().Which.Value.Should().Be(DamlOptional.None);
-        #pragma warning restore DAMLRT0001
+        ReadTopLevelVariant<Scribble>("""{"tag":"Scrawled","value":null}""")
+            .Value.Should().Be(DamlOptional.None);
 
-        #pragma warning disable DAMLRT0001
-        DamlLfJsonReader.ReadValue<Scribble>("""{"tag":"Scrawled","value":"ink"}""")
-            .Should().BeOfType<DamlVariant>().Which.Value
-            .Should().Be(DamlOptional.Some(new DamlText("ink")));
-        #pragma warning restore DAMLRT0001
+        ReadTopLevelVariant<Scribble>("""{"tag":"Scrawled","value":"ink"}""")
+            .Value.Should().Be(DamlOptional.Some(new DamlText("ink")));
     }
 }
 
@@ -1364,6 +1029,8 @@ public enum Direction
 
 public static class DirectionExtensions
 {
+    private static readonly string[] ExpectedConstructors = ["Forward", "U$u0020Turn"];
+
     public static DamlEnum ToDamlEnum(this Direction value) =>
         value switch
         {
@@ -1371,20 +1038,7 @@ public static class DirectionExtensions
             Direction.U_u0020Turn => DamlEnum.Create("U$u0020Turn"),
             _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
         };
-}
 
-public enum Cadence
-{
-    Steady,
-    Broken
-}
-
-public static class CadenceExtensions
-{
-    public static DamlEnum ToDamlEnum(this Cadence value) =>
-        value switch
-        {
-            Cadence.Steady => DamlEnum.Create("Steady"),
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
-        };
+    public static DamlEnum __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
+        DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 }

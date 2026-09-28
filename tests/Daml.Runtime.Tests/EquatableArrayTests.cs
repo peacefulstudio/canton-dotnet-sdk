@@ -180,7 +180,7 @@ public class EquatableArrayTests
 
         view.Count.Should().Be(2);
         view[1].Should().Be(Bob);
-        view.Select(party => party.Id).Should().Equal("alice", "bob");
+        view.Select(party => party.Value).Should().Equal("alice", "bob");
         view.ToList().Should().Equal(Alice, Bob);
     }
 
@@ -758,12 +758,12 @@ public class EquatableArrayTests
         IEnumerable<Party> indexed = parties;
         var walked = Walk(parties);
 
-        indexed.Select(party => party.Id).ToArray().Should()
-            .Equal(walked.Select(party => party.Id).ToArray()).And.Equal("alice", "bob", "carol");
-        indexed.Select(party => party.Id).Count().Should()
-            .Be(walked.Select(party => party.Id).Count()).And.Be(3);
-        indexed.Select(party => party.Id).Last().Should()
-            .Be(walked.Select(party => party.Id).Last()).And.Be("carol");
+        indexed.Select(party => party.Value).ToArray().Should()
+            .Equal(walked.Select(party => party.Value).ToArray()).And.Equal("alice", "bob", "carol");
+        indexed.Select(party => party.Value).Count().Should()
+            .Be(walked.Select(party => party.Value).Count()).And.Be(3);
+        indexed.Select(party => party.Value).Last().Should()
+            .Be(walked.Select(party => party.Value).Last()).And.Be("carol");
     }
 
     [Fact]
@@ -779,10 +779,10 @@ public class EquatableArrayTests
         indexed.TakeLast(1).Should().Equal(walked.TakeLast(1)).And.BeEmpty();
         indexed.SequenceEqual(default(EquatableArray<Party>)).Should()
             .Be(walked.SequenceEqual(Walk(default))).And.BeTrue();
-        indexed.Select(party => party.Id).ToArray().Should()
-            .Equal(walked.Select(party => party.Id).ToArray()).And.BeEmpty();
-        indexed.Select(party => party.Id).Count().Should()
-            .Be(walked.Select(party => party.Id).Count()).And.Be(0);
+        indexed.Select(party => party.Value).ToArray().Should()
+            .Equal(walked.Select(party => party.Value).ToArray()).And.BeEmpty();
+        indexed.Select(party => party.Value).Count().Should()
+            .Be(walked.Select(party => party.Value).Count()).And.Be(0);
     }
 
     [Fact]

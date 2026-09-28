@@ -1,0 +1,16 @@
+Canton.Ledger.Abstractions
+Canton.Ledger.Grpc
+Canton.Ledger.Grpc.Client
+Canton.Ledger.Kernel
+Canton.Ledger.OpenTelemetry
+Canton.Ledger.Pqs.Client
+Canton.Ledger.Rest
+Canton.Ledger.Rest.Client
+Canton.Ledger.Testing
+Daml.Codegen.CSharp
+Daml.Codegen.Intermediate
+Daml.Codegen.Testing.Conformance
+Daml.Ledger.Abstractions
+Daml.Ledger.Abstractions.Testing.Conformance
+Daml.Runtime
+Daml.Runtime.Grpc

@@ -98,7 +98,7 @@ public class EmittedInterfaceChoiceLazyUnsupportedResultTests
 
         act.Should().Throw<NotSupportedException>()
             .WithMessage(
-                "Daml type 'DamlTypeApp*Base = DamlTypeVar { IsOptional = False, Name = f }*' " +
+                "Daml type 'DamlTypeApp*Base = DamlTypeVar { Name = f }*' " +
                 "at 'GenericResults.split' lies outside the emitted Daml-LF JSON decoders");
     }
 }

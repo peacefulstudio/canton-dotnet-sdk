@@ -5,6 +5,7 @@
     <Description>Behavioral conformance kit for Daml.Ledger.Abstractions: an abstract xUnit base any ILedgerClient implementation subclasses to verify the documented behavioral contract (cancellation, unclassified-row surfacing, terminal checkpoint, seeded-row ordering).</Description>
     <PackageTags>daml;canton;blockchain;smart-contracts;ledger;abstractions;conformance;testing</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

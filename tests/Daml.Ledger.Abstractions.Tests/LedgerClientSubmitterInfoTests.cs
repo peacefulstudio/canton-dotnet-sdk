@@ -47,7 +47,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.ExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastExerciseSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -59,7 +59,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.ExerciseAsync(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastTransactionSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -71,7 +71,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateAsync(new FakeTemplate(), new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastCreateSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastCreateSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastCreateSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -83,7 +83,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateOneByExerciseAsync<FakeTemplate>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastTransactionSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -97,7 +97,7 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastSubscribeSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -111,7 +111,7 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeActiveSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastSubscribeActiveSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastSubscribeActiveSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -123,8 +123,8 @@ public class LedgerClientSubmitterInfoTests
 
         await client.ExerciseAsync<int>(SampleCommand, SinglePartyWithReadAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
-        fake.LastExerciseSubmitter!.Value.ReadAs.Select(p => p.Id).Should().Equal("observer");
+        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
+        fake.LastExerciseSubmitter!.Value.ReadAs.Select(p => p.Value).Should().Equal("observer");
     }
 
     [Fact]
@@ -135,8 +135,8 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateAsync(new FakeTemplate(), SinglePartyWithReadAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastCreateSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
-        fake.LastCreateSubmitter!.Value.ReadAs.Select(p => p.Id).Should().Equal("observer");
+        fake.LastCreateSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
+        fake.LastCreateSubmitter!.Value.ReadAs.Select(p => p.Value).Should().Equal("observer");
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
-        fake.LastSubscribeSubmitter!.Value.ReadAs.Select(p => p.Id).Should().Equal("observer");
+        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
+        fake.LastSubscribeSubmitter!.Value.ReadAs.Select(p => p.Value).Should().Equal("observer");
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.ExerciseAsync<int>(SampleCommand, MultiParty, cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Id).Should().BeEquivalentTo("alice", "bob");
+        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Value).Should().BeEquivalentTo("alice", "bob");
         fake.LastExerciseSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -173,7 +173,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateOneByExerciseAsync<FakeTemplate>(SampleCommand, MultiParty, cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Id).Should().BeEquivalentTo("alice", "bob");
+        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Value).Should().BeEquivalentTo("alice", "bob");
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeActiveSubmitter!.Value.ActAs.Select(p => p.Id).Should().BeEquivalentTo("alice", "bob");
+        fake.LastSubscribeActiveSubmitter!.Value.ActAs.Select(p => p.Value).Should().BeEquivalentTo("alice", "bob");
     }
 
     [Fact]
@@ -197,8 +197,8 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateOneByExerciseAsync<FakeTemplate>(SampleCommand, SinglePartyWithReadAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
-        fake.LastTransactionSubmitter!.Value.ReadAs.Select(p => p.Id).Should().Equal("observer");
+        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
+        fake.LastTransactionSubmitter!.Value.ReadAs.Select(p => p.Value).Should().Equal("observer");
     }
 
     [Fact]
@@ -211,8 +211,8 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeActiveSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
-        fake.LastSubscribeActiveSubmitter!.Value.ReadAs.Select(p => p.Id).Should().Equal("observer");
+        fake.LastSubscribeActiveSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
+        fake.LastSubscribeActiveSubmitter!.Value.ReadAs.Select(p => p.Value).Should().Equal("observer");
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateAsync(new FakeTemplate(), MultiParty, cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastCreateSubmitter!.Value.ActAs.Select(p => p.Id).Should().BeEquivalentTo("alice", "bob");
+        fake.LastCreateSubmitter!.Value.ActAs.Select(p => p.Value).Should().BeEquivalentTo("alice", "bob");
         fake.LastCreateSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -237,7 +237,7 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Id).Should().BeEquivalentTo("alice", "bob");
+        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Value).Should().BeEquivalentTo("alice", "bob");
         fake.LastSubscribeSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -249,7 +249,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryExerciseAsync<int>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastExerciseSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastExerciseSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -294,7 +294,7 @@ public class LedgerClientSubmitterInfoTests
 
         await client.TryCreateManyByExerciseAsync<FakeTemplate>(SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
 
-        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastTransactionSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastTransactionSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -347,8 +347,23 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastSubscribeSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastSubscribeFromOffset.Should().Be(resume.Offset);
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_interface_family_accepts_a_StakeholderResume_and_forwards_its_offset_to_the_primitive()
+    {
+        var fake = new RecordingLedgerClient();
+        ILedgerStreamer streamer = fake;
+        var resume = new StakeholderResume(LedgerOffset.At(15));
+
+        await foreach (var _ in streamer.SubscribeAsync(
+            FakeViewDescriptor, new SubmitterInfo(new Party("alice")), resume, cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        fake.LastSubscribeInterfaceFromOffset.Should().Be(resume.Offset);
     }
 
     [Fact]
@@ -361,7 +376,7 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
+        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
         fake.LastSubscribeLedgerEffectsSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -375,8 +390,8 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ActAs.Select(p => p.Id).Should().Equal("alice");
-        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ReadAs.Select(p => p.Id).Should().Equal("observer");
+        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ActAs.Select(p => p.Value).Should().Equal("alice");
+        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ReadAs.Select(p => p.Value).Should().Equal("observer");
     }
 
     [Fact]
@@ -389,7 +404,7 @@ public class LedgerClientSubmitterInfoTests
         {
         }
 
-        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ActAs.Select(p => p.Id).Should().BeEquivalentTo("alice", "bob");
+        fake.LastSubscribeLedgerEffectsSubmitter!.Value.ActAs.Select(p => p.Value).Should().BeEquivalentTo("alice", "bob");
         fake.LastSubscribeLedgerEffectsSubmitter!.Value.ReadAs.Should().BeEmpty();
     }
 
@@ -415,6 +430,7 @@ public class LedgerClientSubmitterInfoTests
         public TimeSpan? LastTransactionTimeout { get; private set; }
         public CommandId? LastExerciseCommandId { get; private set; }
         public LedgerOffset? LastSubscribeFromOffset { get; private set; }
+        public LedgerOffset? LastSubscribeInterfaceFromOffset { get; private set; }
 
         public override Task<ExerciseOutcome<TResult>> TryExerciseAsync<TResult>(
             ExerciseCommand command,
@@ -457,6 +473,17 @@ public class LedgerClientSubmitterInfoTests
             LastCreateSubmitter = submitter;
             return Task.FromResult<ExerciseOutcome<ContractId<TTemplate>>>(
                 new ExerciseOutcome<ContractId<TTemplate>>.None());
+        }
+
+        public override IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
+            ViewDescriptor<TInterface, TView> view,
+            SubmitterInfo submitter,
+            LedgerOffset? fromOffset = null,
+            LedgerOffset? toOffset = null,
+            CancellationToken cancellationToken = default)
+        {
+            LastSubscribeInterfaceFromOffset = fromOffset;
+            return EmptyAsync<InterfaceStreamEvent<TInterface, TView>>(cancellationToken);
         }
 
         public override IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
@@ -525,4 +552,31 @@ public class LedgerClientSubmitterInfoTests
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
             throw new NotSupportedException();
     }
+
+    /// <summary>
+    /// Minimal <see cref="IDamlInterface"/> marker for routing tests, paired with
+    /// <see cref="FakeInterfaceView"/> through <see cref="FakeViewDescriptor"/>.
+    /// </summary>
+    private sealed record FakeInterfaceMarker : IDamlInterface, IHasView<FakeInterfaceView>
+    {
+        public static Identifier InterfaceId { get; } = new("pkg", "Module", "FakeInterface");
+        public static string PackageId => "pkg";
+        public static string PackageName => "fake";
+        public static Version PackageVersion { get; } = new(1, 0, 0);
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(InterfaceId, DamlTypeKind.Interface, PackageName);
+
+        public DamlRecord ToRecord() => DamlRecord.Create();
+    }
+
+    private sealed record FakeInterfaceView : IDamlRecord<FakeInterfaceView>
+    {
+        public DamlRecord ToRecord() => DamlRecord.Create();
+
+        public static FakeInterfaceView FromRecord(DamlRecord record) => new();
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
+            throw new NotSupportedException();
+    }
+
+    private static ViewDescriptor<FakeInterfaceMarker, FakeInterfaceView> FakeViewDescriptor { get; } = new();
 }

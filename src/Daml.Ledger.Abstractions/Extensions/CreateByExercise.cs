@@ -164,7 +164,7 @@ public static class CreateByExercise
             ExerciseOutcome<TransactionResult>.None => new ExerciseOutcome<TCreated>.None(),
             ExerciseOutcome<TransactionResult>.Many many => new ExerciseOutcome<TCreated>.Many(many.ContractIds),
             ExerciseOutcome<TransactionResult>.DamlError e => new ExerciseOutcome<TCreated>.DamlError(e.Category, e.ErrorId, e.Message, e.Metadata),
-            ExerciseOutcome<TransactionResult>.InfraError e => new ExerciseOutcome<TCreated>.InfraError(e.StatusCode, e.Message, e.Category, e.SourceException),
+            ExerciseOutcome<TransactionResult>.InfraError e => new ExerciseOutcome<TCreated>.InfraError(e.Status, e.Message, e.Category, e.SourceException),
             ExerciseOutcome<TransactionResult>.CommittedUndecodable e => new ExerciseOutcome<TCreated>.CommittedUndecodable(e.UpdateId, e.Message, e.SourceException),
             _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name} from TrySubmitSingleAsync."),
         };

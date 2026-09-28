@@ -45,7 +45,7 @@ public sealed class DamlTemplate
     /// list; <see cref="DamlPartySource.Dynamic"/> when the expression involves
     /// anything else (e.g. function calls, projection through nested records,
     /// references to a `key` value, constants, etc.).
-    /// Codegen uses this to decide whether <c>CreateAsync</c> derives <c>actAs</c>
+    /// Codegen uses this to decide whether <c>TryCreateAsync</c> derives <c>actAs</c>
     /// from <c>payload</c> automatically (Static path) or requires the caller to
     /// pass <c>SubmitterInfo</c> explicitly (Dynamic path).
     /// </summary>
@@ -104,7 +104,7 @@ public sealed class DamlChoice
     /// semantics as <see cref="DamlTemplate.Signatories"/>. Codegen unions the
     /// resolved observer parties with the template-level observers and
     /// contributes the result to <c>SubmitterInfo.readAs</c> on the emitted
-    /// <c>&lt;Choice&gt;Async</c> wrapper so visibility propagates to the
+    /// <c>Try&lt;Choice&gt;Async</c> wrapper so visibility propagates to the
     /// command submission.
     /// </summary>
     public DamlPartyAnalysis Observers { get; init; } = DamlPartyAnalysis.Dynamic;
@@ -154,7 +154,7 @@ public abstract record DamlPartyReference;
 /// <summary>
 /// A reference to a <c>Party</c>-typed field on the template payload, e.g.
 /// <c>signatory platform</c> when the template has <c>platform : Party</c>. The
-/// generated <c>CreateAsync</c> derives <c>actAs</c> from
+/// generated <c>TryCreateAsync</c> derives <c>actAs</c> from
 /// <c>payload.&lt;FieldName&gt;</c> rather than asking the caller to pass it
 /// again.
 /// </summary>
@@ -172,14 +172,43 @@ public sealed class DamlInterface
     public required string Name { get; init; }
 
     /// <summary>
-    /// Gets the choices exposed by this interface. (The Daml-LF
-    /// <c>InterfaceMethod</c> list — distinct from interface choices —
-    /// is not yet plumbed through the C# emitter.)
+    /// Gets the choices exposed by this interface.
     /// </summary>
     public required IReadOnlyList<DamlChoice> Choices { get; init; }
+
+    /// <summary>
+    /// Gets the methods declared on this interface — the Daml-LF
+    /// <c>method</c> declarations (<c>method owner : Party</c>), distinct
+    /// from interface choices. Defaults to empty: producers that do not
+    /// populate it (the .NET DarParser producer, which still drops methods)
+    /// construct interfaces without setting this property. Ordering rule: the reader
+    /// preserves the wire order of the entries it reads; the writer applies
+    /// the same ordinal sort-on-write discipline as choices
+    /// (<see cref="DamlInterfaceMethod.Name"/>, ordinal comparer), matching
+    /// the JVM producer's sort-by-name — a wire-ordered (sorted) list
+    /// round-trips in its exact order, and an unsorted in-memory list
+    /// normalizes to the ordinal-sorted order on write.
+    /// </summary>
+    public IReadOnlyList<DamlInterfaceMethod> Methods { get; init; } = [];
 
     /// <summary>
     /// Gets the view type for this interface.
     /// </summary>
     public DamlType? ViewType { get; init; }
 }
+
+/// <summary>
+/// A method declared on a Daml interface — the Daml-LF
+/// <c>method</c> declaration, e.g. <c>method holder : Party</c>. Distinct
+/// from <see cref="DamlChoice"/>: a method has no controllers, no consuming
+/// flag and no argument — it is a pure signature entry whose return type
+/// frequently mentions signature-only builtins (<c>Update a</c>,
+/// <c>a -&gt; b</c>) that are legal in a signature position but never a
+/// serializable data-field type. The C# emitter does not emit anything for
+/// interface methods yet; the model slot exists so the public reader stops
+/// being lossy against the wire format.
+/// </summary>
+/// <param name="Name">The method name (a Daml-LF identifier, e.g. <c>holder</c>).</param>
+/// <param name="ReturnType">The method's return type as declared, e.g.
+/// <c>DamlPrimitiveType(DamlPrimitive.Party)</c> for <c>holder : Party</c>.</param>
+public sealed record DamlInterfaceMethod(string Name, DamlType ReturnType);

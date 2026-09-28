@@ -28,7 +28,11 @@ through:
   8. a file type classified nowhere — exit 2;
   9. a file with neither extension nor shebang — exit 2;
  10. a classified comment type that matches no file — exit 2;
- 11. a scan path missing from the tree — exit 2;
+ 11. a scan path missing from the tree — exit 2, including an internal-only
+     scan path in a tree carrying .gitpublic;
+ 11a. a public-mirror tree (no .gitpublic) with a headerless mirror-authored
+     .github/scripts file — exit 0, and exit 1 once .gitpublic is put back, so
+     the pass is the skip list's doing;
  12. a third-party header under a .licenseignore path — exit 0, and exit 1
      once the ignore file is taken away, so the pass is the ignore file's
      doing and not the gate going quiet;
@@ -68,7 +72,8 @@ headered() {
 build_tree() {
   local root="$1"
   mkdir -p "$root/src" "$root/tests" "$root/jvm-helper/project" "$root/samples" \
-    "$root/scripts" "$root/conformance" "$root/proto"
+    "$root/scripts" "$root/conformance" "$root/proto" "$root/benchmarks" \
+    "$root/.github/scripts"
 
   headered '//' 'namespace Fixture { public sealed class Thing { } }' >"$root/src/Thing.cs"
   headered '//' 'class ThingSpec' >"$root/tests/ThingSpec.scala"
@@ -78,6 +83,8 @@ build_tree() {
   headered '--' 'module Fixture where' >"$root/conformance/Fixture.daml"
   headered '#' 'sdk-version: 0.0.0' >"$root/conformance/daml.yaml"
   headered '#' 'echo fixture' >"$root/samples/run.sh"
+  headered '//' 'namespace Fixture { public sealed class Bench { } }' >"$root/benchmarks/Bench.cs"
+  headered '#' 'echo fixture' >"$root/.github/scripts/ci.sh"
   headered '#' 'repos: []' >"$root/.pre-commit-config.yaml"
   headered '#' 'root = true' >"$root/.editorconfig"
 
@@ -88,6 +95,7 @@ build_tree() {
   chmod +x "$root/scripts/entrypoint"
 
   printf '# Fixture\n' >"$root/CONTEXT.md"
+  printf '/src/\n' >"$root/.gitpublic"
   printf '<Project />\n' >"$root/Directory.Build.props"
   printf '<Configuration />\n' >"$root/coverage.settings.xml"
 }
@@ -192,6 +200,19 @@ missing_path_tree="$(new_tree missing-path)"
 rm -rf "$missing_path_tree/conformance"
 assert_exit "a scan path missing from the tree is reported" 2 "$missing_path_tree"
 
+for internal_path in .github/scripts; do
+  missing_internal_tree="$(new_tree "missing-unpromoted-${internal_path//\//-}")"
+  rm -rf "${missing_internal_tree:?}/$internal_path"
+  assert_exit "an internal-only scan path missing beside .gitpublic is reported" 2 "$missing_internal_tree"
+done
+
+public_tree="$(new_tree public-mirror)"
+printf '#!/usr/bin/env bash\necho mirror-authored\n' >"$public_tree/.github/scripts/leak-check.sh"
+rm -f "$public_tree/.gitpublic"
+assert_exit "a public tree without .gitpublic skips the internal-only scan paths" 0 "$public_tree"
+printf '/src/\n' >"$public_tree/.gitpublic"
+assert_exit "the same tree beside .gitpublic is reported, so the pass was the skip list's doing" 1 "$public_tree"
+
 vendored_tree="$(new_tree vendored)"
 mkdir -p "$vendored_tree/src/vendor"
 printf '// Copyright (c) 2025 Another Vendor. All rights reserved.\n// %s\n\nsyntax = "proto3";\n' \
@@ -261,11 +282,17 @@ else
   report fail "--fix dropped CRLF line endings in a .cmd file"
 fi
 
+for unheadered in benchmarks/Bench.cs .github/scripts/ci.sh; do
+  unheadered_tree="$(new_tree "unheadered-${unheadered//\//-}")"
+  drop_lines "$unheadered_tree/$unheadered" 1 2
+  assert_exit "a headerless $unheadered fails the gate" 1 "$unheadered_tree"
+done
+
 printed_paths="$(bash "$gate" --print-scan-paths)"
 missing_from_print=""
-for path in src tests jvm-helper samples scripts conformance proto CONTEXT.md \
-  Directory.Build.props coverage.settings.xml .editorconfig .pre-commit-config.yaml; do
-  if ! printf '%s\n' "$printed_paths" | grep -qxF -- "$path"; then
+for path in src tests jvm-helper samples scripts conformance proto benchmarks \
+  .github/scripts CONTEXT.md Directory.Build.props coverage.settings.xml .editorconfig .pre-commit-config.yaml; do
+  if ! grep -qxF -- "$path" <<<"$printed_paths"; then
     missing_from_print="$missing_from_print $path"
   fi
 done
