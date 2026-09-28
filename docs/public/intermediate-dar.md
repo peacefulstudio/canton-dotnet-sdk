@@ -25,19 +25,16 @@ not against anything .NET-shaped.
 
 ## Release assets
 
-Starting with the first release of
+From `0.6.0-preview.1` of
 [`peacefulstudio/canton-dotnet-sdk`](https://github.com/peacefulstudio/canton-dotnet-sdk)
-cut after this page merges, every GitHub release attaches:
+onward, every `v*` GitHub release attaches:
 
 | Asset | Contents |
 |---|---|
 | `daml-dar-to-proto-<version>.jar` | The reference producer, a self-contained JVM jar. |
 | `intermediate_dar-<version>.proto` | The exact schema that jar writes against. |
-| `SHA256SUMS` | Checksums for every asset in the release, including the two above. |
+| `SHA256SUMS` | Checksums for the jar, the proto and the fixtures archive. |
 | `intermediate-fixtures-<version>.tar.gz` | A schema-only `.binpb` plus its canonical protobuf-JSON rendering for each DAR in this project's conformance corpus, alongside the SHA-256 of each source DAR. |
-
-No published release carries these assets yet — check the release you are pinning against
-before relying on this table.
 
 ### Older releases
 

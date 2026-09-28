@@ -24,8 +24,8 @@ Runs only at codegen time — never at application runtime. Coupling to `daml-lf
 is confined to this binary. Shipped as a JAR inside the `dpm codegen-cs` bundle and
 executed against the host JDK (a dpm install precondition). The helper ships
 inside that OCI bundle — its source is not part of the public repository. It is
-also packaged standalone as `daml-dar-to-proto`: GitHub releases will attach
-the runnable jar and the Intermediate DAR proto schema, so non-C# SDKs can run the
+also packaged standalone as `daml-dar-to-proto`: from `0.6.0-preview.1`, GitHub releases
+attach the runnable jar and the Intermediate DAR proto schema, so non-C# SDKs can run the
 JVM helper directly to turn a `.dar` into an Intermediate DAR.
 _Avoid_: "Scala helper", "decoder service", "ast extractor"
 
