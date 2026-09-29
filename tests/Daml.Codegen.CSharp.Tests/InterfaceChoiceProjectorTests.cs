@@ -247,7 +247,7 @@ public class InterfaceChoiceProjectorTests
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*no 'GetCount' exercise on contract 'contract-1'*")
             .WithMessage("*TransactionResult.ExercisedEvents*")
-            .WithMessage("*must project the transaction's exercised events*");
+            .WithMessage("*a custom ILedgerWriter did not project the transaction's exercised events*");
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class InterfaceChoiceProjectorTests
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*no 'GetCount' exercise on contract 'contract-1'*")
             .WithMessage("*TransactionResult.ExercisedEvents*")
-            .WithMessage("*must project the transaction's exercised events*");
+            .WithMessage("*a custom ILedgerWriter did not project the transaction's exercised events*");
     }
 
     [Fact]

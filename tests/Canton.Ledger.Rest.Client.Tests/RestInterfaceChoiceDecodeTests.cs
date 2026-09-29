@@ -22,7 +22,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 /// </summary>
 public sealed class RestInterfaceChoiceDecodeTests : IDisposable
 {
-    private const string RichTypesPackageId = "d3b1c254073af761246f22060c60d08a92c4cf4d59327c7a554d3ec6d3e794ec";
+    private const string RichTypesPackageId = "1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946";
     private static readonly Party Alice = new("party::alice");
 
     // DamlTypeResolver indexes only already-loaded assemblies, so the generated

@@ -77,6 +77,28 @@ public abstract class LedgerDeduplicationParityTests
     }
 
     [Fact]
+    public async Task Generated_create_helper_configure_deduplicates_a_resubmission_under_the_command_id_it_sets()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenDeduplicationAsync(cancellationToken);
+        var (client, owner) = lane.Capability;
+        var sharedCommandId = new CommandId(Guid.NewGuid().ToString());
+        CommandsSubmission Configure(CommandsSubmission submission) => submission
+            .WithCommandId(sharedCommandId)
+            .WithDeduplicationPeriod(new DeduplicationPeriod.Duration(TimeSpan.FromMinutes(5)));
+
+        var first = await client.TryCreateAsync(
+            new Marker(owner), configure: Configure, cancellationToken: cancellationToken);
+        var second = await client.TryCreateAsync(
+            new Marker(owner), configure: Configure, cancellationToken: cancellationToken);
+
+        first.Should().BeOfType<ExerciseOutcome<ContractId<Marker>>.One>();
+        var duplicate = second.Should().BeOfType<ExerciseOutcome<ContractId<Marker>>.DamlError>().Subject;
+        duplicate.ErrorId.Should().Be("DUPLICATE_COMMAND");
+        duplicate.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists);
+    }
+
+    [Fact]
     public async Task TrySubmitAndWaitForTransactionAsync_accepts_a_period_beyond_the_participant_maximum()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -121,7 +143,7 @@ public abstract class LedgerDeduplicationParityTests
         outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>();
 
         var accepted = await AcceptedCompletionAsync(
-            client, owner, beforeSubmission, submission.CommandId!.Value, cancellationToken);
+            lane, beforeSubmission, submission.CommandId!.Value, cancellationToken);
 
         accepted.Should().NotBeNull("the accepted command's completion has to reach the stream");
         accepted!.Completion.DeduplicationPeriod.Should().NotBeNull(
@@ -129,18 +151,19 @@ public abstract class LedgerDeduplicationParityTests
     }
 
     private static async Task<CompletionStreamEvent.CommandAccepted?> AcceptedCompletionAsync(
-        ICantonLedgerClient client,
-        Party submitter,
+        CapabilityLane<(ICantonLedgerClient Client, Party Owner)> lane,
         LedgerOffset beginExclusive,
         CommandId commandId,
         CancellationToken cancellationToken)
     {
+        var (client, submitter) = lane.Capability;
         for (var attempt = 1; attempt <= CompletionDrainAttempts; attempt++)
         {
             using var window = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             window.CancelAfter(DrainTimeout);
             var endedOnStaleAuthorization = false;
 
+            using var streamHold = await lane.HoldStreamAsync(cancellationToken);
             try
             {
                 await foreach (var streamEvent in client.CompletionStreamAsync(submitter, beginExclusive, window.Token))

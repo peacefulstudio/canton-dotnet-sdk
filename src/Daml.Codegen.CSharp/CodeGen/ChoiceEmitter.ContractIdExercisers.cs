@@ -77,7 +77,7 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine($"/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref=\"{templateClassName}\"/>.");
             indent.AppendLine("/// One method per create-bearing choice; each delegates to");
             indent.AppendLine("/// <see cref=\"global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync\"/>");
-            indent.AppendLine($"/// and projects success via <c>&lt;Choice&gt;Result.FromCreatedContracts</c>.");
+            indent.AppendLine("/// and projects success from the choice's own exercise result.");
             indent.AppendLine("/// </summary>");
         }
         indent.AppendLine($"public static class {templateClassName}Extensions");
@@ -119,6 +119,9 @@ internal sealed partial class ChoiceEmitter
                 WriteSubmitterInfoContractChoiceAsyncExerciser(
                     indent, choice, templateClassName, dataTypes);
             }
+
+            indent.AppendLine();
+            WriteContractIdResultProjector(indent, choice, templateClassName, slots);
             first = false;
         }
 
@@ -156,7 +159,7 @@ internal sealed partial class ChoiceEmitter
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Exercises the {choice.Name} choice and projects the resulting transaction's created contracts to a typed <see cref=\"{resultName}\"/>.");
+            indent.AppendLine($"/// Exercises the {choice.Name} choice and projects the choice's exercise result to a typed <see cref=\"{resultName}\"/>.");
             if (staticControllers && readAsParams.Count > 0)
             {
                 indent.AppendLine("/// One <c>Party</c> parameter is emitted per Daml controller (declaration order),");
@@ -272,6 +275,7 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine("workflowId,");
             indent.AppendLine("commandId,");
             indent.AppendLine("timeout,");
+            indent.AppendLine("configure,");
             indent.AppendLine("cancellationToken);");
             indent.Dedent();
         }

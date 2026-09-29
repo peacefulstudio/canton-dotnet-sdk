@@ -42,11 +42,12 @@ public abstract class SpliceBindingsParityTests
     /// leaving the merged holding's amount different from the amount that was tapped.
     /// </summary>
     private static async Task<HashSet<ContractId<IHolding>>> SnapshotAmuletHoldingContractIdsAsync(
-        ICantonLedgerClient client,
-        Party @operator,
+        CapabilityLane<(ICantonLedgerClient Client, Party Operator, LocalnetValidatorWallet OperatorWallet)> lane,
         CancellationToken cancellationToken)
     {
+        var (client, @operator, _) = lane.Capability;
         var contractIds = new HashSet<ContractId<IHolding>>();
+        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
         await foreach (var entry in client.SubscribeActiveAsync(
             IHolding.View, @operator, cancellationToken: cancellationToken))
         {
@@ -71,19 +72,22 @@ public abstract class SpliceBindingsParityTests
         List<InterfaceAcsSnapshotEntry<IHolding, HoldingView>> Entries,
         List<InterfaceAcsSnapshotEntry<IHolding, HoldingView>.Created> TappedAmuletHoldings)>
         PollForTappedAmuletHoldingsAsync(
-            ICantonLedgerClient client,
-            Party @operator,
+            CapabilityLane<(ICantonLedgerClient Client, Party Operator, LocalnetValidatorWallet OperatorWallet)> lane,
             HashSet<ContractId<IHolding>> preTapAmuletContractIds,
             CancellationToken cancellationToken)
     {
+        var (client, @operator, _) = lane.Capability;
         var deadline = DateTimeOffset.UtcNow.Add(TapProjectionTimeout);
         while (true)
         {
             var entries = new List<InterfaceAcsSnapshotEntry<IHolding, HoldingView>>();
-            await foreach (var entry in client.SubscribeActiveAsync(
-                IHolding.View, @operator, cancellationToken: cancellationToken))
+            using (await lane.HoldStreamAsync(cancellationToken))
             {
-                entries.Add(entry);
+                await foreach (var entry in client.SubscribeActiveAsync(
+                    IHolding.View, @operator, cancellationToken: cancellationToken))
+                {
+                    entries.Add(entry);
+                }
             }
 
             var tappedAmuletHoldings = entries
@@ -108,6 +112,7 @@ public abstract class SpliceBindingsParityTests
         var (client, @operator, _) = lane.Capability;
 
         var entries = new List<AcsSnapshotEntry<ValidatorLicense>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var entry in client.SubscribeActiveAsync<ValidatorLicense>(
             @operator, cancellationToken: TestContext.Current.CancellationToken))
         {
@@ -131,12 +136,12 @@ public abstract class SpliceBindingsParityTests
         var (client, @operator, operatorWallet) = lane.Capability;
 
         var preTapAmuletContractIds = await SnapshotAmuletHoldingContractIdsAsync(
-            client, @operator, TestContext.Current.CancellationToken);
+            lane, TestContext.Current.CancellationToken);
 
         await operatorWallet.TapAsync("10.0", TestContext.Current.CancellationToken);
 
         var (entries, tappedAmuletHoldings) = await PollForTappedAmuletHoldingsAsync(
-            client, @operator, preTapAmuletContractIds, TestContext.Current.CancellationToken);
+            lane, preTapAmuletContractIds, TestContext.Current.CancellationToken);
 
         var holdings = entries.OfType<InterfaceAcsSnapshotEntry<IHolding, HoldingView>.Created>().ToList();
         holdings.Should().NotBeEmpty();

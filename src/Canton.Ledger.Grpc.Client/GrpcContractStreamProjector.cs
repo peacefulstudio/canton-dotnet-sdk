@@ -13,6 +13,7 @@ using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
 using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
+using RuntimeDisclosedContract = Daml.Runtime.Commands.DisclosedContract;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 namespace Canton.Ledger.Grpc.Client;
@@ -275,6 +276,29 @@ internal static class GrpcContractStreamProjector
     internal static bool MatchesModuleEntity(string moduleName, string entityName, RuntimeIdentifier expected) =>
         string.Equals(moduleName, expected.ModuleName, StringComparison.Ordinal)
         && string.Equals(entityName, expected.EntityName, StringComparison.Ordinal);
+
+    public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response) =>
+        ActiveCreatedEvent(response) is ({ CreatedEventBlob.IsEmpty: false, TemplateId: { } templateId } created, var wireSynchronizerId)
+            ? new RuntimeDisclosedContract(
+                created.ContractId,
+                LedgerWireConversions.ToRuntimeIdentifier(templateId),
+                created.CreatedEventBlob.Memory)
+            {
+                SynchronizerId = StreamEventClassifier.Synchronizer(wireSynchronizerId),
+            }
+            : null;
+
+    private static (ProtoCreatedEvent? Created, string? WireSynchronizerId) ActiveCreatedEvent(GetActiveContractsResponse response) =>
+        response.ContractEntryCase switch
+        {
+            GetActiveContractsResponse.ContractEntryOneofCase.ActiveContract =>
+                (response.ActiveContract?.CreatedEvent, response.ActiveContract?.SynchronizerId),
+            GetActiveContractsResponse.ContractEntryOneofCase.IncompleteUnassigned =>
+                (response.IncompleteUnassigned?.CreatedEvent, response.IncompleteUnassigned?.UnassignedEvent?.Source),
+            GetActiveContractsResponse.ContractEntryOneofCase.IncompleteAssigned =>
+                (response.IncompleteAssigned?.AssignedEvent?.CreatedEvent, response.IncompleteAssigned?.AssignedEvent?.Target),
+            _ => (null, null),
+        };
 
     public static IEnumerable<ContractStreamEvent<T>> ProjectActiveContractEntry<T>(
         GetActiveContractsResponse response,

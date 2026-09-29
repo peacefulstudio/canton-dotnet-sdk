@@ -153,6 +153,7 @@ public sealed class LedgerClientTests : IDisposable
         {
             Created = new Com.Daml.Ledger.Api.V2.CreatedEvent
             {
+                AcsDelta = true,
                 ContractId = "00contract789",
                 TemplateId = new ProtoIdentifier
                 {
@@ -196,9 +197,15 @@ public sealed class LedgerClientTests : IDisposable
         };
         transaction.Events.Add(new Event
         {
-            Archived = new Com.Daml.Ledger.Api.V2.ArchivedEvent
+            Exercised = new ProtoExercisedEvent
             {
-                ContractId = "00archived123"
+                ContractId = "00archived123",
+                TemplateId = new ProtoIdentifier { PackageId = "pkg", ModuleName = "Module", EntityName = "Template" },
+                Choice = "Archive",
+                Consuming = true,
+                AcsDelta = true,
+                ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
+                ExerciseResult = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() }
             }
         });
 
@@ -632,31 +639,6 @@ public sealed class LedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransaction_uses_default_acs_delta_shape()
-    {
-        SubmitAndWaitForTransactionRequest? capturedRequest = null;
-
-        var transaction = new Transaction { UpdateId = "update-456", Offset = 789L };
-        var response = new SubmitAndWaitForTransactionResponse { Transaction = transaction };
-
-        LedgerClientTestFixtures.StubCommandServiceSuccess(_commandService, response, r => capturedRequest = r);
-
-        var createCommand = new RuntimeCommands.CreateCommand(
-            new RuntimeIdentifier("pkg", "Module", "Template"),
-            new DamlRecord(null, []));
-        var submission = RuntimeCommands.CommandsSubmission.Single(createCommand)
-            .WithActAs(ActAs)
-            .WithCommandId(TestCommandId);
-
-        var client = CreateClient();
-        await client.TrySubmitAndWaitForTransactionAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
-
-        capturedRequest.Should().NotBeNull();
-        capturedRequest!.TransactionFormat.Should().BeNull(
-            "the plain submit path must keep the server-default AcsDelta shape");
-    }
-
-    [Fact]
     public async Task TryExerciseAsync_returns_CommittedUndecodable_when_the_committed_transaction_has_multiple_matching_events()
     {
         var transaction = new Transaction { UpdateId = "update-456", Offset = 789L };
@@ -831,7 +813,7 @@ public sealed class LedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_still_leaves_the_transaction_format_unset()
+    public async Task TrySubmitAndWaitForTransactionAsync_sends_the_ledger_effects_transaction_format()
     {
         SubmitAndWaitForTransactionRequest? capturedRequest = null;
         StubSubmitAndWaitForTransaction(TreeShapedTransaction(), r => capturedRequest = r);
@@ -842,7 +824,7 @@ public sealed class LedgerClientTests : IDisposable
             cancellationToken: TestContext.Current.CancellationToken);
 
         capturedRequest.Should().NotBeNull();
-        capturedRequest!.TransactionFormat.Should().BeNull();
+        capturedRequest!.TransactionFormat.TransactionShape.Should().Be(TransactionShape.LedgerEffects);
     }
 
     [Fact]
@@ -934,6 +916,7 @@ public sealed class LedgerClientTests : IDisposable
     {
         Created = new ProtoCreatedEvent
         {
+            AcsDelta = true,
             NodeId = nodeId,
             ContractId = contractId,
             TemplateId = new ProtoIdentifier { PackageId = "pkg", ModuleName = "Module", EntityName = "Template" },

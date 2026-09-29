@@ -8,7 +8,7 @@ generated output, refresh the `expected/` snapshot.
 ## Why this DAR
 
 This package is published to nuget.org by the existing pipeline:
-`.github/workflows/publish-splice.yaml` pulls the Splice `splice-node` release
+the public twin's `publish-splice.yaml` pulls the Splice `splice-node` release
 tarball, takes every DAR under `*/dars/*.dar` whose basename matches `splice-*`,
 and packs each one. `splice-api-token-metadata-v1` has always been in that set,
 but it had no snapshot family, so its emitted C# shipped to consumers with

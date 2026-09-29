@@ -106,3 +106,12 @@ tracing.AddSource(LedgerActivitySourceNames.RestAdminClient);
 - `Canton.Ledger.Grpc.Client` — the gRPC client implementing the same surface
 - `Canton.Ledger.Testing` — in-memory fakes for unit-testing against these contracts
 - `Canton.Ledger.Rest` — the raw Refit surface this adapter is built on
+
+## Support
+
+For questions, bug reports and feature requests, open a
+[GitHub issue](https://github.com/peacefulstudio/canton-dotnet-sdk/issues).
+This package is maintained by [Peaceful Studio](https://peaceful.studio).
+For consulting beyond this SDK (Daml development, .NET integration with
+Canton, validator operations), please write to
+[info@peaceful.studio](mailto:info@peaceful.studio).

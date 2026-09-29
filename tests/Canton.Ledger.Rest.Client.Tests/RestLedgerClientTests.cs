@@ -222,6 +222,7 @@ public sealed class RestLedgerClientTests : IDisposable
                       "offset": "7",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "acsDelta": true,
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "createArgument": {"owner": "party::alice"}
                     }
@@ -814,6 +815,7 @@ public sealed class RestLedgerClientTests : IDisposable
               {
                 "CreatedEvent": {
                   "offset": "1",
+                  "acsDelta": true,
                   "contractId": "00holding",
                   "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                   "createArgument": {"owner": "party::alice"}
@@ -823,6 +825,44 @@ public sealed class RestLedgerClientTests : IDisposable
           }
         }
         """;
+
+    private const string CreatedAndArchivedTransactionResponse =
+        """
+        {
+          "transaction": {
+            "updateId": "upd-1",
+            "offset": "1",
+            "events": [
+              {"CreatedEvent": {"offset": "1", "nodeId": 0, "contractId": "00kept", "acsDelta": true,
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "createArgument": {"owner": "party::alice"}}},
+              {"CreatedEvent": {"offset": "1", "nodeId": 1, "contractId": "00transient", "acsDelta": false,
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "createArgument": {"owner": "party::alice"}}},
+              {"ExercisedEvent": {"offset": "1", "nodeId": 2, "lastDescendantNodeId": 2, "contractId": "00transient",
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
+                "consuming": true, "acsDelta": false, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}},
+              {"CreatedEvent": {"offset": "1", "nodeId": 3, "contractId": "00witnessed",
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "createArgument": {"owner": "party::bob"}}},
+              {"ExercisedEvent": {"offset": "1", "nodeId": 4, "lastDescendantNodeId": 4, "contractId": "00witnessed-target",
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
+                "consuming": true, "acsDelta": false, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}},
+              {"ExercisedEvent": {"offset": "1", "nodeId": 5, "lastDescendantNodeId": 5, "contractId": "00earlier",
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
+                "consuming": true, "acsDelta": true, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}},
+              {"ExercisedEvent": {"offset": "1", "nodeId": 6, "lastDescendantNodeId": 6, "contractId": "00holding",
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
+                "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
+                "consuming": false, "acsDelta": false, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}}
+            ]
+          }
+        }
+        """;
+
 
     [Fact]
     public async Task TryExerciseAsync_uses_ledger_effects_shape()
@@ -918,7 +958,7 @@ public sealed class RestLedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_uses_the_server_default_acs_delta_shape()
+    public async Task TrySubmitAndWaitForTransactionAsync_requests_the_ledger_effects_shape()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, CreatedTransactionResponse);
         var client = ClientWith(transport);
@@ -928,13 +968,33 @@ public sealed class RestLedgerClientTests : IDisposable
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
         using var body = JsonDocument.Parse(transport.LastRequestBody!);
-        body.RootElement.TryGetProperty("transactionFormat", out _).Should().BeFalse(
-            "the plain submit path must keep the server-default ACS-delta shape so "
-            + "ArchivedContractIds stays populated");
+        var transactionFormat = body.RootElement.GetProperty("transactionFormat");
+        transactionFormat.GetProperty("transactionShape").GetString()
+            .Should().Be("TRANSACTION_SHAPE_LEDGER_EFFECTS");
+        transactionFormat.GetProperty("eventFormat").GetProperty("verbose").GetBoolean().Should().BeTrue();
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_with_a_submitter_uses_the_server_default_acs_delta_shape()
+    public async Task TrySubmitAndWaitForTransactionAsync_filters_the_ledger_effects_to_every_actAs_and_readAs_party()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, CreatedTransactionResponse);
+        var client = ClientWith(transport);
+        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice)
+            .WithReadAs(Bob);
+
+        await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        var filtersByParty = body.RootElement
+            .GetProperty("transactionFormat").GetProperty("eventFormat").GetProperty("filtersByParty");
+        filtersByParty.EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo(["party::alice", "party::bob"]);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_with_a_submitter_requests_the_ledger_effects_shape()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, CreatedTransactionResponse);
         var client = ClientWith(transport);
@@ -944,9 +1004,25 @@ public sealed class RestLedgerClientTests : IDisposable
             submission, Alice, cancellationToken: TestContext.Current.CancellationToken);
 
         using var body = JsonDocument.Parse(transport.LastRequestBody!);
-        body.RootElement.TryGetProperty("transactionFormat", out _).Should().BeFalse(
-            "the plain submit path must keep the server-default ACS-delta shape so "
-            + "ArchivedContractIds stays populated");
+        body.RootElement.GetProperty("transactionFormat").GetProperty("transactionShape").GetString()
+            .Should().Be("TRANSACTION_SHAPE_LEDGER_EFFECTS");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_only_the_events_the_wire_flags_as_acs_delta()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, CreatedAndArchivedTransactionResponse);
+        var client = ClientWith(transport);
+        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate())).WithActAs(Alice);
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.CreatedContracts.Select(created => created.ContractId).Should().Equal("00kept");
+        result.ArchivedContractIds.Should().Equal("00earlier");
+        result.ExercisedEvents.Select(exercised => exercised.ContractId)
+            .Should().Equal("00transient", "00witnessed-target", "00earlier", "00holding");
     }
 
     [Fact]

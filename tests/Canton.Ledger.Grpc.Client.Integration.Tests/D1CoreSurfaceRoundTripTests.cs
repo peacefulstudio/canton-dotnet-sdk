@@ -63,6 +63,7 @@ public class D1CoreSurfaceRoundTripTests
         Assert.False(string.IsNullOrWhiteSpace(synchronizer.SynchronizerId), "synchronizer id must not be empty");
         Assert.NotEqual(SynchronizerPermissionLevel.Unrecognized, synchronizer.Permission);
         Assert.NotEqual(SynchronizerPermissionLevel.Unspecified, synchronizer.Permission);
+        Assert.Equal("global", synchronizer.SynchronizerAlias);
     }
 
     [Fact]

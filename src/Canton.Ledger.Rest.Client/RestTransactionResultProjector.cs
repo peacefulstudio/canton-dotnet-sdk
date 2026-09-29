@@ -63,6 +63,23 @@ internal static class RestTransactionResultProjector
         };
     }
 
+    public static TransactionResult ProjectAcsDelta(WireTransaction transaction)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+
+        var events = transaction.Events ?? [];
+        var createdInAcsDelta = events
+            .Where(evt => evt?.CreatedEvent is { AcsDelta: true })
+            .Select(evt => evt.CreatedEvent.ContractId)
+            .ToHashSet(StringComparer.Ordinal);
+        var exercisedInAcsDelta = events
+            .Where(evt => evt?.ExercisedEvent is { AcsDelta: true })
+            .Select(evt => evt.ExercisedEvent.ContractId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return AcsDeltaView.Of(Project(transaction), createdInAcsDelta, exercisedInAcsDelta);
+    }
+
     public static ExerciseOutcome<ContractId<TTemplate>> ProjectToContractId<TTemplate>(
         ExerciseOutcome<TransactionResult> outcome)
         where TTemplate : ITemplate =>

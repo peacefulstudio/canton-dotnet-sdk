@@ -76,7 +76,7 @@ public sealed record FinalizedAllocation(
     public static FinalizedAllocation FromRecord(DamlRecord record) => new FinalizedAllocation(
         AllocationCid: new ContractId<IAllocation>(record.GetRequiredField("allocationCid").As<DamlContractId>().Value),
         ExtraTransferLegSides: (IReadOnlyList<TransferLegSide>)record.GetRequiredField("extraTransferLegSides").As<DamlList>().Values.Select(x => TransferLegSide.FromRecord(x.As<DamlRecord>())).ToList(),
-        NextIterationFunding: record.GetRequiredField("nextIterationFunding").AsOptional().HasValue ? (IReadOnlyDictionary<string, decimal>)record.GetRequiredField("nextIterationFunding").AsOptional().Value!.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlNumeric>().Value) : null
+        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlNumeric>().Value) : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -87,7 +87,7 @@ public sealed record FinalizedAllocation(
         return DamlRecord.Create(
             DamlField.Create("allocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocationCid"), context.Field("allocationCid"))),
             DamlField.Create("extraTransferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraTransferLegSides"), context.Field("extraTransferLegSides"), (__json0, __ctx0) => TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("nextIterationFunding", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "nextIterationFunding"), context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1))))
+            DamlField.Create("nextIterationFunding", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextIterationFunding"), context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1))))
         );
     }
 

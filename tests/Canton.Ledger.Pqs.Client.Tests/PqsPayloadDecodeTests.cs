@@ -37,11 +37,20 @@ public class PqsPayloadDecodeTests
     }
 
     [Fact]
-    public void DeserializeContract_refuses_an_omitted_optional_key_and_names_the_field()
+    public void DeserializeContract_reads_an_omitted_optional_key_as_absent()
     {
-        var act = () => Decode("""{"owner":"alice","quantity":"1","price":"2"}""");
+        var contract = Decode("""{"owner":"alice","quantity":"1","price":"2"}""");
 
-        act.Should().Throw<JsonException>().Which.Message.Should().Contain("note");
+        contract.Data.Note.Should().BeNull();
+        contract.Data.Price.Should().Be(2m);
+    }
+
+    [Fact]
+    public void DeserializeContract_refuses_an_omitted_non_optional_key_and_names_the_field()
+    {
+        var act = () => Decode("""{"owner":"alice","quantity":"1","note":"first"}""");
+
+        act.Should().Throw<JsonException>().WithMessage("Required Daml field '*.price' is missing from the JSON object");
     }
 
     [Fact]

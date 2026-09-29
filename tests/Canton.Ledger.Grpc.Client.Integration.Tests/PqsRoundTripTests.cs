@@ -5,6 +5,7 @@ using System.Collections;
 using System.Diagnostics;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Pqs.Client;
+using Canton.Ledger.Testing.Localnet;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -70,9 +71,9 @@ public class PqsRoundTripTests
         await using var services = PqsServices(pqsConnectionString);
         var pqs = services.GetRequiredService<IPqsClient>();
 
-        var projected = await PollForProjectionAsync(
-            () => pqs.QueryAsync<Asset>(TestContext.Current.CancellationToken),
-            c => c.Id.Value == created.ContractId);
+        var createdContractId = new ContractId<Asset>(created.ContractId);
+        var projected = await PollForFetchAsync(
+            () => pqs.FetchByIdAsync(createdContractId, TestContext.Current.CancellationToken));
 
         Assert.NotNull(projected);
         Assert.Equal(created.Issuer.Value, projected!.Data.Issuer.Value);
@@ -90,9 +91,9 @@ public class PqsRoundTripTests
         await using var services = PqsServices(pqsConnectionString);
         var pqs = services.GetRequiredService<IPqsClient>();
 
-        var projected = await PollForProjectionAsync(
-            () => pqs.QueryAsync<IHolding, HoldingView>(TestContext.Current.CancellationToken),
-            c => c.Id.Value == created.ContractId);
+        var createdHoldingId = new ContractId<Asset>(created.ContractId).ToInterfaceContractId<Asset, IHolding>();
+        var projected = await PollForFetchAsync(
+            () => pqs.FetchByIdAsync<IHolding, HoldingView>(createdHoldingId, TestContext.Current.CancellationToken));
 
         Assert.NotNull(projected);
         Assert.Equal(AssetAmount, projected!.View.Amount);
@@ -135,19 +136,22 @@ public class PqsRoundTripTests
             var beforeOffset = await ledger.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             var createOutcome = await ledger.TryCreateAsync(
-                new Asset(issuer, OpenTelemetryAssetAmount), TestContext.Current.CancellationToken);
+                new Asset(issuer, OpenTelemetryAssetAmount), cancellationToken: TestContext.Current.CancellationToken);
             var created = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(createOutcome).Result;
 
             var afterOffset = await ledger.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-            await foreach (var _ in ledger.SubscribeAsync<Asset>(
-                issuer, beforeOffset, afterOffset, TestContext.Current.CancellationToken))
+            using (await LedgerUserRightsGate.Shared.HoldStreamAsync(userId, TestContext.Current.CancellationToken))
             {
+                await foreach (var _ in ledger.SubscribeAsync<Asset>(
+                    issuer, beforeOffset, afterOffset, TestContext.Current.CancellationToken))
+                {
+                }
             }
 
-            var projected = await PollForProjectionAsync(
-                () => pqs.QueryAsync<Asset>(TestContext.Current.CancellationToken),
-                c => c.Id.Value == created.Value);
+            var createdContractId = new ContractId<Asset>(created.Value);
+            var projected = await PollForFetchAsync(
+                () => pqs.FetchByIdAsync(createdContractId, TestContext.Current.CancellationToken));
             Assert.NotNull(projected);
         }
 
@@ -170,7 +174,8 @@ public class PqsRoundTripTests
 
         var pqsQuerySpans = traceActivities
             .Where(a => a.Source.Name == "Npgsql"
-                && a.GetTagItem("db.query.text") is "SELECT contract_id, payload FROM active(@typeId)")
+                && a.GetTagItem("db.query.text") is
+                    "SELECT contract_id, payload FROM active(@typeId) WHERE contract_id = @contractId LIMIT 1")
             .ToList();
         Assert.True(
             pqsQuerySpans.Count > 0,
@@ -221,23 +226,20 @@ public class PqsRoundTripTests
         var issuer = await ScribeReadablePartyAsync(services.GetRequiredService<IAdminClient>(), userId);
         var ledger = services.GetRequiredService<ICantonLedgerClient>();
 
-        var createOutcome = await ledger.TryCreateAsync(new Asset(issuer, AssetAmount), TestContext.Current.CancellationToken);
+        var createOutcome = await ledger.TryCreateAsync(new Asset(issuer, AssetAmount), cancellationToken: TestContext.Current.CancellationToken);
         var createdCid = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(createOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(createdCid.Value), "created Asset ContractId is empty");
 
         return (issuer, createdCid.Value);
     }
 
-    private static async Task<T?> PollForProjectionAsync<T>(
-        Func<Task<IReadOnlyList<T>>> query,
-        Func<T, bool> match)
+    private static async Task<T?> PollForFetchAsync<T>(Func<Task<T?>> fetch)
         where T : class
     {
         var deadline = DateTimeOffset.UtcNow.Add(ProjectionTimeout);
         while (DateTimeOffset.UtcNow < deadline)
         {
-            var rows = await query();
-            var projected = rows.FirstOrDefault(match);
+            var projected = await fetch();
             if (projected is not null) return projected;
 
             try

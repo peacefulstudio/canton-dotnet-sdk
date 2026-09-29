@@ -164,7 +164,11 @@ public class RestOffsetCheckpointConformanceTests(ITestOutputHelper output)
         var elapsed = Stopwatch.StartNew();
         do
         {
-            entries.AddRange(await ReadOneWindowAsync(wireClient, request, cancellationToken));
+            using (await lane.HoldStreamAsync(cancellationToken))
+            {
+                entries.AddRange(await ReadOneWindowAsync(wireClient, request, cancellationToken));
+            }
+
             windows++;
         }
         while (!entries.Exists(IsOffsetCheckpoint) && elapsed.Elapsed < budget);

@@ -72,7 +72,8 @@ public sealed class GrpcSpliceBindingsParityTests : SpliceBindingsParityTests
                     {
                         await fixture.DisposeAsync().ConfigureAwait(false);
                     }
-                });
+                },
+                rightsGatedUserId: fixture.ValidatorUserId);
         }
         catch
         {

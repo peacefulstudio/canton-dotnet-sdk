@@ -106,6 +106,60 @@ public class RestSubscribeRequestBuilderTests
     }
 
     [Fact]
+    public void BuildGetActiveContractsPageRequest_asks_every_party_template_filter_for_the_created_event_blob_when_requested()
+    {
+        var submitter = new SubmitterInfo(Alice, new HashSet<Party> { Bob });
+
+        var request = RestSubscribeRequestBuilder.BuildGetActiveContractsPageRequest<TemplateMarker>(
+            submitter, 1L, 75, includeDisclosure: true);
+
+        request.EventFormat.FiltersByParty.Values
+            .Select(filters => filters.Cumulative.Single().IdentifierFilter!.TemplateFilter!.IncludeCreatedEventBlob)
+            .Should().Equal(true, true);
+    }
+
+    [Fact]
+    public void BuildGetActiveContractsPageRequest_asks_the_interface_filter_for_the_created_event_blob_when_requested()
+    {
+        var submitter = (SubmitterInfo)Alice;
+
+        var request = RestSubscribeRequestBuilder.BuildGetActiveContractsPageRequest<InterfaceMarker>(
+            submitter, 1L, 75, includeDisclosure: true);
+
+        var interfaceFilter = request.EventFormat.FiltersByParty["party::alice"].Cumulative.Single().IdentifierFilter!.InterfaceFilter!;
+        interfaceFilter.IncludeCreatedEventBlob.Should().BeTrue();
+        interfaceFilter.IncludeInterfaceView.Should().BeTrue();
+    }
+
+    [Fact]
+    public void BuildGetActiveContractsPageRequest_leaves_the_created_event_blob_off_the_template_filter_by_default()
+    {
+        var request = RestSubscribeRequestBuilder.BuildGetActiveContractsPageRequest<TemplateMarker>((SubmitterInfo)Alice, 1L, 75);
+
+        request.EventFormat.FiltersByParty["party::alice"].Cumulative.Single().IdentifierFilter!.TemplateFilter!
+            .IncludeCreatedEventBlob.Should().BeNull();
+    }
+
+    [Fact]
+    public void BuildGetActiveContractsPageRequest_leaves_the_created_event_blob_off_the_interface_filter_by_default()
+    {
+        var request = RestSubscribeRequestBuilder.BuildGetActiveContractsPageRequest<InterfaceMarker>((SubmitterInfo)Alice, 1L, 75);
+
+        request.EventFormat.FiltersByParty["party::alice"].Cumulative.Single().IdentifierFilter!.InterfaceFilter!
+            .IncludeCreatedEventBlob.Should().BeNull();
+    }
+
+    [Fact]
+    public void BuildGetUpdatesRequest_never_asks_for_the_created_event_blob()
+    {
+        var request = RestSubscribeRequestBuilder.BuildGetUpdatesRequest<TemplateMarker>(
+            (SubmitterInfo)Alice, beginExclusive: 0L, endInclusive: 1L, RestTransactionShape.AcsDelta);
+
+        request.UpdateFormat.IncludeTransactions!.EventFormat.FiltersByParty["party::alice"].Cumulative.Single()
+            .IdentifierFilter!.TemplateFilter!.IncludeCreatedEventBlob.Should().BeNull();
+    }
+
+    [Fact]
     public void BuildGetUpdatesRequest_sets_begin_exclusive_and_end_inclusive_offsets()
     {
         var submitter = (SubmitterInfo)Alice;

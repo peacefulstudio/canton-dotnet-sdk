@@ -161,6 +161,24 @@ public interface IPqsClient
         where T : ITemplate, IDamlRecord<T>;
 
     /// <summary>
+    /// Fetches a single active contract implementing a Daml interface by its contract ID,
+    /// projecting the participant-computed interface view into <typeparamref name="TView"/>.
+    /// </summary>
+    /// <remarks>
+    /// The interface analogue of <see cref="FetchByIdAsync{T}"/>: it scopes the read to the one
+    /// contract id rather than every active contract implementing the interface.
+    /// </remarks>
+    /// <typeparam name="TInterface">The generated Daml interface marker (e.g. <c>IHolding</c>).</typeparam>
+    /// <typeparam name="TView">The interface's view record (e.g. <c>HoldingView</c>).</typeparam>
+    /// <param name="contractId">The interface-typed contract id to fetch.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<InterfaceContract<TInterface, TView>?> FetchByIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId,
+        CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>;
+
+    /// <summary>
     /// Checks if a contract exists and is active.
     /// </summary>
     Task<bool> ExistsAsync<T>(

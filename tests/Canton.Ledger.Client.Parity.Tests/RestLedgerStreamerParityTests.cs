@@ -67,7 +67,8 @@ public sealed class RestLedgerStreamerParityTests : LedgerStreamerParityTests
                     {
                         await LaneTeardown.ReleaseAsync(actAsRights, fixture).ConfigureAwait(false);
                     }
-                });
+                },
+                rightsGatedUserId: fixture.ValidatorUserId);
         }
         catch (Exception openFailure)
         {

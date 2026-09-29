@@ -148,6 +148,7 @@ internal sealed class SubmissionExtensionsEmitter(
             {
                 indent.AppendLine("/// <param name=\"submitter\">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>");
             }
+            indent.AppendLine("/// <param name=\"configure\">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>");
             indent.AppendLine("/// <param name=\"cancellationToken\">Cancellation token.</param>");
         }
 
@@ -159,6 +160,8 @@ internal sealed class SubmissionExtensionsEmitter(
         {
             indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
         }
+        var submission = context.Qualifier.Qualify(RuntimeTypeNames.CommandsSubmission);
+        indent.AppendLine($"{context.Qualifier.Qualify("Func")}<{submission}, {submission}>? configure = null,");
         indent.AppendLine("CancellationToken cancellationToken = default)");
         indent.Dedent();
 
@@ -203,7 +206,7 @@ internal sealed class SubmissionExtensionsEmitter(
             indent.AppendLine();
         }
 
-        indent.AppendLine($"return client.TryCreateAsync<{className}>(payload, submitter, cancellationToken: cancellationToken);");
+        indent.AppendLine($"return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<{className}>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
 
         indent.Dedent();
         indent.AppendLine("}");

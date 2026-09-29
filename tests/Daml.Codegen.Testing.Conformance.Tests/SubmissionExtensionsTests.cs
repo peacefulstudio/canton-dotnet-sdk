@@ -21,7 +21,7 @@ public class SubmissionExtensionsTests
             create: _ => new ExerciseOutcome<object>.One("marker-cid"));
         var payload = new Marker(new Party(AlicePartyId));
 
-        var outcome = await client.TryCreateAsync(payload, TestContext.Current.CancellationToken);
+        var outcome = await client.TryCreateAsync(payload, cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Should().BeOfType<ExerciseOutcome<ContractId<Marker>>.One>();
         ((ExerciseOutcome<ContractId<Marker>>.One)outcome).Result.Value.Should().Be("marker-cid");
@@ -34,7 +34,7 @@ public class SubmissionExtensionsTests
             create: _ => new ExerciseOutcome<object>.One("marker-cid"));
         var payload = new Marker(new Party(AlicePartyId));
 
-        await client.TryCreateAsync(payload, TestContext.Current.CancellationToken);
+        await client.TryCreateAsync(payload, cancellationToken: TestContext.Current.CancellationToken);
 
         client.LastCreateSubmitter.Should().NotBeNull(
             "the payload-derived overload takes no submitter argument, so the wrapper is the only thing that can supply one");
@@ -77,7 +77,7 @@ public class SubmissionExtensionsTests
             Suit: Suit.Diamonds,
             Fee: 0m);
 
-        var outcome = await client.TryCreateAsync(payload, TestContext.Current.CancellationToken);
+        var outcome = await client.TryCreateAsync(payload, cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Should().BeOfType<ExerciseOutcome<ContractId<RichRecord>>.One>();
         ((ExerciseOutcome<ContractId<RichRecord>>.One)outcome).Result.Value.Should().Be("rich-cid");

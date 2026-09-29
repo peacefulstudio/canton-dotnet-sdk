@@ -90,9 +90,11 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                 HttpStatusCode.OK,
                 ViewedActiveContractsPage("00impl", interfaceViewJson, nextPageToken: null));
 
-    private static string ViewedActiveContractsPage(string contractId, string interfaceViewJson, string? nextPageToken)
+    private static string ViewedActiveContractsPage(
+        string contractId, string interfaceViewJson, string? nextPageToken, string? createdEventBlob = null)
     {
         var nextPageTokenField = nextPageToken is null ? "" : $", \"nextPageToken\": \"{nextPageToken}\"";
+        var createdEventBlobField = createdEventBlob is null ? "" : $"\"createdEventBlob\": \"{createdEventBlob}\",";
         return $$$"""
             {"activeContracts": [{
               "contractEntry": {
@@ -103,6 +105,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                     "templateId": {"packageId": "impl-pkg", "moduleName": "Token.Impl", "entityName": "Asset"},
                     "createArgument": {"amount": "999"},
                     "interfaceViews": [{{{interfaceViewJson}}}],
+                    {{{createdEventBlobField}}}
                     "witnessParties": ["party::alice"]
                   },
                   "synchronizerId": "sync-1",
@@ -133,6 +136,38 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         holdings[0].Contract.View.Amount.Should().Be(42.5m);
         holdings[0].LastUpdateOffset.Should().Be(LedgerOffset.At(9));
         holdings[0].SynchronizerId.Should().Be((SynchronizerId)"sync-1");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_asks_the_interface_filter_for_the_created_event_blob_when_requested()
+    {
+        var transport = SnapshotTransport(OkViewJson);
+        ICantonLedgerClient client = ClientWith(transport);
+
+        _ = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        transport.Requests.Single(request => request.PathAndQuery == "/v2/state/active-contracts-page")
+            .Body.Should().Contain("\"includeCreatedEventBlob\":true");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_carries_a_Disclosure_naming_the_implementing_template()
+    {
+        ICantonLedgerClient client = ClientWith(new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseForPath(
+                "/v2/state/active-contracts-page",
+                HttpStatusCode.OK,
+                ViewedActiveContractsPage("00impl", OkViewJson, nextPageToken: null, createdEventBlob: "MTIzNA==")));
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Should().ContainSingle().Which.Disclosure.Should().Be(new RuntimeCommands.DisclosedContract(
+            "00impl",
+            new RuntimeIdentifier("impl-pkg", "Token.Impl", "Asset"),
+            new byte[] { 0x31, 0x32, 0x33, 0x34 }) { SynchronizerId = new SynchronizerId("sync-1") });
     }
 
     [Fact]

@@ -315,6 +315,86 @@ public partial class DamlTypesTests
     }
 
     [Fact]
+    public void DamlRecord_GetOptionalField_should_return_the_present_value()
+    {
+        var record = DamlRecord.Create(DamlField.Create("remark", DamlOptional.Some(new DamlText("noted"))));
+
+        record.GetOptionalField("remark").Should().Be(DamlOptional.Some(new DamlText("noted")));
+    }
+
+    [Fact]
+    public void DamlRecord_GetOptionalField_should_read_an_omitted_field_as_None()
+    {
+        var record = DamlRecord.Create(DamlField.Create("text", new DamlText("inner")));
+
+        record.GetOptionalField("remark").Should().Be(new DamlOptional(null));
+    }
+
+    [Fact]
+    public void DamlRecord_GetOptionalChainField_should_return_the_present_value()
+    {
+        var record = DamlRecord.Create(DamlField.Create("tailMaybe", DamlOptionalChain.Some(DamlOptionalChain.None)));
+
+        record.GetOptionalChainField("tailMaybe").Should().Be(DamlOptionalChain.Some(DamlOptionalChain.None));
+    }
+
+    [Fact]
+    public void DamlRecord_GetOptionalChainField_should_read_an_omitted_field_as_a_chain_None()
+    {
+        var record = DamlRecord.Create(DamlField.Create("text", new DamlText("inner")));
+
+        record.GetOptionalChainField("tailMaybe").Should().Be(new DamlOptionalChain(null));
+    }
+
+    [Fact]
+    public void DamlRecord_GetTypeParameterField_should_convert_the_present_value()
+    {
+        var record = DamlRecord.Create(DamlField.Create("item", new DamlText("boxed")));
+
+        record.GetTypeParameterField("item", value => value.As<DamlText>().Value).Should().Be("boxed");
+    }
+
+    [Fact]
+    public void DamlRecord_GetTypeParameterField_should_read_an_omitted_field_as_None_at_an_Optional_instantiation()
+    {
+        var record = DamlRecord.Create();
+
+        var item = record.GetTypeParameterField("item", value => value.As<DamlOptional>().Value);
+
+        item.Should().BeNull();
+    }
+
+    [Fact]
+    public void DamlRecord_GetTypeParameterField_should_read_an_omitted_field_as_None_at_a_nested_Optional_instantiation()
+    {
+        var record = DamlRecord.Create();
+
+        var item = record.GetTypeParameterField("item", value => value.As<DamlOptionalChain>().Value);
+
+        item.Should().BeNull();
+    }
+
+    [Fact]
+    public void DamlRecord_GetTypeParameterField_should_report_an_omitted_field_missing_at_a_List_instantiation()
+    {
+        var record = DamlRecord.Create();
+
+        var act = () => record.GetTypeParameterField("item", value => value.As<DamlList>().Values);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Required field 'item' not found in record.");
+    }
+
+    [Fact]
+    public void DamlRecord_GetTypeParameterField_should_report_an_omitted_field_missing_at_a_non_Optional_instantiation()
+    {
+        var record = DamlRecord.Create();
+
+        var act = () => record.GetTypeParameterField("item", value => value.As<DamlText>().Value);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Required field 'item' not found in record.");
+    }
+
+    [Fact]
     public void DamlRecord_Create_should_store_record_id()
     {
         // Arrange

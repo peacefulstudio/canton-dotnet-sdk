@@ -160,6 +160,35 @@ public class StdlibTests
     }
 
     [Fact]
+    public void Tuple2_FromRecord_should_read_an_omitted_Optional_component_as_None()
+    {
+        var record = DamlRecord.Create(DamlField.Create("_1", new DamlParty("alice")));
+
+        var tuple = Tuple2<string, Optional<string>>.FromRecord(
+            record,
+            v => v.As<DamlParty>().Value,
+            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value));
+
+        tuple.Should().Be(new Tuple2<string, Optional<string>>("alice", new Optional<string>.None()));
+    }
+
+    [Fact]
+    public void Tuple3_FromRecord_should_read_an_omitted_Optional_component_as_None()
+    {
+        var record = DamlRecord.Create(
+            DamlField.Create("_1", new DamlText("a")),
+            DamlField.Create("_2", new DamlInt64(2)));
+
+        var tuple = Tuple3<string, long, Optional<string>>.FromRecord(
+            record,
+            v => v.As<DamlText>().Value,
+            v => v.As<DamlInt64>().Value,
+            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value));
+
+        tuple.Should().Be(new Tuple3<string, long, Optional<string>>("a", 2, new Optional<string>.None()));
+    }
+
+    [Fact]
     public void Tuple2_should_round_trip_with_party_argument()
     {
         // Realistic shape — Splice DARs use `Tuple2 Party Int` in beneficiary lists.

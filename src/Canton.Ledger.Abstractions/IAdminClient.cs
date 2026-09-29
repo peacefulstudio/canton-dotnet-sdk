@@ -176,7 +176,9 @@ public interface IAdminClient
     /// <summary>
     /// Uploads a DAR file to the participant. By default the ledger also vets all packages
     /// in the DAR (the underlying request's <c>vetting_change</c> defaults to
-    /// <c>VETTING_CHANGE_VET_ALL_PACKAGES</c>).
+    /// <c>VETTING_CHANGE_VET_ALL_PACKAGES</c>). The participant autodetects the synchronizer to
+    /// vet on, which requires it to be connected to exactly one; on a participant connected to
+    /// more than one, use the overload that takes a <see cref="SynchronizerId"/>.
     /// </summary>
     /// <param name="darFile">The DAR file contents.</param>
     /// <param name="submissionId">Optional unique submission identifier; the ledger generates one when null.</param>
@@ -187,13 +189,52 @@ public interface IAdminClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Uploads a DAR file to the participant and vets its packages on <paramref name="synchronizerId"/>.
+    /// By default the ledger also vets all packages in the DAR (the underlying request's
+    /// <c>vetting_change</c> defaults to <c>VETTING_CHANGE_VET_ALL_PACKAGES</c>).
+    /// </summary>
+    /// <param name="darFile">The DAR file contents.</param>
+    /// <param name="synchronizerId">
+    /// The synchronizer to vet the DAR's packages on. Required when the participant is connected
+    /// to more than one synchronizer — omitting it there fails with
+    /// <c>PACKAGE_SERVICE_CANNOT_AUTODETECT_SYNCHRONIZER</c>.
+    /// </param>
+    /// <param name="submissionId">Optional unique submission identifier; the ledger generates one when null.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UploadDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        string? submissionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Validates a DAR file without persisting or vetting anything. A DAR the participant finds
-    /// invalid surfaces as a <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>.
+    /// invalid surfaces as a <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>. The
+    /// participant autodetects the synchronizer to check upgrade compatibility against, which
+    /// requires it to be connected to exactly one; on a participant connected to more than one,
+    /// use the overload that takes a <see cref="SynchronizerId"/>.
     /// </summary>
     /// <param name="darFile">The DAR file contents.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task ValidateDarAsync(
         byte[] darFile,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates a DAR file without persisting or vetting anything, checking upgrade compatibility
+    /// against <paramref name="synchronizerId"/>. A DAR the participant finds invalid surfaces as a
+    /// <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>.
+    /// </summary>
+    /// <param name="darFile">The DAR file contents.</param>
+    /// <param name="synchronizerId">
+    /// The synchronizer to check the DAR's packages for upgrade compatibility against. Required
+    /// when the participant is connected to more than one synchronizer — omitting it there fails
+    /// with <c>PACKAGE_SERVICE_CANNOT_AUTODETECT_SYNCHRONIZER</c>.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task ValidateDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
         CancellationToken cancellationToken = default);
 }
 

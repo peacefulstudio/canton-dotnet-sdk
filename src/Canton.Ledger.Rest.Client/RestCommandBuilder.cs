@@ -42,7 +42,7 @@ internal static class RestCommandBuilder
             WorkflowId = submission.WorkflowId?.Value ?? string.Empty,
             ActAs = (submission.ActAs ?? []).Select(p => p.Value).ToList(),
             ReadAs = (submission.ReadAs ?? []).Select(p => p.Value).ToList(),
-            Commands1 = submission.Commands.Select(ToWireCommand).ToList(),
+            CommandList = submission.Commands.Select(ToWireCommand).ToList(),
         };
 
         if (userId is not null)
@@ -199,13 +199,21 @@ internal static class RestCommandBuilder
             _ => throw new NotSupportedException($"Command type {command.GetType().Name} is not supported."),
         };
 
-    private static WireDisclosedContract ToWireDisclosedContract(RuntimeCommands.DisclosedContract disclosed) =>
-        new()
+    private static WireDisclosedContract ToWireDisclosedContract(RuntimeCommands.DisclosedContract disclosed)
+    {
+        var wire = new WireDisclosedContract
         {
             TemplateId = ToWireIdentifier(disclosed.TemplateId),
             ContractId = disclosed.ContractId,
             CreatedEventBlob = Convert.ToBase64String(disclosed.CreatedEventBlob.Span),
         };
+        if (disclosed.SynchronizerId is { } synchronizerId)
+        {
+            wire.SynchronizerId = synchronizerId.Value;
+        }
+
+        return wire;
+    }
 
     private static WireIdentifier ToWireIdentifier(Daml.Runtime.Data.Identifier identifier) =>
         new()

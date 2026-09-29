@@ -98,6 +98,7 @@ public class RestFilterDiscriminationConformanceTests
             cumulative.IdentifierFilter = new WireIdentifierFilter { WildcardFilter = new WireWildcardFilter() };
         }
 
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         var wildcardCount = await CountActiveContractsAsync(
             wireClient, wildcardRequest, TestContext.Current.CancellationToken);
         var filteredCount = await CountActiveContractsAsync(
@@ -119,8 +120,9 @@ public class RestFilterDiscriminationConformanceTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         var entries = new List<AcsSnapshotEntry<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var entry in lane.LedgerClient.SubscribeActiveAsync<Marker>(
-            owner, ledgerEnd, TestContext.Current.CancellationToken))
+            owner, ledgerEnd, cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }

@@ -58,7 +58,7 @@ public class LedgerExerciseByKeyParityTests
 
     private static Rest.Client.Raw.ExerciseByKeyCommand SingleByKeyOverRest(
         RuntimeCommands.CommandsSubmission submission) =>
-        OverRest(submission).Commands1.Should().ContainSingle().Subject.ExerciseByKeyCommand;
+        OverRest(submission).CommandList.Should().ContainSingle().Subject.ExerciseByKeyCommand;
 
     [Fact]
     public void An_exercise_by_key_reaches_the_wire_as_the_by_key_arm_on_both_transports()
@@ -66,7 +66,7 @@ public class LedgerExerciseByKeyParityTests
         var submission = Submission(ExerciseByKey(RecordKey()));
 
         var overGrpc = OverGrpc(submission).Commands_.Should().ContainSingle().Subject;
-        var overRest = OverRest(submission).Commands1.Should().ContainSingle().Subject;
+        var overRest = OverRest(submission).CommandList.Should().ContainSingle().Subject;
 
         overGrpc.ExerciseByKey.Should().NotBeNull();
         overGrpc.Exercise.Should().BeNull();
@@ -145,7 +145,7 @@ public class LedgerExerciseByKeyParityTests
 
     private static Rest.Client.Raw.CreateAndExerciseCommand SingleCreateAndExerciseOverRest(
         RuntimeCommands.CommandsSubmission submission) =>
-        OverRest(submission).Commands1.Should().ContainSingle().Subject.CreateAndExerciseCommand;
+        OverRest(submission).CommandList.Should().ContainSingle().Subject.CreateAndExerciseCommand;
 
     [Fact]
     public void A_create_and_exercise_reaches_the_wire_as_the_create_and_exercise_arm_on_both_transports()
@@ -153,7 +153,7 @@ public class LedgerExerciseByKeyParityTests
         var submission = Submission(CreateAndExercise());
 
         var overGrpc = OverGrpc(submission).Commands_.Should().ContainSingle().Subject;
-        var overRest = OverRest(submission).Commands1.Should().ContainSingle().Subject;
+        var overRest = OverRest(submission).CommandList.Should().ContainSingle().Subject;
 
         overGrpc.CreateAndExercise.Should().NotBeNull();
         overGrpc.Exercise.Should().BeNull();

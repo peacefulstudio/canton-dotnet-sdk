@@ -31,7 +31,7 @@ namespace Canton.Ledger.Rest.Client.Integration.Tests;
 /// because the participant discards that shape — that leg pins the defect this converter exists to
 /// fix, and it is the leg that starts failing once the participant honors the declared shape
 /// natively. The same create carrying the adapted object must not commit inside the observation
-/// window, because an hour-long bound is genuinely held.
+/// window, because a two-minute bound is genuinely held.
 /// </para>
 /// <para>
 /// The held leg is asserted as "did not commit inside the window" rather than on the 503 a held
@@ -55,7 +55,7 @@ public class RestMinLedgerTimeConformanceTests
     private const string MinLedgerTimeRelProperty = "minLedgerTimeRel";
     private const string SecondsProperty = "seconds";
     private const string NanosProperty = "nanos";
-    private const string RelativeBound = "3600s";
+    private const string RelativeBound = "120s";
 
     private static readonly TimeSpan ObservationWindow = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan PromptCommit = TimeSpan.FromSeconds(10);
@@ -103,7 +103,7 @@ public class RestMinLedgerTimeConformanceTests
         specDeclared.Elapsed.Should().BeLessThan(PromptCommit);
 
         adapted.Committed.Should().BeFalse(
-            "an hour-long minimum ledger time sent as the served object must be held rather than "
+            "a two-minute minimum ledger time sent as the served object must be held rather than "
             + $"committed, but it answered {adapted.Describe()}");
         adapted.Elapsed.Should().BeGreaterThan(
             PromptCommit,

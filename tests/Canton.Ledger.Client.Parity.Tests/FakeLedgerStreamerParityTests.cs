@@ -17,6 +17,8 @@ public sealed class FakeLedgerStreamerParityTests : LedgerStreamerParityTests
 {
     protected override bool SupportsParticipantRejectedReads => false;
 
+    protected override bool SupportsExplicitDisclosure => false;
+
     protected override Task<CapabilityLane<(ILedgerReader Reader, ILedgerWriter Writer, ICantonLedgerClient Client, Party Owner)>>
         OpenStreamerAsync(CancellationToken cancellationToken)
     {

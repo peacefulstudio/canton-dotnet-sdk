@@ -230,6 +230,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         };
         var headers = await HeadersAsync(cancellationToken);
 
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(_userId, cancellationToken);
         using var call = _updates.GetUpdates(
             request, headers, deadline: null, cancellationToken: linked.Token);
         linked.CancelAfter(timeout);
@@ -279,6 +280,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         };
         var headers = await HeadersAsync(cancellationToken);
 
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(_userId, cancellationToken);
         using var call = _updates.GetUpdates(
             request, headers, deadline: null, cancellationToken: linked.Token);
         linked.CancelAfter(timeout);
@@ -329,6 +331,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         ContractStreamEvent<T>.Unassigned? unassigned = null;
         ContractStreamEvent<T>.Assigned? assigned = null;
 
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(_userId, cancellationToken);
         try
         {
             await foreach (var streamEvent in _client.SubscribeAsync<T>(submitter, LedgerOffset.At(fromOffset), cancellationToken: linked.Token))

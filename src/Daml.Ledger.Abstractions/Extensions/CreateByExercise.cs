@@ -32,7 +32,7 @@ public static class CreateByExercise
     /// <see cref="ExerciseOutcome{T}.Many"/> carrying every created contract id.
     /// A writer-level <see cref="ExerciseOutcome{T}.Many"/> (multiple root transactions)
     /// is propagated faithfully rather than discarded. Use
-    /// <see cref="TryCreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,CancellationToken)"/>
+    /// <see cref="TryCreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>
     /// when the choice is expected to create any number of <typeparamref name="TTemplate"/> contracts.
     /// </summary>
     public static async Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateOneByExerciseAsync<TTemplate>(
@@ -42,13 +42,14 @@ public static class CreateByExercise
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
         ArgumentNullException.ThrowIfNull(writer);
 
         var outcome = await writer
-            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, cancellationToken)
+            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
         return RemapExerciseOutcome(outcome, ProjectSingleCreated<TTemplate>);
@@ -75,13 +76,14 @@ public static class CreateByExercise
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
         ArgumentNullException.ThrowIfNull(writer);
 
         var outcome = await writer
-            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, cancellationToken)
+            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
         return RemapExerciseOutcome(
@@ -95,9 +97,9 @@ public static class CreateByExercise
     /// Throws <see cref="LedgerOperationException"/> when the choice created no
     /// <typeparamref name="TTemplate"/> (expected exactly one), when it created more than
     /// one (use
-    /// <see cref="CreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,CancellationToken)"/>
+    /// <see cref="CreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>
     /// instead), or on a Daml or infrastructure error. For structured handling, use
-    /// <see cref="TryCreateOneByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,CancellationToken)"/>.
+    /// <see cref="TryCreateOneByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>.
     /// </summary>
     public static async Task<ContractId<TTemplate>> CreateOneByExerciseAsync<TTemplate>(
         this ILedgerWriter writer,
@@ -106,11 +108,12 @@ public static class CreateByExercise
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
         var outcome = await writer
-            .TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, cancellationToken)
+            .TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
         return outcome.ResultOrThrow(
@@ -131,7 +134,7 @@ public static class CreateByExercise
     /// <see cref="LedgerOperationException"/> on a Daml or infrastructure error, or when a
     /// non-conforming writer yields a <c>None</c> / <c>Many</c> outcome. For structured
     /// handling, use
-    /// <see cref="TryCreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,CancellationToken)"/>.
+    /// <see cref="TryCreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>.
     /// </summary>
     public static async Task<EquatableArray<ContractId<TTemplate>>> CreateManyByExerciseAsync<TTemplate>(
         this ILedgerWriter writer,
@@ -140,11 +143,12 @@ public static class CreateByExercise
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
         var outcome = await writer
-            .TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, cancellationToken)
+            .TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
         return outcome.ResultOrThrow(
@@ -154,7 +158,7 @@ public static class CreateByExercise
             cancellationToken);
     }
 
-    private static ExerciseOutcome<TCreated> RemapExerciseOutcome<TCreated>(
+    internal static ExerciseOutcome<TCreated> RemapExerciseOutcome<TCreated>(
         ExerciseOutcome<TransactionResult> outcome,
         Func<TransactionResult, ExerciseOutcome<TCreated>> projectCreated)
     {
@@ -170,7 +174,7 @@ public static class CreateByExercise
         };
     }
 
-    private static ExerciseOutcome<ContractId<TTemplate>> ProjectSingleCreated<TTemplate>(TransactionResult result)
+    internal static ExerciseOutcome<ContractId<TTemplate>> ProjectSingleCreated<TTemplate>(TransactionResult result)
         where TTemplate : IDamlType
     {
         var created = result.All<TTemplate>();

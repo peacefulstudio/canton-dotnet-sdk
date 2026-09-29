@@ -82,6 +82,7 @@ public class EmittedInterfaceChoiceExerciserInvocationTests
         null,
         null,
         null,
+        null,
         CancellationToken.None,
     ];
 

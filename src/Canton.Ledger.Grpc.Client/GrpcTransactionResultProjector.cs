@@ -60,6 +60,20 @@ internal static class GrpcTransactionResultProjector
         };
     }
 
+    public static TransactionResult ProjectAcsDelta(Transaction transaction)
+    {
+        var createdInAcsDelta = transaction.Events
+            .Where(evt => evt.EventCase == Event.EventOneofCase.Created && evt.Created.AcsDelta)
+            .Select(evt => evt.Created.ContractId)
+            .ToHashSet(StringComparer.Ordinal);
+        var exercisedInAcsDelta = transaction.Events
+            .Where(evt => evt.EventCase == Event.EventOneofCase.Exercised && evt.Exercised.AcsDelta)
+            .Select(evt => evt.Exercised.ContractId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return AcsDeltaView.Of(Project(transaction), createdInAcsDelta, exercisedInAcsDelta);
+    }
+
     private static CreatedContract ToCreatedContract(ProtoCreatedEvent created)
     {
         var templateId = created.TemplateId

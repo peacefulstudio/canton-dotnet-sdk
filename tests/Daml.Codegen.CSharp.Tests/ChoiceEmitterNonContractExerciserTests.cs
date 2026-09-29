@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
 using AwesomeAssertions;
@@ -210,5 +211,23 @@ public class ChoiceEmitterNonContractExerciserTests
 
         output.Should().Contain("<c>IReadOnlyList&lt;IReadOnlyDictionary&lt;string, long&gt;&gt;</c>");
         output.Should().NotContain("<c>IReadOnlyList<IReadOnlyDictionary<string, long>></c>");
+    }
+
+    [Fact]
+    public void ChoiceEmitterNonContractExerciser_exerciser_declares_configure_between_timeout_and_cancellation_token()
+    {
+        var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
+
+        output.Should().MatchRegex(@"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        Regex.Matches(output, Regex.Escape(ConfigureParameter)).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ChoiceEmitterNonContractExerciser_exerciser_documents_configure_with_a_disclosure_example()
+    {
+        var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
+
+        output.Should().Contain("/// <param name=\"configure\">");
+        output.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");
     }
 }

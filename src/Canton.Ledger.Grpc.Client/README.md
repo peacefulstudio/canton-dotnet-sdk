@@ -258,3 +258,12 @@ tracing.AddSource(LedgerActivitySourceNames.GrpcAdminClient);
 - `Canton.Ledger.Grpc` — Low-level gRPC stubs
 - `Canton.Ledger.Pqs.Client` — PQS query client
 - `Daml.Runtime` — Runtime types for generated Daml contracts
+
+## Support
+
+For questions, bug reports and feature requests, open a
+[GitHub issue](https://github.com/peacefulstudio/canton-dotnet-sdk/issues).
+This package is maintained by [Peaceful Studio](https://peaceful.studio).
+For consulting beyond this SDK (Daml development, .NET integration with
+Canton, validator operations), please write to
+[info@peaceful.studio](mailto:info@peaceful.studio).

@@ -48,7 +48,10 @@ public static class AcsSnapshotEntryExtensions
         return new ActiveContract<Contract<T>>(
             created.ToContract(),
             created.Offset,
-            created.SynchronizerId);
+            created.SynchronizerId)
+        {
+            Disclosure = created.Disclosure,
+        };
     }
 
     /// <summary>
@@ -91,6 +94,9 @@ public static class AcsSnapshotEntryExtensions
         return new ActiveContract<Contract<T, TKey>>(
             created.ToContract<T, TKey>(),
             created.Offset,
-            created.SynchronizerId);
+            created.SynchronizerId)
+        {
+            Disclosure = created.Disclosure,
+        };
     }
 }

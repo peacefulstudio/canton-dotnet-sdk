@@ -78,7 +78,7 @@ public sealed record SettlementInfo(
     public static SettlementInfo FromRecord(DamlRecord record) => new SettlementInfo(
         Executors: (IReadOnlyList<Party>)record.GetRequiredField("executors").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
         Id: record.GetRequiredField("id").As<DamlText>().Value,
-        Cid: record.GetRequiredField("cid").AsOptional().HasValue ? new ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(record.GetRequiredField("cid").AsOptional().Value!.As<DamlContractId>().Value) : null,
+        Cid: record.GetOptionalField("cid").AsOptional().HasValue ? new ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(record.GetOptionalField("cid").AsOptional().Value!.As<DamlContractId>().Value) : null,
         Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
     );
 
@@ -90,7 +90,7 @@ public sealed record SettlementInfo(
         return DamlRecord.Create(
             DamlField.Create("executors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "executors"), context.Field("executors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
             DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))),
-            DamlField.Create("cid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "cid"), context.Field("cid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            DamlField.Create("cid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "cid"), context.Field("cid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
             DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }

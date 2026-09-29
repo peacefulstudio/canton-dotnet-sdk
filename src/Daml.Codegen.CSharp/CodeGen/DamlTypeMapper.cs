@@ -142,6 +142,14 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
     private bool MapsToRewrittenReferenceType(DamlType type) =>
         new ReferenceTypeVisitor(this, depth: 0).Dispatch(type);
 
+    /// <summary>
+    /// The JSON encoding of <paramref name="type"/> when it is an Optional, or <c>null</c> when it
+    /// is not. Answers over the same representation pre-pass <see cref="MapType(DamlType)"/>
+    /// runs, so a legacy <c>Optional</c> application classifies exactly like its typed node.
+    /// </summary>
+    internal OptionalEncoding? OptionalWireEncoding(DamlType type) =>
+        new OptionalWireEncodingVisitor(this, depth: 0).Dispatch(OptionalRepresentation.Rewrite(type, context.Package, resolver));
+
     /// <summary>Produces the expression that deserializes <paramref name="valueName"/> back into <paramref name="type"/>.</summary>
     /// <param name="type">The Daml type to reconstruct.</param>
     /// <param name="valueName">The C# expression referencing the Daml value.</param>
@@ -910,6 +918,38 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, ICrossPackageRe
             !Mapper.IsEnumTypeRef((DamlTypeRef)application.Base);
 
         protected override bool VisitUnrepresentableApplication(DamlTypeApp application) => false;
+    }
+
+    /// <summary>
+    /// The Optional-encoding operation: the wrapper's own encoding, <see cref="OptionalEncoding.Flat"/>
+    /// for a surviving <see cref="DamlOptionalType"/>, and <c>null</c> for every non-Optional node.
+    /// </summary>
+    private sealed class OptionalWireEncodingVisitor(DamlTypeMapper mapper, int depth)
+        : TypeOperation<OptionalEncoding?>(mapper, depth)
+    {
+        protected override OptionalEncoding? VisitWrappedOptional(DamlWrappedOptional wrapped) => wrapped.Encoding;
+
+        public override OptionalEncoding? VisitOptional(DamlOptionalType type) => OptionalEncoding.Flat;
+
+        public override OptionalEncoding? VisitPrimitive(DamlPrimitiveType type) => null;
+
+        public override OptionalEncoding? VisitTypeRef(DamlTypeRef type) => null;
+
+        public override OptionalEncoding? VisitTypeVar(DamlTypeVar type) => null;
+
+        public override OptionalEncoding? VisitList(DamlListType type) => null;
+
+        public override OptionalEncoding? VisitTextMap(DamlTextMapType type) => null;
+
+        public override OptionalEncoding? VisitGenMap(DamlGenMapType type) => null;
+
+        public override OptionalEncoding? VisitContractId(DamlContractIdType type) => null;
+
+        protected override OptionalEncoding? VisitNumericApplication(DamlTypeApp application) => null;
+
+        protected override OptionalEncoding? VisitGenericApplication(DamlTypeApp application) => null;
+
+        protected override OptionalEncoding? VisitUnrepresentableApplication(DamlTypeApp application) => null;
     }
 
     /// <summary>

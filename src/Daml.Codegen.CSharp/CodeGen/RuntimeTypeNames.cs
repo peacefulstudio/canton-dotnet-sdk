@@ -17,6 +17,7 @@ internal static class RuntimeTypeNames
     public const string DamlVariant = nameof(Daml.Runtime.Data.DamlVariant);
     public const string DamlEnum = nameof(Daml.Runtime.Data.DamlEnum);
     public const string DamlOptional = nameof(Daml.Runtime.Data.DamlOptional);
+    public const string DamlOptionalChain = nameof(Daml.Runtime.Data.DamlOptionalChain);
     public const string DamlList = nameof(Daml.Runtime.Data.DamlList);
     public const string DamlTextMap = nameof(Daml.Runtime.Data.DamlTextMap);
     public const string DamlGenMap = nameof(Daml.Runtime.Data.DamlGenMap);

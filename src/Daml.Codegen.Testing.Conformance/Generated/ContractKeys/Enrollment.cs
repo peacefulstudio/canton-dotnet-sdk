@@ -29,13 +29,13 @@ public sealed partial record Enrollment(
 ) : ITemplate, IHasKey<Enrollment, Tuple2<Party, Optional<string>>>, IHasChoices<Enrollment>, IDamlRecord<Enrollment>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d", "ContractKeys", "Enrollment");
+    public static Identifier TemplateId { get; } = new("a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050", "ContractKeys", "Enrollment");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d";
+    public static string PackageId => "a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "contractkeys";
+    public static string PackageName => "contractkeys-h61a17c769e62";
 
     /// <summary>Gets the package version.</summary>
     public static Version PackageVersion { get; } = new(0, 0, 1);
@@ -62,7 +62,7 @@ public sealed partial record Enrollment(
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Enrollment FromRecord(DamlRecord record) => new Enrollment(
         Custodian: Party.FromDamlValue(record.GetRequiredField("custodian").As<DamlParty>()),
-        Note: record.GetRequiredField("note").AsOptional().HasValue ? record.GetRequiredField("note").AsOptional().Value!.As<DamlText>().Value : null,
+        Note: record.GetOptionalField("note").AsOptional().HasValue ? record.GetOptionalField("note").AsOptional().Value!.As<DamlText>().Value : null,
         Active: record.GetRequiredField("active").As<DamlBool>().Value
     );
 
@@ -73,7 +73,7 @@ public sealed partial record Enrollment(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
             DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))),
-            DamlField.Create("note", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "note"), context.Field("note"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
+            DamlField.Create("note", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "note"), context.Field("note"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
             DamlField.Create("active", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "active"), context.Field("active")))
         );
     }
@@ -225,7 +225,7 @@ public sealed record ToggleResult(
 /// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="Enrollment"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
-/// and projects success via <c>&lt;Choice&gt;Result.FromCreatedContracts</c>.
+/// and projects success from the choice's own exercise result.
 /// </summary>
 public static class EnrollmentExtensions
 {
@@ -248,7 +248,7 @@ public static class EnrollmentExtensions
     }
 
     /// <summary>
-    /// Exercises the Toggle choice and projects the resulting transaction's created contracts to a typed <see cref="ToggleResult"/>.
+    /// Exercises the Toggle choice and projects the choice's exercise result to a typed <see cref="ToggleResult"/>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -260,6 +260,7 @@ public static class EnrollmentExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
         this ContractId<Enrollment> contractId,
@@ -269,6 +270,7 @@ public static class EnrollmentExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -282,11 +284,12 @@ public static class EnrollmentExtensions
             workflowId,
             commandId,
             timeout,
+            configure,
             cancellationToken);
     }
 
     /// <summary>
-    /// Exercises the Toggle choice with an explicit <see cref="SubmitterInfo"/> and projects the resulting transaction's created contracts to a typed <see cref="ToggleResult"/>.
+    /// Exercises the Toggle choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ToggleResult"/>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -298,6 +301,7 @@ public static class EnrollmentExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
         this ContractId<Enrollment> contractId,
@@ -307,15 +311,16 @@ public static class EnrollmentExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ToggleCommand(argument);
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
-        return outcome.ProjectCommitted(tx => ToggleResult.FromCreatedContracts(tx.CreatedContracts));
+        return outcome.ProjectCommitted(tx => ProjectToggleResult(tx, contractId.Value));
     }
 
     /// <summary>
@@ -330,6 +335,7 @@ public static class EnrollmentExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
         this IContract<ContractId<Enrollment>, Enrollment> contract,
@@ -338,6 +344,7 @@ public static class EnrollmentExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -351,6 +358,7 @@ public static class EnrollmentExtensions
             workflowId,
             commandId,
             timeout,
+            configure,
             cancellationToken);
     }
 
@@ -368,6 +376,7 @@ public static class EnrollmentExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
         this IContract<ContractId<Enrollment>, Enrollment> contract,
@@ -377,6 +386,7 @@ public static class EnrollmentExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -390,7 +400,56 @@ public static class EnrollmentExtensions
             workflowId,
             commandId,
             timeout,
+            configure,
             cancellationToken);
+    }
+
+    private static ExerciseOutcome<ToggleResult> ProjectToggleResult(TransactionResult tx, string contractId)
+    {
+        var fromCreatedContracts = ToggleResult.FromCreatedContracts(tx.CreatedContracts);
+        if (fromCreatedContracts is ExerciseOutcome<ToggleResult>.Many)
+        {
+            return fromCreatedContracts;
+        }
+
+        foreach (var exercised in tx.ExercisedEvents)
+        {
+            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
+                && string.Equals(exercised.TemplateId.ModuleName, Enrollment.TemplateId.ModuleName, StringComparison.Ordinal)
+                && string.Equals(exercised.TemplateId.EntityName, Enrollment.TemplateId.EntityName, StringComparison.Ordinal)
+                && string.Equals(exercised.ChoiceName.Value, "Toggle", StringComparison.Ordinal))
+            {
+                try
+                {
+                    return DecodeToggleResult(exercised.ExerciseResult);
+                }
+                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
+                {
+                    return new ExerciseOutcome<ToggleResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
+                }
+            }
+        }
+
+        return fromCreatedContracts;
+    }
+
+    private static ExerciseOutcome<ToggleResult> DecodeToggleResult(DamlValue exerciseResult)
+    {
+        var matches0 = new List<string>();
+        matches0.Add(exerciseResult.As<DamlContractId>().Value);
+
+        if (matches0.Count == 0)
+        {
+            return new ExerciseOutcome<ToggleResult>.None();
+        }
+        if (matches0.Count > 1)
+        {
+            return new ExerciseOutcome<ToggleResult>.Many(EquatableArray.Create(matches0));
+        }
+
+        return new ExerciseOutcome<ToggleResult>.One(new ToggleResult(
+            Enrollment: new ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>(matches0[0])
+        ));
     }
 }
 
@@ -413,10 +472,12 @@ public static class EnrollmentSubmissionExtensions
     /// </summary>
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ContractId<Enrollment>>> TryCreateAsync(
         this ILedgerWriter client,
         Enrollment payload,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -424,7 +485,7 @@ public static class EnrollmentSubmissionExtensions
 
         SubmitterInfo submitter = payload.Custodian;
 
-        return client.TryCreateAsync<Enrollment>(payload, submitter, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Enrollment>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
@@ -463,6 +524,7 @@ public static class EnrollmentNonContractExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
         this ContractId<Enrollment> contractId,
@@ -471,13 +533,14 @@ public static class EnrollmentNonContractExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
@@ -505,9 +568,9 @@ public static class EnrollmentNonContractExtensions
 
         throw new InvalidOperationException(
             $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 }

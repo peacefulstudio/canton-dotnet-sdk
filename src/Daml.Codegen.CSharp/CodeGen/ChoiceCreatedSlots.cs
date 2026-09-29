@@ -38,11 +38,32 @@ internal enum CreatedCardinality
 internal sealed record InterfaceMatcher(string ModuleName, string EntityName);
 
 /// <summary>
+/// One step on the way from a choice's exercise result down to one of its <c>ContractId</c>
+/// slots, mirroring the return-type wrapper the step passes through.
+/// </summary>
+internal abstract record ExerciseResultStep
+{
+    /// <summary>Into the value an <c>Optional</c> carries, when it carries one.</summary>
+    public sealed record OptionalValue : ExerciseResultStep;
+
+    /// <summary>Into every element of a list, in order.</summary>
+    public sealed record ListElements : ExerciseResultStep;
+
+    /// <summary>Into one component of a <c>DA.Types</c> tuple, by its zero-based position.</summary>
+    /// <param name="Index">The component's position in the tuple.</param>
+    public sealed record TupleComponent(int Index) : ExerciseResultStep;
+}
+
+/// <summary>
 /// One declared <c>ContractId T</c>-bearing slot in a choice's return type.
 /// </summary>
 /// <param name="FieldName">PascalCase C# field name on the emitted <c>&lt;Choice&gt;Result</c> record.</param>
 /// <param name="CSharpTemplateType">C# name of the template or interface-marker type (e.g. <c>Agreement</c>, <c>IFactory</c>).</param>
 /// <param name="Cardinality">How many created contracts of this template the choice should produce.</param>
+/// <param name="ResultPath">
+/// The steps from the choice's exercise result down to this slot's <c>ContractId</c> values,
+/// outermost first; empty when the return type is the bare <c>ContractId</c> itself.
+/// </param>
 /// <param name="Interface">
 /// Set when the slot targets a Daml interface marker — generated interface markers expose
 /// no <c>TemplateId</c>, so the projector matches an interface slot against the created
@@ -52,6 +73,7 @@ internal sealed record ChoiceCreatedSlot(
     string FieldName,
     string CSharpTemplateType,
     CreatedCardinality Cardinality,
+    IReadOnlyList<ExerciseResultStep> ResultPath,
     InterfaceMatcher? Interface = null);
 
 /// <summary>
@@ -89,7 +111,7 @@ internal static class ChoiceCreatedSlots
     public static IReadOnlyList<ChoiceCreatedSlot> Extract(PackageEmitContext context, ICrossPackageResolver resolver, DamlTypeMapper mapper, DamlType returnType)
     {
         var slots = new List<ChoiceCreatedSlot>();
-        Walk(context, resolver, mapper, returnType, slots, parentCardinality: CreatedCardinality.Single);
+        Walk(context, resolver, mapper, returnType, slots, parentCardinality: CreatedCardinality.Single, resultPath: []);
         return Disambiguate(slots);
     }
 
@@ -128,7 +150,8 @@ internal static class ChoiceCreatedSlots
         PackageEmitContext context, ICrossPackageResolver resolver, DamlTypeMapper mapper,
         DamlType type,
         List<ChoiceCreatedSlot> slots,
-        CreatedCardinality parentCardinality)
+        CreatedCardinality parentCardinality,
+        IReadOnlyList<ExerciseResultStep> resultPath)
     {
         switch (type)
         {
@@ -140,14 +163,15 @@ internal static class ChoiceCreatedSlots
                     FieldName: templateName,
                     CSharpTemplateType: csharpName,
                     Cardinality: parentCardinality,
+                    ResultPath: resultPath,
                     Interface: interfaceMatcher));
                 return;
             }
             case DamlOptionalType optional:
-                Walk(context, resolver, mapper, optional.Value, slots, CreatedCardinality.Optional);
+                Walk(context, resolver, mapper, optional.Value, slots, CreatedCardinality.Optional, [.. resultPath, new ExerciseResultStep.OptionalValue()]);
                 return;
             case DamlListType list:
-                Walk(context, resolver, mapper, list.Element, slots, CreatedCardinality.List);
+                Walk(context, resolver, mapper, list.Element, slots, CreatedCardinality.List, [.. resultPath, new ExerciseResultStep.ListElements()]);
                 return;
             case DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.ContractId }, Arguments: [var arg] }:
             {
@@ -156,20 +180,21 @@ internal static class ChoiceCreatedSlots
                     FieldName: templateName,
                     CSharpTemplateType: csharpName,
                     Cardinality: parentCardinality,
+                    ResultPath: resultPath,
                     Interface: interfaceMatcher));
                 return;
             }
             case DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments: [var inner] }:
-                Walk(context, resolver, mapper, inner, slots, CreatedCardinality.Optional);
+                Walk(context, resolver, mapper, inner, slots, CreatedCardinality.Optional, [.. resultPath, new ExerciseResultStep.OptionalValue()]);
                 return;
             case DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.List }, Arguments: [var inner] }:
-                Walk(context, resolver, mapper, inner, slots, CreatedCardinality.List);
+                Walk(context, resolver, mapper, inner, slots, CreatedCardinality.List, [.. resultPath, new ExerciseResultStep.ListElements()]);
                 return;
             case DamlTypeApp { Base: DamlTypeRef { Module: "DA.Types", Name: var tupleName } } app
                 when tupleName.StartsWith("Tuple", StringComparison.Ordinal):
                 for (var i = 0; i < app.Arguments.Count; i++)
                 {
-                    Walk(context, resolver, mapper, app.Arguments[i], slots, parentCardinality);
+                    Walk(context, resolver, mapper, app.Arguments[i], slots, parentCardinality, [.. resultPath, new ExerciseResultStep.TupleComponent(i)]);
                 }
                 return;
             default:

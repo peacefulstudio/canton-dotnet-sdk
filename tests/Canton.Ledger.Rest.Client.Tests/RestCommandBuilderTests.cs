@@ -279,7 +279,7 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: null);
 
-        var wireCommand = commands.Commands1.Should().ContainSingle().Subject;
+        var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         wireCommand.CreateCommand.Should().NotBeNull();
         wireCommand.CreateCommand!.TemplateId.ModuleName.Should().Be("Module");
         wireCommand.CreateCommand.TemplateId.EntityName.Should().Be("CommandBuilderTemplate");
@@ -296,7 +296,7 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: null);
 
-        var wireCommand = commands.Commands1.Should().ContainSingle().Subject;
+        var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         wireCommand.ExerciseCommand.Should().NotBeNull();
         wireCommand.ExerciseCommand!.ContractId.Should().Be("00contract123");
         wireCommand.ExerciseCommand.Choice.Should().Be("Archive");
@@ -311,7 +311,7 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: null);
 
-        var wireCommand = commands.Commands1.Should().ContainSingle().Subject;
+        var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         wireCommand.ExerciseCommand.Should().NotBeNull();
         wireCommand.ExerciseCommand!.TemplateId.PackageId.Should().Be("ipkg");
         wireCommand.ExerciseCommand.TemplateId.ModuleName.Should().Be("IModule");
@@ -349,7 +349,7 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: null);
 
-        var wireCommand = commands.Commands1.Should().ContainSingle().Subject;
+        var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         wireCommand.ExerciseByKeyCommand.Should().NotBeNull();
         wireCommand.ExerciseByKeyCommand!.TemplateId.PackageId.Should().Be("pkg");
         wireCommand.ExerciseByKeyCommand.TemplateId.ModuleName.Should().Be("Module");
@@ -378,7 +378,7 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: null);
 
-        var wireCommand = commands.Commands1.Should().ContainSingle().Subject;
+        var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         wireCommand.ExerciseByKeyCommand.Should().NotBeNull();
         wireCommand.ExerciseByKeyCommand!.ContractKey.Party.Should().Be(
             "party::steward",
@@ -445,6 +445,43 @@ public class RestCommandBuilderTests
         disclosed.TemplateId.ModuleName.Should().Be("Disclosed");
         disclosed.TemplateId.EntityName.Should().Be("Contract");
         disclosed.CreatedEventBlob.Should().Be(Convert.ToBase64String(blob));
+    }
+
+    [Fact]
+    public void BuildCommands_writes_a_disclosed_contracts_synchronizerId_on_the_wire()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithCommandId(TestCommandId)
+            .WithDisclosedContracts(new RuntimeCommands.DisclosedContract(
+                "00disclosed", DisclosedTemplateId, new byte[] { 0x01 })
+            {
+                SynchronizerId = new SynchronizerId("global-domain::1220aa"),
+            });
+
+        var json = JsonSerializer.Serialize(
+            RestCommandBuilder.BuildCommands(submission, userId: null), RestRefitSettings.SerializerOptions);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("disclosedContracts")[0]
+            .GetProperty("synchronizerId").GetString().Should().Be("global-domain::1220aa");
+    }
+
+    [Fact]
+    public void BuildCommands_omits_a_disclosed_contracts_synchronizerId_when_it_names_none()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithCommandId(TestCommandId)
+            .WithDisclosedContracts(new RuntimeCommands.DisclosedContract(
+                "00disclosed", DisclosedTemplateId, new byte[] { 0x01 }));
+
+        var json = JsonSerializer.Serialize(
+            RestCommandBuilder.BuildCommands(submission, userId: null), RestRefitSettings.SerializerOptions);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("disclosedContracts")[0]
+            .TryGetProperty("synchronizerId", out _).Should().BeFalse();
     }
 
     [Fact]
@@ -600,7 +637,7 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: null);
 
-        var wireCommand = commands.Commands1.Should().ContainSingle().Subject;
+        var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         var createAndExerciseCommand = wireCommand.CreateAndExerciseCommand;
         createAndExerciseCommand.Should().NotBeNull();
         createAndExerciseCommand!.TemplateId.PackageId.Should().Be("pkg");

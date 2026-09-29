@@ -16,7 +16,8 @@ namespace Canton.Ledger.Testing;
 /// A query-style member you did not stage throws a descriptive <see cref="NotSupportedException"/>
 /// naming the missing setup, so a test never silently exercises unconfigured behaviour. The
 /// mutation-only members with no return payload — <see cref="GrantUserRightsAsync"/>,
-/// <see cref="RevokeUserRightsAsync"/>, <see cref="UploadDarAsync"/>, <see cref="ValidateDarAsync"/>
+/// <see cref="RevokeUserRightsAsync"/>, <see cref="UploadDarAsync(byte[], string?, CancellationToken)"/>,
+/// <see cref="ValidateDarAsync(byte[], CancellationToken)"/>
 /// — are unconditional no-op successes instead, the same way <see cref="FakeLedgerClient.Dispose"/>
 /// is: there is no return value to fake, so requiring staging first would add ceremony without
 /// adding safety. <see cref="CreateUserAsync"/> and <see cref="AllocatePartyAsync"/> sit between
@@ -223,7 +224,30 @@ public sealed class FakeAdminClient : IAdminClient
     }
 
     /// <inheritdoc />
-    public Task ValidateDarAsync(byte[] darFile, CancellationToken cancellationToken = default)
+    public Task UploadDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        string? submissionId,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfNullOrEmpty(darFile);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ValidateDarAsync(
+        byte[] darFile,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfNullOrEmpty(darFile);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ValidateDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrEmpty(darFile);
         return Task.CompletedTask;

@@ -11,6 +11,8 @@ using Daml.Runtime.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Peaceful.Canton.Localnet.Testing;
 using Xunit;
+using RuntimeCommands = Daml.Runtime.Commands;
+using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 #pragma warning disable CANTONREST001
 
@@ -24,7 +26,7 @@ public sealed class RestRichTypesRoundTripParityTests : RichTypesRoundTripParity
         + "(or the legacy un-namespaced CANTON_LOCALNET_* globals) and bring up the localnet "
         + "(canton-localnet up && canton-localnet wait-ready) to run this parity test.";
 
-    protected override async Task<CapabilityLane<(ICantonLedgerClient Client, Party Owner)>> OpenClientAsync(
+    protected override async Task<CapabilityLane<RichTypesSession>> OpenClientAsync(
         CancellationToken cancellationToken)
     {
         if (!EndpointDiscovery.IsLocalnetAvailable())
@@ -50,10 +52,15 @@ public sealed class RestRichTypesRoundTripParityTests : RichTypesRoundTripParity
             var party = await fixture.AllocatePartyAsync(
                 "rest-richtypes-parity", cancellationToken: cancellationToken).ConfigureAwait(false);
             await actAsRights.GrantAsync(party.PartyId, cancellationToken).ConfigureAwait(false);
+            var counterparty = await fixture.AllocatePartyAsync(
+                "rest-richtypes-parity-counterparty", cancellationToken: cancellationToken).ConfigureAwait(false);
+            await actAsRights.GrantAsync(counterparty.PartyId, cancellationToken).ConfigureAwait(false);
 
             var client = services.GetRequiredService<ICantonLedgerClient>();
-            return new CapabilityLane<(ICantonLedgerClient, Party)>(
-                (client, new Party(party.PartyId)),
+            return new CapabilityLane<RichTypesSession>(
+                new RichTypesSession(client, new Party(party.PartyId), new Party(counterparty.PartyId),
+                    (contractId, reader, token) => ReadDisclosedContractAsync(
+                        services.GetRequiredService<IEventQueryServiceApi>(), contractId, reader, token)),
                 async () =>
                 {
                     try
@@ -64,7 +71,8 @@ public sealed class RestRichTypesRoundTripParityTests : RichTypesRoundTripParity
                     {
                         await LaneTeardown.ReleaseAsync(actAsRights, fixture).ConfigureAwait(false);
                     }
-                });
+                },
+                rightsGatedUserId: fixture.ValidatorUserId);
         }
         catch (Exception openFailure)
         {
@@ -72,5 +80,42 @@ public sealed class RestRichTypesRoundTripParityTests : RichTypesRoundTripParity
                 .ConfigureAwait(false);
             throw;
         }
+    }
+
+    private static async Task<RuntimeCommands.DisclosedContract> ReadDisclosedContractAsync(
+        IEventQueryServiceApi eventQuery, string contractId, Party reader, CancellationToken cancellationToken)
+    {
+        var response = await eventQuery.GetEventsByContractId(
+            new GetEventsByContractIdRequest
+            {
+                ContractId = contractId,
+                EventFormat = new EventFormat
+                {
+                    Verbose = true,
+                    FiltersByParty = new Dictionary<string, Filters>
+                    {
+                        [reader.Value] = new Filters
+                        {
+                            Cumulative =
+                            [
+                                new CumulativeFilter
+                                {
+                                    IdentifierFilter = new IdentifierFilter
+                                    {
+                                        WildcardFilter = new WildcardFilter { IncludeCreatedEventBlob = true },
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        var created = response.Created.CreatedEvent;
+        return new RuntimeCommands.DisclosedContract(
+            contractId,
+            new RuntimeIdentifier(created.TemplateId.PackageId, created.TemplateId.ModuleName, created.TemplateId.EntityName),
+            Convert.FromBase64String(created.CreatedEventBlob));
     }
 }

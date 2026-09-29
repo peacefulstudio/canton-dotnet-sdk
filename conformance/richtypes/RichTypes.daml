@@ -213,3 +213,36 @@ template GenericResults
       controller owner
       do
         pure (if outer then Some (if inner then Some "present" else None) else None)
+
+data TrailingNote = TrailingNote
+  with
+    text : Text
+    remark : Optional Text
+  deriving (Eq, Show)
+
+template OptionalTails
+  with
+    owner : Party
+    midNote : Optional Text
+    inner : TrailingNote
+    tailNote : Optional Text
+  where
+    signatory owner
+
+    nonconsuming choice EchoOptionalTails : OptionalTails
+      controller owner
+      do
+        pure this
+
+template NestedOptionalTails
+  with
+    owner : Party
+    midMaybe : Optional (Optional Text)
+    tailMaybe : Optional (Optional Text)
+  where
+    signatory owner
+
+    nonconsuming choice EchoNestedOptionalTails : NestedOptionalTails
+      controller owner
+      do
+        pure this

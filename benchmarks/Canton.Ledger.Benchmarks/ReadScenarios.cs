@@ -61,7 +61,7 @@ internal static class ReadScenarios
             var contracts = 0;
             var start = Stopwatch.GetTimestamp();
             await foreach (var entry in transport.Client
-                               .SubscribeActiveAsync<Marker>(owner, activeAtOffset, cancellationToken)
+                               .SubscribeActiveAsync<Marker>(owner, activeAtOffset, cancellationToken: cancellationToken)
                                .ConfigureAwait(false))
             {
                 switch (entry)

@@ -1,0 +1,61 @@
+-- Copyright 2026 Peaceful Studio OÜ
+-- SPDX-License-Identifier: Apache-2.0
+module SubmitShapes where
+
+template Ephemeral
+  with
+    owner : Party
+    tag : Text
+  where
+    signatory owner
+
+template EphemeralFactory
+  with
+    owner : Party
+  where
+    signatory owner
+
+    nonconsuming choice Churn : Decimal
+      with
+        retiring : ContractId Ephemeral
+      controller owner
+      do
+        _ <- create Ephemeral with owner, tag = "kept"
+        transient <- create Ephemeral with owner, tag = "transient"
+        archive transient
+        archive retiring
+        pure 42.5
+
+template Ticket
+  with
+    issuer : Party
+    holder : Party
+  where
+    signatory issuer
+    observer holder
+
+template TicketDesk
+  with
+    issuer : Party
+    patron : Party
+  where
+    signatory issuer
+    observer patron
+
+    nonconsuming choice Issue : ContractId Ticket
+      controller patron
+      do
+        _ <- create Ticket with issuer, holder = issuer
+        create Ticket with issuer, holder = patron
+
+    nonconsuming choice Reserve : ContractId Ticket
+      controller patron
+      do
+        create Ticket with issuer, holder = issuer
+
+    nonconsuming choice Retire : ()
+      with
+        retiring : ContractId Ticket
+      controller patron
+      do
+        archive retiring

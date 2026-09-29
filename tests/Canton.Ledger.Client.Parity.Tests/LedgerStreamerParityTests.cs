@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -53,6 +54,13 @@ public abstract class LedgerStreamerParityTests
     /// </summary>
     protected virtual bool SupportsParticipantRejectedReads => true;
 
+    /// <summary>
+    /// Whether this provider has a participant that returns a <c>created_event_blob</c> and
+    /// validates a disclosed contract. A lane replaying canned rows has neither, so it opts out of
+    /// the explicit-disclosure checks below.
+    /// </summary>
+    protected virtual bool SupportsExplicitDisclosure => true;
+
     /// <summary>Opens a lane over this provider's reader/writer/streaming capabilities for one test.</summary>
     protected abstract Task<CapabilityLane<(ILedgerReader Reader, ILedgerWriter Writer, ICantonLedgerClient Client, Party Owner)>>
         OpenStreamerAsync(CancellationToken cancellationToken);
@@ -67,8 +75,9 @@ public abstract class LedgerStreamerParityTests
         var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var entries = new List<AcsSnapshotEntry<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var entry in client.SubscribeActiveAsync<Marker>(
-            owner, ledgerEnd, TestContext.Current.CancellationToken))
+            owner, ledgerEnd, cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -87,8 +96,9 @@ public abstract class LedgerStreamerParityTests
         var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var entries = new List<InterfaceAcsSnapshotEntry<IHolding, HoldingView>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var entry in client.SubscribeActiveAsync(
-            IHolding.View, owner, ledgerEnd, TestContext.Current.CancellationToken))
+            IHolding.View, owner, ledgerEnd, cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -115,6 +125,7 @@ public abstract class LedgerStreamerParityTests
         var toOffset = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var events = new List<ContractStreamEvent<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var evt in client.SubscribeAsync<Marker>(
             owner, fromOffset, toOffset, TestContext.Current.CancellationToken))
         {
@@ -142,6 +153,7 @@ public abstract class LedgerStreamerParityTests
         var toOffset = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var events = new List<InterfaceStreamEvent<IHolding, HoldingView>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var evt in client.SubscribeAsync(
             IHolding.View, owner, fromOffset, toOffset, TestContext.Current.CancellationToken))
         {
@@ -171,6 +183,7 @@ public abstract class LedgerStreamerParityTests
         var toOffset = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var events = new List<ContractStreamEvent<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var evt in client.SubscribeLedgerEffectsAsync<Marker>(
             owner, fromOffset, toOffset, TestContext.Current.CancellationToken))
         {
@@ -198,6 +211,7 @@ public abstract class LedgerStreamerParityTests
         var toOffset = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var events = new List<InterfaceStreamEvent<IHolding, HoldingView>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var evt in client.SubscribeLedgerEffectsAsync(
             IHolding.View, owner, fromOffset, toOffset, TestContext.Current.CancellationToken))
         {
@@ -220,14 +234,126 @@ public abstract class LedgerStreamerParityTests
         var assetCid = await CreateAssetAsync(writer, owner);
         var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         var holdings = await client.QueryActiveAsync<IHolding, HoldingView>(
-            owner, ledgerEnd, TestContext.Current.CancellationToken);
+            owner, ledgerEnd, cancellationToken: TestContext.Current.CancellationToken);
 
         var holding = holdings.Should().ContainSingle(
             holding => holding.Contract.Id.Value == assetCid.Value).Subject;
         holding.Contract.View.Amount.Should().Be(AssetAmount);
         holding.LastUpdateOffset.Value.Should().BeGreaterThan(0);
         holding.SynchronizerId.Should().NotBe(default(SynchronizerId));
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_asked_for_the_created_event_blob_returns_the_created_Marker_ready_for_disclosure()
+    {
+        Assert.SkipUnless(
+            SupportsExplicitDisclosure,
+            "this lane has no participant to return a created_event_blob or to validate a disclosure");
+
+        await using var lane = await OpenStreamerAsync(TestContext.Current.CancellationToken);
+        var (reader, writer, client, owner) = lane.Capability;
+
+        var markerCid = await CreateMarkerAsync(writer, owner);
+        var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var disclosure = await DisclosureOfTheActiveMarkerAsync(lane, client, owner, ledgerEnd, markerCid);
+
+        disclosure.ContractId.Should().Be(markerCid.Value);
+        disclosure.TemplateId.Should().Be(Marker.TemplateId);
+        disclosure.CreatedEventBlob.IsEmpty.Should().BeFalse();
+
+        var archived = await writer.TrySubmitAndWaitForTransactionAsync(
+            CommandsSubmission.Single(markerCid.ArchiveCommand()).WithDisclosedContracts(disclosure),
+            owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        archived.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the participant accepts the disclosure the typed read built")
+            .Which.Result.ArchivedContractIds.Should().Contain(markerCid.Value);
+    }
+
+    [Fact]
+    public async Task A_submission_disclosing_the_Marker_with_a_tampered_created_event_blob_is_rejected()
+    {
+        Assert.SkipUnless(
+            SupportsExplicitDisclosure,
+            "this lane has no participant to return a created_event_blob or to validate a disclosure");
+
+        await using var lane = await OpenStreamerAsync(TestContext.Current.CancellationToken);
+        var (reader, writer, client, owner) = lane.Capability;
+
+        var markerCid = await CreateMarkerAsync(writer, owner);
+        var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var disclosure = await DisclosureOfTheActiveMarkerAsync(lane, client, owner, ledgerEnd, markerCid);
+
+        var archived = await writer.TrySubmitAndWaitForTransactionAsync(
+            CommandsSubmission.Single(markerCid.ArchiveCommand())
+                .WithDisclosedContracts(disclosure with { CreatedEventBlob = WithMiddleByteFlipped(disclosure.CreatedEventBlob) }),
+            owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        archived.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>(
+            "the participant validates a disclosed contract's blob rather than trusting it");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_not_asked_for_the_created_event_blob_returns_the_created_Marker_without_a_Disclosure()
+    {
+        await using var lane = await OpenStreamerAsync(TestContext.Current.CancellationToken);
+        var (reader, writer, client, owner) = lane.Capability;
+
+        var markerCid = await CreateMarkerAsync(writer, owner);
+        var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var entries = new List<AcsSnapshotEntry<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
+        await foreach (var entry in client.SubscribeActiveAsync<Marker>(
+            owner, ledgerEnd, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        entries.OfType<AcsSnapshotEntry<Marker>.Created>()
+            .Should().ContainSingle(created => created.ContractId.Equals(markerCid))
+            .Which.Disclosure.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_asked_for_the_created_event_blob_discloses_the_Asset_behind_the_IHolding_view()
+    {
+        Assert.SkipUnless(
+            SupportsExplicitDisclosure,
+            "this lane has no participant to return a created_event_blob or to validate a disclosure");
+
+        await using var lane = await OpenStreamerAsync(TestContext.Current.CancellationToken);
+        var (reader, writer, client, owner) = lane.Capability;
+
+        var assetCid = await CreateAssetAsync(writer, owner);
+        var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        IReadOnlyList<ActiveContract<InterfaceContract<IHolding, HoldingView>>> holdings;
+        using (await lane.HoldStreamAsync(TestContext.Current.CancellationToken))
+        {
+            holdings = await client.QueryActiveAsync<IHolding, HoldingView>(
+                owner, ledgerEnd, includeDisclosure: true, TestContext.Current.CancellationToken);
+        }
+
+        var disclosure = holdings.Should().ContainSingle(holding => holding.Contract.Id.Value == assetCid.Value)
+            .Which.Disclosure.Should().NotBeNull().And.Subject.As<DisclosedContract>();
+        disclosure.ContractId.Should().Be(assetCid.Value);
+        disclosure.TemplateId.Should().Be(Asset.TemplateId);
+        disclosure.CreatedEventBlob.IsEmpty.Should().BeFalse();
+
+        var archived = await writer.TrySubmitAndWaitForTransactionAsync(
+            CommandsSubmission.Single(assetCid.ArchiveCommand()).WithDisclosedContracts(disclosure),
+            owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        archived.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the participant accepts the disclosure the interface read built")
+            .Which.Result.ArchivedContractIds.Should().Contain(assetCid.Value);
     }
 
     [Fact]
@@ -244,6 +370,7 @@ public abstract class LedgerStreamerParityTests
         var pastTheLedgerEnd = LedgerOffset.At(ledgerEnd.Value + OffsetsPastTheLedgerEnd);
 
         var events = new List<ContractStreamEvent<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var evt in client.SubscribeAsync<Marker>(
             owner, ledgerEnd, pastTheLedgerEnd, TestContext.Current.CancellationToken))
         {
@@ -257,6 +384,33 @@ public abstract class LedgerStreamerParityTests
         error.Status.Should().NotBeOfType<TransportStatus.UndecodableBody>(
             "the participant reported this failure over the transport, so it carries the transport's status");
         error.Message.Should().NotBeNullOrWhiteSpace();
+    }
+
+    private static async Task<DisclosedContract> DisclosureOfTheActiveMarkerAsync(
+        CapabilityLane<(ILedgerReader Reader, ILedgerWriter Writer, ICantonLedgerClient Client, Party Owner)> lane,
+        ICantonLedgerClient client,
+        Party owner,
+        LedgerOffset ledgerEnd,
+        ContractId<Marker> markerCid)
+    {
+        var entries = new List<AcsSnapshotEntry<Marker>>();
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
+        await foreach (var entry in client.SubscribeActiveAsync<Marker>(
+            owner, ledgerEnd, includeDisclosure: true, TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        return entries.OfType<AcsSnapshotEntry<Marker>.Created>()
+            .Should().ContainSingle(created => created.ContractId.Equals(markerCid))
+            .Which.Disclosure.Should().NotBeNull().And.Subject.As<DisclosedContract>();
+    }
+
+    private static byte[] WithMiddleByteFlipped(ReadOnlyMemory<byte> blob)
+    {
+        var tampered = blob.ToArray();
+        tampered[tampered.Length / 2] ^= 0xFF;
+        return tampered;
     }
 
     private static Task CreateMarkerBeforeTheWindowAsync(ILedgerWriter writer, Party owner) =>

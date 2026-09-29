@@ -106,11 +106,11 @@ public sealed record AllocationRequestView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationRequestView FromRecord(DamlRecord record) => new AllocationRequestView(
-        OriginalRequestCid: record.GetRequiredField("originalRequestCid").AsOptional().HasValue ? new ContractId<IAllocationRequest>(record.GetRequiredField("originalRequestCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
+        OriginalRequestCid: record.GetOptionalField("originalRequestCid").AsOptional().HasValue ? new ContractId<IAllocationRequest>(record.GetOptionalField("originalRequestCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
         Settlement: global::Splice.Api.Token.AllocationV2.SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<DamlRecord>()),
         Allocations: (IReadOnlyList<global::Splice.Api.Token.AllocationV2.AllocationSpecification>)record.GetRequiredField("allocations").As<DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.AllocationSpecification.FromRecord(x.As<DamlRecord>())).ToList(),
         RequestedAt: record.GetRequiredField("requestedAt").As<DamlTimestamp>().Value,
-        SettleAt: record.GetRequiredField("settleAt").AsOptional().HasValue ? record.GetRequiredField("settleAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
+        SettleAt: record.GetOptionalField("settleAt").AsOptional().HasValue ? record.GetOptionalField("settleAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
         AvailableActions: (IReadOnlyDictionary<AllocationRequestAction, IReadOnlyList<IReadOnlyList<Party>>>)record.GetRequiredField("availableActions").As<DamlGenMap>().Entries.ToDictionary(kv => AllocationRequestAction.FromVariant(kv.Key.As<DamlVariant>()), kv => (IReadOnlyList<IReadOnlyList<Party>>)kv.Value.As<DamlList>().Values.Select(x => (IReadOnlyList<Party>)x.As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList()).ToList()),
         Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
     );
@@ -121,11 +121,11 @@ public sealed record AllocationRequestView(
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
-            DamlField.Create("originalRequestCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "originalRequestCid"), context.Field("originalRequestCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            DamlField.Create("originalRequestCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "originalRequestCid"), context.Field("originalRequestCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
             DamlField.Create("settlement", global::Splice.Api.Token.AllocationV2.SettlementInfo.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settlement"), context.Field("settlement"))),
             DamlField.Create("allocations", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocations"), context.Field("allocations"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.AllocationSpecification.__ReadDamlLfJson(__json0, __ctx0))),
             DamlField.Create("requestedAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "requestedAt"), context.Field("requestedAt"))),
-            DamlField.Create("settleAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settleAt"), context.Field("settleAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
+            DamlField.Create("settleAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "settleAt"), context.Field("settleAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
             DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => AllocationRequestAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))),
             DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );

@@ -48,10 +48,10 @@ public class ContractKeyRoundTripTests
         var startOffset = await client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var createOutcome = await client.TryCreateAsync(
-            new Account(custodian, label, 100L), TestContext.Current.CancellationToken);
+            new Account(custodian, label, 100L), cancellationToken: TestContext.Current.CancellationToken);
         var createdCid = Assert.IsType<ExerciseOutcome<ContractId<Account>>.One>(createOutcome).Result;
 
-        var created = await ReadCreatedAsync<Account>(client, custodian, createdCid.Value, startOffset);
+        var created = await ReadCreatedAsync<Account>(client, fixture.ValidatorUserId, custodian, createdCid.Value, startOffset);
 
         var key = created.Key;
         Assert.NotNull(key);
@@ -86,10 +86,10 @@ public class ContractKeyRoundTripTests
         var startOffset = await client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var createOutcome = await client.TryCreateAsync(
-            new Steward(steward, "charter"), TestContext.Current.CancellationToken);
+            new Steward(steward, "charter"), cancellationToken: TestContext.Current.CancellationToken);
         var createdCid = Assert.IsType<ExerciseOutcome<ContractId<Steward>>.One>(createOutcome).Result;
 
-        var created = await ReadCreatedAsync<Steward>(client, steward, createdCid.Value, startOffset);
+        var created = await ReadCreatedAsync<Steward>(client, fixture.ValidatorUserId, steward, createdCid.Value, startOffset);
 
         var key = created.Key;
         Assert.NotNull(key);
@@ -122,10 +122,10 @@ public class ContractKeyRoundTripTests
         var startOffset = await client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var createOutcome = await client.TryCreateAsync(
-            new Steward(steward, "charter"), TestContext.Current.CancellationToken);
+            new Steward(steward, "charter"), cancellationToken: TestContext.Current.CancellationToken);
         var createdCid = Assert.IsType<ExerciseOutcome<ContractId<Steward>>.One>(createOutcome).Result;
 
-        var created = await ReadCreatedThroughStewardshipAsync(client, steward, createdCid.Value, startOffset);
+        var created = await ReadCreatedThroughStewardshipAsync(client, fixture.ValidatorUserId, steward, createdCid.Value, startOffset);
 
         var key = created.Key;
         Assert.NotNull(key);
@@ -146,8 +146,12 @@ public class ContractKeyRoundTripTests
         var services = LocalnetLedgerServices.ForValidator(fixture, fixture.ValidatorUserId);
         try
         {
+            var globalSynchronizerId = await GlobalSynchronizerIdAsync(
+                services.GetRequiredService<ICantonLedgerClient>(), TestContext.Current.CancellationToken);
             await services.GetRequiredService<IAdminClient>().UploadDarAsync(
                 await ContractKeysDarAsync(TestContext.Current.CancellationToken),
+                synchronizerId: globalSynchronizerId,
+                submissionId: null,
                 cancellationToken: TestContext.Current.CancellationToken);
 
             var party = await fixture.AllocatePartyAsync(
@@ -171,6 +175,25 @@ public class ContractKeyRoundTripTests
         }
     }
 
+    private static async Task<SynchronizerId> GlobalSynchronizerIdAsync(
+        ICantonLedgerClient ledgerClient, CancellationToken cancellationToken)
+    {
+        const string GlobalSynchronizerAlias = "global";
+
+        var connected = await ledgerClient.GetConnectedSynchronizersAsync(cancellationToken: cancellationToken);
+        var global = connected.FirstOrDefault(
+            synchronizer => synchronizer.SynchronizerAlias == GlobalSynchronizerAlias);
+
+        if (global is null)
+        {
+            var aliases = string.Join(", ", connected.Select(synchronizer => synchronizer.SynchronizerAlias));
+            throw new InvalidOperationException(
+                $"No connected synchronizer with alias '{GlobalSynchronizerAlias}'. Connected: [{aliases}].");
+        }
+
+        return new SynchronizerId(global.SynchronizerId);
+    }
+
     private static async Task<byte[]> ContractKeysDarAsync(CancellationToken cancellationToken)
     {
         await using var dar = ConformanceCorpus.OpenDar(ConformancePackage.ContractKeys);
@@ -181,6 +204,7 @@ public class ContractKeyRoundTripTests
 
     private static async Task<ContractStreamEvent<T>.Created> ReadCreatedAsync<T>(
         ICantonLedgerClient client,
+        string userId,
         Party reader,
         string contractIdValue,
         LedgerOffset fromExclusive)
@@ -190,6 +214,8 @@ public class ContractKeyRoundTripTests
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(SubscribeBudget);
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(
+            userId, TestContext.Current.CancellationToken);
         try
         {
             await foreach (var streamEvent in client.SubscribeAsync<T>(reader, fromExclusive, endOffset, cts.Token))
@@ -238,6 +264,7 @@ public class ContractKeyRoundTripTests
     private static async Task<InterfaceStreamEvent<IStewardship, StewardshipView>.Created>
         ReadCreatedThroughStewardshipAsync(
             ICantonLedgerClient client,
+            string userId,
             Party reader,
             string contractIdValue,
             LedgerOffset fromExclusive)
@@ -246,6 +273,8 @@ public class ContractKeyRoundTripTests
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(SubscribeBudget);
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(
+            userId, TestContext.Current.CancellationToken);
         try
         {
             await foreach (var streamEvent in client.SubscribeAsync(

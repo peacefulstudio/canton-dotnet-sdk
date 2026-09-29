@@ -77,9 +77,9 @@ public sealed record Lock(
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Lock FromRecord(DamlRecord record) => new Lock(
         Holders: (IReadOnlyList<Party>)record.GetRequiredField("holders").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
-        ExpiresAt: record.GetRequiredField("expiresAt").AsOptional().HasValue ? record.GetRequiredField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
-        ExpiresAfter: record.GetRequiredField("expiresAfter").AsOptional().HasValue ? RelTime.FromRecord(record.GetRequiredField("expiresAfter").AsOptional().Value!.As<DamlRecord>()) : null,
-        Context: record.GetRequiredField("context").AsOptional().HasValue ? record.GetRequiredField("context").AsOptional().Value!.As<DamlText>().Value : null
+        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
+        ExpiresAfter: record.GetOptionalField("expiresAfter").AsOptional().HasValue ? RelTime.FromRecord(record.GetOptionalField("expiresAfter").AsOptional().Value!.As<DamlRecord>()) : null,
+        Context: record.GetOptionalField("context").AsOptional().HasValue ? record.GetOptionalField("context").AsOptional().Value!.As<DamlText>().Value : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -89,9 +89,9 @@ public sealed record Lock(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
             DamlField.Create("holders", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holders"), context.Field("holders"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
-            DamlField.Create("expiresAfter", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "expiresAfter"), context.Field("expiresAfter"), (__json0, __ctx0) => RelTime.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("context", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "context"), context.Field("context"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
+            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
+            DamlField.Create("expiresAfter", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAfter"), context.Field("expiresAfter"), (__json0, __ctx0) => RelTime.__ReadDamlLfJson(__json0, __ctx0))),
+            DamlField.Create("context", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "context"), context.Field("context"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
         );
     }
 

@@ -2,694 +2,505 @@
 <!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Account.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Account.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.ContractIdentifiers</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Membership.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Schedule.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Schedule.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.ContractKeys.Steward.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.DefaultTarget.ContractIdentifiers</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.DefaultTarget.Note.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.DefaultTarget.Note.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.Asset.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.Asset.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.ContractIdentifiers</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.Marker.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.Marker.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Contract</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.ContractId</Target>
-    <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
-    <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.CreditAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Account.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.TryCreditAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.CreditAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Account.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.TryCreditAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.CreditAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.TryCreditAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.CreditAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountExtensions.TryCreditAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.Credit,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountNonContractExtensions.CurrentBalanceAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.CurrentBalance,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountNonContractExtensions.TryCurrentBalanceAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Account},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account.CurrentBalance,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.AccountSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Account,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.ToggleAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.TryToggleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.ToggleAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.TryToggleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.ToggleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.TryToggleAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.ToggleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentExtensions.TryToggleAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.EnrollmentSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.ExtendAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.TryExtendAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.ExtendAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.TryExtendAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.ExtendAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.TryExtendAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.ExtendAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayExtensions.TryExtendAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidayNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Holiday},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidaySubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.HolidaySubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Holiday,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.IStewardshipExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.IStewardship},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.IStewardshipExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.IStewardship},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.IStewardshipExtensions.DescribeCharterAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.IStewardship},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.DescribeCharter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.IStewardshipExtensions.TryDescribeCharterAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.IStewardship},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.DescribeCharter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.RenewAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.TryRenewAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.RenewAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.TryRenewAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.RenewAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.TryRenewAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.RenewAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipExtensions.TryRenewAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership.Renew,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Membership},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.MembershipSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Membership,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.ScheduleExtensions.RescheduleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Schedule},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Schedule.Reschedule,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.ScheduleExtensions.TryRescheduleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Schedule},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Schedule.Reschedule,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.ScheduleNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Schedule},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.ScheduleNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Schedule},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.ScheduleSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Schedule,Daml.Runtime.Commands.SubmitterInfo,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.ScheduleSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Schedule,Daml.Runtime.Commands.SubmitterInfo,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.ReviseAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.TryReviseAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.ReviseAsync(Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.TryReviseAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.ReviseAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.TryReviseAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.ReviseAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardExtensions.TryReviseAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward.Revise,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.ContractKeys.Steward},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.ContractKeys.StewardSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.ContractKeys.Steward,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.DefaultTarget.NoteNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.DefaultTarget.Note},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.DefaultTarget.NoteNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.DefaultTarget.Note},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.DefaultTarget.NoteSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.DefaultTarget.Note,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.DefaultTarget.NoteSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.DefaultTarget.Note,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.AssetNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.Asset},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.AssetNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.Asset},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.AssetSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Asset,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.AssetSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Asset,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.ReturnContractIdsAsync(Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.TryReturnContractIdsAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.ReturnContractIdsAsync(Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.TryReturnContractIdsAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.ReturnContractIdsAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.TryReturnContractIdsAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.ReturnContractIdsAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsExtensions.TryReturnContractIdsAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnEitherAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnEither,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnEitherAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnEither,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnGenMapAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnGenMap,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnGenMapAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnGenMap,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnNestedOptionalAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNestedOptional,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnNestedOptionalAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNestedOptional,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnNonEmptyAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNonEmpty,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnNonEmptyAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNonEmpty,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnOptionalTextAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalText,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnOptionalTextAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalText,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnSetAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSet,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnSetAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSet,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnTextMapAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTextMap,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnTextMapAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTextMap,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.ReturnTupleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTuple,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsNonContractExtensions.TryReturnTupleAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.GenericResults},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTuple,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.GenericResultsSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.GenericResults,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.DescribeAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Describe,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.TryDescribeAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Describe,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.ReissueAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Reissue,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.TryReissueAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Reissue,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.SplitAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Split,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.IHoldingExtensions.TrySplitAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.IHolding},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Split,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.MarkerNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.Marker},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.MarkerNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.Marker},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.MarkerSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Marker,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.MarkerSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.Marker,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.RelabelAsync(Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.TryRelabelAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.RelabelAsync(Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.TryRelabelAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.RelabelAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.TryRelabelAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.RelabelAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordExtensions.TryRelabelAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Relabel,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.RichRecord},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.RichRecordSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.RichRecord,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.ReboxAsync(Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.TryReboxAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.ReboxAsync(Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Contract,Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.TryReboxAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.ReboxAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.TryReboxAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.ReboxAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,Daml.Runtime.Data.Party,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersExtensions.TryReboxAsync(Daml.Runtime.Contracts.IContract{Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersNonContractExtensions.ArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersNonContractExtensions.TryArchiveAsync(Daml.Runtime.Contracts.ContractId{Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners},Daml.Ledger.Abstractions.ILedgerWriter,Daml.Runtime.Commands.SubmitterInfo,System.String,System.Nullable{Daml.Runtime.Commands.CommandId},System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersSubmissionExtensions.CreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners,System.Threading.CancellationToken)</Target>
+    <Target>M:Daml.Codegen.Testing.Conformance.RichTypes.TypeCornersSubmissionExtensions.TryCreateAsync(Daml.Ledger.Abstractions.ILedgerWriter,Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners,System.Threading.CancellationToken)</Target>
     <Left>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Left>
     <Right>lib/net10.0/Daml.Codegen.Testing.Conformance.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>

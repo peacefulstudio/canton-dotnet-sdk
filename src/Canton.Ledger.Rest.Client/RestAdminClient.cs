@@ -340,15 +340,26 @@ internal sealed partial class RestAdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return TracedAsync(nameof(UploadDarAsync), () => UploadDarCoreAsync(darFile, cancellationToken));
+        return TracedAsync(nameof(UploadDarAsync), () => UploadDarCoreAsync(darFile, synchronizerId: null, cancellationToken));
     }
 
-    private async Task<bool> UploadDarCoreAsync(byte[] darFile, CancellationToken cancellationToken)
+    public Task UploadDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        string? submissionId,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfNullOrEmpty(darFile);
+
+        return TracedAsync(nameof(UploadDarAsync), () => UploadDarCoreAsync(darFile, synchronizerId, cancellationToken));
+    }
+
+    private async Task<bool> UploadDarCoreAsync(byte[] darFile, SynchronizerId? synchronizerId, CancellationToken cancellationToken)
     {
         LogUploadingDar(_logger, darFile.Length);
 
         await _calls.SendAsync(
-            new RestCall(HttpMethod.Post, DarsPath, darFile, MissingBody("DAR upload"), MalformedBody("DAR upload"), Replayable: false),
+            new RestCall(HttpMethod.Post, DarPath(DarsPath, synchronizerId), darFile, MissingBody("DAR upload"), MalformedBody("DAR upload"), Replayable: false),
             IgnoreBodyAsync,
             timeout: null,
             cancellationToken).ConfigureAwait(false);
@@ -357,17 +368,29 @@ internal sealed partial class RestAdminClient : IAdminClient
         return true;
     }
 
-    public Task ValidateDarAsync(byte[] darFile, CancellationToken cancellationToken = default)
+    public Task ValidateDarAsync(
+        byte[] darFile,
+        CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return TracedAsync(nameof(ValidateDarAsync), () => ValidateDarCoreAsync(darFile, cancellationToken));
+        return TracedAsync(nameof(ValidateDarAsync), () => ValidateDarCoreAsync(darFile, synchronizerId: null, cancellationToken));
     }
 
-    private async Task<bool> ValidateDarCoreAsync(byte[] darFile, CancellationToken cancellationToken)
+    public Task ValidateDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfNullOrEmpty(darFile);
+
+        return TracedAsync(nameof(ValidateDarAsync), () => ValidateDarCoreAsync(darFile, synchronizerId, cancellationToken));
+    }
+
+    private async Task<bool> ValidateDarCoreAsync(byte[] darFile, SynchronizerId? synchronizerId, CancellationToken cancellationToken)
     {
         await _calls.SendAsync(
-            new RestCall(HttpMethod.Post, ValidateDarPath, darFile, MissingBody("DAR validation"), MalformedBody("DAR validation")),
+            new RestCall(HttpMethod.Post, DarPath(ValidateDarPath, synchronizerId), darFile, MissingBody("DAR validation"), MalformedBody("DAR validation")),
             IgnoreBodyAsync,
             timeout: null,
             cancellationToken).ConfigureAwait(false);
@@ -375,6 +398,11 @@ internal sealed partial class RestAdminClient : IAdminClient
         LogDarValidated(_logger, darFile.Length);
         return true;
     }
+
+    private static string DarPath(string path, SynchronizerId? synchronizerId) =>
+        synchronizerId is { } synchronizer
+            ? $"{path}?synchronizerId={Uri.EscapeDataString(synchronizer.Value)}"
+            : path;
 
     private static async Task<T> TracedAsync<T>(
         string operation,

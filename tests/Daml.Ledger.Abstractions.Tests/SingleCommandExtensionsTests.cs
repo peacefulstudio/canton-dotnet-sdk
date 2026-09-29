@@ -285,6 +285,211 @@ public class SingleCommandExtensionsTests
         };
     }
 
+    private static readonly DisclosedContract HoldingDisclosure = new(
+        "cid-holding", new Identifier("pkg", "Module", "Holding"), new byte[] { 1, 2, 3 });
+
+    private static readonly SynchronizerId GlobalSynchronizer = new("global-domain::1220abcd");
+
+    private static Func<CommandsSubmission, CommandsSubmission> AddEveryOptionalPart =>
+        s => s.WithDisclosedContracts(HoldingDisclosure)
+            .WithDeduplicationPeriod(new DeduplicationPeriod.Duration(TimeSpan.FromMinutes(5)))
+            .WithSynchronizerId(GlobalSynchronizer)
+            .WithMinLedgerTime(new MinLedgerTime.Relative(TimeSpan.FromSeconds(10)));
+
+    private static void AssertEveryOptionalPartReachedTheWriter(CapturingWriter writer)
+    {
+        var submission = writer.LastSubmission!;
+        submission.DisclosedContracts.Should().Equal(HoldingDisclosure);
+        submission.DeduplicationPeriod.Should().Be(new DeduplicationPeriod.Duration(TimeSpan.FromMinutes(5)));
+        submission.SynchronizerId.Should().Be(new SynchronizerId("global-domain::1220abcd"));
+        submission.MinLedgerTime.Should().Be(new MinLedgerTime.Relative(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_delivers_the_parts_added_by_configure_to_the_writer()
+    {
+        var writer = new CapturingWriter();
+
+        await writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, configure: AddEveryOptionalPart,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        AssertEveryOptionalPartReachedTheWriter(writer);
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_without_configure_submits_no_optional_parts()
+    {
+        var writer = new CapturingWriter();
+
+        await writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        var submission = writer.LastSubmission!;
+        submission.DisclosedContracts.Should().BeNull();
+        submission.DeduplicationPeriod.Should().BeNull();
+        submission.SynchronizerId.Should().BeNull();
+        submission.MinLedgerTime.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_hands_configure_the_submission_already_carrying_the_command_id_and_workflow_id()
+    {
+        var writer = new CapturingWriter();
+        CommandsSubmission? seen = null;
+
+        await writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, workflowId: "wf-1", commandId: new CommandId("caller-supplied"),
+            configure: s => seen = s,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        seen!.CommandId.Should().Be(new CommandId("caller-supplied"));
+        seen.WorkflowId.Should().Be(new WorkflowId("wf-1"));
+        seen.Commands.Should().ContainSingle().Which.Should().Be(SampleCommand);
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_submits_what_configure_returns()
+    {
+        var writer = new CapturingWriter();
+
+        await writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, configure: s => s.WithCommandId(new CommandId("chosen-by-configure")),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        writer.LastSubmission!.CommandId.Should().Be(new CommandId("chosen-by-configure"));
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_rejects_a_configure_that_replaces_the_command_and_submits_nothing()
+    {
+        var writer = new CapturingWriter();
+        var otherCommand = SampleCommand with { Choice = new ChoiceName("SomethingElse") };
+
+        Func<Task> act = () => writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, configure: s => s with { Commands = [otherCommand] },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*command*");
+        writer.LastSubmission.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_rejects_a_configure_that_adds_a_second_command_and_submits_nothing()
+    {
+        var writer = new CapturingWriter();
+
+        Func<Task> act = () => writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, configure: s => s with { Commands = [SampleCommand, SampleCommand] },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*command*");
+        writer.LastSubmission.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_rejects_a_configure_that_returns_null_and_submits_nothing()
+    {
+        var writer = new CapturingWriter();
+
+        Func<Task> act = () => writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, configure: _ => null!,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*null*");
+        writer.LastSubmission.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitSingleAsync_still_dispatches_the_submitter_when_configure_sets_other_act_as_parties()
+    {
+        var writer = new CapturingWriter();
+
+        await writer.TrySubmitSingleAsync(
+            SampleCommand, Alice, configure: s => s.WithActAs(new Party("mallory")),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        writer.LastSubmitter.Should().Be(Alice);
+    }
+
+    [Theory]
+    [InlineData("TryCreateOneByExerciseAsync")]
+    [InlineData("TryCreateManyByExerciseAsync")]
+    [InlineData("CreateOneByExerciseAsync")]
+    [InlineData("CreateManyByExerciseAsync")]
+    [InlineData("ExerciseAsync")]
+    public async Task Sibling_submit_extensions_deliver_the_parts_added_by_configure_to_the_writer(string method)
+    {
+        var writer = new CapturingWriter(
+            new ExerciseOutcome<TransactionResult>.One(TransactionCreatingOneSampleTemplate));
+        var configure = AddEveryOptionalPart;
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await (method switch
+        {
+            "TryCreateOneByExerciseAsync" => writer.TryCreateOneByExerciseAsync<SampleTemplate>(
+                SampleCommand, Alice, configure: configure, cancellationToken: cancellationToken),
+            "TryCreateManyByExerciseAsync" => writer.TryCreateManyByExerciseAsync<SampleTemplate>(
+                SampleCommand, Alice, configure: configure, cancellationToken: cancellationToken),
+            "CreateOneByExerciseAsync" => writer.CreateOneByExerciseAsync<SampleTemplate>(
+                SampleCommand, Alice, configure: configure, cancellationToken: cancellationToken),
+            "CreateManyByExerciseAsync" => writer.CreateManyByExerciseAsync<SampleTemplate>(
+                SampleCommand, Alice, configure: configure, cancellationToken: cancellationToken),
+            "ExerciseAsync" => writer.ExerciseAsync(
+                SampleCommand, Alice, configure: configure, cancellationToken: cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(method), method, null),
+        });
+
+        AssertEveryOptionalPartReachedTheWriter(writer);
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_with_configure_submits_a_create_command_carrying_the_parts_added_by_configure()
+    {
+        var writer = new CapturingWriter(
+            new ExerciseOutcome<TransactionResult>.One(TransactionCreatingOneSampleTemplate));
+
+        var outcome = await SingleCommandExtensions.TryCreateAsync(
+            writer, new SampleTemplate(), Alice, configure: AddEveryOptionalPart,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        AssertEveryOptionalPartReachedTheWriter(writer);
+        writer.LastSubmission!.Commands.Should().ContainSingle().Which.Should().BeOfType<CreateCommand>();
+        writer.LastSubmission.WorkflowId.Should().Be(new WorkflowId("create-sampletemplate"));
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<SampleTemplate>>.One>()
+            .Which.Result.Should().Be(new ContractId<SampleTemplate>("cid-created"));
+        writer.TryCreateAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_with_configure_carries_the_supplied_workflow_id_and_command_id()
+    {
+        var writer = new CapturingWriter(
+            new ExerciseOutcome<TransactionResult>.One(TransactionCreatingOneSampleTemplate));
+
+        await SingleCommandExtensions.TryCreateAsync(
+            writer, new SampleTemplate(), Alice, workflowId: "wf-1", commandId: new CommandId("caller-supplied"),
+            timeout: TimeSpan.FromSeconds(3), configure: AddEveryOptionalPart,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        writer.LastSubmission!.WorkflowId.Should().Be(new WorkflowId("wf-1"));
+        writer.LastSubmission.CommandId.Should().Be(new CommandId("caller-supplied"));
+        writer.LastTimeout.Should().Be(TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_with_a_null_configure_delegates_to_the_writers_own_create()
+    {
+        var writer = new CapturingWriter();
+
+        await SingleCommandExtensions.TryCreateAsync(
+            writer, new SampleTemplate(), Alice, configure: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        writer.TryCreateAsyncCalls.Should().Be(1);
+        writer.LastSubmission.Should().BeNull();
+    }
+
     [Fact]
     public async Task ExerciseAsync_forwards_the_command_id_from_an_implicitly_converted_Party_for_a_void_choice()
     {
@@ -324,6 +529,10 @@ public class SingleCommandExtensionsTests
 
         public CommandsSubmission? LastSubmission { get; private set; }
 
+        public SubmitterInfo? LastSubmitter { get; private set; }
+
+        public int TryCreateAsyncCalls { get; private set; }
+
         public TimeSpan? LastTimeout { get; private set; }
 
         public CancellationToken LastCancellationToken { get; private set; }
@@ -351,6 +560,7 @@ public class SingleCommandExtensionsTests
             CancellationToken cancellationToken = default)
         {
             LastSubmission = submission;
+            LastSubmitter = submitter;
             LastTimeout = timeout;
             LastCancellationToken = cancellationToken;
             return Task.FromResult(_outcome);
@@ -364,7 +574,10 @@ public class SingleCommandExtensionsTests
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
             where TTemplate : ITemplate
-            => Task.FromResult<ExerciseOutcome<ContractId<TTemplate>>>(
+        {
+            TryCreateAsyncCalls++;
+            return Task.FromResult<ExerciseOutcome<ContractId<TTemplate>>>(
                 new ExerciseOutcome<ContractId<TTemplate>>.None());
+        }
     }
 }

@@ -179,7 +179,7 @@ public class NonContractChoiceVariantExerciserRoundTripTests
 
         var task = (Task)exerciser.Invoke(
             null,
-            [contractId, LedgerReturning(exerciseResult), submitter, null, null, null, CancellationToken.None])!;
+            [contractId, LedgerReturning(exerciseResult), submitter, null, null, null, null, CancellationToken.None])!;
         await task;
 
         var outcome = task.GetType().GetProperty("Result")!.GetValue(task)!;

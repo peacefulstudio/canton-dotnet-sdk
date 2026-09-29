@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Runtime.Commands;
 using Daml.Runtime.Data;
 
 namespace Daml.Runtime.Contracts;
@@ -36,4 +37,12 @@ namespace Daml.Runtime.Contracts;
 public sealed record ActiveContract<TContract>(
     TContract Contract,
     LedgerOffset LastUpdateOffset,
-    SynchronizerId SynchronizerId);
+    SynchronizerId SynchronizerId)
+{
+    /// <summary>
+    /// The contract, ready to attach to another party's submission as an explicit
+    /// disclosure. <c>null</c> unless the snapshot was opened with
+    /// <c>includeDisclosure: true</c> and the participant returned a blob.
+    /// </summary>
+    public DisclosedContract? Disclosure { get; init; }
+}

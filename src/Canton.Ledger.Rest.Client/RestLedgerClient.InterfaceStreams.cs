@@ -31,13 +31,15 @@ internal sealed partial class RestLedgerClient
         ViewDescriptor<TInterface, TView> view,
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
     {
         ArgumentNullException.ThrowIfNull(view);
 
-        return SubscribeActiveInterfaceAsyncCore<TInterface, TView>(submitter, activeAtOffset, cancellationToken);
+        return SubscribeActiveInterfaceAsyncCore<TInterface, TView>(
+            submitter, activeAtOffset, includeDisclosure, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -45,7 +47,7 @@ internal sealed partial class RestLedgerClient
     /// The interface-family counterpart of <see cref="SubscribeAsync{T}"/>: one bounded, blocking
     /// <c>POST /v2/updates</c> in the ACS-delta shape carrying the same <c>InterfaceFilter</c> and
     /// view-decoding contract as
-    /// <see cref="SubscribeActiveAsync{TInterface, TView}(ViewDescriptor{TInterface, TView}, RuntimeCommands.SubmitterInfo, LedgerOffset?, CancellationToken)"/>.
+    /// <see cref="SubscribeActiveAsync{TInterface, TView}(ViewDescriptor{TInterface, TView}, RuntimeCommands.SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>.
     /// A <paramref name="toOffset"/> of <see langword="null"/> is an open-ended tail the loop
     /// follows; a value terminates it. An already-cancelled <paramref name="cancellationToken"/> is
     /// honored before any request is sent, and a failed window ends the enumeration with a terminal
@@ -93,13 +95,15 @@ internal sealed partial class RestLedgerClient
     private async IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveInterfaceAsyncCore<TInterface, TView>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset,
+        bool includeDisclosure,
         [EnumeratorCancellation] CancellationToken cancellationToken)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
     {
         var effectiveOffset = activeAtOffset
             ?? await GetLedgerEndAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        var pages = ReadActiveContractPagesAsync<TInterface>(submitter, effectiveOffset, cancellationToken);
+        var pages = ReadActiveContractPagesAsync<TInterface>(
+            submitter, effectiveOffset, includeDisclosure, cancellationToken);
         await foreach (var read in pages.ConfigureAwait(false))
         {
             if (read.Fault is { } fault)
@@ -114,10 +118,11 @@ internal sealed partial class RestLedgerClient
                 continue;
             }
 
+            var disclosure = RestContractStreamProjector.DisclosureOf(entry, _logger);
             foreach (var projected in RestInterfaceStreamProjector.ProjectActiveContractEntry<TInterface, TView>(
                 entry, _logger, effectiveOffset))
             {
-                yield return ToInterfaceAcsSnapshotEntry<TInterface, TView>(projected);
+                yield return ToInterfaceAcsSnapshotEntry(projected, disclosure);
             }
         }
 
@@ -189,7 +194,8 @@ internal sealed partial class RestLedgerClient
     }
 
     private static InterfaceAcsSnapshotEntry<TInterface, TView> ToInterfaceAcsSnapshotEntry<TInterface, TView>(
-        InterfaceStreamEvent<TInterface, TView> entry)
+        InterfaceStreamEvent<TInterface, TView> entry,
+        RuntimeCommands.DisclosedContract? disclosure)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView> => entry switch
     {
@@ -200,7 +206,10 @@ internal sealed partial class RestLedgerClient
                 created.Key,
                 created.Offset,
                 created.SynchronizerId,
-                created.WitnessParties),
+                created.WitnessParties)
+            {
+                Disclosure = disclosure,
+            },
         InterfaceStreamEvent<TInterface, TView>.Unassigned unassigned =>
             new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
                 unassigned.Offset, UnclassifiedKind.UnassignedEvent),

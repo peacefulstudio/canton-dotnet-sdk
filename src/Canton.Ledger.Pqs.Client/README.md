@@ -117,7 +117,7 @@ Each row's `payload` is decoded with the generated Daml-LF JSON reader, so Daml 
 Decoding is strict:
 
 - PQS documents Daml `Numeric` and `Int64` as JSON strings by default, and `--target-encoding-numericasstring` / `--target-encoding-int64asstring` change that default. A bare JSON number where an `Int64` or `Numeric` is expected is refused.
-- PQS stores nullable fields as JSON nulls by default. `--target-encoding-excludenulls` is not supported: a payload that omits an optional field's key fails to decode with an error naming the field.
+- PQS stores nullable fields as JSON nulls by default. A payload that omits the key of a Daml `Optional` field, as `--target-encoding-excludenulls` does, decodes that field as `None`; a payload that omits any other field's key fails to decode with an error naming the field.
 - A row over 16 MiB, 100,000 JSON nodes or nesting depth 128 fails to decode. These limits are not configurable.
 
 A row that cannot be decoded throws `JsonException`.

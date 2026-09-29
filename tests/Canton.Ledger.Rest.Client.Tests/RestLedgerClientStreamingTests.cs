@@ -88,7 +88,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(10), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(10), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -99,6 +99,58 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         created.ContractId.Value.Should().Be("00holding");
         var checkpoint = entries[1].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.Checkpoint>().Subject;
         checkpoint.Resume.Offset.Value.Should().Be(10L);
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_asks_the_template_filter_for_the_created_event_blob_when_requested()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"activeContracts": []}""");
+        var client = ClientWith(transport);
+
+        await foreach (var _ in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        transport.LastRequestBody.Should().Contain("\"includeCreatedEventBlob\":true");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_leaves_the_created_event_blob_off_the_request_by_default()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"activeContracts": []}""");
+        var client = ClientWith(transport);
+
+        await foreach (var _ in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        transport.LastRequestBody.Should().NotContain("includeCreatedEventBlob");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_Created_carries_a_Disclosure_built_from_the_created_event_blob()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """
+            {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "createdEventBlob": "CgsM", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
+            """);
+        var client = ClientWith(transport);
+
+        var entries = new List<AcsSnapshotEntry<TestTemplate>>();
+        await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        entries[0].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.Created>()
+            .Which.Disclosure.Should().Be(new DisclosedContract(
+                "00holding",
+                new RuntimeIdentifier("pkg", "Module", "StreamingTemplate"),
+                new byte[] { 0x0A, 0x0B, 0x0C }) { SynchronizerId = new SynchronizerId("sync-1") });
     }
 
     [Fact]
@@ -113,7 +165,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(11), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(11), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -138,7 +190,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(42), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(42), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -205,7 +257,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(1), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(1), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -234,7 +286,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(1), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(1), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -263,7 +315,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(1), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(1), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -282,7 +334,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(1), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(1), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }

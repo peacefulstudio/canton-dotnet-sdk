@@ -155,6 +155,7 @@ internal sealed class GrpcCommandBuilder
             TemplateId = DamlValueConverter.ToProtoIdentifier(disclosed.TemplateId),
             ContractId = disclosed.ContractId,
             CreatedEventBlob = ByteString.CopyFrom(disclosed.CreatedEventBlob.Span),
+            SynchronizerId = disclosed.SynchronizerId?.Value ?? string.Empty,
         };
 
     private static ReassignmentCommand ToProtoReassignmentCommand(IReassignmentCommand command) =>

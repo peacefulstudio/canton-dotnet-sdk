@@ -27,7 +27,7 @@ public sealed record Box<TA>(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Box<TA> FromRecord(DamlRecord record, Func<DamlValue, TA> convertTA) => new Box<TA>(
-        Item: convertTA(record.GetRequiredField("item"))
+        Item: record.GetTypeParameterField("item", convertTA)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,7 +36,7 @@ public sealed record Box<TA>(
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
-            DamlField.Create("item", readTA(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "item"), context.Field("item")))
+            DamlField.Create("item", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTypeParameterField(json, context, "item", readTA))
         );
     }
 

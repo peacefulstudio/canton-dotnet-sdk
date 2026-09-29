@@ -29,6 +29,7 @@ public class RestInteractiveSubmissionConformanceTests
         await lane.GrantActAsAsync(party.PartyId, TestContext.Current.CancellationToken);
         var synchronizer = Assert.Single(await lane.Fixture.GetConnectedSynchronizersAsync(
             party.PartyId, TestContext.Current.CancellationToken));
+        Assert.Equal("global", synchronizer.Alias);
 
         var response = await lane.Api<IInteractiveSubmissionApi>().GetPreferredPackageVersion(
             [party.PartyId],

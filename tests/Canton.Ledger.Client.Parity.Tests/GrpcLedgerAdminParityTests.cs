@@ -21,7 +21,7 @@ public sealed class GrpcLedgerAdminParityTests : LiveLedgerAdminParityTests
         + "(or the legacy un-namespaced CANTON_LOCALNET_* globals) and bring up the localnet "
         + "(canton-localnet up && canton-localnet wait-ready) to run this parity test.";
 
-    protected override async Task<CapabilityLane<IAdminClient>> OpenAdminAsync(
+    protected override async Task<CapabilityLane<AdminCapability>> OpenAdminAsync(
         AdminParityScenario scenario, CancellationToken cancellationToken)
     {
         if (!EndpointDiscovery.IsLocalnetAvailable())
@@ -41,10 +41,17 @@ public sealed class GrpcLedgerAdminParityTests : LiveLedgerAdminParityTests
                     options.GrpcAddress = grpcAddress;
                     options.UserId = fixture.ValidatorUserId;
                 })
+                .AddLedgerClient(options =>
+                {
+                    options.GrpcAddress = grpcAddress;
+                    options.UserId = fixture.ValidatorUserId;
+                })
                 .BuildServiceProvider();
 
             var admin = services.GetRequiredService<IAdminClient>();
-            return new CapabilityLane<IAdminClient>(admin, async () =>
+            var ledgerClient = services.GetRequiredService<ICantonLedgerClient>();
+            var capability = await ResolveAdminCapabilityAsync(admin, ledgerClient, cancellationToken);
+            return new CapabilityLane<AdminCapability>(capability, async () =>
             {
                 try
                 {

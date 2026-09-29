@@ -27,7 +27,7 @@ public sealed record Crate<TA>(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Crate<TA> FromRecord(DamlRecord record, Func<DamlValue, TA> convertTA) => new Crate<TA>(
-        Item: Optional<TA>.FromValue(record.GetRequiredField("item"), __optional0 => convertTA(__optional0))
+        Item: Optional<TA>.FromValue(record.GetOptionalField("item"), __optional0 => convertTA(__optional0))
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,7 +36,7 @@ public sealed record Crate<TA>(
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
-            DamlField.Create("item", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "item"), context.Field("item"), (__json0, __ctx0) => readTA(__json0, __ctx0)))
+            DamlField.Create("item", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "item"), context.Field("item"), (__json0, __ctx0) => readTA(__json0, __ctx0)))
         );
     }
 

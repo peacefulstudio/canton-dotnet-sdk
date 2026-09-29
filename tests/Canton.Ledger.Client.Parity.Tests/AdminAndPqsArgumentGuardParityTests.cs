@@ -146,6 +146,12 @@ public sealed class AdminAndPqsArgumentGuardParityTests
 
     [Theory]
     [MemberData(nameof(PqsClients))]
+    public void FetchByIdAsync_interface_overload_rejects_a_null_contractId_synchronously(string flavour) =>
+        AssertPqsRejectsNull(
+            flavour, "contractId", client => client.FetchByIdAsync<IHolding, HoldingView>(null!));
+
+    [Theory]
+    [MemberData(nameof(PqsClients))]
     public void ExistsAsync_rejects_a_null_contractId_synchronously(string flavour) =>
         AssertPqsRejectsNull(flavour, "contractId", client => client.ExistsAsync<Marker>(null!));
 

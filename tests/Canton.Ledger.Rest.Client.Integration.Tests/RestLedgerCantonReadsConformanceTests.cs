@@ -88,5 +88,6 @@ public class RestLedgerCantonReadsConformanceTests
         var single = Assert.Single(synchronizers);
         Assert.Equal(expected.Id, single.SynchronizerId);
         Assert.Equal(expected.Alias, single.SynchronizerAlias);
+        Assert.Equal("global", single.SynchronizerAlias);
     }
 }

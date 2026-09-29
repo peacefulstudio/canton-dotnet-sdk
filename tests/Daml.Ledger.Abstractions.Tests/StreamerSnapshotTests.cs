@@ -359,6 +359,82 @@ public sealed class StreamerSnapshotTests
         active[0].SynchronizerId.Should().Be(new SynchronizerId("sync-a"));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SnapshotActiveAsync_forwards_the_created_event_blob_request(bool includeDisclosure)
+    {
+        var streamer = new FakeStreamer(new AcsSnapshotEntry<Probe>.Checkpoint(new StakeholderResume(LedgerOffset.At(1))));
+
+        _ = await streamer.SnapshotActiveAsync<Probe>(
+            Alice, includeDisclosure: includeDisclosure, cancellationToken: TestContext.Current.CancellationToken);
+
+        streamer.RequestedCreatedEventBlob.Should().Be(includeDisclosure);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SnapshotActiveAsync_keyed_forwards_the_created_event_blob_request(bool includeDisclosure)
+    {
+        var streamer = new FakeStreamer(new AcsSnapshotEntry<Probe>.Checkpoint(new StakeholderResume(LedgerOffset.At(1))));
+
+        _ = await streamer.SnapshotActiveAsync(
+            Probe.Key, Alice, includeDisclosure: includeDisclosure, cancellationToken: TestContext.Current.CancellationToken);
+
+        streamer.RequestedCreatedEventBlob.Should().Be(includeDisclosure);
+    }
+
+    [Fact]
+    public async Task SnapshotAsync_never_asks_for_the_created_event_blob()
+    {
+        var streamer = new FakeStreamer(new AcsSnapshotEntry<Probe>.Checkpoint(new StakeholderResume(LedgerOffset.At(1))));
+
+        _ = await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        streamer.RequestedCreatedEventBlob.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SnapshotActiveAsync_keyed_carries_each_rows_Disclosure()
+    {
+        var streamer = new FakeStreamer(
+            new AcsSnapshotEntry<Probe>.Created(
+                new ContractId<Probe>("cid-1"),
+                new Probe(new Party("alice"), ProbeGrade.Low),
+                new ContractKey(DamlRecord.Create(new DamlField("owner", new DamlParty("alice")))),
+                LedgerOffset.At(3),
+                new SynchronizerId("sync-a"),
+                [new Party("alice")])
+            {
+                Disclosure = new DisclosedContract("cid-1", new Identifier("probe-pkg", "Probe.Mod", "Probe"), new byte[] { 0x07, 0x08 }),
+            },
+            new AcsSnapshotEntry<Probe>.Checkpoint(new StakeholderResume(LedgerOffset.At(3))));
+
+        var active = await streamer.SnapshotActiveAsync(
+            Probe.Key, Alice, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        active.Should().ContainSingle().Which.Disclosure.Should().Be(
+            new DisclosedContract("cid-1", new Identifier("probe-pkg", "Probe.Mod", "Probe"), new byte[] { 0x07, 0x08 }));
+    }
+
+    [Fact]
+    public async Task SnapshotActiveAsync_carries_each_rows_Disclosure()
+    {
+        var streamer = new FakeStreamer(
+            CreatedOn("cid-1", "alice", 1, "sync-a") with
+            {
+                Disclosure = new DisclosedContract("cid-1", new Identifier("probe-pkg", "Probe.Mod", "Probe"), new byte[] { 0x09 }),
+            },
+            new AcsSnapshotEntry<Probe>.Checkpoint(new StakeholderResume(LedgerOffset.At(1))));
+
+        var active = await streamer.SnapshotActiveAsync<Probe>(
+            Alice, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        active.Should().ContainSingle().Which.Disclosure.Should().Be(
+            new DisclosedContract("cid-1", new Identifier("probe-pkg", "Probe.Mod", "Probe"), new byte[] { 0x09 }));
+    }
+
     [Fact]
     public async Task SnapshotActiveAsync_reports_a_keyed_row_that_carried_no_key()
     {
@@ -440,6 +516,8 @@ public sealed class StreamerSnapshotTests
     {
         private bool ObservesCancellation { get; init; } = true;
 
+        public bool? RequestedCreatedEventBlob { get; private set; }
+
         public static FakeStreamer IgnoringCancellation(params AcsSnapshotEntry<Probe>[] entries) =>
             new(entries) { ObservesCancellation = false };
 
@@ -460,8 +538,13 @@ public sealed class StreamerSnapshotTests
         public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
-            where T : ITemplate, IDamlRecord<T> => (IAsyncEnumerable<AcsSnapshotEntry<T>>)(object)Replay(cancellationToken);
+            where T : ITemplate, IDamlRecord<T>
+        {
+            RequestedCreatedEventBlob = includeDisclosure;
+            return (IAsyncEnumerable<AcsSnapshotEntry<T>>)(object)Replay(cancellationToken);
+        }
 
         public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
             ViewDescriptor<TInterface, TView> view,
@@ -485,6 +568,7 @@ public sealed class StreamerSnapshotTests
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
             where TInterface : IDamlInterface, IHasView<TView>
             where TView : IDamlRecord<TView> => throw new NotSupportedException();

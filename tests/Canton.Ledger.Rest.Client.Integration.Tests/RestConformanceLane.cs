@@ -46,6 +46,9 @@ internal sealed class RestConformanceLane : IAsyncDisposable
     internal Task GrantActAsAsync(string partyId, CancellationToken cancellationToken) =>
         _actAsRights.GrantAsync(partyId, cancellationToken);
 
+    internal ValueTask<StreamHold> HoldStreamAsync(CancellationToken cancellationToken) =>
+        LedgerUserRightsGate.Shared.HoldStreamAsync(Fixture.ValidatorUserId, cancellationToken);
+
     internal static async Task<RestConformanceLane> OpenAsync(
         CancellationToken cancellationToken, RecordingRequestHandler? recordingHandler = null)
     {

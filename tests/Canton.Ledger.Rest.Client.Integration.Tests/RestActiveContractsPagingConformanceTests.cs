@@ -41,7 +41,8 @@ public class RestActiveContractsPagingConformanceTests
 
         var ledgerEnd = await lane.LedgerClient.GetLedgerEndAsync(cancellationToken: cancellationToken);
         var entries = new List<AcsSnapshotEntry<Marker>>();
-        await foreach (var entry in lane.LedgerClient.SubscribeActiveAsync<Marker>(owner, ledgerEnd, cancellationToken))
+        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
+        await foreach (var entry in lane.LedgerClient.SubscribeActiveAsync<Marker>(owner, ledgerEnd, cancellationToken: cancellationToken))
         {
             entries.Add(entry);
         }

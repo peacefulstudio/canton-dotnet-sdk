@@ -383,6 +383,37 @@ public class GrpcCommandBuilderTests
     }
 
     [Fact]
+    public void BuildCommands_maps_a_disclosed_contracts_synchronizer_id_onto_the_wire()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithCommandId(TestCommandId)
+            .WithDisclosedContracts(new RuntimeCommands.DisclosedContract(
+                "00disclosed", new RuntimeIdentifier("disclosed-pkg", "Disclosed", "Contract"), new byte[] { 0x01 })
+            {
+                SynchronizerId = new SynchronizerId("global-domain::1220aa"),
+            });
+
+        var commands = Builder().BuildCommands(submission);
+
+        commands.DisclosedContracts.Should().ContainSingle().Which.SynchronizerId.Should().Be("global-domain::1220aa");
+    }
+
+    [Fact]
+    public void BuildCommands_leaves_a_disclosed_contracts_synchronizer_id_empty_when_it_names_none()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithCommandId(TestCommandId)
+            .WithDisclosedContracts(new RuntimeCommands.DisclosedContract(
+                "00disclosed", new RuntimeIdentifier("disclosed-pkg", "Disclosed", "Contract"), new byte[] { 0x01 }));
+
+        var commands = Builder().BuildCommands(submission);
+
+        commands.DisclosedContracts.Should().ContainSingle().Which.SynchronizerId.Should().BeEmpty();
+    }
+
+    [Fact]
     public void BuildCommands_maps_every_disclosed_contract_in_submission_order()
     {
         var submission = RuntimeCommands.CommandsSubmission.Single(Create())

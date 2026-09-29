@@ -9,6 +9,9 @@
 Generates strongly-typed C# from Daml `.dar` archives so .NET applications can
 talk to a Canton/Daml ledger with full type safety.
 
+Maintained by [Peaceful Studio](https://peaceful.studio), which also offers
+[consulting](#consulting) for teams building on Canton.
+
 ## Platform Support
 
 CI builds and tests on every supported OS × architecture. Each badge reflects the latest `main` run.
@@ -478,9 +481,15 @@ The DAR to IntermediateDar decode is packaged for standalone publication as
 `daml-dar-to-proto`, a runnable jar emitting the schema defined in
 `proto/intermediate_dar.proto`.
 
-From `0.6.0-preview.1`, each `v*` GitHub release attaches
-`daml-dar-to-proto-<version>.jar`, `intermediate_dar-<version>.proto`,
-`SHA256SUMS` and `intermediate-fixtures-<version>.tar.gz`.
+From `0.6.0-preview.1`, each `v*` release attaches `daml-dar-to-proto-<version>.jar`,
+`intermediate_dar-<version>.proto`, a `SHA256SUMS` checksum file and
+`intermediate-fixtures-<version>.tar.gz` (a schema-only `.binpb` plus a canonical-JSON
+rendering per conformance-corpus DAR, with a `manifest.json` recording each DAR's and
+each output's SHA-256) to the GitHub release.
+
+```
+java -jar daml-dar-to-proto-<version>.jar --dar contracts.dar --out intermediate.binpb
+```
 
 The jar's own interface, for reference: `--dar` and `--out` select input and
 output, `--schema-only` opts into the patch-version-insensitive schema-mode
@@ -547,8 +556,8 @@ The `--generate-project` flag creates a `.csproj` file with:
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
-    <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.1" />
-    <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.1" />
+    <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.2" />
+    <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.2" />
   </ItemGroup>
 
 </Project>
@@ -606,8 +615,8 @@ dependency as a package, named after its Daml package name:
 <ItemGroup>
   <None Include="README.md" Pack="true" PackagePath="\" />
   <None Include="icon.png" Pack="true" PackagePath="\" />
-  <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.1" />
-  <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.1" />
+  <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.2" />
+  <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.2" />
   <PackageReference Include="Daml.Finance" Version="2.0.0.*-*" />
   <PackageReference Include="Some.Library" Version="1.5.0.*-*" />
 </ItemGroup>
@@ -927,6 +936,9 @@ requirement, and the branch model. The per-PR checklist itself lives in
 the PR template and is filled in when you open a PR. By participating
 you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+For questions, bug reports and feature requests, open a
+[GitHub issue](https://github.com/peacefulstudio/canton-dotnet-sdk/issues).
+
 For security-sensitive bugs, please follow [SECURITY.md](SECURITY.md)
 instead of opening a public issue.
 
@@ -939,6 +951,15 @@ when adoption warrants neutral governance, Peaceful Studio commits to
 transferring this repository to a community-led organisation under the
 same license terms. Contributions welcome from anywhere in the
 Daml and C# ecosystem; no CLA required.
+
+## Consulting
+
+Beyond this SDK, Peaceful Studio works with teams building on Canton:
+Daml smart contract and application development, integrating existing
+.NET systems with a Canton ledger, and operating validator nodes. If
+that would help your project, please write to
+[info@peaceful.studio](mailto:info@peaceful.studio) or visit
+[peaceful.studio](https://peaceful.studio).
 
 ## Roadmap
 

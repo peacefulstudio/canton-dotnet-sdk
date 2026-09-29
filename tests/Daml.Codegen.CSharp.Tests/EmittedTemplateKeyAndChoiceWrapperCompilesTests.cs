@@ -362,7 +362,7 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
             .Contain("public static class ChoicelessAssetWithKeySubmissionExtensions",
                 "a choice-free template emits the typed-submitter surface and nothing that exercises a choice")
             .And.NotContain("using Daml.Ledger.Abstractions.Extensions;",
-                "the emitted TryCreateAsync calls ILedgerWriter.TryCreateAsync directly, so the typed-submitter surface needs no extension-method namespace");
+                "the emitted TryCreateAsync reaches SingleCommandExtensions.TryCreateAsync by its global-qualified name, so the typed-submitter surface needs no extension-method namespace");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 
