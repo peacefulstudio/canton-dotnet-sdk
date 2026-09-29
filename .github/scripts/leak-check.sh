@@ -38,7 +38,7 @@ scan "internal docs paths" \
   'docs/internal/'
 
 scan "non-public peaceful.studio addresses" \
-  '\b(?!(?:security|conduct)@)[a-z0-9._-]+@peaceful\.studio'
+  '\b(?!(?:security|conduct|info)@)[a-z0-9._-]+@peaceful\.studio'
 
 scan "ASCII-mangled legal entity name (OU instead of OÜ)" \
   'Peaceful Studio OU\b'
