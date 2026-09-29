@@ -3362,7 +3362,8 @@ the GitHub Packages NuGet feed
 (`nuget.pkg.github.com/peacefulstudio`) during development and have
 since been pruned. They are not supported.
 
-[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.1...HEAD
+[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.2...HEAD
+[0.6.0-preview.2]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.1...v0.6.0-preview.2
 [0.6.0-preview.1]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.5.0-preview.3...v0.6.0-preview.1
 [0.5.0-preview.3]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.5.0-preview.2...v0.5.0-preview.3
 [0.5.0-preview.2]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.5.0-preview.1...v0.5.0-preview.2
