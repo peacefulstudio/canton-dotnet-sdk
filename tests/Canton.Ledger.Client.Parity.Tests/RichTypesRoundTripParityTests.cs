@@ -4,13 +4,16 @@
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Stdlib;
 using Daml.Runtime.Streams;
 using Daml.Codegen.Testing.Conformance.RichTypes;
+using Daml.Codegen.Testing.Conformance.SubmitShapes;
 using Xunit;
+using RuntimeCommands = Daml.Runtime.Commands;
 
 namespace Canton.Ledger.Client.Parity.Tests;
 
@@ -26,19 +29,37 @@ public abstract class RichTypesRoundTripParityTests
     private static readonly TimeSpan ReadBackBudget = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Why this lane cannot decode a <see cref="TypeCorners"/> it reads back, or
-    /// <see langword="null"/> when it can. Only the TypeCorners rows skip with this reason.
+    /// Why this lane cannot decode an <c>Optional (Optional Text)</c> field it reads back, or
+    /// <see langword="null"/> when it can. Only the <see cref="TypeCorners"/> and
+    /// <see cref="NestedOptionalTails"/> rows skip with this reason.
     /// </summary>
-    protected virtual string? TypeCornersDecodeQuarantine => null;
+    protected virtual string? NestedOptionalDecodeQuarantine => null;
 
     /// <summary>
     /// Opens a lane over this provider's <see cref="ICantonLedgerClient"/> for one test, with a
     /// party the client may act as and <c>richtypes.dar</c> uploaded.
     /// </summary>
-    protected abstract Task<CapabilityLane<(ICantonLedgerClient Client, Party Owner)>> OpenClientAsync(
+    protected abstract Task<CapabilityLane<RichTypesSession>> OpenClientAsync(
         CancellationToken cancellationToken);
 
     public static TheoryData<string> MaybeMaybeNoteStates => ["None", "Some None", "Some (Some deep)"];
+
+    public static TheoryData<string?, string?, string?> OptionalTailsStates => new()
+    {
+        { "mid", "remark", null },
+        { null, "remark", "tail" },
+        { "mid", null, "tail" },
+        { null, null, null },
+    };
+
+    public static TheoryData<string, string> NestedOptionalTailsStates => new()
+    {
+        { "Some (Some deep)", "None" },
+        { "Some (Some deep)", "Some None" },
+        { "None", "Some (Some deep)" },
+        { "Some None", "Some (Some deep)" },
+        { "None", "None" },
+    };
 
     [Fact]
     public async Task RichRecord_round_trips_every_typed_field_through_the_ledger()
@@ -68,7 +89,7 @@ public abstract class RichTypesRoundTripParityTests
             Fee: 0.05m);
 
         var createdCid = await CreateAsync(client, owner, submitted);
-        var readBack = await ReadBackAsync(client, owner, createdCid);
+        var readBack = await ReadBackAsync(lane, createdCid);
 
         readBack.Should().Be(submitted);
         readBack.Tags.Should().Equal("alpha", "beta");
@@ -76,11 +97,144 @@ public abstract class RichTypesRoundTripParityTests
         readBack.Outcome.Should().Be(new Outcome.Win(new Outcome_Win(Prize: 250.50m, Tier: "gold")));
     }
 
+    [Fact]
+    public async Task Churn_returns_its_Decimal_result_through_the_generated_TryChurnAsync()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var factory = await CreateAsync(client, owner, new EphemeralFactory(owner));
+        var retiring = await CreateAsync(client, owner, new Ephemeral(owner, "retiring"));
+
+        var outcome = await factory.TryChurnAsync(
+            client, new EphemeralFactory.Churn(retiring), owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<decimal>.One>(
+            "the choice committed, so the wrapper has to return its result rather than throw; got {0}", outcome)
+            .Which.Result.Should().Be(42.5m);
+    }
+
+    [Fact]
+    public async Task Churn_flat_submit_reports_only_the_surviving_create_and_the_pre_existing_archive()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var factory = await CreateAsync(client, owner, new EphemeralFactory(owner));
+        var retiring = await CreateAsync(client, owner, new Ephemeral(owner, "retiring"));
+
+        var outcome = await client.TrySubmitSingleAsync(
+            factory.ChurnCommand(new EphemeralFactory.Churn(retiring)), owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the choice committed; got {0}", outcome).Subject.Result;
+        result.CreatedContracts.Select(created => Ephemeral.FromRecord(created.Payload).Tag)
+            .Should().Equal("kept");
+        result.ArchivedContractIds.Should().Equal(retiring.Value);
+        result.ExercisedEvents.Select(exercised => exercised.ChoiceName.Value)
+            .Should().Contain("Churn");
+    }
+
+    [Fact]
+    public async Task Issue_flat_submit_reports_only_the_contract_its_submitter_is_a_stakeholder_of()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+
+        var outcome = await client.TrySubmitSingleAsync(
+            desk.IssueCommand(new TicketDesk.Issue()), patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the choice committed; got {0}", outcome).Subject.Result;
+        result.CreatedContracts.Select(created => Ticket.FromRecord(created.Payload).Holder)
+            .Should().Equal(patron);
+    }
+
+    [Fact]
+    public async Task Issue_returns_the_patrons_ticket_through_the_generated_TryIssueAsync()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+
+        var outcome = await desk.TryIssueAsync(
+            client, new TicketDesk.Issue(), patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<IssueResult>.One>(
+            "the issuer-only ticket is invisible to the patron, so exactly one created contract is theirs; got {0}", outcome);
+    }
+
+    [Fact]
+    public async Task Reserve_returns_the_ticket_its_submitter_is_no_stakeholder_of_through_the_bare_Party_TryReserveAsync()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+
+        var outcome = await desk.TryReserveAsync(
+            client, new TicketDesk.Reserve(), patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var reserved = outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>(
+            "the choice committed and returned the ticket's contract id, which the patron sees on its own exercise "
+            + "although it is no stakeholder of the ticket; got {0}", outcome).Subject.Result.Ticket;
+        (await ReadBackAsync(lane, reserved, issuer)).Should().Be(new Ticket(issuer, issuer));
+    }
+
+    [Fact]
+    public async Task Reserve_returns_the_ticket_its_submitter_is_no_stakeholder_of_through_the_SubmitterInfo_TryReserveAsync()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+
+        var outcome = await desk.TryReserveAsync(
+            client, new TicketDesk.Reserve(), new RuntimeCommands.SubmitterInfo(patron),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var reserved = outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>(
+            "the choice committed and returned the ticket's contract id, which the patron sees on its own exercise "
+            + "although it is no stakeholder of the ticket; got {0}", outcome).Subject.Result.Ticket;
+        (await ReadBackAsync(lane, reserved, issuer)).Should().Be(new Ticket(issuer, issuer));
+    }
+
+    [Fact]
+    public async Task Retire_flat_submit_reports_no_archive_of_a_contract_its_submitter_only_witnesses()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+        var issuerOnlyTicket = await CreateAsync(client, issuer, new Ticket(issuer, issuer));
+        var disclosedTicket = await lane.Capability.DiscloseAsync(
+            issuerOnlyTicket.Value, issuer, TestContext.Current.CancellationToken);
+        var submission = RuntimeCommands.CommandsSubmission
+            .Single(desk.RetireCommand(new TicketDesk.Retire(issuerOnlyTicket)))
+            .WithCommandId(new RuntimeCommands.CommandId(Guid.NewGuid().ToString()))
+            .WithDisclosedContracts(disclosedTicket);
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            submission, patron, cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the choice committed; got {0}", outcome).Subject.Result;
+        result.ArchivedContractIds.Should().BeEmpty();
+        result.ExercisedEvents.Select(exercised => exercised.ChoiceName.Value)
+            .Should().Contain("Retire");
+    }
+
     [Theory]
     [MemberData(nameof(MaybeMaybeNoteStates))]
     public async Task TypeCorners_round_trips_both_Maps_and_the_nested_Optional_through_the_ledger(string maybeMaybeNoteState)
     {
-        if (TypeCornersDecodeQuarantine is { } quarantine)
+        if (NestedOptionalDecodeQuarantine is { } quarantine)
         {
             Assert.Skip(quarantine);
         }
@@ -90,12 +244,91 @@ public abstract class RichTypesRoundTripParityTests
         var submitted = TypeCornersOwnedBy(owner, MaybeMaybeNote(maybeMaybeNoteState));
 
         var createdCid = await CreateAsync(client, owner, submitted);
-        var readBack = await ReadBackAsync(client, owner, createdCid);
+        var readBack = await ReadBackAsync(lane, createdCid);
 
         readBack.Should().Be(submitted);
         readBack.MaybeMaybeNote.Should().Be(MaybeMaybeNote(maybeMaybeNoteState));
         readBack.QuotaByParty.Should().BeEquivalentTo(new Dictionary<Party, long> { [owner] = 7L });
         readBack.LabelByRank.Should().BeEquivalentTo(new Dictionary<long, string> { [1L] = "gold", [2L] = "silver" });
+    }
+
+    [Theory]
+    [MemberData(nameof(OptionalTailsStates))]
+    public async Task OptionalTails_round_trips_every_None_position_through_the_ledger(
+        string? midNote, string? remark, string? tailNote)
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var submitted = new OptionalTails(owner, midNote, new TrailingNote("inner", remark), tailNote);
+
+        var createdCid = await CreateAsync(client, owner, submitted);
+        var readBack = await ReadBackAsync(lane, createdCid);
+
+        readBack.Should().Be(new OptionalTails(owner, midNote, new TrailingNote("inner", remark), tailNote));
+    }
+
+    [Theory]
+    [MemberData(nameof(OptionalTailsStates))]
+    public async Task EchoOptionalTails_result_decodes_every_None_position(
+        string? midNote, string? remark, string? tailNote)
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var createdCid = await CreateAsync(
+            client, owner, new OptionalTails(owner, midNote, new TrailingNote("inner", remark), tailNote));
+
+        var outcome = await createdCid.TryEchoOptionalTailsAsync(
+            client, new OptionalTails.EchoOptionalTails(), owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<OptionalTails>.One>(
+                "the exercise has to commit and decode, and the transport reported {0}", outcome)
+            .Subject.Result.Should().Be(new OptionalTails(owner, midNote, new TrailingNote("inner", remark), tailNote));
+    }
+
+    [Theory]
+    [MemberData(nameof(NestedOptionalTailsStates))]
+    public async Task NestedOptionalTails_round_trips_every_nested_None_position_through_the_ledger(
+        string midState, string tailState)
+    {
+        if (NestedOptionalDecodeQuarantine is { } quarantine)
+        {
+            Assert.Skip(quarantine);
+        }
+
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var submitted = new NestedOptionalTails(owner, MaybeMaybeNote(midState), MaybeMaybeNote(tailState));
+
+        var createdCid = await CreateAsync(client, owner, submitted);
+        var readBack = await ReadBackAsync(lane, createdCid);
+
+        readBack.Should().Be(new NestedOptionalTails(owner, MaybeMaybeNote(midState), MaybeMaybeNote(tailState)));
+    }
+
+    [Theory]
+    [MemberData(nameof(NestedOptionalTailsStates))]
+    public async Task EchoNestedOptionalTails_result_decodes_every_nested_None_position(
+        string midState, string tailState)
+    {
+        if (NestedOptionalDecodeQuarantine is { } quarantine)
+        {
+            Assert.Skip(quarantine);
+        }
+
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var createdCid = await CreateAsync(
+            client, owner, new NestedOptionalTails(owner, MaybeMaybeNote(midState), MaybeMaybeNote(tailState)));
+
+        var outcome = await createdCid.TryEchoNestedOptionalTailsAsync(
+            client, new NestedOptionalTails.EchoNestedOptionalTails(), owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<NestedOptionalTails>.One>(
+                "the exercise has to commit and decode, and the transport reported {0}", outcome)
+            .Subject.Result.Should().Be(
+                new NestedOptionalTails(owner, MaybeMaybeNote(midState), MaybeMaybeNote(tailState)));
     }
 
     private static Optional<Optional<string>> MaybeMaybeNote(string state) => state switch
@@ -133,11 +366,19 @@ public abstract class RichTypesRoundTripParityTests
             "the create has to commit and decode, and the transport reported {0}", outcome).Subject.Result;
     }
 
-    private static async Task<T> ReadBackAsync<T>(ICantonLedgerClient client, Party owner, ContractId<T> createdCid)
+    private static Task<T> ReadBackAsync<T>(
+        CapabilityLane<RichTypesSession> lane, ContractId<T> createdCid)
+        where T : ITemplate, IDamlRecord<T> =>
+        ReadBackAsync(lane, createdCid, lane.Capability.Owner);
+
+    private static async Task<T> ReadBackAsync<T>(
+        CapabilityLane<RichTypesSession> lane, ContractId<T> createdCid, Party owner)
         where T : ITemplate, IDamlRecord<T>
     {
+        var client = lane.Capability.Client;
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         budget.CancelAfter(ReadBackBudget);
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         await foreach (var entry in client.SubscribeActiveAsync<T>(owner, cancellationToken: budget.Token))
         {
             if (entry is AcsSnapshotEntry<T>.Created created && created.ContractId.Value == createdCid.Value)
@@ -147,5 +388,24 @@ public abstract class RichTypesRoundTripParityTests
         }
         throw new Xunit.Sdk.XunitException(
             $"The active contract set of {owner.Value} held no {typeof(T).Name} {createdCid.Value}.");
+    }
+}
+
+/// <summary>
+/// A client with two parties it may act as: the <see cref="Owner"/> most tests use, and a
+/// <see cref="Counterparty"/> for the shapes where a second party signs or only observes.
+/// <see cref="DiscloseAsync"/> reads a contract's created-event blob as a party that sees it, so
+/// another party can submit against the contract without being a stakeholder.
+/// </summary>
+public readonly record struct RichTypesSession(
+    ICantonLedgerClient Client,
+    Party Owner,
+    Party Counterparty,
+    Func<string, Party, CancellationToken, Task<RuntimeCommands.DisclosedContract>> DiscloseAsync)
+{
+    public void Deconstruct(out ICantonLedgerClient client, out Party owner)
+    {
+        client = Client;
+        owner = Owner;
     }
 }

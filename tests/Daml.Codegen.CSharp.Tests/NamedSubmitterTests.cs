@@ -135,7 +135,7 @@ public class NamedSubmitterTests
         content.Should().Contain("payload.Platform");
         content.Should().Contain("payload.Initiator");
         content.Should().Contain("payload.Counterparty");
-        content.Should().Contain("client.TryCreateAsync<Agreement>(payload, submitter");
+        content.Should().Contain("SingleCommandExtensions.TryCreateAsync<Agreement>(client, payload, submitter");
     }
 
     [Fact]

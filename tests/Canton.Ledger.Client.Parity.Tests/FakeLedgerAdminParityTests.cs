@@ -11,7 +11,7 @@ public sealed class FakeLedgerAdminParityTests : LedgerAdminParityTests
 {
     private const string VettedPackageId = "1220fakevettedpackagedeadbeefdeadbeefdeadbeefdeadbeefdeadbeef01";
 
-    protected override Task<CapabilityLane<IAdminClient>> OpenAdminAsync(
+    protected override Task<CapabilityLane<AdminCapability>> OpenAdminAsync(
         AdminParityScenario scenario, CancellationToken cancellationToken)
     {
         var party = new Party($"{scenario.PartyHint}::1220fake");
@@ -29,6 +29,7 @@ public sealed class FakeLedgerAdminParityTests : LedgerAdminParityTests
             .WithVettedPackages(vettedPackage)
             .WithPackage(VettedPackageId, packageArchive)
             .Build();
-        return Task.FromResult(new CapabilityLane<IAdminClient>(client, () => ValueTask.CompletedTask));
+        var capability = new AdminCapability(client, synchronizerId, IsMultiSynchronizer: false);
+        return Task.FromResult(new CapabilityLane<AdminCapability>(capability, () => ValueTask.CompletedTask));
     }
 }

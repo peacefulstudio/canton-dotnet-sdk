@@ -21,6 +21,10 @@ namespace Canton.Ledger.Testing.Localnet;
 /// The revoke runs on <see cref="CancellationToken.None"/> so that a run cancelled mid-test still
 /// hands its rights back. It verifies that every confirmed grant was actually revoked; a grant with
 /// an ambiguous outcome is also sent for cleanup, but may already be absent.
+/// <para>
+/// Every grant and every revoke takes the exclusive side of <see cref="LedgerUserRightsGate.Shared"/>
+/// for the user, so it waits until no stream holding the shared side for that user is open.
+/// </para>
 /// </remarks>
 public sealed class ActAsRightsLease : IAsyncDisposable
 {
@@ -30,6 +34,7 @@ public sealed class ActAsRightsLease : IAsyncDisposable
     private readonly Uri _rightsEndpoint;
     private readonly string _userId;
     private readonly Func<CancellationToken, ValueTask<string>> _getAccessToken;
+    private readonly LedgerUserRightsGate _rightsGate;
     private readonly List<string> _leasedParties = [];
     private readonly HashSet<string> _confirmedParties = new(StringComparer.Ordinal);
 
@@ -37,10 +42,12 @@ public sealed class ActAsRightsLease : IAsyncDisposable
         Uri jsonLedgerApi,
         string userId,
         Func<CancellationToken, ValueTask<string>> getAccessToken,
-        HttpMessageHandler? handler = null)
+        HttpMessageHandler? handler = null,
+        LedgerUserRightsGate? rightsGate = null)
     {
         _userId = userId;
         _getAccessToken = getAccessToken;
+        _rightsGate = rightsGate ?? LedgerUserRightsGate.Shared;
         _rightsEndpoint = new Uri(
             EnsureTrailingSlash(jsonLedgerApi), $"v2/users/{Uri.EscapeDataString(userId)}/rights");
         _httpClient = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
@@ -59,9 +66,14 @@ public sealed class ActAsRightsLease : IAsyncDisposable
     /// lease so disposal still attempts the compensating revoke; a definite participant rejection
     /// removes it.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The participant rejected the grant.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The participant rejected the grant, or the calling flow holds a stream on the user.
+    /// </exception>
+    /// <exception cref="TimeoutException">A stream on the user stayed open past the gate's wait limit.</exception>
     public async Task GrantAsync(string partyId, CancellationToken cancellationToken = default)
     {
+        using var rightsChange = await _rightsGate.BeginRightsChangeAsync(_userId, cancellationToken)
+            .ConfigureAwait(false);
         await SendAsync(
                 HttpMethod.Post,
                 [partyId],
@@ -79,8 +91,10 @@ public sealed class ActAsRightsLease : IAsyncDisposable
 
     /// <summary>Revokes every right this lease granted, in one request.</summary>
     /// <exception cref="InvalidOperationException">
-    /// The participant rejected the revoke, or reported that it left a confirmed right standing.
+    /// The participant rejected the revoke, reported that it left a confirmed right standing, or the
+    /// calling flow holds a stream on the user.
     /// </exception>
+    /// <exception cref="TimeoutException">A stream on the user stayed open past the gate's wait limit.</exception>
     public async ValueTask DisposeAsync()
     {
         try
@@ -90,6 +104,8 @@ public sealed class ActAsRightsLease : IAsyncDisposable
                 return;
             }
 
+            using var rightsChange = await _rightsGate.BeginRightsChangeAsync(_userId, CancellationToken.None)
+                .ConfigureAwait(false);
             var revoking = _leasedParties.ToArray();
             _leasedParties.Clear();
             var confirmed = _confirmedParties.ToArray();

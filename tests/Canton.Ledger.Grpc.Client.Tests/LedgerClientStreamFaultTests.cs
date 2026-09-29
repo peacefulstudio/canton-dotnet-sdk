@@ -145,7 +145,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
         using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
 
         var entries = await CollectAsync(CreateClient().SubscribeActiveAsync<FooBar>(
-            ActAs, LedgerOffset.At(7L), TestContext.Current.CancellationToken));
+            ActAs, LedgerOffset.At(7L), cancellationToken: TestContext.Current.CancellationToken));
 
         entries.Should().ContainSingle().Which.Should().BeOfType<AcsSnapshotEntry<FooBar>.StreamError>();
         AssertFaultRecorded(capture, detail);

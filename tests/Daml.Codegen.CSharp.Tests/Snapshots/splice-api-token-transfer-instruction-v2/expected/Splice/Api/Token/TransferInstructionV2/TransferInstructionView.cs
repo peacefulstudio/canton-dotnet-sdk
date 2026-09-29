@@ -84,9 +84,9 @@ public sealed record TransferInstructionView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TransferInstructionView FromRecord(DamlRecord record) => new TransferInstructionView(
-        OriginalInstructionCid: record.GetRequiredField("originalInstructionCid").AsOptional().HasValue ? new ContractId<ITransferInstruction>(record.GetRequiredField("originalInstructionCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
+        OriginalInstructionCid: record.GetOptionalField("originalInstructionCid").AsOptional().HasValue ? new ContractId<ITransferInstruction>(record.GetOptionalField("originalInstructionCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
         Transfer: Transfer.FromRecord(record.GetRequiredField("transfer").As<DamlRecord>()),
-        ExpiresAt: record.GetRequiredField("expiresAt").AsOptional().HasValue ? record.GetRequiredField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
+        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
         AvailableActions: (IReadOnlyDictionary<TransferInstructionAction, IReadOnlyList<IReadOnlyList<Party>>>)record.GetRequiredField("availableActions").As<DamlGenMap>().Entries.ToDictionary(kv => TransferInstructionAction.FromVariant(kv.Key.As<DamlVariant>()), kv => (IReadOnlyList<IReadOnlyList<Party>>)kv.Value.As<DamlList>().Values.Select(x => (IReadOnlyList<Party>)x.As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList()).ToList()),
         Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
     );
@@ -97,9 +97,9 @@ public sealed record TransferInstructionView(
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
-            DamlField.Create("originalInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "originalInstructionCid"), context.Field("originalInstructionCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            DamlField.Create("originalInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "originalInstructionCid"), context.Field("originalInstructionCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
             DamlField.Create("transfer", Transfer.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transfer"), context.Field("transfer"))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
+            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
             DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => TransferInstructionAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))),
             DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );

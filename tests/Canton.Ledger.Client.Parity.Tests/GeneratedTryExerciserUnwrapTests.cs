@@ -30,7 +30,7 @@ public class GeneratedTryExerciserUnwrapTests
             .Build();
 
         var contractId = await client
-            .TryCreateAsync(new Marker(Alice), TestContext.Current.CancellationToken)
+            .TryCreateAsync(new Marker(Alice), cancellationToken: TestContext.Current.CancellationToken)
             .OneOrThrowAsync("Create Marker");
 
         contractId.Should().Be(new ContractId<Marker>("00marker"));
@@ -48,7 +48,7 @@ public class GeneratedTryExerciserUnwrapTests
             .Build();
 
         var act = async () => await client
-            .TryCreateAsync(new Marker(Alice), TestContext.Current.CancellationToken)
+            .TryCreateAsync(new Marker(Alice), cancellationToken: TestContext.Current.CancellationToken)
             .OneOrThrowAsync("Create Marker");
 
         var thrown = await act.Should().ThrowAsync<LedgerOperationException>();

@@ -301,17 +301,20 @@ internal sealed partial class LedgerClient
     public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
         var templateFilter = GrpcMarkerMatcher<T>.StreamFilterIdentifier();
-        return SubscribeActiveAsyncCore<T>(submitter, templateFilter, activeAtOffset?.Value, cancellationToken);
+        return SubscribeActiveAsyncCore<T>(
+            submitter, templateFilter, activeAtOffset?.Value, includeDisclosure, cancellationToken);
     }
 
     private async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsyncCore<T>(
         RuntimeCommands.SubmitterInfo submitter,
         ProtoIdentifier templateFilter,
         long? activeAtOffset,
+        bool includeDisclosure,
         [EnumeratorCancellation] CancellationToken cancellationToken)
         where T : ITemplate, IDamlRecord<T>
     {
@@ -327,7 +330,8 @@ internal sealed partial class LedgerClient
             submitter,
             templateFilter,
             effectiveOffset,
-            GrpcMarkerMatcher<T>.IsInterface);
+            GrpcMarkerMatcher<T>.IsInterface,
+            includeDisclosure);
 
         LogSubscribeActiveStarted(_logger, typeof(T).Name, effectiveOffset);
 
@@ -356,6 +360,7 @@ internal sealed partial class LedgerClient
                 yield break;
             }
 
+            var disclosure = GrpcContractStreamProjector.DisclosureOf(stream.Current);
             foreach (var projected in GrpcContractStreamProjector.ProjectActiveContractEntry<T>(
                 stream.Current, _logger, LedgerOffset.At(effectiveOffset)))
             {
@@ -364,16 +369,20 @@ internal sealed partial class LedgerClient
                     LogActiveContractEntryUnclassified(
                         _logger, typeof(T).Name, stream.Current.ContractEntryCase, unclassified.Kind, unclassified.Offset?.Value);
                 }
-                yield return ToAcsSnapshotEntry(projected);
+                yield return ToAcsSnapshotEntry(projected, disclosure);
             }
         }
     }
 
-    private static AcsSnapshotEntry<T> ToAcsSnapshotEntry<T>(ContractStreamEvent<T> entry)
+    private static AcsSnapshotEntry<T> ToAcsSnapshotEntry<T>(
+        ContractStreamEvent<T> entry, RuntimeCommands.DisclosedContract? disclosure)
         where T : ITemplate, IDamlRecord<T> => entry switch
     {
         ContractStreamEvent<T>.Created created => new AcsSnapshotEntry<T>.Created(
-            created.ContractId, created.Payload, created.Key, created.Offset, created.SynchronizerId, created.WitnessParties),
+            created.ContractId, created.Payload, created.Key, created.Offset, created.SynchronizerId, created.WitnessParties)
+        {
+            Disclosure = disclosure,
+        },
         ContractStreamEvent<T>.Unassigned unassigned => new AcsSnapshotEntry<T>.Unclassified(
             unassigned.Offset, UnclassifiedKind.UnassignedEvent),
         ContractStreamEvent<T>.Unclassified unclassified => new AcsSnapshotEntry<T>.Unclassified(

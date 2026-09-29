@@ -122,13 +122,13 @@ public sealed record AllocationView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationView FromRecord(DamlRecord record) => new AllocationView(
-        OriginalAllocationCid: record.GetRequiredField("originalAllocationCid").AsOptional().HasValue ? new ContractId<IAllocation>(record.GetRequiredField("originalAllocationCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
+        OriginalAllocationCid: record.GetOptionalField("originalAllocationCid").AsOptional().HasValue ? new ContractId<IAllocation>(record.GetOptionalField("originalAllocationCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
         Settlement: SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<DamlRecord>()),
         Allocation: AllocationSpecification.FromRecord(record.GetRequiredField("allocation").As<DamlRecord>()),
         HoldingCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("holdingCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList(),
         CreatedAt: record.GetRequiredField("createdAt").As<DamlTimestamp>().Value,
         NumIterations: record.GetRequiredField("numIterations").As<DamlInt64>().Value,
-        ExpiresAt: record.GetRequiredField("expiresAt").AsOptional().HasValue ? record.GetRequiredField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
+        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
         AvailableActions: (IReadOnlyDictionary<AllocationAction, IReadOnlyList<IReadOnlyList<Party>>>)record.GetRequiredField("availableActions").As<DamlGenMap>().Entries.ToDictionary(kv => AllocationAction.FromVariant(kv.Key.As<DamlVariant>()), kv => (IReadOnlyList<IReadOnlyList<Party>>)kv.Value.As<DamlList>().Values.Select(x => (IReadOnlyList<Party>)x.As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList()).ToList()),
         Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
     );
@@ -139,13 +139,13 @@ public sealed record AllocationView(
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
-            DamlField.Create("originalAllocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "originalAllocationCid"), context.Field("originalAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            DamlField.Create("originalAllocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "originalAllocationCid"), context.Field("originalAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
             DamlField.Create("settlement", SettlementInfo.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settlement"), context.Field("settlement"))),
             DamlField.Create("allocation", AllocationSpecification.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocation"), context.Field("allocation"))),
             DamlField.Create("holdingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holdingCids"), context.Field("holdingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
             DamlField.Create("createdAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "createdAt"), context.Field("createdAt"))),
             DamlField.Create("numIterations", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "numIterations"), context.Field("numIterations"))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
+            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
             DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => AllocationAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))),
             DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );

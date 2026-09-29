@@ -33,7 +33,10 @@ internal static class InterfaceViewSnapshot
                             Key = created.Key,
                         },
                         created.Offset,
-                        created.SynchronizerId));
+                        created.SynchronizerId)
+                    {
+                        Disclosure = created.Disclosure,
+                    });
                 continue;
             }
 

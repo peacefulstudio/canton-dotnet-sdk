@@ -86,9 +86,14 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     public static FakeLedgerClientBuilder Create() => new();
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Replays the staged rows as staged: a row's <c>Disclosure</c> is whatever the test set on
+    /// it, whatever <paramref name="includeDisclosure"/> says.
+    /// </remarks>
     public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T> =>
         Replay(

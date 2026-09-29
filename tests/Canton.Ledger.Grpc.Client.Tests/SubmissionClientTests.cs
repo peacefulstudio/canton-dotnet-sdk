@@ -57,6 +57,7 @@ public class SubmissionClientTests
 
     private SubmissionClient CreateClient(
         Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>>? pointReadByOffset = null,
+        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>>? acsDeltaPointReadByOffset = null,
         Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionTree>>? treePointReadByOffset = null,
         ILogger? logger = null) =>
         new(
@@ -67,6 +68,7 @@ public class SubmissionClientTests
             _options,
             logger ?? NullLogger<LedgerClient>.Instance,
             pointReadByOffset ?? ((_, _, _) => throw new InvalidOperationException("point read not expected")),
+            acsDeltaPointReadByOffset ?? ((_, _, _) => throw new InvalidOperationException("ACS-delta point read not expected")),
             treePointReadByOffset ?? ((_, _, _) => throw new InvalidOperationException("tree point read not expected")));
 
     private static RuntimeCommands.CommandsSubmission Create() =>
@@ -91,7 +93,7 @@ public class SubmissionClientTests
                 Transaction = new Transaction { UpdateId = "u-original", Offset = 42L },
             });
         long? readOffset = null;
-        var client = CreateClient((offset, _, _) =>
+        var client = CreateClient(acsDeltaPointReadByOffset: (offset, _, _) =>
         {
             readOffset = offset;
             return Task.FromResult(resolved);
@@ -112,7 +114,7 @@ public class SubmissionClientTests
         _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
         StubSubmitAndWaitForTransaction(Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
         var pointReadInvoked = false;
-        var client = CreateClient((_, _, _) =>
+        var client = CreateClient(acsDeltaPointReadByOffset: (_, _, _) =>
         {
             pointReadInvoked = true;
             return Task.FromException<TransactionResult>(new InvalidOperationException("unexpected"));
@@ -181,14 +183,111 @@ public class SubmissionClientTests
             r => r.Message.Contains("Created: 1, Archived: 1", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_requests_the_ledger_effects_shape_filtered_to_every_submitting_party()
+    {
+        StubSubmitAndWaitForTransaction(Completed(LedgerEffectsTransaction()));
+        var client = CreateClient();
+
+        await client.TrySubmitAndWaitForTransactionAsync(
+            Create().WithReadAs(new Party("party::bob")), cancellationToken: TestContext.Current.CancellationToken);
+
+        var format = SentRequest().TransactionFormat;
+        format.TransactionShape.Should().Be(TransactionShape.LedgerEffects);
+        format.EventFormat.Verbose.Should().BeTrue();
+        format.EventFormat.FiltersByParty.Keys.Should().BeEquivalentTo("party::alice", "party::bob");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_surfaces_the_exercised_events_of_a_nonconsuming_choice()
+    {
+        StubSubmitAndWaitForTransaction(Completed(LedgerEffectsTransaction()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.ExercisedEvents.Select(e => e.ChoiceName.Value).Should().Equal("Consume", "Peek");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_only_the_events_the_wire_flags_as_acs_delta()
+    {
+        StubSubmitAndWaitForTransaction(Completed(LedgerEffectsTransaction()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.CreatedContracts.Select(c => c.ContractId).Should().Equal("00created");
+        result.ArchivedContractIds.Should().Equal("00target");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_resolves_a_retried_duplicate_to_the_acs_delta_meaning()
+    {
+        _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
+        var pointRead = GrpcTransactionResultProjector.ProjectAcsDelta(LedgerEffectsTransactionCreatingAndConsuming("00transient"));
+        var client = CreateClient(acsDeltaPointReadByOffset: (_, _, _) => Task.FromResult(pointRead));
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.CreatedContracts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_omits_the_events_the_wire_does_not_flag_as_acs_delta()
+    {
+        StubSubmitAndWaitForTransaction(Completed(WitnessedTransaction()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.CreatedContracts.Select(c => c.ContractId).Should().Equal("00held");
+        result.ArchivedContractIds.Should().Equal("00earlier");
+    }
+
+    private SubmitAndWaitForTransactionRequest SentRequest() =>
+        _commandService.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(CommandService.CommandServiceClient.SubmitAndWaitForTransactionAsync))
+            .Select(call => (SubmitAndWaitForTransactionRequest)call.GetArguments()[0]!)
+            .Last();
+
+    private static Transaction LedgerEffectsTransactionCreatingAndConsuming(string contractId)
+    {
+        var transaction = new Transaction { UpdateId = "u-effects", Offset = 42L };
+        transaction.Events.Add(Created(nodeId: 0, contractId));
+        transaction.Events.Add(ExercisedOn(nodeId: 1, contractId, "Consume", consuming: true));
+        return transaction;
+    }
+
     private static RuntimeCommands.SubmitterInfo Submitter() => new(new HashSet<Party> { ActAs });
 
     private static Transaction LedgerEffectsTransaction()
     {
         var transaction = new Transaction { UpdateId = "u-effects", Offset = 42L };
-        transaction.Events.Add(Exercised(nodeId: 0, lastDescendantNodeId: 1, "Consume", consuming: true));
-        transaction.Events.Add(Created(nodeId: 1, "00created"));
+        transaction.Events.Add(Exercised(nodeId: 0, lastDescendantNodeId: 1, "Consume", consuming: true, acsDelta: true));
+        transaction.Events.Add(Created(nodeId: 1, "00created", acsDelta: true));
         transaction.Events.Add(Exercised(nodeId: 2, lastDescendantNodeId: 2, "Peek", consuming: false));
+        return transaction;
+    }
+
+    private static Transaction WitnessedTransaction()
+    {
+        var transaction = new Transaction { UpdateId = "u-witnessed", Offset = 42L };
+        transaction.Events.Add(Created(nodeId: 0, "00witnessed"));
+        transaction.Events.Add(Created(nodeId: 1, "00held", acsDelta: true));
+        transaction.Events.Add(ExercisedOn(nodeId: 2, "00witnessed-target", "Retire", consuming: true));
+        transaction.Events.Add(ExercisedOn(nodeId: 3, "00earlier", "Retire", consuming: true, acsDelta: true));
         return transaction;
     }
 
@@ -208,10 +307,11 @@ public class SubmissionClientTests
         return transaction;
     }
 
-    private static Event Created(int nodeId, string contractId) => new()
+    private static Event Created(int nodeId, string contractId, bool acsDelta = false) => new()
     {
         Created = new ProtoCreatedEvent
         {
+            AcsDelta = acsDelta,
             NodeId = nodeId,
             ContractId = contractId,
             TemplateId = TestTemplateId,
@@ -219,13 +319,19 @@ public class SubmissionClientTests
         },
     };
 
-    private static Event Exercised(int nodeId, int lastDescendantNodeId, string choice, bool consuming) => new()
+    private static Event Exercised(
+        int nodeId, int lastDescendantNodeId, string choice, bool consuming, bool acsDelta = false) =>
+        ExercisedOn(nodeId, "00target", choice, consuming, lastDescendantNodeId, acsDelta);
+
+    private static Event ExercisedOn(
+        int nodeId, string contractId, string choice, bool consuming, int? lastDescendantNodeId = null, bool acsDelta = false) => new()
     {
         Exercised = new ProtoExercisedEvent
         {
+            AcsDelta = acsDelta,
             NodeId = nodeId,
-            LastDescendantNodeId = lastDescendantNodeId,
-            ContractId = "00target",
+            LastDescendantNodeId = lastDescendantNodeId ?? nodeId,
+            ContractId = contractId,
             TemplateId = TestTemplateId,
             Choice = choice,
             ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },

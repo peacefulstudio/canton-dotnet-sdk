@@ -18,12 +18,14 @@ public sealed partial class FakeLedgerClient
     /// <typeparamref name="TInterface"/>, dropping the rows past
     /// <paramref name="activeAtOffset"/> exactly as the template-family
     /// <see cref="SubscribeActiveAsync{T}"/> does. Leaving the interface unstaged throws a
-    /// <see cref="NotSupportedException"/> naming the missing setup.
+    /// <see cref="NotSupportedException"/> naming the missing setup. A row's <c>Disclosure</c> is
+    /// whatever the test set on it, whatever <paramref name="includeDisclosure"/> says.
     /// </remarks>
     public IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
         ViewDescriptor<TInterface, TView> view,
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>

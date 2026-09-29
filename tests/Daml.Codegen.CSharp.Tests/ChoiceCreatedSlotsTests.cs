@@ -208,6 +208,42 @@ public class ChoiceCreatedSlotsTests
     }
 
     [Fact]
+    public void ChoiceCreatedSlots_bare_contract_id_has_an_empty_result_path()
+    {
+        var slots = Extract(ContractIdOf(Ref("Agreement")));
+
+        slots[0].ResultPath.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ChoiceCreatedSlots_tuple_components_record_their_zero_based_position()
+    {
+        var slots = Extract(Tuple(ContractIdOf(Ref("Buyer")), ContractIdOf(Ref("Seller"))));
+
+        slots[0].ResultPath.Should().Equal(new ExerciseResultStep.TupleComponent(0));
+        slots[1].ResultPath.Should().Equal(new ExerciseResultStep.TupleComponent(1));
+    }
+
+    [Fact]
+    public void ChoiceCreatedSlots_optional_contract_id_steps_into_the_optional_value()
+    {
+        var slots = Extract(OptionalOf(ContractIdOf(Ref("Agreement"))));
+
+        slots[0].ResultPath.Should().Equal(new ExerciseResultStep.OptionalValue());
+    }
+
+    [Fact]
+    public void ChoiceCreatedSlots_list_of_tuples_steps_into_each_element_then_the_component_outermost_first()
+    {
+        var slots = Extract(ListOf(Tuple(new DamlPrimitiveType(DamlPrimitive.Int64), ContractIdOf(Ref("Agreement")))));
+
+        slots.Should().ContainSingle();
+        slots[0].ResultPath.Should().Equal(
+            new ExerciseResultStep.ListElements(),
+            new ExerciseResultStep.TupleComponent(1));
+    }
+
+    [Fact]
     public void ChoiceCreatedSlots_non_contract_return_yields_no_slots()
     {
         Extract(new DamlPrimitiveType(DamlPrimitive.Int64)).Should().BeEmpty();

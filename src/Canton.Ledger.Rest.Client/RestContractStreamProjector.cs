@@ -11,6 +11,7 @@ using Daml.Runtime.Streams;
 using Canton.Ledger.Rest.Client.Raw;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RuntimeDisclosedContract = Daml.Runtime.Commands.DisclosedContract;
 using WireCreatedEvent = Canton.Ledger.Rest.Client.Raw.CreatedEvent;
 using WireEvent = Canton.Ledger.Rest.Client.Raw.Event;
 using WireIdentifier = Canton.Ledger.Rest.Client.Raw.Identifier;
@@ -226,6 +227,41 @@ internal static partial class RestContractStreamProjector
             LedgerOffset.At(reassignmentOffset), UnclassifiedKind.Unknown, EmptyReassignmentEventRawKind);
     }
 
+    public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response, ILogger? logger = null)
+    {
+        if (ActiveCreatedEvent(response) is not ({ CreatedEventBlob: { Length: > 0 } base64Blob, TemplateId: { } templateId } created, var wireSynchronizerId))
+        {
+            return null;
+        }
+
+        var blob = new byte[base64Blob.Length];
+        if (!Convert.TryFromBase64String(base64Blob, blob, out var blobLength))
+        {
+            LogCreatedEventBlobNotBase64(logger ?? NullLogger.Instance, created.ContractId);
+            return null;
+        }
+
+        return new RuntimeDisclosedContract(
+            created.ContractId,
+            RestWireConversions.ToRuntimeIdentifier(templateId),
+            blob.AsMemory(0, blobLength))
+        {
+            SynchronizerId = StreamEventClassifier.Synchronizer(wireSynchronizerId),
+        };
+    }
+
+    private static (WireCreatedEvent? Created, string? WireSynchronizerId) ActiveCreatedEvent(GetActiveContractsResponse response) =>
+        response.ContractEntry switch
+        {
+            { JsActiveContract: { } activeContract } =>
+                (activeContract.CreatedEvent, activeContract.SynchronizerId),
+            { JsIncompleteUnassigned: { } incompleteUnassigned } =>
+                (incompleteUnassigned.CreatedEvent, incompleteUnassigned.UnassignedEvent?.Source),
+            { JsIncompleteAssigned: { } incompleteAssigned } =>
+                (incompleteAssigned.AssignedEvent?.CreatedEvent, incompleteAssigned.AssignedEvent?.Target),
+            _ => (null, null),
+        };
+
     public static IEnumerable<ContractStreamEvent<T>> ProjectActiveContractEntry<T>(
         GetActiveContractsResponse response,
         ILogger? logger = null,
@@ -432,6 +468,9 @@ internal static partial class RestContractStreamProjector
         var refusal = UnparseableOffsetInSnapshotRefusal(typeof(T).Name, wireOffset, snapshotOffset, logger);
         return new ContractStreamEvent<T>.Unclassified(refusal.Offset, refusal.Kind);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The created_event_blob of contract {ContractId} in the active-contract snapshot is not base64 — its row carries no Disclosure")]
+    private static partial void LogCreatedEventBlobNotBase64(ILogger logger, string contractId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not parse the wire offset '{WireOffset}' on the {TemplateType} stream — surfaced as Unclassified (decode-failure) carrying no offset, so a consumer must not persist this event as a resume point")]
     private static partial void LogOffsetParseFailed(ILogger logger, string templateType, string? wireOffset);

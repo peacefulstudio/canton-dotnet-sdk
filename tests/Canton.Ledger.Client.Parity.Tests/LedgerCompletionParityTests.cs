@@ -58,7 +58,7 @@ public abstract class LedgerCompletionParityTests
         var probe = lane.Capability;
 
         var follow = await FollowAsync(
-            probe, probe.BeginExclusiveOffset, int.MaxValue, DrainTimeout, TestContext.Current.CancellationToken);
+            lane, probe.BeginExclusiveOffset, int.MaxValue, DrainTimeout, TestContext.Current.CancellationToken);
 
         follow.Accepted.Should().NotBeNull(
             "the submitted command's completion has to reach the stream, and this drain saw {0}",
@@ -73,7 +73,7 @@ public abstract class LedgerCompletionParityTests
         var probe = lane.Capability;
 
         var follow = await FollowAsync(
-            probe, probe.BeginExclusiveOffset, int.MaxValue, DrainTimeout, TestContext.Current.CancellationToken);
+            lane, probe.BeginExclusiveOffset, int.MaxValue, DrainTimeout, TestContext.Current.CancellationToken);
 
         follow.Accepted.Should().NotBeNull(
             "the submitted command's completion has to reach the stream, and this drain saw {0}",
@@ -92,14 +92,14 @@ public abstract class LedgerCompletionParityTests
         var probe = lane.Capability;
 
         var firstWindow = await FollowAsync(
-            probe, probe.BeginExclusiveOffset, maxEvents: 1, DrainTimeout, TestContext.Current.CancellationToken);
+            lane, probe.BeginExclusiveOffset, maxEvents: 1, DrainTimeout, TestContext.Current.CancellationToken);
 
         firstWindow.HighestObservedOffset.Should().BeGreaterThanOrEqualTo(
             probe.BeginExclusiveOffset,
             "the resume offset is the highest offset observed, which may still be the one the caller passed in");
 
         var reopened = await FollowAsync(
-            probe,
+            lane,
             firstWindow.HighestObservedOffset,
             int.MaxValue,
             DrainTimeout,
@@ -116,13 +116,13 @@ public abstract class LedgerCompletionParityTests
         var probe = lane.Capability;
 
         var drained = await FollowAsync(
-            probe, probe.BeginExclusiveOffset, int.MaxValue, DrainTimeout, TestContext.Current.CancellationToken);
+            lane, probe.BeginExclusiveOffset, int.MaxValue, DrainTimeout, TestContext.Current.CancellationToken);
         drained.Accepted.Should().NotBeNull(
             "the submitted command's completion has to reach the stream, and this drain saw {0}",
             drained.Describe());
 
         var reopened = await FollowAsync(
-            probe, drained.HighestObservedOffset, int.MaxValue, ReopenBudget, TestContext.Current.CancellationToken);
+            lane, drained.HighestObservedOffset, int.MaxValue, ReopenBudget, TestContext.Current.CancellationToken);
 
         reopened.Observed.Should().NotContain(
             streamEvent => streamEvent is CompletionStreamEvent.StreamError,
@@ -133,27 +133,27 @@ public abstract class LedgerCompletionParityTests
     }
 
     private static async Task<CompletionFollow> FollowAsync(
-        CompletionProbe probe,
+        CapabilityLane<CompletionProbe> lane,
         long fromOffset,
         int maxEvents,
         TimeSpan budget,
         CancellationToken cancellationToken)
     {
-        var follow = await DrainOneWindowAsync(probe, fromOffset, maxEvents, budget, cancellationToken);
+        var follow = await DrainOneWindowAsync(lane, fromOffset, maxEvents, budget, cancellationToken);
 
         while (follow.EndedOnStaleAuthorization
             && follow.StaleAuthorizationReopens < StaleAuthorizationReopenAttempts)
         {
             await Task.Delay(StaleAuthorizationBackoff, cancellationToken);
             follow = follow.ContinuedBy(await DrainOneWindowAsync(
-                probe, follow.HighestObservedOffset, maxEvents, budget, cancellationToken));
+                lane, follow.HighestObservedOffset, maxEvents, budget, cancellationToken));
         }
 
         return follow;
     }
 
     private static async Task<CompletionFollow> DrainOneWindowAsync(
-        CompletionProbe probe,
+        CapabilityLane<CompletionProbe> lane,
         long fromOffset,
         int maxEvents,
         TimeSpan budget,
@@ -165,7 +165,9 @@ public abstract class LedgerCompletionParityTests
         var observed = new List<CompletionStreamEvent>();
         var highestObservedOffset = fromOffset;
         CompletionStreamEvent.CommandAccepted? accepted = null;
+        var probe = lane.Capability;
 
+        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
         try
         {
             await foreach (var streamEvent in probe.Client.CompletionStreamAsync(

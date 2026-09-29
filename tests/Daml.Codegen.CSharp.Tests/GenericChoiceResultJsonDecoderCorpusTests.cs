@@ -130,7 +130,7 @@ public class GenericChoiceResultJsonDecoderCorpusTests
             $"{BoxName}<string>.__ReadDamlLfJson(json, context, (__json0, __ctx0) => {DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadText(__json0, __ctx0))",
             "a choice whose return type is an instantiated generic record must call the record's own generic __ReadDamlLfJson overload with one injected reader per type argument, not a DamlLfJsonDecoders.ReadRecord call");
         boxSource.Should().Contain(
-            "DamlField.Create(\"value\", readTA(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, \"value\"), context.Field(\"value\")))",
+            "DamlField.Create(\"value\", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTypeParameterField(json, context, \"value\", readTA))",
             "Box's own __ReadDamlLfJson carries the field-by-field decode Vault.cs now only calls into, driven by its injected readTA reader");
     }
 
@@ -165,10 +165,10 @@ public class GenericChoiceResultJsonDecoderCorpusTests
             + $"(__json0, __ctx0) => {DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadBool(__json0, __ctx0))",
             "the call site must inject the Text reader for the first type argument and the Bool reader for the second, in declaration order — a transposed call would inject the Bool reader where Text is expected; each lambda is independently scoped, so both siblings reuse __json0/__ctx0 rather than being indexed by argument position");
         pairSource.Should().Contain(
-            "DamlField.Create(\"first\", readTA(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, \"first\"), context.Field(\"first\")))",
+            "DamlField.Create(\"first\", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTypeParameterField(json, context, \"first\", readTA))",
             "Pair's own __ReadDamlLfJson must decode the 'first' field with readTA, the reader for its first type parameter");
         pairSource.Should().Contain(
-            "DamlField.Create(\"second\", readTB(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, \"second\"), context.Field(\"second\")))",
+            "DamlField.Create(\"second\", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTypeParameterField(json, context, \"second\", readTB))",
             "Pair's own __ReadDamlLfJson must decode the 'second' field with readTB, the reader for its second type parameter — swapping readTA/readTB here would still compile but decode both fields with the wrong reader");
     }
 

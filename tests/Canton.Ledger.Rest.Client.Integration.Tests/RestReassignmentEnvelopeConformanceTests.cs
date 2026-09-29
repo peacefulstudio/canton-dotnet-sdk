@@ -48,7 +48,9 @@ public class RestReassignmentEnvelopeConformanceTests(ITestOutputHelper output)
         var contractId = await ContractIdToUnassignAsync(lane, owner, TestContext.Current.CancellationToken);
         var connected = await lane.LedgerClient.GetConnectedSynchronizersAsync(
             owner, cancellationToken: TestContext.Current.CancellationToken);
-        var synchronizer = new SynchronizerId(connected.Should().ContainSingle().Subject.SynchronizerId);
+        var connectedSynchronizer = connected.Should().ContainSingle().Subject;
+        connectedSynchronizer.SynchronizerAlias.Should().Be("global");
+        var synchronizer = new SynchronizerId(connectedSynchronizer.SynchronizerId);
 
         var act = () => lane.LedgerClient.SubmitReassignmentAsync(
             ReassignmentSubmission.Of(new UnassignCommand(contractId, synchronizer, synchronizer), owner),

@@ -35,7 +35,7 @@ public sealed partial record AmuletConversionRateFeed
         public static AmuletConversionRateFeed_Update FromRecord(DamlRecord record) => new AmuletConversionRateFeed_Update(
             AmuletConversionRate: record.GetRequiredField("amuletConversionRate").As<DamlNumeric>().Value,
             AmuletRulesCid: new ContractId<global::Splice.AmuletRules.AmuletRules>(record.GetRequiredField("amuletRulesCid").As<DamlContractId>().Value),
-            MarkerContextO: record.GetRequiredField("markerContextO").AsOptional().HasValue ? MarkerContext.FromRecord(record.GetRequiredField("markerContextO").AsOptional().Value!.As<DamlRecord>()) : null,
+            MarkerContextO: record.GetOptionalField("markerContextO").AsOptional().HasValue ? MarkerContext.FromRecord(record.GetOptionalField("markerContextO").AsOptional().Value!.As<DamlRecord>()) : null,
             NewNextUpdateAfter: record.GetRequiredField("newNextUpdateAfter").As<DamlTimestamp>().Value
         );
 
@@ -47,7 +47,7 @@ public sealed partial record AmuletConversionRateFeed
             return DamlRecord.Create(
                 DamlField.Create("amuletConversionRate", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletConversionRate"), context.Field("amuletConversionRate"))),
                 DamlField.Create("amuletRulesCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletRulesCid"), context.Field("amuletRulesCid"))),
-                DamlField.Create("markerContextO", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "markerContextO"), context.Field("markerContextO"), (__json0, __ctx0) => MarkerContext.__ReadDamlLfJson(__json0, __ctx0))),
+                DamlField.Create("markerContextO", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "markerContextO"), context.Field("markerContextO"), (__json0, __ctx0) => MarkerContext.__ReadDamlLfJson(__json0, __ctx0))),
                 DamlField.Create("newNextUpdateAfter", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newNextUpdateAfter"), context.Field("newNextUpdateAfter")))
             );
         }

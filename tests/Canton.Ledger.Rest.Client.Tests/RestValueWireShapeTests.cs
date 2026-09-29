@@ -49,7 +49,7 @@ public class RestValueWireShapeTests
             new Commands
             {
                 CommandId = "c1",
-                Commands1 =
+                CommandList =
                 [
                     new Command
                     {

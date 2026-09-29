@@ -95,7 +95,7 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_still_leaves_the_transaction_format_unset()
+    public async Task TrySubmitAndWaitForTransactionAsync_sends_the_ledger_effects_transaction_format()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, SubmitResponse(TreeShapedEvents));
         var client = ClientWith(transport);
@@ -104,7 +104,8 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
             Submission().WithActAs(Alice), cancellationToken: TestContext.Current.CancellationToken);
 
         using var body = JsonDocument.Parse(transport.LastRequestBody!);
-        body.RootElement.TryGetProperty("transactionFormat", out _).Should().BeFalse();
+        body.RootElement.GetProperty("transactionFormat").GetProperty("transactionShape").GetString()
+            .Should().Be("TRANSACTION_SHAPE_LEDGER_EFFECTS");
     }
 
     [Fact]
@@ -278,6 +279,7 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
           "CreatedEvent": {
             "offset": "7",
             "nodeId": {{{nodeId}}},
+            "acsDelta": true,
             "contractId": "{{{contractId}}}",
             "templateId": {{{TemplateIdJson}}},
             "createArgument": {"owner": "party::alice"}

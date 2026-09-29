@@ -4,14 +4,21 @@ DAML models that define the type shapes codegen claims to support. Three corpora
 shipped (compiled + embedded) in `Daml.Codegen.Testing.Conformance`: `richtypes` below,
 plus the contract-key and default-target corpora described further down.
 
-The committed `.dar` is the source of truth for the package build. To grow the
-corpus (new type shapes), edit `RichTypes.daml`, then rebuild and commit the DAR:
+The committed `.dar` is the source of truth for the package build. `richtypes` and
+`contractkeys` carry a content-addressed package name (`<base>-h<hash12>`, the hash
+covering the Daml sources and `daml.yaml`) because Canton's upgrade check works per
+package name: two builds with different content need different names, or the second
+build is rejected as `KNOWN_PACKAGE_VERSION` by a participant already holding the
+first. To grow the corpus (new type shapes), edit `RichTypes.daml`, then run one
+command, which re-derives the name, rebuilds the DAR and regenerates the shipped
+bindings:
 
-    cd conformance/richtypes && dpm build && cp .daml/dist/richtypes-*.dar ./richtypes.dar
+    scripts/rebuild-conformance-dar.sh --package richtypes --base richtypes
 
-After rebuilding the DAR, refresh the generated tree the package ships
-(`scripts/refresh-conformance.sh`) and the pinned SHAs the determinism gate
-compares against (`scripts/codegen-determinism.sh --update`); both read this DAR.
+Commit the changed `daml.yaml`, DAR and `Generated/` tree together. Also refresh the
+pinned SHAs the determinism gate compares against
+(`scripts/codegen-determinism.sh --update`); it reads this DAR.
+An internal drift test reads the shipped DAR fresh and fails if a step was skipped.
 
 `RichRecord` covers the primitive, collection and nominal shapes; `TypeCorners`
 covers the harder corners — parameterized records and variants (`Box`, `Slot`)
@@ -52,6 +59,15 @@ interpolated type name fixed it, which is what unblocked this template-choice ha
 corpus; see the typed exercise-path choice-descriptor work (choice descriptors as witnesses,
 `ArgumentDecoder` + interface-choice descriptors) for the wider follow-up.
 
+`OptionalTails` and `NestedOptionalTails` place a `None` at every position the JSON
+Ledger API may encode differently: `OptionalTails` carries a mid-record
+`Optional Text` (`midNote`), a record whose own last field is an `Optional Text`
+(`inner : TrailingNote`, trailing `remark`) and a trailing `Optional Text` (`tailNote`);
+`NestedOptionalTails` carries an `Optional (Optional Text)` mid-record (`midMaybe`) and
+trailing (`tailMaybe`). Each template's nonconsuming `Echo…` choice returns the contract's
+own payload, so the same shapes are read back both as a create argument and as an exercise
+result.
+
 `richtypes/daml.yaml` carries `-Wno-upgrade-interfaces` in its `build-options`:
 at `--target=2.1`, a smart-contract-upgrade-eligible target, `damlc` refuses a
 module that mixes interface definitions with the templates implementing them
@@ -87,16 +103,18 @@ their maintainer from the key's first component (`key._1`). `Steward` also
 implements the `Stewardship` interface, which declares both a `viewtype`
 (`StewardshipView`) and a non-`Unit` nonconsuming choice (`DescribeCharter`),
 so a keyed template backing an interface with a real choice is covered too.
+The package also carries one unkeyed template, `Offer` (module `Disclosure`),
+whose only signatory is its issuer and whose nonconsuming `Inspect` choice is
+controlled by whichever `reader` party the exercise names, so a party that is no
+stakeholder of the contract can exercise it only by disclosing it explicitly.
 `ContractKeysCorpusDarCharacterizationTests` reads the DAR and
 asserts each of them, so a fixture edit that flattens a shape fails rather than
-quietly narrowing the evidence. Rebuild its DAR the same way:
+quietly narrowing the evidence. It also carries a content-addressed package name
+(see above); rebuild its DAR, and refresh the `Generated/ContractKeys/` sources the
+package compiles, with one command:
 
-    cd conformance/contractkeys && dpm build && \
-      cp .daml/dist/contractkeys-*.dar ./contractkeys.dar
+    scripts/rebuild-conformance-dar.sh --package contractkeys --base contractkeys
 
-`contractkeys` is a shipped package, so rebuilding its DAR also requires
-refreshing the generated tree (`scripts/refresh-conformance.sh`) — without that
-the `Generated/ContractKeys/` sources the package compiles go stale silently.
 The determinism gate reads only `richtypes`, so `codegen-determinism.sh` does
 not need re-running for a contract-key-only change.
 

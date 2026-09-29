@@ -27,7 +27,7 @@ public class GeneratedExerciserArgumentGuardTests
         Assert.Throws<ArgumentNullException>(() =>
         {
             _ = MarkerSubmissionExtensions.TryCreateAsync(
-                null!, new Marker(Alice), TestContext.Current.CancellationToken);
+                null!, new Marker(Alice), cancellationToken: TestContext.Current.CancellationToken);
         });
     }
 

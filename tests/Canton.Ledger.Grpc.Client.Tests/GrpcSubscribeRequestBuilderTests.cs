@@ -159,6 +159,66 @@ public class GrpcSubscribeRequestBuilderTests
             .Should().Be("#richtypes");
     }
 
+    [Fact]
+    public void BuildGetActiveContractsRequest_asks_the_template_filter_for_the_created_event_blob_when_requested()
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Party> { (Party)"alice", (Party)"bob" },
+            new HashSet<Party> { (Party)"observer" });
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
+            submitter, TemplateId, activeAtOffset: 0L, includeDisclosure: true);
+
+        request.EventFormat.FiltersByParty.Values
+            .Select(filters => filters.Cumulative.Single().TemplateFilter.IncludeCreatedEventBlob)
+            .Should().Equal(true, true, true);
+    }
+
+    [Fact]
+    public void BuildGetActiveContractsRequest_asks_the_interface_filter_for_the_created_event_blob_when_requested()
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Party> { (Party)"alice" },
+            new HashSet<Party>());
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
+            submitter, TemplateId, activeAtOffset: 0L, isInterface: true, includeDisclosure: true);
+
+        var interfaceFilter = request.EventFormat.FiltersByParty["alice"].Cumulative.Single().InterfaceFilter;
+        interfaceFilter.IncludeCreatedEventBlob.Should().BeTrue();
+        interfaceFilter.IncludeInterfaceView.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildGetActiveContractsRequest_leaves_the_created_event_blob_out_by_default(bool isInterface)
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Party> { (Party)"alice" },
+            new HashSet<Party>());
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
+            submitter, TemplateId, activeAtOffset: 0L, isInterface: isInterface);
+
+        var filter = request.EventFormat.FiltersByParty["alice"].Cumulative.Single();
+        (filter.TemplateFilter?.IncludeCreatedEventBlob ?? filter.InterfaceFilter.IncludeCreatedEventBlob)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void BuildGetUpdatesRequest_never_asks_for_the_created_event_blob()
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Party> { (Party)"alice" },
+            new HashSet<Party>());
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetUpdatesRequest(submitter, TemplateId, fromOffset: null, toOffset: null);
+
+        request.UpdateFormat.IncludeTransactions.EventFormat.FiltersByParty["alice"].Cumulative.Single()
+            .TemplateFilter.IncludeCreatedEventBlob.Should().BeFalse();
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

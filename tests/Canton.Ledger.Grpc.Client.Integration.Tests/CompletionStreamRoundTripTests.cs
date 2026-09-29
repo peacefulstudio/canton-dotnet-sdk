@@ -80,7 +80,7 @@ public class CompletionStreamRoundTripTests
         Assert.Equal(commandId, returnedCommandId.Value);
 
         var accepted = await ObserveAcceptedAsync(
-            client, owner, preSubmitOffset, commandId, TestContext.Current.CancellationToken);
+            client, userId, owner, preSubmitOffset, commandId, TestContext.Current.CancellationToken);
 
         Assert.NotNull(accepted);
         Assert.Equal(commandId, accepted!.Completion.CommandId.Value);
@@ -89,6 +89,7 @@ public class CompletionStreamRoundTripTests
 
     private static async Task<CompletionStreamEvent.CommandAccepted?> ObserveAcceptedAsync(
         ICantonLedgerClient client,
+        string userId,
         Party owner,
         long beginExclusiveOffset,
         string commandId,
@@ -97,7 +98,7 @@ public class CompletionStreamRoundTripTests
         var fromOffset = beginExclusiveOffset;
         for (var attempt = 0; attempt <= StaleAuthorizationReopenAttempts; attempt++)
         {
-            var window = await DrainOneWindowAsync(client, owner, fromOffset, commandId, cancellationToken);
+            var window = await DrainOneWindowAsync(client, userId, owner, fromOffset, commandId, cancellationToken);
             if (window.Accepted is not null || !window.EndedOnStaleAuthorization)
             {
                 return window.Accepted;
@@ -112,6 +113,7 @@ public class CompletionStreamRoundTripTests
 
     private static async Task<CompletionWindow> DrainOneWindowAsync(
         ICantonLedgerClient client,
+        string userId,
         Party owner,
         long fromOffset,
         string commandId,
@@ -123,6 +125,7 @@ public class CompletionStreamRoundTripTests
         var highestObservedOffset = fromOffset;
         var endedOnStaleAuthorization = false;
 
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(userId, cancellationToken);
         await foreach (var streamEvent in client.CompletionStreamAsync(owner, LedgerOffset.At(fromOffset), windowBudget.Token))
         {
             if (OffsetOf(streamEvent) is { } offset)

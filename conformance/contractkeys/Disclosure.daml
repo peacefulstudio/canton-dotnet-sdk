@@ -1,0 +1,17 @@
+-- Copyright 2026 Peaceful Studio OÜ
+-- SPDX-License-Identifier: Apache-2.0
+module Disclosure where
+
+template Offer
+  with
+    issuer : Party
+    price : Int
+  where
+    signatory issuer
+
+    nonconsuming choice Inspect : Int
+      with
+        reader : Party
+      controller reader
+      do
+        pure price

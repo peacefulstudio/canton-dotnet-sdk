@@ -5,10 +5,15 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Grpc.Client;
 using Canton.Ledger.Grpc.Client.Integration.Tests;
 using Canton.Ledger.Testing.Localnet;
+using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime.Data;
+using Grpc.Core;
+using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Peaceful.Canton.Localnet.Testing;
 using Xunit;
+using RuntimeCommands = Daml.Runtime.Commands;
+using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 namespace Canton.Ledger.Client.Parity.Tests;
 
@@ -23,11 +28,11 @@ public sealed class GrpcRichTypesRoundTripParityTests : RichTypesRoundTripParity
         + "(or the legacy un-namespaced CANTON_LOCALNET_* globals) and bring up the localnet "
         + "(canton-localnet up && canton-localnet wait-ready) to run this parity test.";
 
-    protected override string? TypeCornersDecodeQuarantine =>
+    protected override string? NestedOptionalDecodeQuarantine =>
         "The gRPC read path decodes every proto Optional as a flat DamlOptional, so "
-        + "TypeCorners.FromRecord cannot read its Optional (Optional Text) field back in any state.";
+        + "neither TypeCorners.FromRecord nor NestedOptionalTails.FromRecord can read an Optional (Optional Text) field back in any state.";
 
-    protected override async Task<CapabilityLane<(ICantonLedgerClient Client, Party Owner)>> OpenClientAsync(
+    protected override async Task<CapabilityLane<RichTypesSession>> OpenClientAsync(
         CancellationToken cancellationToken)
     {
         if (!EndpointDiscovery.IsLocalnetAvailable())
@@ -45,6 +50,9 @@ public sealed class GrpcRichTypesRoundTripParityTests : RichTypesRoundTripParity
             var party = await fixture.AllocatePartyAsync(
                 "grpc-richtypes-parity", cancellationToken: cancellationToken).ConfigureAwait(false);
             await actAsRights.GrantAsync(party.PartyId, cancellationToken).ConfigureAwait(false);
+            var counterparty = await fixture.AllocatePartyAsync(
+                "grpc-richtypes-parity-counterparty", cancellationToken: cancellationToken).ConfigureAwait(false);
+            await actAsRights.GrantAsync(counterparty.PartyId, cancellationToken).ConfigureAwait(false);
 
             services = new ServiceCollection()
                 .AddSingleton<ITokenProvider>(new LocalnetTokenProvider(fixture.TokenProvider.GetAccessTokenAsync))
@@ -56,8 +64,9 @@ public sealed class GrpcRichTypesRoundTripParityTests : RichTypesRoundTripParity
                 .BuildServiceProvider();
 
             var client = services.GetRequiredService<ICantonLedgerClient>();
-            return new CapabilityLane<(ICantonLedgerClient, Party)>(
-                (client, new Party(party.PartyId)),
+            return new CapabilityLane<RichTypesSession>(
+                new RichTypesSession(client, new Party(party.PartyId), new Party(counterparty.PartyId),
+                    (contractId, reader, token) => ReadDisclosedContractAsync(fixture, grpcAddress, contractId, reader, token)),
                 async () =>
                 {
                     try
@@ -68,7 +77,8 @@ public sealed class GrpcRichTypesRoundTripParityTests : RichTypesRoundTripParity
                     {
                         await LaneTeardown.ReleaseAsync(actAsRights, fixture).ConfigureAwait(false);
                     }
-                });
+                },
+                rightsGatedUserId: fixture.ValidatorUserId);
         }
         catch (Exception openFailure)
         {
@@ -76,5 +86,30 @@ public sealed class GrpcRichTypesRoundTripParityTests : RichTypesRoundTripParity
                 .ConfigureAwait(false);
             throw;
         }
+    }
+
+    private static async Task<RuntimeCommands.DisclosedContract> ReadDisclosedContractAsync(
+        LocalnetFixture fixture, string grpcAddress, string contractId, Party reader, CancellationToken cancellationToken)
+    {
+        var withBlob = new Filters();
+        withBlob.Cumulative.Add(new CumulativeFilter { WildcardFilter = new WildcardFilter { IncludeCreatedEventBlob = true } });
+        var request = new GetEventsByContractIdRequest
+        {
+            ContractId = contractId,
+            EventFormat = new EventFormat { Verbose = true },
+        };
+        request.EventFormat.FiltersByParty[reader.Value] = withBlob;
+        var accessToken = await fixture.TokenProvider.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        var headers = new Metadata { { "Authorization", $"Bearer {accessToken}" } };
+
+        using var channel = GrpcChannel.ForAddress(grpcAddress);
+        var response = await new EventQueryService.EventQueryServiceClient(channel)
+            .GetEventsByContractIdAsync(request, headers, cancellationToken: cancellationToken);
+
+        var created = response.Created.CreatedEvent;
+        return new RuntimeCommands.DisclosedContract(
+            contractId,
+            new RuntimeIdentifier(created.TemplateId.PackageId, created.TemplateId.ModuleName, created.TemplateId.EntityName),
+            created.CreatedEventBlob.ToByteArray());
     }
 }

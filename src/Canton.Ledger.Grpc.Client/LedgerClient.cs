@@ -65,6 +65,7 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         _submissionClient = new SubmissionClient(
             _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
             (offset, submitter, token) => GetUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token),
+            (offset, submitter, token) => GetAcsDeltaUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, token),
             (offset, submitter, token) => GetUpdateTreeByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token));
 
         CallContextHelper.LogStartupDiagnostics(
@@ -137,6 +138,7 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         _submissionClient = new SubmissionClient(
             _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
             (offset, submitter, token) => GetUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token),
+            (offset, submitter, token) => GetAcsDeltaUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, token),
             (offset, submitter, token) => GetUpdateTreeByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token));
     }
 

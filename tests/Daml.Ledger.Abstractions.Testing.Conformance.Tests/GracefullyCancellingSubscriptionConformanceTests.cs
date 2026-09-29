@@ -84,6 +84,7 @@ public sealed class GracefullyCancellingSubscriptionConformanceTests
         public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
             where T : ITemplate, IDamlRecord<T> =>
             throw new NotSupportedException();
@@ -139,6 +140,7 @@ public sealed class GracefullyCancellingSubscriptionConformanceTests
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
             where TInterface : IDamlInterface, IHasView<TView>
             where TView : IDamlRecord<TView> =>

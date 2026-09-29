@@ -65,8 +65,8 @@ public sealed record Tuple2<T1, T2>(T1 _1, T2 _2)
         ArgumentNullException.ThrowIfNull(convert1);
         ArgumentNullException.ThrowIfNull(convert2);
         return new Tuple2<T1, T2>(
-            convert1(record.GetRequiredField("_1")),
-            convert2(record.GetRequiredField("_2")));
+            record.GetTypeParameterField("_1", convert1),
+            record.GetTypeParameterField("_2", convert2));
     }
 }
 
@@ -125,8 +125,8 @@ public sealed record Tuple3<T1, T2, T3>(T1 _1, T2 _2, T3 _3)
         ArgumentNullException.ThrowIfNull(convert2);
         ArgumentNullException.ThrowIfNull(convert3);
         return new Tuple3<T1, T2, T3>(
-            convert1(record.GetRequiredField("_1")),
-            convert2(record.GetRequiredField("_2")),
-            convert3(record.GetRequiredField("_3")));
+            record.GetTypeParameterField("_1", convert1),
+            record.GetTypeParameterField("_2", convert2),
+            record.GetTypeParameterField("_3", convert3));
     }
 }

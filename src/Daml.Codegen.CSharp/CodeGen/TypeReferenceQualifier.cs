@@ -42,6 +42,7 @@ internal sealed class TypeReferenceQualifier
             [RuntimeTypeNames.DamlVariant] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlEnum] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlOptional] = RuntimeNamespaces.Data,
+            [RuntimeTypeNames.DamlOptionalChain] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlList] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlTextMap] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlGenMap] = RuntimeNamespaces.Data,
@@ -100,6 +101,7 @@ internal sealed class TypeReferenceQualifier
             ["HashSet"] = "System.Collections.Generic",
             ["EqualityComparer"] = "System.Collections.Generic",
             ["HashCode"] = "System",
+            ["Func"] = "System",
         };
 
     private readonly string _generatedNamespace;

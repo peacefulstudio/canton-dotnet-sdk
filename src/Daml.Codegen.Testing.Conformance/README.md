@@ -11,8 +11,8 @@ the contract-key one, and `ConformanceCorpus.OpenDar(ConformancePackage.DefaultT
 the one built with no Daml-LF target requested.
 
 Generated types are emitted one namespace per Daml module, all under
-`Daml.Codegen.Testing.Conformance`: `RichTypes` for the first corpus, `ContractKeys` and
-`KeyBuilders` for the second, `DefaultTarget` for the third. `RichTypes` was spelled
+`Daml.Codegen.Testing.Conformance`: `RichTypes` for the first corpus, `ContractKeys`,
+`KeyBuilders` and `Disclosure` for the second, `DefaultTarget` for the third. `RichTypes` was spelled
 `Richtypes` before 0.5.0-preview.2, and the rename is case-only, which Roslyn does not
 forgive — a consumer holding `using Daml.Codegen.Testing.Conformance.Richtypes;` stops
 compiling until the spelling is corrected, as does a

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
 using AwesomeAssertions;
@@ -119,6 +120,9 @@ public class ChoiceEmitterInterfaceExtensionTests
         output.Should().Contain("return new ExerciseOutcome<string>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);");
         output.Should().Contain("throw new global::System.InvalidOperationException(");
         output.Should().Contain("no 'Transfer' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}");
+        output.Should().Contain("Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, ");
+        output.Should().Contain("or the transaction was requested in a shape without exercised events (ACS_DELTA); ");
+        output.Should().Contain("request the LEDGER_EFFECTS shape with verbose events.");
     }
 
     [Fact]
@@ -195,5 +199,23 @@ public class ChoiceEmitterInterfaceExtensionTests
         output.Should().Contain("TransferArg argument)");
         output.Should().Contain("return ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Transfer\"), argument.ToRecord());");
         output.Should().Contain("var command = contractId.TransferCommand(argument);");
+    }
+
+    [Fact]
+    public void ChoiceEmitterInterfaceExtension_interface_exerciser_declares_configure_between_timeout_and_cancellation_token()
+    {
+        var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
+
+        output.Should().MatchRegex(@"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        Regex.Matches(output, Regex.Escape(ConfigureParameter)).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ChoiceEmitterInterfaceExtension_interface_exerciser_documents_configure_with_a_disclosure_example()
+    {
+        var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
+
+        output.Should().Contain("/// <param name=\"configure\">");
+        output.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");
     }
 }

@@ -22,14 +22,15 @@ internal sealed record PqsLedgerEntry(
 
     public DamlRecord ToRecord() => throw new NotSupportedException();
 
-    public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
-        PqsRecordReader.Read(
-            json,
-            context,
-            ("owner", DamlLfJsonDecoders.ReadParty),
-            ("quantity", DamlLfJsonDecoders.ReadInt64),
-            ("price", DamlLfJsonDecoders.ReadNumeric),
-            ("note", PqsRecordReader.OptionalOf(DamlLfJsonDecoders.ReadText)));
+    public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
+    {
+        DamlLfJsonDecoders.RequireObject(json, context);
+        return DamlRecord.Create(
+            DamlField.Create("owner", DamlLfJsonDecoders.ReadParty(DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
+            DamlField.Create("quantity", DamlLfJsonDecoders.ReadInt64(DamlLfJsonDecoders.RequireField(json, context, "quantity"), context.Field("quantity"))),
+            DamlField.Create("price", DamlLfJsonDecoders.ReadNumeric(DamlLfJsonDecoders.RequireField(json, context, "price"), context.Field("price"))),
+            DamlField.Create("note", DamlLfJsonDecoders.ReadOptional(DamlLfJsonDecoders.OptionalField(json, "note"), context.Field("note"), DamlLfJsonDecoders.ReadText)));
+    }
 
     public static PqsLedgerEntry FromRecord(DamlRecord record) => new(
         Owner: record.GetRequiredField("owner").As<DamlParty>().Value,

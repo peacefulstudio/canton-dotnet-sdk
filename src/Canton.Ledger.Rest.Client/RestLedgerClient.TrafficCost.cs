@@ -106,7 +106,7 @@ internal sealed partial class RestLedgerClient
             SynchronizerId = commands.SynchronizerId,
             ActAs = commands.ActAs,
             ReadAs = commands.ReadAs,
-            Commands = commands.Commands1,
+            Commands = commands.CommandList,
             EstimateTrafficCost = new WireCostEstimationHints(),
         };
 

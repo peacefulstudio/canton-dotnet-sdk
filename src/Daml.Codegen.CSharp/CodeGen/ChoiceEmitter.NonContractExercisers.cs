@@ -126,7 +126,7 @@ internal sealed partial class ChoiceEmitter
             : $"var command = contractId.{choiceName}Command();");
 
         indent.AppendLine();
-        indent.AppendLine($"var outcome = await client.TrySubmitSingleAsync(command, {submitter.Name}, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);");
+        indent.AppendLine($"var outcome = await client.TrySubmitSingleAsync(command, {submitter.Name}, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);");
         indent.AppendLine();
         indent.AppendLine($"return outcome.ProjectCommitted(tx => Project{choiceName}Result(tx, contractId.Value));");
 
@@ -195,10 +195,10 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine("throw new InvalidOperationException(");
         indent.Indent();
         indent.AppendLine($"$\"Submission succeeded but no '{choice.Name}' exercise on contract '{{contractId}}' was recorded on transaction {{tx.UpdateId}}. \" +");
-        indent.AppendLine("\"This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — \" +");
-        indent.AppendLine("\"your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. \" +");
-        indent.AppendLine("\"If your implementation does populate ExercisedEvents, ensure the participant is configured to return \" +");
-        indent.AppendLine("\"LedgerEffects with verbose events so the exercise event survives projection.\");");
+        indent.AppendLine("\"The transaction returned for this submission carries no exercised event for it. \" +");
+        indent.AppendLine("\"Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, \" +");
+        indent.AppendLine("\"or the transaction was requested in a shape without exercised events (ACS_DELTA); \" +");
+        indent.AppendLine("\"request the LEDGER_EFFECTS shape with verbose events.\");");
         indent.Dedent();
 
         indent.Dedent();

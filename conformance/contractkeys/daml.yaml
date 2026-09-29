@@ -1,7 +1,7 @@
 # Copyright 2026 Peaceful Studio OÜ
 # SPDX-License-Identifier: Apache-2.0
 sdk-version: 3.5.2
-name: contractkeys
+name: contractkeys-h61a17c769e62
 source: .
 version: 0.0.1
 dependencies:

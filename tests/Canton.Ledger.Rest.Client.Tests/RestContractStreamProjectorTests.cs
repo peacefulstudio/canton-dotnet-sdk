@@ -14,6 +14,7 @@ using Daml.Runtime.Data;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using RuntimeDisclosedContract = Daml.Runtime.Commands.DisclosedContract;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 #pragma warning disable CANTONREST001
@@ -360,6 +361,139 @@ public class RestContractStreamProjectorTests
         var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
         unclassified.Offset.Should().Be(LedgerOffset.At(50L));
         unclassified.Kind.Should().Be(UnclassifiedKind.Unknown);
+    }
+
+    [Fact]
+    public async Task DisclosureOf_an_active_contract_decodes_its_base64_created_event_blob()
+    {
+        var response = await ActiveContractsResponseFrom(
+            """
+            {
+              "contractEntry": {
+                "JsActiveContract": {
+                  "createdEvent": {
+                    "offset": "42",
+                    "contractId": "00holding",
+                    "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
+                    "createArgument": {},
+                    "createdEventBlob": "CgsM"
+                  },
+                  "synchronizerId": "sync-1"
+                }
+              }
+            }
+            """);
+
+        RestContractStreamProjector.DisclosureOf(response).Should().Be(new RuntimeDisclosedContract(
+            "00holding",
+            new RuntimeIdentifier("tmpl-pkg", "Sample.Token", "StreamHolding"),
+            new byte[] { 0x0A, 0x0B, 0x0C }) { SynchronizerId = new SynchronizerId("sync-1") });
+    }
+
+    [Fact]
+    public async Task DisclosureOf_an_incomplete_assigned_entry_reads_the_blob_off_its_assigned_created_event()
+    {
+        var response = await ActiveContractsResponseFrom(
+            """
+            {
+              "contractEntry": {
+                "JsIncompleteAssigned": {
+                  "assignedEvent": {
+                    "source": "sync-1",
+                    "target": "sync-2",
+                    "createdEvent": {
+                      "offset": "43",
+                      "contractId": "00assigned",
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
+                      "createArgument": {},
+                      "createdEventBlob": "ISI="
+                    }
+                  }
+                }
+              }
+            }
+            """);
+
+        RestContractStreamProjector.DisclosureOf(response).Should().Be(new RuntimeDisclosedContract(
+            "00assigned",
+            new RuntimeIdentifier("tmpl-pkg", "Sample.Token", "StreamHolding"),
+            new byte[] { 0x21, 0x22 }) { SynchronizerId = new SynchronizerId("sync-2") });
+    }
+
+    [Fact]
+    public async Task DisclosureOf_an_incomplete_unassigned_entry_reads_the_blob_off_its_created_event()
+    {
+        var response = await ActiveContractsResponseFrom(
+            """
+            {
+              "contractEntry": {
+                "JsIncompleteUnassigned": {
+                  "createdEvent": {
+                    "offset": "44",
+                    "contractId": "00unassigned",
+                    "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
+                    "createArgument": {},
+                    "createdEventBlob": "MTIz"
+                  },
+                  "unassignedEvent": {"contractId": "00unassigned", "source": "sync-1", "target": "sync-2", "offset": "45", "reassignmentId": "r-1", "reassignmentCounter": "1"}
+                }
+              }
+            }
+            """);
+
+        RestContractStreamProjector.DisclosureOf(response).Should().Be(new RuntimeDisclosedContract(
+            "00unassigned",
+            new RuntimeIdentifier("tmpl-pkg", "Sample.Token", "StreamHolding"),
+            new byte[] { 0x31, 0x32, 0x33 }) { SynchronizerId = new SynchronizerId("sync-1") });
+    }
+
+    [Fact]
+    public async Task DisclosureOf_a_created_event_without_a_blob_is_null()
+    {
+        var response = await ActiveContractsResponseFrom(
+            """
+            {
+              "contractEntry": {
+                "JsActiveContract": {
+                  "createdEvent": {
+                    "offset": "42",
+                    "contractId": "00holding",
+                    "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
+                    "createArgument": {}
+                  },
+                  "synchronizerId": "sync-1"
+                }
+              }
+            }
+            """);
+
+        RestContractStreamProjector.DisclosureOf(response).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DisclosureOf_a_blob_that_is_not_base64_is_null_and_logs_a_warning()
+    {
+        var response = await ActiveContractsResponseFrom(
+            """
+            {
+              "contractEntry": {
+                "JsActiveContract": {
+                  "createdEvent": {
+                    "offset": "42",
+                    "contractId": "00holding",
+                    "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
+                    "createArgument": {},
+                    "createdEventBlob": "not base64!"
+                  },
+                  "synchronizerId": "sync-1"
+                }
+              }
+            }
+            """);
+        var loggerFactory = new CapturingLoggerFactory();
+
+        RestContractStreamProjector.DisclosureOf(response, loggerFactory.CreateLogger("test")).Should().BeNull();
+        loggerFactory.Records.Should().ContainSingle(record => record.Level == LogLevel.Warning);
     }
 
     [Fact]

@@ -188,7 +188,7 @@ internal sealed class RecordSerializationEmitter(
         {
             var field = fields[i];
             var fieldName = MemberName(field.Name, indent.CurrentTypeName);
-            var conversion = mapper.FromValue(field.Type, $"record.GetRequiredField(\"{field.Name}\")", delegates, nestedArgTypeNames);
+            var conversion = FieldFromValue(field, delegates, nestedArgTypeNames);
             var comma = i < fields.Count - 1 ? "," : "";
 
             indent.AppendLine($"{fieldName}: {conversion}{comma}");
@@ -253,9 +253,7 @@ internal sealed class RecordSerializationEmitter(
         {
             var field = fields[i];
             StdlibPackages.RequireForFieldType(resolver, context.Package, indent, field.Type);
-            var jsonExpr = $"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.RequireField(json, context, \"{field.Name}\")";
-            var contextExpr = $"context.Field(\"{field.Name}\")";
-            var decoded = mapper.FromJson(field.Type, jsonExpr, contextExpr, nestedArgTypeNames, typeVarReaders);
+            var decoded = FieldFromJson(field, nestedArgTypeNames, typeVarReaders);
             var comma = i < fields.Count - 1 ? "," : "";
 
             indent.AppendLine($"{DamlFieldReference(nestedArgTypeNames)}.Create(\"{field.Name}\", {decoded}){comma}");
@@ -267,6 +265,49 @@ internal sealed class RecordSerializationEmitter(
         indent.AppendLine("}");
         indent.AppendLine();
     }
+
+    private string FieldFromJson(
+        DamlFieldDefinition field,
+        IReadOnlySet<string>? nestedArgTypeNames,
+        IReadOnlyDictionary<string, string> typeVarReaders)
+    {
+        var decoders = DamlTypeMapper.DamlLfJsonDecodersQualifiedName;
+        var fieldName = $"\"{field.Name}\"";
+        if (field.Type is DamlTypeVar typeVar && typeVarReaders.TryGetValue(typeVar.Name, out var reader))
+        {
+            return $"{decoders}.ReadTypeParameterField(json, context, {fieldName}, {reader})";
+        }
+
+        var jsonExpr = mapper.OptionalWireEncoding(field.Type) is { } encoding
+            ? $"{decoders}.{OmissibleFieldAccessor(encoding)}(json, {fieldName})"
+            : $"{decoders}.RequireField(json, context, {fieldName})";
+        return mapper.FromJson(field.Type, jsonExpr, $"context.Field({fieldName})", nestedArgTypeNames, typeVarReaders);
+    }
+
+    private string FieldFromValue(
+        DamlFieldDefinition field,
+        IReadOnlyDictionary<string, string> converters,
+        IReadOnlySet<string>? nestedArgTypeNames)
+    {
+        var fieldName = $"\"{field.Name}\"";
+        if (field.Type is DamlTypeVar typeVar && converters.TryGetValue(typeVar.Name, out var convert))
+        {
+            return $"record.GetTypeParameterField({fieldName}, {convert})";
+        }
+
+        var valueExpr = mapper.OptionalWireEncoding(field.Type) is { } encoding
+            ? $"record.Get{OmissibleFieldAccessor(encoding)}({fieldName})"
+            : $"record.GetRequiredField({fieldName})";
+        return mapper.FromValue(field.Type, valueExpr, converters, nestedArgTypeNames);
+    }
+
+#pragma warning disable CS8524
+    private static string OmissibleFieldAccessor(OptionalEncoding encoding) => encoding switch
+    {
+        OptionalEncoding.Flat => "OptionalField",
+        OptionalEncoding.NestedChain => "OptionalChainField",
+    };
+#pragma warning restore CS8524
 
     private string ConverterParameters(
         IndentWriter indent,

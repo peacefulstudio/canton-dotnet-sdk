@@ -154,6 +154,11 @@ public interface ILedgerStreamer
     /// subscription passes the party itself here.
     /// </param>
     /// <param name="activeAtOffset">Snapshot offset; <c>null</c> means the current ledger end.</param>
+    /// <param name="includeDisclosure">
+    /// <c>true</c> asks the participant for each contract's <c>created_event_blob</c>, so every
+    /// <c>Created</c> row carries a <c>Disclosure</c> another party can attach to its submission.
+    /// <c>false</c>, the default, leaves the blob out and <c>Disclosure</c> <c>null</c>.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
@@ -166,6 +171,7 @@ public interface ILedgerStreamer
     IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>;
 
@@ -373,6 +379,11 @@ public interface ILedgerStreamer
     /// subscription passes the party itself here.
     /// </param>
     /// <param name="activeAtOffset">Snapshot offset; <c>null</c> means the current ledger end.</param>
+    /// <param name="includeDisclosure">
+    /// <c>true</c> asks the participant for each contract's <c>created_event_blob</c>, so every
+    /// <c>Created</c> row carries a <c>Disclosure</c> another party can attach to its submission.
+    /// <c>false</c>, the default, leaves the blob out and <c>Disclosure</c> <c>null</c>.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
@@ -386,6 +397,7 @@ public interface ILedgerStreamer
         ViewDescriptor<TInterface, TView> view,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>;

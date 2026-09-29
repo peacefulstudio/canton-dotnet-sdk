@@ -197,6 +197,24 @@ internal sealed partial class PqsClient : IPqsClient
     }
 
     /// <inheritdoc />
+    public Task<InterfaceContract<TInterface, TView>?> FetchByIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId,
+        CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        ArgumentNullException.ThrowIfNull(contractId);
+
+        return ExecuteProjectingQueryOneAsync(
+            "SELECT contract_id, payload FROM active(@typeId) WHERE contract_id = @contractId LIMIT 1",
+            GetDamlTypeId<TInterface>(),
+            cmd => cmd.Parameters.AddWithValue("@contractId", contractId.Value),
+            (fetchedContractId, payloadJson) =>
+                DeserializeInterfaceContract<TInterface, TView>(fetchedContractId, payloadJson),
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<bool> ExistsAsync<T>(
         ContractId<T> contractId,
         CancellationToken cancellationToken = default)
@@ -296,14 +314,26 @@ internal sealed partial class PqsClient : IPqsClient
         string sql,
         Action<NpgsqlCommand>? configureParams,
         CancellationToken cancellationToken)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        var templateId = TemplateExtensions.GetTemplateId<T>();
+        where T : ITemplate, IDamlRecord<T> =>
+        ExecuteProjectingQueryOneAsync(
+            sql,
+            TemplateExtensions.GetTemplateId<T>(),
+            configureParams,
+            (contractId, payloadJson) => DeserializeContract<T>(contractId, payloadJson),
+            cancellationToken);
 
-        return ExecuteWithDiagnosticsAsync<Contract<T>?>(
+    private Task<TItem?> ExecuteProjectingQueryOneAsync<TItem>(
+        string sql,
+        string identifier,
+        Action<NpgsqlCommand>? configureParams,
+        Func<string, string, TItem> project,
+        CancellationToken cancellationToken)
+        where TItem : class
+    {
+        return ExecuteWithDiagnosticsAsync<TItem?>(
             "PqsQueryOne",
             sql,
-            templateId,
+            identifier,
             configureParams,
             notFoundResult: null,
             async (command, _) =>
@@ -313,12 +343,12 @@ internal sealed partial class PqsClient : IPqsClient
                 {
                     if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        var contract = DeserializeContract<T>(reader.GetString(0), reader.GetString(1));
-                        LogQueryOneResult(_logger, "found", templateId);
-                        return contract;
+                        var item = project(reader.GetString(0), reader.GetString(1));
+                        LogQueryOneResult(_logger, "found", identifier);
+                        return item;
                     }
 
-                    LogQueryOneResult(_logger, "not found", templateId);
+                    LogQueryOneResult(_logger, "not found", identifier);
                     return null;
                 }
             },

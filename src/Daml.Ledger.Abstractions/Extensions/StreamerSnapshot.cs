@@ -60,7 +60,7 @@ public static class StreamerSnapshot
     /// <para>
     /// Each row's own offset, synchronizer id and witness parties are discarded too, by design:
     /// this method hands back contracts, not observations of them. Use
-    /// <see cref="SnapshotActiveAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, CancellationToken)"/>
+    /// <see cref="SnapshotActiveAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>
     /// to keep the last-update offset and the synchronizer id.
     /// </para>
     /// <para>
@@ -96,7 +96,7 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, cancellationToken)
+        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<Contract<T>>(rows.Count);
@@ -117,8 +117,7 @@ public static class StreamerSnapshot
     /// The provenance-keeping twin of
     /// <see cref="SnapshotAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, CancellationToken)"/>,
     /// with identical fault, unclassified-row, truncation and cancellation behaviour. A distinct
-    /// name rather than an overload: the parameter list is the same and C# does not overload on
-    /// return type.
+    /// name rather than an overload: C# does not overload on return type.
     /// </para>
     /// <para>
     /// <see cref="ActiveContract{TContract}.LastUpdateOffset"/> is a per-contract fact, not a
@@ -130,7 +129,7 @@ public static class StreamerSnapshot
     /// </para>
     /// <para>
     /// The returned contracts carry no contract key. A keyed template's snapshot goes through
-    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, CancellationToken)"/>,
+    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>,
     /// which yields <see cref="Contract{T, TKey}"/> with the key decoded.
     /// </para>
     /// </remarks>
@@ -138,6 +137,12 @@ public static class StreamerSnapshot
     /// <param name="streamer">The streaming capability.</param>
     /// <param name="submitter">The submitter authorization whose combined parties scope visibility.</param>
     /// <param name="activeAtOffset">Snapshot offset; <c>null</c> means the current ledger end.</param>
+    /// <param name="includeDisclosure">
+    /// <c>true</c> asks the participant for each contract's <c>created_event_blob</c>, so every
+    /// returned <see cref="ActiveContract{TContract}"/> carries a
+    /// <see cref="ActiveContract{TContract}.Disclosure"/> another party can attach to its
+    /// submission. <c>false</c>, the default, leaves it <c>null</c>.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
@@ -156,12 +161,13 @@ public static class StreamerSnapshot
         this ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, cancellationToken)
+        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<ActiveContract<Contract<T>>>(rows.Count);
@@ -184,7 +190,7 @@ public static class StreamerSnapshot
     /// for every fault, unclassified row and truncation case, and additionally throws
     /// <see cref="LedgerOperationException"/> when a create row of a keyed template arrives
     /// without the key the keyed shape requires. It discards the same per-row provenance;
-    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, CancellationToken)"/>
+    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>
     /// keeps it.
     /// </remarks>
     /// <typeparam name="T">The keyed Daml template the snapshot is filtered to.</typeparam>
@@ -224,7 +230,7 @@ public static class StreamerSnapshot
         ArgumentNullException.ThrowIfNull(key);
         _ = key; // type-inference carrier only; decode uses T.Key per IHasKey
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, cancellationToken)
+        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<Contract<T, TKey>>(rows.Count);
@@ -259,6 +265,12 @@ public static class StreamerSnapshot
     /// method and <see cref="Contract{T, TKey}.FromCreatedEvent"/> decode identically.</param>
     /// <param name="submitter">The submitter authorization whose combined parties scope visibility.</param>
     /// <param name="activeAtOffset">Snapshot offset; <c>null</c> means the current ledger end.</param>
+    /// <param name="includeDisclosure">
+    /// <c>true</c> asks the participant for each contract's <c>created_event_blob</c>, so every
+    /// returned <see cref="ActiveContract{TContract}"/> carries a
+    /// <see cref="ActiveContract{TContract}.Disclosure"/> another party can attach to its
+    /// submission. <c>false</c>, the default, leaves it <c>null</c>.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
@@ -279,13 +291,14 @@ public static class StreamerSnapshot
         KeyDescriptor<T, TKey> key,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>, IHasKey<T, TKey>
     {
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, cancellationToken)
+        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<ActiveContract<Contract<T, TKey>>>(rows.Count);
@@ -294,7 +307,10 @@ public static class StreamerSnapshot
             contracts.Add(new ActiveContract<Contract<T, TKey>>(
                 ToKeyedContract<T, TKey>(row),
                 row.Offset,
-                row.SynchronizerId));
+                row.SynchronizerId)
+            {
+                Disclosure = row.Disclosure,
+            });
         }
 
         return contracts;
@@ -316,6 +332,7 @@ public static class StreamerSnapshot
         ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset,
+        bool includeDisclosure,
         CancellationToken cancellationToken)
         where T : ITemplate, IDamlRecord<T>
     {
@@ -323,7 +340,7 @@ public static class StreamerSnapshot
         var reachedCheckpoint = false;
 
         await foreach (var entry in streamer
-            .SubscribeActiveAsync<T>(submitter, activeAtOffset, cancellationToken)
+            .SubscribeActiveAsync<T>(submitter, activeAtOffset, includeDisclosure, cancellationToken)
             .ConfigureAwait(false))
         {
             switch (entry)

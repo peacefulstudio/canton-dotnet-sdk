@@ -51,7 +51,7 @@ public static class ThrowingExercise
     /// Structured Daml errors and infrastructure errors also throw
     /// <see cref="LedgerOperationException"/>.
     /// For structured error handling, use
-    /// <see cref="SingleCommandExtensions.TrySubmitSingleAsync(ILedgerWriter,ICommand,SubmitterInfo,string?,CommandId?,TimeSpan?,CancellationToken)"/> instead.
+    /// <see cref="SingleCommandExtensions.TrySubmitSingleAsync(ILedgerWriter,ICommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/> instead.
     /// </summary>
     public static async Task ExerciseAsync(
         this ILedgerWriter writer,
@@ -60,11 +60,12 @@ public static class ThrowingExercise
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(writer);
         var outcome = await writer
-            .TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken)
+            .TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
         outcome.ThrowIfError(cancellationToken);
     }

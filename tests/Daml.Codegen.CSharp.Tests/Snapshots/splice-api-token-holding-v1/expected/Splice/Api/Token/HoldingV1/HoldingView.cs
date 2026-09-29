@@ -34,7 +34,7 @@ public sealed record HoldingView(
         Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()),
         InstrumentId: InstrumentId.FromRecord(record.GetRequiredField("instrumentId").As<DamlRecord>()),
         Amount: record.GetRequiredField("amount").As<DamlNumeric>().Value,
-        Lock: record.GetRequiredField("lock").AsOptional().HasValue ? Lock.FromRecord(record.GetRequiredField("lock").AsOptional().Value!.As<DamlRecord>()) : null,
+        Lock: record.GetOptionalField("lock").AsOptional().HasValue ? Lock.FromRecord(record.GetOptionalField("lock").AsOptional().Value!.As<DamlRecord>()) : null,
         Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
     );
 
@@ -47,7 +47,7 @@ public sealed record HoldingView(
             DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
             DamlField.Create("instrumentId", InstrumentId.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))),
             DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))),
-            DamlField.Create("lock", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "lock"), context.Field("lock"), (__json0, __ctx0) => Lock.__ReadDamlLfJson(__json0, __ctx0))),
+            DamlField.Create("lock", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "lock"), context.Field("lock"), (__json0, __ctx0) => Lock.__ReadDamlLfJson(__json0, __ctx0))),
             DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }

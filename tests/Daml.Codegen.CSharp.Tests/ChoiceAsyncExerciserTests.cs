@@ -207,14 +207,26 @@ public class ChoiceAsyncExerciserTests
     }
 
     [Fact]
-    public void Generate_should_project_success_via_FromCreatedContracts()
+    public void Generate_should_project_success_through_the_choice_exercise_result_projector()
     {
         var module = ModuleWith(
             Template("Agreement", ContractIdOf("Agreement"), choiceName: "Renew"));
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("RenewResult.FromCreatedContracts(tx.CreatedContracts)");
+        code.Should().Contain("private static ExerciseOutcome<RenewResult> ProjectRenewResult(TransactionResult tx, string contractId)");
+        code.Should().Contain("return DecodeRenewResult(exercised.ExerciseResult);");
+    }
+
+    [Fact]
+    public void Generate_should_fall_back_to_FromCreatedContracts_when_no_exercise_result_matches()
+    {
+        var module = ModuleWith(
+            Template("Agreement", ContractIdOf("Agreement"), choiceName: "Renew"));
+
+        var code = GenerateAndReadTemplate(module, "Agreement");
+
+        code.Should().Contain("var fromCreatedContracts = RenewResult.FromCreatedContracts(tx.CreatedContracts);");
     }
 
     [Fact]
@@ -225,7 +237,7 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("return outcome.ProjectCommitted(tx => RenewResult.FromCreatedContracts(tx.CreatedContracts));");
+        code.Should().Contain("return outcome.ProjectCommitted(tx => ProjectRenewResult(tx, contractId.Value));");
     }
 
     [Fact]

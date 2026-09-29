@@ -21,7 +21,4 @@ internal static class PqsRecordReader
                 field.Reader(DamlLfJsonDecoders.RequireField(body, context, field.Name), context.Field(field.Name))))
             .ToArray());
     }
-
-    public static DamlLfElementReader OptionalOf(DamlLfElementReader elementReader) =>
-        (element, context) => DamlLfJsonDecoders.ReadOptional(element, context, elementReader);
 }

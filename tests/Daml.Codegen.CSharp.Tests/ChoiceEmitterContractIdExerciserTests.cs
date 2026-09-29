@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
 using AwesomeAssertions;
@@ -232,5 +233,70 @@ public class ChoiceEmitterContractIdExerciserTests
         idxCommandId.Should().BeGreaterThanOrEqualTo(0);
         idxTimeout.Should().BeGreaterThan(idxCommandId);
         idxCancellationToken.Should().BeGreaterThan(idxTimeout);
+    }
+
+    [Fact]
+    public void ChoiceEmitterContractIdExerciser_every_overload_declares_configure_between_timeout_and_cancellation_token()
+    {
+        var template = Template(
+            [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
+            Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
+
+        var (_, exercisers) = Emit(template);
+
+        Regex.Matches(exercisers, @"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)")
+            .Should().HaveCount(4);
+        Regex.Matches(exercisers, "CancellationToken cancellationToken = default\\)").Should().HaveCount(4);
+    }
+
+    [Fact]
+    public void ChoiceEmitterContractIdExerciser_submitter_info_overload_declares_configure_between_timeout_and_cancellation_token()
+    {
+        var template = Template(
+            [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
+            Choice("Spawn", ContractIdOf("Token")));
+
+        var (_, exercisers) = Emit(template);
+
+        exercisers.Should().Contain("SubmitterInfo submitter,");
+        Regex.Matches(exercisers, @"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)")
+            .Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ChoiceEmitterContractIdExerciser_party_overload_forwards_configure_to_the_submitter_info_overload()
+    {
+        var template = Template(
+            [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
+            Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
+
+        var (_, exercisers) = Emit(template);
+
+        exercisers.Should().MatchRegex(@"return contractId\.TrySpawnAsync\(\s*client,\s*submitter,\s*workflowId,\s*commandId,\s*timeout,\s*configure,\s*cancellationToken\);");
+    }
+
+    [Fact]
+    public void ChoiceEmitterContractIdExerciser_contract_overload_forwards_configure_to_the_contract_id_overload()
+    {
+        var template = Template(
+            [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
+            Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
+
+        var (_, exercisers) = Emit(template);
+
+        exercisers.Should().MatchRegex(@"return contract\.Id\.TrySpawnAsync\(\s*client,[^;]*timeout,\s*configure,\s*cancellationToken\);");
+    }
+
+    [Fact]
+    public void ChoiceEmitterContractIdExerciser_documents_configure_with_a_disclosure_example()
+    {
+        var template = Template(
+            [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
+            Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
+
+        var (_, exercisers) = Emit(template);
+
+        exercisers.Should().Contain("/// <param name=\"configure\">");
+        exercisers.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");
     }
 }

@@ -461,7 +461,7 @@ public class FakeLedgerClientTests
             .Build();
 
         var entries = await CollectAsync(client.SubscribeActiveAsync<DemoAsset>(
-            Alice, LedgerOffset.At(3), TestContext.Current.CancellationToken));
+            Alice, LedgerOffset.At(3), cancellationToken: TestContext.Current.CancellationToken));
 
         entries.Should().ContainSingle().Which.Should().BeOfType<AcsSnapshotEntry<DemoAsset>.Checkpoint>();
     }

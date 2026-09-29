@@ -232,8 +232,8 @@ public class RecordEmitterTests
                 [new DamlPrimitiveType(DamlPrimitive.Text)]))));
 
         output.Should().Contain(
-            "MaybeText: record.GetRequiredField(\"maybeText\").AsOptional().HasValue"
-            + " ? record.GetRequiredField(\"maybeText\").AsOptional().Value!.As<DamlText>().Value : null",
+            "MaybeText: record.GetOptionalField(\"maybeText\").AsOptional().HasValue"
+            + " ? record.GetOptionalField(\"maybeText\").AsOptional().Value!.As<DamlText>().Value : null",
             "FromRecord must normalize through AsOptional so JSON-decoded records, which flatten Some to the bare value, still decode");
         output.Should().NotContain(".As<DamlOptional>()");
     }

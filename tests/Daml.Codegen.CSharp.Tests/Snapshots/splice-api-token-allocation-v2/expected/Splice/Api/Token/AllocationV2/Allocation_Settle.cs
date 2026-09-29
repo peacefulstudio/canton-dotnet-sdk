@@ -89,7 +89,7 @@ public sealed record Allocation_Settle(
     public static Allocation_Settle FromRecord(DamlRecord record) => new Allocation_Settle(
         Actors: (IReadOnlyList<Party>)record.GetRequiredField("actors").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
         ExtraTransferLegSides: (IReadOnlyList<TransferLegSide>)record.GetRequiredField("extraTransferLegSides").As<DamlList>().Values.Select(x => TransferLegSide.FromRecord(x.As<DamlRecord>())).ToList(),
-        NextIterationFunding: record.GetRequiredField("nextIterationFunding").AsOptional().HasValue ? (IReadOnlyDictionary<string, decimal>)record.GetRequiredField("nextIterationFunding").AsOptional().Value!.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlNumeric>().Value) : null,
+        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlNumeric>().Value) : null,
         ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<DamlRecord>())
     );
 
@@ -101,7 +101,7 @@ public sealed record Allocation_Settle(
         return DamlRecord.Create(
             DamlField.Create("actors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actors"), context.Field("actors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
             DamlField.Create("extraTransferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraTransferLegSides"), context.Field("extraTransferLegSides"), (__json0, __ctx0) => TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("nextIterationFunding", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "nextIterationFunding"), context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1)))),
+            DamlField.Create("nextIterationFunding", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextIterationFunding"), context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1)))),
             DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
         );
     }

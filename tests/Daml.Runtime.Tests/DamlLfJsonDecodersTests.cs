@@ -896,6 +896,24 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
+    public void ReadTuple2_should_decode_an_omitted_Optional_component_as_None()
+    {
+        using var document = JsonDocument.Parse("""{"_1":"alice"}""");
+        var context = DamlLfJsonDecodeContext.Root("Key");
+
+        var decoded = DamlLfJsonDecoders.ReadTuple2(
+            document.RootElement,
+            context,
+            DamlLfJsonDecoders.ReadParty,
+            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText));
+
+        decoded.Should().Be(new DamlRecord(null, [
+            new DamlField("_1", new DamlParty("alice")),
+            new DamlField("_2", DamlOptional.None),
+        ]));
+    }
+
+    [Fact]
     public void ReadTuple2_should_reject_a_non_object_shape()
     {
         using var document = JsonDocument.Parse("""["gold","42"]""");
@@ -1066,6 +1084,163 @@ public class DamlLfJsonDecodersTests
         var act = () => DamlLfJsonDecoders.RequireField(document.RootElement, context, "count");
 
         act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Widget.count' is missing from the JSON object");
+    }
+
+    [Fact]
+    public void OptionalField_should_return_the_named_property_value()
+    {
+        using var document = JsonDocument.Parse("""{"note":"ren"}""");
+
+        var result = DamlLfJsonDecoders.OptionalField(document.RootElement, "note");
+
+        result.GetString().Should().Be("ren");
+    }
+
+    [Fact]
+    public void OptionalField_should_return_an_explicit_null_unchanged()
+    {
+        using var document = JsonDocument.Parse("""{"note":null}""");
+
+        var result = DamlLfJsonDecoders.OptionalField(document.RootElement, "note");
+
+        result.ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public void OptionalField_should_read_an_omitted_field_as_json_null()
+    {
+        using var document = JsonDocument.Parse("{}");
+
+        var result = DamlLfJsonDecoders.OptionalField(document.RootElement, "note");
+
+        result.ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public void OptionalField_should_compose_with_ReadOptional_to_decode_an_omitted_field_as_None()
+    {
+        using var document = JsonDocument.Parse("""{"text":"inner"}""");
+        var context = DamlLfJsonDecodeContext.Root("TrailingNote");
+
+        var decoded = DamlLfJsonDecoders.ReadOptional(
+            DamlLfJsonDecoders.OptionalField(document.RootElement, "remark"), context.Field("remark"), DamlLfJsonDecoders.ReadText);
+
+        decoded.Should().Be(DamlOptional.None);
+    }
+
+    [Fact]
+    public void OptionalChainField_should_return_the_named_property_value()
+    {
+        using var document = JsonDocument.Parse("""{"note":[["ink"]]}""");
+
+        var result = DamlLfJsonDecoders.OptionalChainField(document.RootElement, "note");
+
+        result.GetRawText().Should().Be("""[["ink"]]""");
+    }
+
+    [Fact]
+    public void OptionalChainField_should_read_an_omitted_field_as_an_empty_array()
+    {
+        using var document = JsonDocument.Parse("{}");
+
+        var result = DamlLfJsonDecoders.OptionalChainField(document.RootElement, "note");
+
+        result.GetRawText().Should().Be("[]");
+    }
+
+    [Fact]
+    public void OptionalChainField_should_compose_with_ReadOptionalChain_to_decode_an_omitted_field_as_None()
+    {
+        using var document = JsonDocument.Parse("""{"midMaybe":[["deep"]]}""");
+        var context = DamlLfJsonDecodeContext.Root("NestedOptionalTails");
+
+        var decoded = DamlLfJsonDecoders.ReadOptionalChain(
+            DamlLfJsonDecoders.OptionalChainField(document.RootElement, "tailMaybe"),
+            context.Field("tailMaybe"),
+            (element, elementContext) => DamlLfJsonDecoders.ReadOptionalChain(element, elementContext, DamlLfJsonDecoders.ReadText));
+
+        decoded.Should().Be(DamlOptionalChain.None);
+    }
+
+    [Fact]
+    public void ReadTypeParameterField_should_decode_a_present_field_with_the_instantiation_reader()
+    {
+        using var document = JsonDocument.Parse("""{"item":"gold"}""");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+
+        var decoded = DamlLfJsonDecoders.ReadTypeParameterField(document.RootElement, context, "item", DamlLfJsonDecoders.ReadText);
+
+        decoded.Should().Be(new DamlText("gold"));
+    }
+
+    [Fact]
+    public void ReadTypeParameterField_should_decode_an_omitted_field_as_None_at_an_Optional_instantiation()
+    {
+        using var document = JsonDocument.Parse("{}");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+
+        var decoded = DamlLfJsonDecoders.ReadTypeParameterField(
+            document.RootElement,
+            context,
+            "item",
+            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText));
+
+        decoded.Should().Be(DamlOptional.None);
+    }
+
+    [Fact]
+    public void ReadTypeParameterField_should_decode_an_omitted_field_as_None_at_a_nested_Optional_instantiation()
+    {
+        using var document = JsonDocument.Parse("{}");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+
+        var decoded = DamlLfJsonDecoders.ReadTypeParameterField(
+            document.RootElement,
+            context,
+            "item",
+            (element, elementContext) => DamlLfJsonDecoders.ReadOptionalChain(
+                element,
+                elementContext,
+                (inner, innerContext) => DamlLfJsonDecoders.ReadOptionalChain(inner, innerContext, DamlLfJsonDecoders.ReadText)));
+
+        decoded.Should().Be(new DamlOptionalChain(null));
+    }
+
+    [Fact]
+    public void ReadTypeParameterField_should_report_an_omitted_field_missing_at_a_List_instantiation()
+    {
+        using var document = JsonDocument.Parse("{}");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+
+        var act = () => DamlLfJsonDecoders.ReadTypeParameterField(
+            document.RootElement,
+            context,
+            "item",
+            (element, elementContext) => DamlLfJsonDecoders.ReadList(element, elementContext, DamlLfJsonDecoders.ReadText));
+
+        act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Box.item' is missing from the JSON object");
+    }
+
+    [Fact]
+    public void ReadTypeParameterField_should_report_an_omitted_field_missing_at_a_non_Optional_instantiation()
+    {
+        using var document = JsonDocument.Parse("{}");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+
+        var act = () => DamlLfJsonDecoders.ReadTypeParameterField(document.RootElement, context, "item", DamlLfJsonDecoders.ReadText);
+
+        act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Box.item' is missing from the JSON object");
+    }
+
+    [Fact]
+    public void ReadTypeParameterField_should_report_the_field_path_of_a_malformed_present_value()
+    {
+        using var document = JsonDocument.Parse("""{"item":5}""");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+
+        var act = () => DamlLfJsonDecoders.ReadTypeParameterField(document.RootElement, context, "item", DamlLfJsonDecoders.ReadText);
+
+        act.Should().Throw<JsonException>().WithMessage("Expected JSON String at 'Box.item' but found Number");
     }
 
     [Fact]

@@ -24,7 +24,7 @@ public sealed record AllocationResult_Output_AllocationResult_Settled(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationResult_Output_AllocationResult_Settled FromRecord(DamlRecord record) => new AllocationResult_Output_AllocationResult_Settled(
-        NextIterationAllocationCid: record.GetRequiredField("nextIterationAllocationCid").AsOptional().HasValue ? new ContractId<IAllocation>(record.GetRequiredField("nextIterationAllocationCid").AsOptional().Value!.As<DamlContractId>().Value) : null
+        NextIterationAllocationCid: record.GetOptionalField("nextIterationAllocationCid").AsOptional().HasValue ? new ContractId<IAllocation>(record.GetOptionalField("nextIterationAllocationCid").AsOptional().Value!.As<DamlContractId>().Value) : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -33,7 +33,7 @@ public sealed record AllocationResult_Output_AllocationResult_Settled(
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return DamlRecord.Create(
-            DamlField.Create("nextIterationAllocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "nextIterationAllocationCid"), context.Field("nextIterationAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
+            DamlField.Create("nextIterationAllocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextIterationAllocationCid"), context.Field("nextIterationAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
         );
     }
 

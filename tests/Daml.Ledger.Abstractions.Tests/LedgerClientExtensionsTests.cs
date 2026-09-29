@@ -1093,6 +1093,7 @@ public class LedgerClientExtensionsTests
         public override IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
             => EmptyAsync<AcsSnapshotEntry<T>>(cancellationToken);
 
@@ -1123,6 +1124,7 @@ public class LedgerClientExtensionsTests
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
             => EmptyAsync<InterfaceAcsSnapshotEntry<TInterface, TView>>(cancellationToken);
 

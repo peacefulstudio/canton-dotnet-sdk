@@ -17,7 +17,22 @@ internal sealed partial class LedgerClient
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GetTransactionByOffsetAsync(offset, submitter, GrpcTransactionResultProjector.Project, timeout, cancellationToken);
+
+    internal Task<TransactionResult> GetAcsDeltaUpdateByOffsetAsync(
+        LedgerOffset offset,
+        RuntimeCommands.SubmitterInfo submitter,
+        CancellationToken cancellationToken) =>
+        GetTransactionByOffsetAsync(
+            offset, submitter, GrpcTransactionResultProjector.ProjectAcsDelta, timeout: null, cancellationToken);
+
+    private Task<TransactionResult> GetTransactionByOffsetAsync(
+        LedgerOffset offset,
+        RuntimeCommands.SubmitterInfo submitter,
+        Func<Transaction, TransactionResult> project,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
 
@@ -32,7 +47,7 @@ internal sealed partial class LedgerClient
             UpdateService.Descriptor,
             "GetUpdateByOffset",
             (headers, deadline, token) => _updateService.GetUpdateByOffsetAsync(request, headers, deadline, token),
-            response => ProjectPointReadTransaction(response, $"offset {offset.Value}"),
+            response => ProjectPointRead(response, $"offset {offset.Value}", project),
             cancellationToken,
             timeout: timeout,
             configureActivity: activity =>

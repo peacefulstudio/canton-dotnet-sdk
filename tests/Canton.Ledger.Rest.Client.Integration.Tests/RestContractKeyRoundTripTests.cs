@@ -190,6 +190,7 @@ public class RestContractKeyRoundTripTests
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(SubscribeBudget);
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         try
         {
             await foreach (var streamEvent in lane.LedgerClient.SubscribeAsync<T>(
@@ -256,6 +257,7 @@ public class RestContractKeyRoundTripTests
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(SubscribeBudget);
+        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
         try
         {
             await foreach (var streamEvent in lane.LedgerClient.SubscribeAsync(

@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
 using AwesomeAssertions;
 using Xunit;
+using static Daml.Codegen.CSharp.Tests.TestHelpers.EmittedSubmissionShape;
 
 namespace Daml.Codegen.CSharp.Tests;
 
@@ -138,7 +140,7 @@ public class SubmissionExtensionsEmitterTests
         var output = Emit(template);
 
         output.Should().Contain("SubmitterInfo submitter,");
-        output.Should().Contain("return client.TryCreateAsync<Keyed>(payload, submitter, cancellationToken: cancellationToken);");
+        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
         output.Should().NotContain("= payload.");
     }
 
@@ -197,5 +199,47 @@ public class SubmissionExtensionsEmitterTests
 
         output.Should().Contain("SubmitterInfo submitter,");
         output.Should().NotContain("= payload.");
+    }
+
+    [Fact]
+    public void SubmissionExtensionsEmitter_static_create_declares_configure_before_the_cancellation_token_and_forwards_it()
+    {
+        var template = Template(
+            "Asset",
+            [PartyField("owner")],
+            signatories: StaticParties("owner"));
+
+        var output = Emit(template);
+
+        output.Should().MatchRegex(@"Asset payload,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Asset>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
+    }
+
+    [Fact]
+    public void SubmissionExtensionsEmitter_dynamic_create_declares_configure_after_the_submitter_and_forwards_it()
+    {
+        var template = Template(
+            "Keyed",
+            [PartyField("custodian")],
+            signatories: DamlPartyAnalysis.Dynamic);
+
+        var output = Emit(template);
+
+        output.Should().MatchRegex(@"SubmitterInfo submitter,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
+    }
+
+    [Fact]
+    public void SubmissionExtensionsEmitter_create_documents_configure_with_a_disclosure_example()
+    {
+        var template = Template(
+            "Asset",
+            [PartyField("owner")],
+            signatories: StaticParties("owner"));
+
+        var output = Emit(template);
+
+        output.Should().Contain("/// <param name=\"configure\">");
+        output.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");
     }
 }

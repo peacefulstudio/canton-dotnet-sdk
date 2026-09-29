@@ -35,19 +35,19 @@ public interface IStewardship : IDamlInterface, IHasView<StewardshipView>, IHasC
     static Identifier IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d", "ContractKeys", "Stewardship");
+    public static new Identifier InterfaceId { get; } = new("a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050", "ContractKeys", "Stewardship");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d";
+    static string IDamlInterface.PackageId => "a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "contractkeys";
+    static string IDamlInterface.PackageName => "contractkeys-h61a17c769e62";
 
     /// <summary>Gets the package version.</summary>
     static Version IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d", "ContractKeys", "Stewardship"), DamlTypeKind.Interface, "contractkeys");
+    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050", "ContractKeys", "Stewardship"), DamlTypeKind.Interface, "contractkeys-h61a17c769e62");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="StewardshipView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static ViewDescriptor<IStewardship, StewardshipView> View { get; } = new();
@@ -133,6 +133,7 @@ public static class IStewardshipExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
         this ContractId<IStewardship> contractId,
@@ -141,13 +142,14 @@ public static class IStewardshipExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
@@ -181,6 +183,7 @@ public static class IStewardshipExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<string>> TryDescribeCharterAsync(
         this ContractId<IStewardship> contractId,
@@ -190,13 +193,14 @@ public static class IStewardshipExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.DescribeCharterCommand(argument);
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectDescribeCharterResult(tx, contractId.Value));
     }
@@ -225,10 +229,10 @@ public static class IStewardshipExtensions
 
         throw new global::System.InvalidOperationException(
             $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 
     private static ExerciseOutcome<string> ProjectDescribeCharterResult(TransactionResult tx, string contractId)
@@ -255,9 +259,9 @@ public static class IStewardshipExtensions
 
         throw new global::System.InvalidOperationException(
             $"Submission succeeded but no 'DescribeCharter' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 }

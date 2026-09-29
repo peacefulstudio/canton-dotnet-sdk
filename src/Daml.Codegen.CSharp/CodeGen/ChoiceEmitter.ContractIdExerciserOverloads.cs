@@ -32,7 +32,7 @@ internal sealed partial class ChoiceEmitter
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Exercises the {choice.Name} choice with an explicit <see cref=\"SubmitterInfo\"/> and projects the resulting transaction's created contracts to a typed <see cref=\"{resultName}\"/>.");
+            indent.AppendLine($"/// Exercises the {choice.Name} choice with an explicit <see cref=\"SubmitterInfo\"/> and projects the choice's exercise result to a typed <see cref=\"{resultName}\"/>.");
             indent.AppendLine("/// Companion to the named-<c>Party</c> overload for the case where the submitter must");
             indent.AppendLine("/// read contracts it does not act as — the choice's created contracts are visible to an");
             indent.AppendLine("/// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.");
@@ -104,7 +104,6 @@ internal sealed partial class ChoiceEmitter
         IReadOnlyDictionary<string, DamlDataType> dataTypes)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var resultName = $"{choiceName}Result";
         var hasArg = GetChoiceArgumentInfo(choice, dataTypes).HasArgument;
 
         indent.AppendLine();
@@ -113,9 +112,9 @@ internal sealed partial class ChoiceEmitter
             : $"var command = contractId.{choiceName}Command();");
 
         indent.AppendLine();
-        indent.AppendLine("var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);");
+        indent.AppendLine("var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);");
         indent.AppendLine();
-        indent.AppendLine($"return outcome.ProjectCommitted(tx => {resultName}.FromCreatedContracts(tx.CreatedContracts));");
+        indent.AppendLine($"return outcome.ProjectCommitted(tx => Project{choiceName}Result(tx, contractId.Value));");
     }
 
     /// <summary>
@@ -234,6 +233,7 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine("workflowId,");
         indent.AppendLine("commandId,");
         indent.AppendLine("timeout,");
+        indent.AppendLine("configure,");
         indent.AppendLine("cancellationToken);");
         indent.Dedent();
 

@@ -38,12 +38,12 @@ internal enum RestTransactionShape
 internal static class RestSubscribeRequestBuilder
 {
     public static WireGetActiveContractsPageRequest BuildGetActiveContractsPageRequest<T>(
-        RuntimeCommands.SubmitterInfo submitter, long activeAtOffset, int maxPageSize)
+        RuntimeCommands.SubmitterInfo submitter, long activeAtOffset, int maxPageSize, bool includeDisclosure = false)
         where T : IDamlType =>
         new()
         {
             ActiveAtOffset = FormatOffset(activeAtOffset),
-            EventFormat = BuildEventFormat<T>(submitter),
+            EventFormat = BuildEventFormat<T>(submitter, includeDisclosure),
             MaxPageSize = maxPageSize,
         };
 
@@ -117,12 +117,13 @@ internal static class RestSubscribeRequestBuilder
             TransactionShape = Raw.TransactionFormatTransactionShape.TRANSACTION_SHAPE_LEDGER_EFFECTS,
         };
 
-    private static WireEventFormat BuildEventFormat<T>(RuntimeCommands.SubmitterInfo submitter)
+    private static WireEventFormat BuildEventFormat<T>(
+        RuntimeCommands.SubmitterInfo submitter, bool includeDisclosure = false)
         where T : IDamlType =>
         new()
         {
             Verbose = true,
-            FiltersByParty = BuildFiltersByParty(submitter, BuildFilters<T>),
+            FiltersByParty = BuildFiltersByParty(submitter, () => BuildFilters<T>(includeDisclosure)),
         };
 
     private static Dictionary<string, WireFilters> BuildFiltersByParty(
@@ -130,11 +131,16 @@ internal static class RestSubscribeRequestBuilder
         SubscribeFilterPolicy.FilteredPartyIds(submitter)
             .ToDictionary(partyId => partyId, _ => createFilters());
 
-    private static WireFilters BuildFilters<T>()
+    private static WireFilters BuildFilters<T>(bool includeDisclosure)
         where T : IDamlType =>
-        RestMarkerMatcher<T>.IsInterface ? BuildInterfaceFilters<T>() : BuildTemplateFilters<T>();
+        RestMarkerMatcher<T>.IsInterface
+            ? BuildInterfaceFilters<T>(includeDisclosure)
+            : BuildTemplateFilters<T>(includeDisclosure);
 
-    private static WireFilters BuildTemplateFilters<T>()
+    private static bool? CreatedEventBlobRequest(bool includeDisclosure) =>
+        includeDisclosure ? true : null;
+
+    private static WireFilters BuildTemplateFilters<T>(bool includeDisclosure)
         where T : IDamlType =>
         new()
         {
@@ -144,13 +150,17 @@ internal static class RestSubscribeRequestBuilder
                 {
                     IdentifierFilter = new WireIdentifierFilter
                     {
-                        TemplateFilter = new WireTemplateFilter { TemplateId = RestMarkerMatcher<T>.FilterIdentifier },
+                        TemplateFilter = new WireTemplateFilter
+                        {
+                            TemplateId = RestMarkerMatcher<T>.FilterIdentifier,
+                            IncludeCreatedEventBlob = CreatedEventBlobRequest(includeDisclosure),
+                        },
                     },
                 },
             ],
         };
 
-    private static WireFilters BuildInterfaceFilters<T>()
+    private static WireFilters BuildInterfaceFilters<T>(bool includeDisclosure)
         where T : IDamlType =>
         new()
         {
@@ -164,6 +174,7 @@ internal static class RestSubscribeRequestBuilder
                         {
                             InterfaceId = RestMarkerMatcher<T>.FilterIdentifier,
                             IncludeInterfaceView = true,
+                            IncludeCreatedEventBlob = CreatedEventBlobRequest(includeDisclosure),
                         },
                     },
                 },

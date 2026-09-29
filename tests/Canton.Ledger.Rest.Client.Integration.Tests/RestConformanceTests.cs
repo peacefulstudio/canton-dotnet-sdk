@@ -104,25 +104,40 @@ public class RestConformanceTests
             .Select(party => party.GetProperty("party").GetString()!)
             .ToList();
 
-        var response = await lane.Api<IPartyManagementServiceApi>().ListKnownParties(
-            pageToken: null!,
-            pageSize: null,
-            identityProviderId: null!,
-            filterParty: null!,
-            TestContext.Current.CancellationToken);
+        var partyIdsFromTheClientRead = new HashSet<string>(StringComparer.Ordinal);
+        string? pageToken = null;
+        var isFirstPage = true;
+        do
+        {
+            var response = await lane.Api<IPartyManagementServiceApi>().ListKnownParties(
+                pageToken: pageToken!,
+                pageSize: null,
+                identityProviderId: null!,
+                filterParty: null!,
+                TestContext.Current.CancellationToken);
 
-        Assert.NotNull(response.PartyDetails);
-        Assert.NotNull(response.NextPageToken);
-        Assert.False(
-            response.AdditionalProperties.ContainsKey("partyDetails"),
-            "the camelCase 'partyDetails' key must bind to the typed property, not AdditionalProperties");
-        Assert.False(
-            response.AdditionalProperties.ContainsKey("nextPageToken"),
-            "the camelCase 'nextPageToken' key must bind to the typed property, not AdditionalProperties");
+            Assert.NotNull(response.PartyDetails);
+            if (isFirstPage)
+            {
+                Assert.NotNull(response.NextPageToken);
+                isFirstPage = false;
+            }
 
-        var partyIdsFromTheClientRead = response.PartyDetails
-            .Select(party => party.Party)
-            .ToHashSet(StringComparer.Ordinal);
+            Assert.False(
+                response.AdditionalProperties.ContainsKey("partyDetails"),
+                "the camelCase 'partyDetails' key must bind to the typed property, not AdditionalProperties");
+            Assert.False(
+                response.AdditionalProperties.ContainsKey("nextPageToken"),
+                "the camelCase 'nextPageToken' key must bind to the typed property, not AdditionalProperties");
+
+            foreach (var party in response.PartyDetails)
+            {
+                partyIdsFromTheClientRead.Add(party.Party);
+            }
+
+            pageToken = string.IsNullOrEmpty(response.NextPageToken) ? null : response.NextPageToken;
+        } while (pageToken is not null);
+
         var partyIdsTheClientReadDropped = partyIdsKnownBeforeTheClientRead
             .Where(partyId => !partyIdsFromTheClientRead.Contains(partyId))
             .ToList();

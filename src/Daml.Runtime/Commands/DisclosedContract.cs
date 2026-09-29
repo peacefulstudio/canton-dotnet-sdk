@@ -38,6 +38,13 @@ public sealed record DisclosedContract(
     }
 
     /// <summary>
+    /// The synchronizer the disclosed contract is assigned to, so a participant connected to
+    /// several synchronizers routes the submission to the one that holds it. <c>null</c> leaves
+    /// the choice to the participant.
+    /// </summary>
+    public SynchronizerId? SynchronizerId { get; init; }
+
+    /// <summary>
     /// Compares <see cref="CreatedEventBlob"/> byte-for-byte, unlike the synthesized
     /// record equality, which compares only the memory segment's reference, offset,
     /// and length.
@@ -46,6 +53,7 @@ public sealed record DisclosedContract(
         other is not null
         && ContractId == other.ContractId
         && TemplateId == other.TemplateId
+        && SynchronizerId == other.SynchronizerId
         && CreatedEventBlob.Span.SequenceEqual(other.CreatedEventBlob.Span);
 
     /// <inheritdoc />
@@ -54,6 +62,7 @@ public sealed record DisclosedContract(
         var hash = new HashCode();
         hash.Add(ContractId);
         hash.Add(TemplateId);
+        hash.Add(SynchronizerId);
         hash.AddBytes(CreatedEventBlob.Span);
         return hash.ToHashCode();
     }

@@ -35,7 +35,7 @@ public sealed class RestTupleKeyDecodeTests
     public void A_Tuple2_key_of_a_party_and_text_decodes_to_a_record_holding_both_components()
     {
         var created = CreatedWithKey(
-            "1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d:ContractKeys:Membership",
+            "a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050:ContractKeys:Membership",
             """{"_1": "alice::ns1", "_2": "gold"}""");
 
         var key = RestPayloadDecoder.ContractKeyOf(created, Membership.TemplateId);
@@ -49,7 +49,7 @@ public sealed class RestTupleKeyDecodeTests
     public void A_Tuple2_key_whose_second_component_is_an_absent_Optional_decodes_it_as_an_empty_DamlOptional()
     {
         var created = CreatedWithKey(
-            "1435b1fe66cf84bdbf8ff0e9f0fd942e662bb6013aa1dbf33da20fc2a14cdb5d:ContractKeys:Enrollment",
+            "a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050:ContractKeys:Enrollment",
             """{"_1": "alice::ns1", "_2": null}""");
 
         var key = RestPayloadDecoder.ContractKeyOf(created, Enrollment.TemplateId);

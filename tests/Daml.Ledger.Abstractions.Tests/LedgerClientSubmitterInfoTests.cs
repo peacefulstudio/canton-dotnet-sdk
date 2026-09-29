@@ -510,6 +510,7 @@ public class LedgerClientSubmitterInfoTests
         public override IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
         {
             LastSubscribeActiveSubmitter = submitter;

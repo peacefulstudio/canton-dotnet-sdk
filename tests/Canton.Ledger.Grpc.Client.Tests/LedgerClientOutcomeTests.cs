@@ -55,6 +55,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
         {
             Created = new ProtoCreatedEvent
             {
+                AcsDelta = true,
                 ContractId = "00abc",
                 TemplateId = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" },
                 CreateArguments = new ProtoRecord(),
@@ -141,7 +142,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
         var transaction = new Transaction { UpdateId = "u-1", Offset = 1L };
         transaction.Events.Add(new Event
         {
-            Created = new ProtoCreatedEvent { ContractId = "00broken", CreateArguments = new ProtoRecord() },
+            Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00broken", CreateArguments = new ProtoRecord() },
         });
         StubCommandService(new SubmitAndWaitForTransactionResponse { Transaction = transaction });
 
@@ -188,6 +189,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
         {
             Created = new ProtoCreatedEvent
             {
+                AcsDelta = true,
                 ContractId = "00xyz",
                 TemplateId = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" },
                 CreateArguments = new ProtoRecord(),
@@ -238,8 +240,8 @@ public sealed class LedgerClientOutcomeTests : IDisposable
     {
         var transaction = new Transaction { UpdateId = "u-1", Offset = 1L };
         var tid = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" };
-        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { ContractId = "00a", TemplateId = tid, CreateArguments = new ProtoRecord() } });
-        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { ContractId = "00b", TemplateId = tid, CreateArguments = new ProtoRecord() } });
+        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00a", TemplateId = tid, CreateArguments = new ProtoRecord() } });
+        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00b", TemplateId = tid, CreateArguments = new ProtoRecord() } });
         StubCommandService(new SubmitAndWaitForTransactionResponse { Transaction = transaction });
 
         var exercise = new RuntimeCommands.ExerciseCommand(
@@ -299,6 +301,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
         {
             Created = new ProtoCreatedEvent
             {
+                AcsDelta = true,
                 ContractId = "00a",
                 TemplateId = new ProtoIdentifier
                 {

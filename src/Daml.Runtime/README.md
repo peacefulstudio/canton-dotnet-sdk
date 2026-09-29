@@ -312,6 +312,15 @@ value in a set or dictionary that holds it. Two such records decoded from the sa
 payload are therefore equal, which record-synthesized equality — a reference comparison on
 `IReadOnlyList<T>` and `IReadOnlyDictionary<TKey,TValue>` — did not give.
 
+## Support
+
+For questions, bug reports and feature requests, open a
+[GitHub issue](https://github.com/peacefulstudio/canton-dotnet-sdk/issues).
+This package is maintained by [Peaceful Studio](https://peaceful.studio).
+For consulting beyond this SDK (Daml development, .NET integration with
+Canton, validator operations), please write to
+[info@peaceful.studio](mailto:info@peaceful.studio).
+
 ## License
 
 Apache-2.0

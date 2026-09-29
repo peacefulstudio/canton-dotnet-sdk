@@ -75,6 +75,18 @@ public class PqsClientQueryExecutionTests
     }
 
     [Fact]
+    public async Task FetchByIdAsync_returns_null_when_the_interface_is_not_found()
+    {
+        var client = ClientThatOpensWith(Throwing(TemplateNotFound()));
+        var contractId = new ContractId<ISampleInterface>("00abc123");
+
+        var result = await client.FetchByIdAsync<ISampleInterface, SampleView>(
+            contractId, TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ExistsAsync_returns_false_when_the_template_is_not_found()
     {
         var client = ClientThatOpensWith(Throwing(TemplateNotFound()));

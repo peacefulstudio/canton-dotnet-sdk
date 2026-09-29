@@ -95,6 +95,7 @@ internal sealed partial class LedgerClient
         ViewDescriptor<TInterface, TView> view,
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
@@ -105,6 +106,7 @@ internal sealed partial class LedgerClient
             submitter,
             GrpcMarkerMatcher<TInterface>.StreamFilterIdentifier(),
             activeAtOffset?.Value,
+            includeDisclosure,
             cancellationToken);
     }
 
@@ -197,6 +199,7 @@ internal sealed partial class LedgerClient
         RuntimeCommands.SubmitterInfo submitter,
         ProtoIdentifier interfaceFilterId,
         long? activeAtOffset,
+        bool includeDisclosure,
         [EnumeratorCancellation] CancellationToken cancellationToken)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
@@ -211,7 +214,7 @@ internal sealed partial class LedgerClient
         var sharedHeaders = await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false);
 
         var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
-            submitter, interfaceFilterId, effectiveOffset, SubscribesAsAnInterface);
+            submitter, interfaceFilterId, effectiveOffset, SubscribesAsAnInterface, includeDisclosure);
 
         LogSubscribeActiveStarted(_logger, typeof(TInterface).Name, effectiveOffset);
 
@@ -241,6 +244,7 @@ internal sealed partial class LedgerClient
                 yield break;
             }
 
+            var disclosure = GrpcContractStreamProjector.DisclosureOf(stream.Current);
             foreach (var projected in GrpcInterfaceStreamProjector.ProjectActiveContractEntry<TInterface, TView>(
                 stream.Current, _logger, LedgerOffset.At(effectiveOffset)))
             {
@@ -253,13 +257,14 @@ internal sealed partial class LedgerClient
                         unclassified.Kind,
                         unclassified.Offset?.Value);
                 }
-                yield return ToInterfaceAcsSnapshotEntry<TInterface, TView>(projected);
+                yield return ToInterfaceAcsSnapshotEntry(projected, disclosure);
             }
         }
     }
 
     private static InterfaceAcsSnapshotEntry<TInterface, TView> ToInterfaceAcsSnapshotEntry<TInterface, TView>(
-        InterfaceStreamEvent<TInterface, TView> entry)
+        InterfaceStreamEvent<TInterface, TView> entry,
+        RuntimeCommands.DisclosedContract? disclosure)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView> => entry switch
     {
@@ -270,7 +275,10 @@ internal sealed partial class LedgerClient
                 created.Key,
                 created.Offset,
                 created.SynchronizerId,
-                created.WitnessParties),
+                created.WitnessParties)
+            {
+                Disclosure = disclosure,
+            },
         InterfaceStreamEvent<TInterface, TView>.Unassigned unassigned =>
             new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
                 unassigned.Offset, UnclassifiedKind.UnassignedEvent),

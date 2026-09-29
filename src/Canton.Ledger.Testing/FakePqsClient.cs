@@ -125,6 +125,17 @@ public sealed class FakePqsClient : IPqsClient
     }
 
     /// <inheritdoc />
+    public Task<InterfaceContract<TInterface, TView>?> FetchByIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId, CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        ArgumentNullException.ThrowIfNull(contractId);
+        return Task.FromResult(StagedInterfaceContracts<TInterface, TView>()
+            .FirstOrDefault(c => c.Id.Equals(contractId)));
+    }
+
+    /// <inheritdoc />
     public Task<bool> ExistsAsync<T>(ContractId<T> contractId, CancellationToken cancellationToken = default)
         where T : ITemplate
     {

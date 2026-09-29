@@ -562,6 +562,32 @@ public sealed class RestAdminClientTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadDarAsync_adds_the_synchronizerId_query_parameter_when_synchronizerId_provided()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        IAdminClient client = ClientWith(transport);
+
+        await client.UploadDarAsync(
+            [0x50, 0x4B, 0x03, 0x04],
+            synchronizerId: new SynchronizerId("sync::ns1"),
+            submissionId: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/dars?synchronizerId=sync%3A%3Ans1");
+    }
+
+    [Fact]
+    public async Task UploadDarAsync_omits_the_synchronizerId_query_parameter_when_synchronizerId_omitted()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        IAdminClient client = ClientWith(transport);
+
+        await client.UploadDarAsync([0x50, 0x4B, 0x03, 0x04], cancellationToken: TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/dars");
+    }
+
+    [Fact]
     public async Task UploadDarAsync_is_never_replayed_by_the_opt_in_retry_pipeline()
     {
         var transport = new RecordingHttpHandler()
@@ -586,6 +612,31 @@ public sealed class RestAdminClientTests : IDisposable
         transport.LastRequest.RequestUri!.PathAndQuery.Should().Be("/v2/dars/validate");
         transport.LastRequest.Content!.Headers.ContentType!.MediaType.Should().Be("application/octet-stream");
         transport.LastRequestBytes.Should().Equal(0x50, 0x4B, 0x03, 0x04);
+    }
+
+    [Fact]
+    public async Task ValidateDarAsync_adds_the_synchronizerId_query_parameter_when_synchronizerId_provided()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        IAdminClient client = ClientWith(transport);
+
+        await client.ValidateDarAsync(
+            [0x50, 0x4B, 0x03, 0x04],
+            synchronizerId: new SynchronizerId("sync::ns1"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/dars/validate?synchronizerId=sync%3A%3Ans1");
+    }
+
+    [Fact]
+    public async Task ValidateDarAsync_omits_the_synchronizerId_query_parameter_when_synchronizerId_omitted()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        IAdminClient client = ClientWith(transport);
+
+        await client.ValidateDarAsync([0x50, 0x4B, 0x03, 0x04], cancellationToken: TestContext.Current.CancellationToken);
+
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/dars/validate");
     }
 
     [Fact]

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using AwesomeAssertions;
 using Daml.Runtime;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -339,6 +340,48 @@ public sealed class AcsSnapshotEntryTests
         active.Contract.Key.Hash.Should().Be(LedgerKeyHash);
         active.LastUpdateOffset.Should().Be(LedgerOffset.At(4));
         active.SynchronizerId.Should().Be(new SynchronizerId("sync"));
+    }
+
+    [Fact]
+    public void ToActiveContract_carries_the_rows_Disclosure()
+    {
+        var created = new AcsSnapshotEntry<DecodableTemplate>.Created(
+            new ContractId<DecodableTemplate>("c1"),
+            new DecodableTemplate(new Party("alice")),
+            null,
+            LedgerOffset.At(4),
+            new SynchronizerId("sync"),
+            [new Party("alice")])
+        {
+            Disclosure = new DisclosedContract("c1", new Identifier("pkg-a", "Mod.A", "Tpl"), new byte[] { 0x01, 0x02 }),
+        };
+
+        var active = created.ToActiveContract();
+
+        active.Disclosure.Should().Be(
+            new DisclosedContract("c1", new Identifier("pkg-a", "Mod.A", "Tpl"), new byte[] { 0x01, 0x02 }));
+    }
+
+    [Fact]
+    public void ToActiveContract_keyed_carries_the_rows_Disclosure()
+    {
+        var created = new AcsSnapshotEntry<DecodableTemplate>.Created(
+            new ContractId<DecodableTemplate>("c1"),
+            new DecodableTemplate(new Party("alice")),
+            new ContractKey(
+                DamlRecord.Create(new DamlField("owner", new DamlParty("alice"))),
+                DecodableTemplate.TemplateId),
+            LedgerOffset.At(4),
+            new SynchronizerId("sync"),
+            [new Party("alice")])
+        {
+            Disclosure = new DisclosedContract("c1", new Identifier("pkg-b", "Mod.B", "Keyed"), new byte[] { 0x03 }),
+        };
+
+        var active = created.ToActiveContract<DecodableTemplate, Party>();
+
+        active.Disclosure.Should().Be(
+            new DisclosedContract("c1", new Identifier("pkg-b", "Mod.B", "Keyed"), new byte[] { 0x03 }));
     }
 
     [Fact]

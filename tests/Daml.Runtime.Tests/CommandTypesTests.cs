@@ -547,6 +547,29 @@ public class CommandTypesTests
     }
 
     [Fact]
+    public void DisclosedContract_equality_should_distinguish_different_synchronizer_ids()
+    {
+        var identifier = new Identifier("pkg", "Module", "Template");
+        var left = new DisclosedContract("contract-id-1", identifier, "created-event-blob"u8.ToArray())
+        {
+            SynchronizerId = new SynchronizerId("global-domain::1220aa"),
+        };
+        var right = left with { SynchronizerId = new SynchronizerId("private-domain::1220bb") };
+
+        left.Should().NotBe(right);
+        left.GetHashCode().Should().NotBe(right.GetHashCode());
+    }
+
+    [Fact]
+    public void DisclosedContract_should_default_to_no_synchronizer_id()
+    {
+        var disclosedContract = new DisclosedContract(
+            "contract-id-1", new Identifier("pkg", "Module", "Template"), "created-event-blob"u8.ToArray());
+
+        disclosedContract.SynchronizerId.Should().BeNull();
+    }
+
+    [Fact]
     public void DisclosedContract_should_not_observe_mutation_of_the_source_blob_array()
     {
         var blob = "created-event-blob"u8.ToArray();

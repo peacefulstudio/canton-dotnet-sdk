@@ -175,7 +175,7 @@ public class NonContractChoiceUnitExerciserRoundTripTests
     {
         var task = (Task<ExerciseOutcome<DamlUnit>>)TryDoNothingAsyncExerciser().Invoke(
             null,
-            [TypedContractId(contractId), client, submitter, null, null, null, CancellationToken.None])!;
+            [TypedContractId(contractId), client, submitter, null, null, null, null, CancellationToken.None])!;
         return await task;
     }
 

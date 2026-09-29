@@ -63,12 +63,13 @@ internal static class GrpcSubscribeRequestBuilder
         RuntimeCommands.SubmitterInfo submitter,
         ProtoIdentifier filterId,
         long activeAtOffset,
-        bool isInterface = false)
+        bool isInterface = false,
+        bool includeDisclosure = false)
     {
         return new GetActiveContractsRequest
         {
             ActiveAtOffset = activeAtOffset,
-            EventFormat = BuildEventFormat(submitter, filterId, isInterface),
+            EventFormat = BuildEventFormat(submitter, filterId, isInterface, includeDisclosure),
         };
     }
 
@@ -81,12 +82,13 @@ internal static class GrpcSubscribeRequestBuilder
     private static EventFormat BuildEventFormat(
         RuntimeCommands.SubmitterInfo submitter,
         ProtoIdentifier filterId,
-        bool isInterface)
+        bool isInterface,
+        bool includeDisclosure = false)
     {
         var eventFormat = new EventFormat { Verbose = true };
         Func<Filters> createFilters = isInterface
-            ? () => BuildInterfaceFilters(filterId)
-            : () => BuildTemplateFilters(filterId);
+            ? () => BuildInterfaceFilters(filterId, includeDisclosure)
+            : () => BuildTemplateFilters(filterId, includeDisclosure);
 
         AddFilterForEachParty(eventFormat, submitter, createFilters);
         return eventFormat;
@@ -103,7 +105,7 @@ internal static class GrpcSubscribeRequestBuilder
         }
     }
 
-    private static Filters BuildTemplateFilters(ProtoIdentifier templateId)
+    private static Filters BuildTemplateFilters(ProtoIdentifier templateId, bool includeDisclosure)
     {
         var filters = new Filters();
         filters.Cumulative.Add(new CumulativeFilter
@@ -111,12 +113,13 @@ internal static class GrpcSubscribeRequestBuilder
             TemplateFilter = new TemplateFilter
             {
                 TemplateId = templateId,
+                IncludeCreatedEventBlob = includeDisclosure,
             },
         });
         return filters;
     }
 
-    private static Filters BuildInterfaceFilters(ProtoIdentifier interfaceId)
+    private static Filters BuildInterfaceFilters(ProtoIdentifier interfaceId, bool includeDisclosure)
     {
         var filters = new Filters();
         filters.Cumulative.Add(new CumulativeFilter
@@ -125,6 +128,7 @@ internal static class GrpcSubscribeRequestBuilder
             {
                 InterfaceId = interfaceId,
                 IncludeInterfaceView = true,
+                IncludeCreatedEventBlob = includeDisclosure,
             },
         });
         return filters;

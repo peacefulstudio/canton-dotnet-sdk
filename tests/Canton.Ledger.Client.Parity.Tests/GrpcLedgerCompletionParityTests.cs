@@ -79,7 +79,8 @@ public sealed class GrpcLedgerCompletionParityTests : LedgerCompletionParityTest
                 {
                     await LaneTeardown.ReleaseAsync(actAsRights, fixture).ConfigureAwait(false);
                 }
-            });
+            },
+            rightsGatedUserId: fixture.ValidatorUserId);
         }
         catch (Exception openFailure)
         {

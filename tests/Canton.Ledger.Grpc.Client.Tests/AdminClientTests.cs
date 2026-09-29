@@ -1299,6 +1299,52 @@ public sealed class AdminClientTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadDar_sets_SynchronizerId_on_the_request_when_synchronizerId_provided()
+    {
+        var darFile = new byte[] { 0x0A, 0x0B, 0x0C };
+
+        UploadDarFileRequest? capturedRequest = null;
+        _packageManagementService
+            .UploadDarFileAsync(
+                Arg.Do<UploadDarFileRequest>(r => capturedRequest = r),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(UnaryResponse(new UploadDarFileResponse()));
+
+        var client = CreateClient();
+        await client.UploadDarAsync(
+            darFile,
+            synchronizerId: new SynchronizerId("global-domain::1220ff"),
+            submissionId: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.SynchronizerId.Should().Be("global-domain::1220ff");
+    }
+
+    [Fact]
+    public async Task UploadDar_leaves_SynchronizerId_empty_when_synchronizerId_omitted()
+    {
+        var darFile = new byte[] { 0x0A, 0x0B, 0x0C };
+
+        UploadDarFileRequest? capturedRequest = null;
+        _packageManagementService
+            .UploadDarFileAsync(
+                Arg.Do<UploadDarFileRequest>(r => capturedRequest = r),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(UnaryResponse(new UploadDarFileResponse()));
+
+        var client = CreateClient();
+        await client.UploadDarAsync(darFile, cancellationToken: TestContext.Current.CancellationToken);
+
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.SynchronizerId.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task UploadDar_throws_ArgumentNullException_when_darFile_null()
     {
         var client = CreateClient();
@@ -1357,6 +1403,51 @@ public sealed class AdminClientTests : IDisposable
 
         capturedRequest.Should().NotBeNull();
         capturedRequest!.DarFile.ToByteArray().Should().Equal(darFile);
+    }
+
+    [Fact]
+    public async Task ValidateDar_sets_SynchronizerId_on_the_request_when_synchronizerId_provided()
+    {
+        var darFile = new byte[] { 0x0A, 0x0B, 0x0C };
+
+        ValidateDarFileRequest? capturedRequest = null;
+        _packageManagementService
+            .ValidateDarFileAsync(
+                Arg.Do<ValidateDarFileRequest>(r => capturedRequest = r),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(UnaryResponse(new ValidateDarFileResponse()));
+
+        var client = CreateClient();
+        await client.ValidateDarAsync(
+            darFile,
+            synchronizerId: new SynchronizerId("global-domain::1220ff"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.SynchronizerId.Should().Be("global-domain::1220ff");
+    }
+
+    [Fact]
+    public async Task ValidateDar_leaves_SynchronizerId_empty_when_synchronizerId_omitted()
+    {
+        var darFile = new byte[] { 0x0A, 0x0B, 0x0C };
+
+        ValidateDarFileRequest? capturedRequest = null;
+        _packageManagementService
+            .ValidateDarFileAsync(
+                Arg.Do<ValidateDarFileRequest>(r => capturedRequest = r),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(UnaryResponse(new ValidateDarFileResponse()));
+
+        var client = CreateClient();
+        await client.ValidateDarAsync(darFile, cancellationToken: TestContext.Current.CancellationToken);
+
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.SynchronizerId.Should().BeEmpty();
     }
 
     private static readonly IReadOnlyDictionary<string, Func<IAdminClient, CancellationToken, Task>> AdminOperations =

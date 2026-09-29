@@ -158,17 +158,19 @@ public static class AnsEntrySubmissionExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ContractId<AnsEntry>>> TryCreateAsync(
         this ILedgerWriter client,
         AnsEntry payload,
         SubmitterInfo submitter,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(payload);
 
-        return client.TryCreateAsync<AnsEntry>(payload, submitter, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<AnsEntry>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
@@ -211,6 +213,7 @@ public static class AnsEntryNonContractExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<AnsEntry_ExpireResult>> TryAnsEntry_ExpireAsync(
         this ContractId<AnsEntry> contractId,
@@ -220,13 +223,14 @@ public static class AnsEntryNonContractExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AnsEntry_ExpireCommand(argument);
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectAnsEntry_ExpireResult(tx, contractId.Value));
     }
@@ -261,6 +265,7 @@ public static class AnsEntryNonContractExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<AnsEntry_RenewResult>> TryAnsEntry_RenewAsync(
         this ContractId<AnsEntry> contractId,
@@ -270,13 +275,14 @@ public static class AnsEntryNonContractExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AnsEntry_RenewCommand(argument);
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectAnsEntry_RenewResult(tx, contractId.Value));
     }
@@ -307,6 +313,7 @@ public static class AnsEntryNonContractExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
         this ContractId<AnsEntry> contractId,
@@ -315,13 +322,14 @@ public static class AnsEntryNonContractExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
@@ -349,10 +357,10 @@ public static class AnsEntryNonContractExtensions
 
         throw new InvalidOperationException(
             $"Submission succeeded but no 'AnsEntry_Expire' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 
     private static ExerciseOutcome<AnsEntry_RenewResult> ProjectAnsEntry_RenewResult(TransactionResult tx, string contractId)
@@ -378,10 +386,10 @@ public static class AnsEntryNonContractExtensions
 
         throw new InvalidOperationException(
             $"Submission succeeded but no 'AnsEntry_Renew' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 
     private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
@@ -407,9 +415,9 @@ public static class AnsEntryNonContractExtensions
 
         throw new InvalidOperationException(
             $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 }

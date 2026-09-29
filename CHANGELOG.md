@@ -37,6 +37,65 @@ because they are versioned in lockstep:
 
 ### Security
 
+## [0.6.0-preview.2] — 2026-09-29
+
+This release breaks source compatibility for callers in three places: the generated submit helpers, the active-contract reads, and two raw REST wire properties. It also changes what a generated `Try<Choice>Async` returns for a `ContractId` choice and renames two conformance packages, and implementers of `IAdminClient` and `IPqsClient` must add new members. Upgrade every package reference to `0.6.0-preview.2` together and regenerate your bindings with this release's codegen.
+
+If you generate through `dpm`, clear its component cache first: delete `~/.dpm/cache/components/ghcr.io/peacefulstudio/dpm-codegen-cs` (or the same path under `$DPM_HOME`). dpm caches the component by name, not by version, so a zero `Generated/` diff after bumping the pin means the old emitter ran.
+
+### Changed — BREAKING
+
+- **Generated submit helpers and the generic submit extensions take a `configure` parameter before the `CancellationToken`** (`Daml.Ledger.Abstractions`, `Daml.Codegen.CSharp` output).
+  - The parameter is `Func<CommandsSubmission, CommandsSubmission>? configure = null`, inserted immediately before `CancellationToken cancellationToken`.
+  - It is added to every generated exerciser (`Try<Choice>Async` on a `ContractId<T>`, on a fetched contract and on an interface) and every generated `TryCreateAsync`.
+  - It is also added to `SingleCommandExtensions.TrySubmitSingleAsync`, `CreateByExercise.TryCreateOneByExerciseAsync`, `TryCreateManyByExerciseAsync`, `CreateOneByExerciseAsync` and `CreateManyByExerciseAsync`, and to the void `ThrowingExercise.ExerciseAsync`.
+  - **A call that passes the token positionally no longer compiles: name it (`cancellationToken: token`).** A call that already names the token is unaffected.
+  - **Regenerate any checked-in generated code.**
+- **Active-contract reads take an `includeDisclosure` flag before the cancellation token** (`Daml.Ledger.Abstractions`, `Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`, `Canton.Ledger.Testing`, `Daml.Ledger.Abstractions.Testing.Conformance`).
+  - `ILedgerStreamer.SubscribeActiveAsync` (both overloads), `StreamerSnapshot.SnapshotActiveAsync` (both overloads) and `ICantonLedgerClient.QueryActiveAsync<TInterface, TView>` gain `bool includeDisclosure = false` just before `CancellationToken`.
+  - **Name the token where you passed it positionally**, e.g. `SubscribeActiveAsync<T>(submitter, null, cancellationToken: ct)`.
+  - **Implementers of `ILedgerStreamer` add the parameter to both `SubscribeActiveAsync` overloads**, and so do subclasses of the conformance kit's `NotSupportedLedgerClient` that override them.
+- **A generated `Try<Choice>Async` for a choice returning `ContractId`s reports the contracts the choice returned, including ones its submitter is no stakeholder of** (`Daml.Codegen.CSharp`).
+  - The wrapper used to build its result from the creates the submitter is a stakeholder of, so a choice creating a contract for another party came back as `ExerciseOutcome.None` after the command had committed. It now reads the contract ids from the choice's own exercise result.
+  - It follows the return type through tuples, `Optional`s and lists: a tuple's contract ids land in component order, and an absent `Optional` or an empty list projects as absent or empty even when the transaction created another contract of that template.
+  - **Review any code that treated `None` as "the choice created nothing I can see".**
+  - **Regenerate your bindings to pick up the change.**
+- **`Canton.Ledger.Rest`: two raw wire properties are renamed.**
+  - `Canton.Ledger.Rest.Client.Raw.Commands.Commands1` is now `Commands.CommandList`, and `Canton.Ledger.Rest.Client.Raw.Signature.Signature1` is now `Signature.Value`. The JSON wire names are unchanged.
+  - **Update any code that reads or sets the old members.**
+- **The `richtypes` and `contractkeys` conformance packages have new package names and ids** (`Daml.Codegen.Testing.Conformance`).
+  - Each carries a content-addressed `PackageName` (`<base>-h<hash12>`) instead of the fixed name, and `contractkeys` gains a `Disclosure.Offer` template that re-hashes it.
+  - **Update any assertion against either literal package name or id.**
+
+### Added
+
+- **`configure` on every generated submit helper and generic submit extension** (`Daml.Ledger.Abstractions`, `Daml.Codegen.CSharp` output).
+  - `configure` receives the `CommandsSubmission` the helper built and returns the one to submit. Use it to add what the helper does not expose: disclosed contracts (`s => s.WithDisclosedContracts(holding.Disclosure!)`), a deduplication period, a synchronizer id or a minimum ledger time.
+  - A hook that returns `null`, or a submission with a different command list, makes the call throw `InvalidOperationException` before anything is submitted. The submitter's act-as and read-as parties replace any set on the returned submission.
+  - `null`, the default, submits exactly what the helper submitted before.
+- **A typed active-contract read can return each contract ready for explicit disclosure** (`Daml.Runtime`, `Daml.Ledger.Abstractions`, `Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`).
+  - Pass `includeDisclosure: true` to `SubscribeActiveAsync`, `SnapshotActiveAsync` or `QueryActiveAsync<TInterface, TView>`. Every `AcsSnapshotEntry<T>.Created`, `InterfaceAcsSnapshotEntry<TInterface, TView>.Created` and `ActiveContract<TContract>` then carries a `Disclosure` you can pass straight to `CommandsSubmission.WithDisclosedContracts(active.Disclosure!)`.
+  - Without the flag, `Disclosure` is `null` and the request is unchanged. A REST blob that is not valid base64 leaves `Disclosure` `null` and logs a warning.
+- **`DisclosedContract.SynchronizerId`** (`Daml.Runtime`) routes a submission to the synchronizer that holds the disclosed contract. Left `null`, nothing is sent and the participant chooses, as before.
+- **`SingleCommandExtensions.TryCreateAsync<TTemplate>`** (`Daml.Ledger.Abstractions`) is the plain static method generated `TryCreateAsync` helpers call. It is hidden from IntelliSense and deliberately not an extension method.
+- **`IPqsClient.FetchByIdAsync<TInterface, TView>`** (`Canton.Ledger.Abstractions`, `Canton.Ledger.Pqs.Client`, `Canton.Ledger.Testing`) fetches one active contract implementing a Daml interface by its contract id and projects the interface view into `TView`.
+  - **Implementers of `IPqsClient` add the method.**
+- **`IAdminClient.UploadDarAsync` and `ValidateDarAsync` overloads take a required `synchronizerId`** (`Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`).
+  - A participant connected to more than one synchronizer needs one to upload or validate a DAR. The existing overloads are unchanged.
+  - **Implementers of `IAdminClient` add the two overloads.**
+- **A `Disclosure.Offer` template in the `contractkeys` conformance package** (`Daml.Codegen.Testing.Conformance`) exercises explicit disclosure: a non-stakeholder can exercise its nonconsuming `Inspect` choice only through a disclosed contract.
+
+### Fixed
+
+- **A record whose trailing `Optional` field is `None` now decodes on both transports** (`Daml.Runtime`, generated code, `Canton.Ledger.Rest.Client`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Pqs.Client`).
+  - The Ledger API leaves out a trailing `None` field in create arguments, exercise results and the active contract set. Generated readers used to refuse such a payload as undecodable.
+  - A declared `Optional` field that is absent now decodes as `None`, as does a generic record's type-parameter field or a `Tuple2`/`Tuple3` component whose instantiation is `Optional`. Every other field is still required.
+  - **Regenerate your bindings to pick up the fix.**
+- **`ILedgerWriter.TrySubmitAndWaitForTransactionAsync` returns the transaction's exercised events** (`Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`).
+  - A generated `Try<Choice>Async` for a choice that does not return a `ContractId`, such as a nonconsuming `Decimal` choice, threw `InvalidOperationException` after the command had committed. A caller that retried on the exception submitted twice.
+  - `CreatedContracts` and `ArchivedContractIds` keep their ACS-delta meaning: an event the submitter merely witnesses is in neither.
+  - **The exception for a choice whose exercise is not found now names both causes.**
+
 ## [0.6.0-preview.1] — 2026-09-28
 
 The first release of the combined Canton .NET SDK. Three changes dominate it.

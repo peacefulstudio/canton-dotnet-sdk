@@ -164,13 +164,13 @@ public sealed partial record TypeCorners(
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("d3b1c254073af761246f22060c60d08a92c4cf4d59327c7a554d3ec6d3e794ec", "RichTypes", "TypeCorners");
+    public static Identifier TemplateId { get; } = new("1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946", "RichTypes", "TypeCorners");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "d3b1c254073af761246f22060c60d08a92c4cf4d59327c7a554d3ec6d3e794ec";
+    public static string PackageId => "1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes";
+    public static string PackageName => "richtypes-hd117e68b37cc";
 
     /// <summary>Gets the package version.</summary>
     public static Version PackageVersion { get; } = new(0, 0, 1);
@@ -204,8 +204,8 @@ public sealed partial record TypeCorners(
         BoxedText: Box<string>.FromRecord(record.GetRequiredField("boxedText").As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value),
         BoxedProfile: Box<Profile>.FromRecord(record.GetRequiredField("boxedProfile").As<DamlRecord>(), __v0 => Profile.FromRecord(__v0.As<DamlRecord>())),
         Slot: Slot<long>.FromVariant(record.GetRequiredField("slot").As<DamlVariant>(), __v0 => __v0.As<DamlInt64>().Value),
-        NestedNote: record.GetRequiredField("nestedNote").AsOptional().HasValue ? Box<Optional<string>>.FromRecord(record.GetRequiredField("nestedNote").AsOptional().Value!.As<DamlRecord>(), __v0 => Optional<string>.FromValue(__v0, __optional2 => __optional2.As<DamlText>().Value)) : null,
-        MaybeMaybeNote: Optional<Optional<string>>.FromChainValue(record.GetRequiredField("maybeMaybeNote"), __optional0 => Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<DamlText>().Value)),
+        NestedNote: record.GetOptionalField("nestedNote").AsOptional().HasValue ? Box<Optional<string>>.FromRecord(record.GetOptionalField("nestedNote").AsOptional().Value!.As<DamlRecord>(), __v0 => Optional<string>.FromValue(__v0, __optional2 => __optional2.As<DamlText>().Value)) : null,
+        MaybeMaybeNote: Optional<Optional<string>>.FromChainValue(record.GetOptionalChainField("maybeMaybeNote"), __optional0 => Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<DamlText>().Value)),
         Crate: Crate<string>.FromRecord(record.GetRequiredField("crate").As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value),
         QuotaByParty: (IReadOnlyDictionary<Party, long>)record.GetRequiredField("quotaByParty").As<DamlGenMap>().Entries.ToDictionary(kv => Party.FromDamlValue(kv.Key.As<DamlParty>()), kv => kv.Value.As<DamlInt64>().Value),
         LabelByRank: (IReadOnlyDictionary<long, string>)record.GetRequiredField("labelByRank").As<DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<DamlInt64>().Value, kv => kv.Value.As<DamlText>().Value),
@@ -228,8 +228,8 @@ public sealed partial record TypeCorners(
             DamlField.Create("boxedText", Box<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "boxedText"), context.Field("boxedText"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
             DamlField.Create("boxedProfile", Box<Profile>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "boxedProfile"), context.Field("boxedProfile"), (__json0, __ctx0) => Profile.__ReadDamlLfJson(__json0, __ctx0))),
             DamlField.Create("slot", Slot<long>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "slot"), context.Field("slot"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))),
-            DamlField.Create("nestedNote", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "nestedNote"), context.Field("nestedNote"), (__json0, __ctx0) => Box<Optional<string>>.__ReadDamlLfJson(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json2, __ctx2))))),
-            DamlField.Create("maybeMaybeNote", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "maybeMaybeNote"), context.Field("maybeMaybeNote"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)))),
+            DamlField.Create("nestedNote", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nestedNote"), context.Field("nestedNote"), (__json0, __ctx0) => Box<Optional<string>>.__ReadDamlLfJson(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json2, __ctx2))))),
+            DamlField.Create("maybeMaybeNote", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalChainField(json, "maybeMaybeNote"), context.Field("maybeMaybeNote"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)))),
             DamlField.Create("crate", Crate<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "crate"), context.Field("crate"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
             DamlField.Create("quotaByParty", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "quotaByParty"), context.Field("quotaByParty"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))),
             DamlField.Create("labelByRank", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "labelByRank"), context.Field("labelByRank"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
@@ -346,7 +346,7 @@ public sealed record ReboxResult(
 /// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="TypeCorners"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
-/// and projects success via <c>&lt;Choice&gt;Result.FromCreatedContracts</c>.
+/// and projects success from the choice's own exercise result.
 /// </summary>
 public static class TypeCornersExtensions
 {
@@ -369,7 +369,7 @@ public static class TypeCornersExtensions
     }
 
     /// <summary>
-    /// Exercises the Rebox choice and projects the resulting transaction's created contracts to a typed <see cref="ReboxResult"/>.
+    /// Exercises the Rebox choice and projects the choice's exercise result to a typed <see cref="ReboxResult"/>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -381,6 +381,7 @@ public static class TypeCornersExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
         this ContractId<TypeCorners> contractId,
@@ -390,6 +391,7 @@ public static class TypeCornersExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -403,11 +405,12 @@ public static class TypeCornersExtensions
             workflowId,
             commandId,
             timeout,
+            configure,
             cancellationToken);
     }
 
     /// <summary>
-    /// Exercises the Rebox choice with an explicit <see cref="SubmitterInfo"/> and projects the resulting transaction's created contracts to a typed <see cref="ReboxResult"/>.
+    /// Exercises the Rebox choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ReboxResult"/>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -419,6 +422,7 @@ public static class TypeCornersExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
         this ContractId<TypeCorners> contractId,
@@ -428,15 +432,16 @@ public static class TypeCornersExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReboxCommand(argument);
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
-        return outcome.ProjectCommitted(tx => ReboxResult.FromCreatedContracts(tx.CreatedContracts));
+        return outcome.ProjectCommitted(tx => ProjectReboxResult(tx, contractId.Value));
     }
 
     /// <summary>
@@ -451,6 +456,7 @@ public static class TypeCornersExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
         this IContract<ContractId<TypeCorners>, TypeCorners> contract,
@@ -459,6 +465,7 @@ public static class TypeCornersExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -472,6 +479,7 @@ public static class TypeCornersExtensions
             workflowId,
             commandId,
             timeout,
+            configure,
             cancellationToken);
     }
 
@@ -489,6 +497,7 @@ public static class TypeCornersExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
         this IContract<ContractId<TypeCorners>, TypeCorners> contract,
@@ -498,6 +507,7 @@ public static class TypeCornersExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -511,7 +521,56 @@ public static class TypeCornersExtensions
             workflowId,
             commandId,
             timeout,
+            configure,
             cancellationToken);
+    }
+
+    private static ExerciseOutcome<ReboxResult> ProjectReboxResult(TransactionResult tx, string contractId)
+    {
+        var fromCreatedContracts = ReboxResult.FromCreatedContracts(tx.CreatedContracts);
+        if (fromCreatedContracts is ExerciseOutcome<ReboxResult>.Many)
+        {
+            return fromCreatedContracts;
+        }
+
+        foreach (var exercised in tx.ExercisedEvents)
+        {
+            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
+                && string.Equals(exercised.TemplateId.ModuleName, TypeCorners.TemplateId.ModuleName, StringComparison.Ordinal)
+                && string.Equals(exercised.TemplateId.EntityName, TypeCorners.TemplateId.EntityName, StringComparison.Ordinal)
+                && string.Equals(exercised.ChoiceName.Value, "Rebox", StringComparison.Ordinal))
+            {
+                try
+                {
+                    return DecodeReboxResult(exercised.ExerciseResult);
+                }
+                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
+                {
+                    return new ExerciseOutcome<ReboxResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
+                }
+            }
+        }
+
+        return fromCreatedContracts;
+    }
+
+    private static ExerciseOutcome<ReboxResult> DecodeReboxResult(DamlValue exerciseResult)
+    {
+        var matches0 = new List<string>();
+        matches0.Add(exerciseResult.As<DamlContractId>().Value);
+
+        if (matches0.Count == 0)
+        {
+            return new ExerciseOutcome<ReboxResult>.None();
+        }
+        if (matches0.Count > 1)
+        {
+            return new ExerciseOutcome<ReboxResult>.Many(EquatableArray.Create(matches0));
+        }
+
+        return new ExerciseOutcome<ReboxResult>.One(new ReboxResult(
+            TypeCorners: new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>(matches0[0])
+        ));
     }
 }
 
@@ -534,10 +593,12 @@ public static class TypeCornersSubmissionExtensions
     /// </summary>
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<ExerciseOutcome<ContractId<TypeCorners>>> TryCreateAsync(
         this ILedgerWriter client,
         TypeCorners payload,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -545,7 +606,7 @@ public static class TypeCornersSubmissionExtensions
 
         SubmitterInfo submitter = payload.Owner;
 
-        return client.TryCreateAsync<TypeCorners>(payload, submitter, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<TypeCorners>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
@@ -584,6 +645,7 @@ public static class TypeCornersNonContractExtensions
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
         this ContractId<TypeCorners> contractId,
@@ -592,13 +654,14 @@ public static class TypeCornersNonContractExtensions
         string? workflowId = null,
         CommandId? commandId = null,
         TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
-        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
 
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
@@ -626,9 +689,9 @@ public static class TypeCornersNonContractExtensions
 
         throw new InvalidOperationException(
             $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "This is most often caused by the ILedgerWriter implementation not populating TransactionResult.ExercisedEvents — " +
-            "your ILedgerWriter implementation must project the transaction's exercised events into TransactionResult.ExercisedEvents. " +
-            "If your implementation does populate ExercisedEvents, ensure the participant is configured to return " +
-            "LedgerEffects with verbose events so the exercise event survives projection.");
+            "The transaction returned for this submission carries no exercised event for it. " +
+            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+            "request the LEDGER_EFFECTS shape with verbose events.");
     }
 }

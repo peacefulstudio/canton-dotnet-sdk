@@ -198,6 +198,11 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <typeparam name="TView">The interface's view record (e.g. <c>HoldingView</c>).</typeparam>
     /// <param name="submitter">The submitter authorization whose combined parties scope visibility.</param>
     /// <param name="activeAtOffset">Snapshot offset; <see langword="null"/> means the current ledger end.</param>
+    /// <param name="includeDisclosure">
+    /// <see langword="true"/> asks the participant for each contract's <c>created_event_blob</c>, so every
+    /// returned <see cref="ActiveContract{TContract}"/> carries a <see cref="ActiveContract{TContract}.Disclosure"/>
+    /// naming the implementing template. <see langword="false"/>, the default, leaves it <see langword="null"/>.
+    /// </param>
     /// <param name="cancellationToken">Cancels the underlying snapshot stream cleanly.</param>
     /// <returns>
     /// The active interface contracts, each wrapped with its last-update offset and synchronizer id.
@@ -209,12 +214,13 @@ public interface ICantonLedgerClient : ILedgerClient
     Task<IReadOnlyList<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView> =>
         InterfaceViewSnapshot.DrainAsync(
             SubscribeActiveAsync(
-                new ViewDescriptor<TInterface, TView>(), submitter, activeAtOffset, cancellationToken),
+                new ViewDescriptor<TInterface, TView>(), submitter, activeAtOffset, includeDisclosure, cancellationToken),
             cancellationToken);
 
     /// <summary>

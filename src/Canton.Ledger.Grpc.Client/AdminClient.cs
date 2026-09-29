@@ -516,12 +516,25 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return SurfaceLedgerErrorsAsync(UploadDarCoreAsync(darFile, submissionId, cancellationToken));
+        return SurfaceLedgerErrorsAsync(UploadDarCoreAsync(darFile, submissionId, synchronizerId: null, cancellationToken));
+    }
+
+    /// <inheritdoc />
+    public Task UploadDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        string? submissionId,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfNullOrEmpty(darFile);
+
+        return SurfaceLedgerErrorsAsync(UploadDarCoreAsync(darFile, submissionId, synchronizerId, cancellationToken));
     }
 
     private async Task UploadDarCoreAsync(
         byte[] darFile,
         string? submissionId,
+        SynchronizerId? synchronizerId,
         CancellationToken cancellationToken)
     {
         LogUploadingDar(_logger, darFile.Length);
@@ -531,6 +544,8 @@ internal sealed partial class AdminClient : IAdminClient
             DarFile = ByteString.CopyFrom(darFile),
             SubmissionId = submissionId ?? string.Empty
         };
+        if (synchronizerId is { } synchronizer)
+            request.SynchronizerId = synchronizer.Value;
 
         await _invoker.InvokeTracedAsync<AdminClient, UploadDarFileResponse>(
             ActivitySource,
@@ -556,12 +571,25 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return SurfaceLedgerErrorsAsync(ValidateDarCoreAsync(darFile, cancellationToken));
+        return SurfaceLedgerErrorsAsync(ValidateDarCoreAsync(darFile, synchronizerId: null, cancellationToken));
     }
 
-    private async Task ValidateDarCoreAsync(byte[] darFile, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public Task ValidateDarAsync(
+        byte[] darFile,
+        SynchronizerId synchronizerId,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfNullOrEmpty(darFile);
+
+        return SurfaceLedgerErrorsAsync(ValidateDarCoreAsync(darFile, synchronizerId, cancellationToken));
+    }
+
+    private async Task ValidateDarCoreAsync(byte[] darFile, SynchronizerId? synchronizerId, CancellationToken cancellationToken)
     {
         var request = new ValidateDarFileRequest { DarFile = ByteString.CopyFrom(darFile) };
+        if (synchronizerId is { } synchronizer)
+            request.SynchronizerId = synchronizer.Value;
 
         await _invoker.InvokeTracedAsync<AdminClient, ValidateDarFileResponse>(
             ActivitySource,

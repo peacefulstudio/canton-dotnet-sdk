@@ -48,7 +48,8 @@ public class SubscribeArchivedRoundTripTests
 
         var endOffset = await client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        var (created, archived) = await ReadCreatedAndArchivedAsync(client, owner, markerCid.Value, startOffset, endOffset);
+        var (created, archived) = await ReadCreatedAndArchivedAsync(
+            client, fixture.ValidatorUserId, owner, markerCid.Value, startOffset, endOffset);
 
         Assert.True(created, $"expected a Created event for {markerCid.Value} on the AcsDelta subscribe stream");
         Assert.True(archived, $"expected an Archived event for {markerCid.Value} on the AcsDelta subscribe stream");
@@ -72,7 +73,7 @@ public class SubscribeArchivedRoundTripTests
         var retainedCid = await CreateMarkerAsync(client, owner);
         var archivedCid = await CreateMarkerAsync(client, owner);
 
-        var (snapshotActive, snapshotOffset) = await SnapshotActiveAsync(client, owner);
+        var (snapshotActive, snapshotOffset) = await SnapshotActiveAsync(client, fixture.ValidatorUserId, owner);
 
         Assert.Contains(retainedCid.Value, snapshotActive);
         Assert.Contains(archivedCid.Value, snapshotActive);
@@ -86,6 +87,8 @@ public class SubscribeArchivedRoundTripTests
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(60));
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(
+            fixture.ValidatorUserId, TestContext.Current.CancellationToken);
         await foreach (var streamEvent in client.SubscribeAsync<Marker>(owner, snapshotOffset, endOffset, cts.Token))
         {
             switch (streamEvent)
@@ -133,7 +136,7 @@ public class SubscribeArchivedRoundTripTests
 
     private static async Task<ContractId<Marker>> CreateMarkerAsync(ICantonLedgerClient client, Party owner)
     {
-        var outcome = await client.TryCreateAsync(new Marker(owner), TestContext.Current.CancellationToken);
+        var outcome = await client.TryCreateAsync(new Marker(owner), cancellationToken: TestContext.Current.CancellationToken);
         return Assert.IsType<ExerciseOutcome<ContractId<Marker>>.One>(outcome).Result;
     }
 
@@ -154,13 +157,20 @@ public class SubscribeArchivedRoundTripTests
     }
 
     private static async Task<(bool Created, bool Archived)> ReadCreatedAndArchivedAsync(
-        ICantonLedgerClient client, Party owner, string contractIdValue, LedgerOffset fromOffset, LedgerOffset toOffset)
+        ICantonLedgerClient client,
+        string userId,
+        Party owner,
+        string contractIdValue,
+        LedgerOffset fromOffset,
+        LedgerOffset toOffset)
     {
         var created = false;
         var archived = false;
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(60));
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(
+            userId, TestContext.Current.CancellationToken);
         await foreach (var streamEvent in client.SubscribeAsync<Marker>(owner, fromOffset, toOffset, cts.Token))
         {
             switch (streamEvent)
@@ -178,13 +188,15 @@ public class SubscribeArchivedRoundTripTests
     }
 
     private static async Task<(HashSet<string> Active, LedgerOffset SnapshotOffset)> SnapshotActiveAsync(
-        ICantonLedgerClient client, Party owner)
+        ICantonLedgerClient client, string userId, Party owner)
     {
         var active = new HashSet<string>();
         LedgerOffset snapshotOffset = default;
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(60));
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(
+            userId, TestContext.Current.CancellationToken);
         await foreach (var entry in client.SubscribeActiveAsync<Marker>(owner, cancellationToken: cts.Token))
         {
             switch (entry)

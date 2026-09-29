@@ -131,6 +131,44 @@ public class FakePqsClientTests
     }
 
     [Fact]
+    public async Task FetchByIdAsync_interface_returns_the_matching_staged_contract()
+    {
+        var cid = new ContractId<IDemoHoldingView>("cid1");
+        var contract = new InterfaceContract<IDemoHoldingView, DemoHoldingView>(cid, new DemoHoldingView(42m));
+        var client = FakePqsClient.Create().WithInterfaceQueryResults(contract).Build();
+
+        var result = await client.FetchByIdAsync<IDemoHoldingView, DemoHoldingView>(
+            cid, TestContext.Current.CancellationToken);
+
+        result.Should().Be(contract);
+    }
+
+    [Fact]
+    public async Task FetchByIdAsync_interface_returns_null_when_no_staged_contract_matches()
+    {
+        var contract = new InterfaceContract<IDemoHoldingView, DemoHoldingView>(
+            new ContractId<IDemoHoldingView>("cid1"), new DemoHoldingView(42m));
+        var client = FakePqsClient.Create().WithInterfaceQueryResults(contract).Build();
+
+        var result = await client.FetchByIdAsync<IDemoHoldingView, DemoHoldingView>(
+            new ContractId<IDemoHoldingView>("cid-missing"), TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FetchByIdAsync_interface_for_unstaged_interface_throws_descriptive_NotSupportedException()
+    {
+        var client = FakePqsClient.Create().Build();
+
+        var act = () => client.FetchByIdAsync<IDemoHoldingView, DemoHoldingView>(
+            new ContractId<IDemoHoldingView>("cid1"));
+
+        (await act.Should().ThrowAsync<NotSupportedException>())
+            .Which.Message.Should().Contain("WithInterfaceQueryResults").And.Contain("IDemoHoldingView");
+    }
+
+    [Fact]
     public async Task ExistsAsync_returns_true_when_a_staged_contract_matches()
     {
         var cid = new ContractId<DemoHolding>("cid1");

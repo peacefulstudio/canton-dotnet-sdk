@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.ComponentModel;
 using Daml.Runtime.Contracts;
 
 namespace Daml.Runtime.Data;
@@ -50,7 +51,83 @@ public sealed record DamlRecord(
     /// Gets a required field value by name, throwing if not found.
     /// </summary>
     public DamlValue GetRequiredField(string name) =>
-        GetField(name) ?? throw new InvalidOperationException($"Required field '{name}' not found in record.");
+        GetField(name) ?? throw MissingField(name);
+
+    /// <summary>
+    /// Gets a field whose Daml type is a flat <c>Optional</c>, reading an omitted field as
+    /// <see cref="DamlOptional.None"/>. The Ledger API leaves out a record field whose value is a
+    /// trailing <c>None</c>, and a payload written before an upgrade added the field has no such field.
+    /// Called by generated <c>FromRecord</c> methods.
+    /// </summary>
+    /// <param name="name">The field label.</param>
+    /// <returns>The field's value, or <see cref="DamlOptional.None"/> when the record has no such field.</returns>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public DamlValue GetOptionalField(string name) =>
+        GetField(name) ?? DamlOptional.None;
+
+    /// <summary>
+    /// Gets a field whose Daml type is a nested <c>Optional (Optional a)</c> chain, reading an
+    /// omitted field as <see cref="DamlOptionalChain.None"/>, for the reasons
+    /// <see cref="GetOptionalField"/> gives. Called by generated <c>FromRecord</c> methods.
+    /// </summary>
+    /// <param name="name">The field label.</param>
+    /// <returns>The field's value, or <see cref="DamlOptionalChain.None"/> when the record has no such field.</returns>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public DamlValue GetOptionalChainField(string name) =>
+        GetField(name) ?? DamlOptionalChain.None;
+
+    /// <summary>
+    /// Gets and converts a field whose Daml type is a type parameter. An omitted field is handed
+    /// to <paramref name="convert"/> as <see cref="DamlOptional.None"/>, then as
+    /// <see cref="DamlOptionalChain.None"/>, so it reads as <c>None</c> when the instantiation is a
+    /// flat or a nested <c>Optional</c>, for the reasons <see cref="GetOptionalField"/> gives.
+    /// Called by generated <c>FromRecord</c> methods and the stdlib tuples.
+    /// </summary>
+    /// <typeparam name="T">The instantiation's C# type.</typeparam>
+    /// <param name="name">The field label.</param>
+    /// <param name="convert">The instantiation's converter.</param>
+    /// <returns>The converted field value.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The field is omitted and the instantiation is not an <c>Optional</c>.
+    /// </exception>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public T GetTypeParameterField<T>(string name, Func<DamlValue, T> convert)
+    {
+        ArgumentNullException.ThrowIfNull(convert);
+        if (GetField(name) is { } value)
+        {
+            return convert(value);
+        }
+
+        foreach (var omittedNone in OmittedOptionalEncodings)
+        {
+            if (TryConvertOmitted(convert, omittedNone, out var converted))
+            {
+                return converted;
+            }
+        }
+
+        throw MissingField(name);
+    }
+
+    private static readonly DamlValue[] OmittedOptionalEncodings = [DamlOptional.None, DamlOptionalChain.None];
+
+    private static bool TryConvertOmitted<T>(Func<DamlValue, T> convert, DamlValue omittedNone, out T converted)
+    {
+        try
+        {
+            converted = convert(omittedNone);
+            return true;
+        }
+        catch (InvalidCastException)
+        {
+            converted = default!;
+            return false;
+        }
+    }
+
+    private static InvalidOperationException MissingField(string name) =>
+        new($"Required field '{name}' not found in record.");
 
     /// <summary>
     /// Compares two records by <see cref="RecordId"/> and field-by-field content.

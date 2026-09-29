@@ -27,6 +27,7 @@ internal sealed class ConformingFakeClient : NotSupportedLedgerClient
     public override async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

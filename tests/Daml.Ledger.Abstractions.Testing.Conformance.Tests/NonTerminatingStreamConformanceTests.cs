@@ -134,6 +134,7 @@ public sealed class NonTerminatingStreamConformanceTests
         public async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
             where T : ITemplate, IDamlRecord<T>
         {
@@ -295,6 +296,7 @@ public sealed class NonTerminatingStreamConformanceTests
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
             CancellationToken cancellationToken = default)
             where TInterface : IDamlInterface, IHasView<TView>
             where TView : IDamlRecord<TView> =>

@@ -30,9 +30,10 @@ internal sealed class ArchivalDroppingFakeClient : ILedgerClient
     public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T> =>
-        _seeded.SubscribeActiveAsync<T>(submitter, activeAtOffset, cancellationToken);
+        _seeded.SubscribeActiveAsync<T>(submitter, activeAtOffset, includeDisclosure, cancellationToken);
 
     public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
         SubmitterInfo submitter,
@@ -124,10 +125,11 @@ internal sealed class ArchivalDroppingFakeClient : ILedgerClient
         ViewDescriptor<TInterface, TView> view,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView> =>
-        _seeded.SubscribeActiveAsync(view, submitter, activeAtOffset, cancellationToken);
+        _seeded.SubscribeActiveAsync(view, submitter, activeAtOffset, includeDisclosure, cancellationToken);
 
     public void Dispose() => _seeded.Dispose();
 }

@@ -249,6 +249,25 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine("}");
         }
 
+        WriteSlotCardinalityProjection(indent, resultName, slots);
+
+        indent.Dedent();
+        indent.AppendLine("}");
+        indent.AppendLine();
+    }
+
+    /// <summary>
+    /// Emits the tail both result projectors share: given one <c>matches{i}</c> list of raw
+    /// contract ids per slot, already declared and filled, validates each slot's cardinality
+    /// and returns the typed <c>ExerciseOutcome</c>.
+    /// </summary>
+    private void WriteSlotCardinalityProjection(
+        IndentWriter indent,
+        string resultName,
+        IReadOnlyList<ChoiceCreatedSlot> slots)
+    {
+        string Q(string templateName) => context.QualifyInModule(templateName);
+
         for (var i = 0; i < slots.Count; i++)
         {
             var slot = slots[i];
@@ -307,9 +326,5 @@ internal sealed partial class ChoiceEmitter
         }
         indent.Dedent();
         indent.AppendLine("));");
-
-        indent.Dedent();
-        indent.AppendLine("}");
-        indent.AppendLine();
     }
 }

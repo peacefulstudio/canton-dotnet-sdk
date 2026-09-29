@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -48,7 +49,16 @@ public abstract record AcsSnapshotEntry<T>
         ContractKey? Key,
         LedgerOffset Offset,
         SynchronizerId SynchronizerId,
-        EquatableArray<Party> WitnessParties) : AcsSnapshotEntry<T>;
+        EquatableArray<Party> WitnessParties) : AcsSnapshotEntry<T>
+    {
+        /// <summary>
+        /// The contract, ready to attach to another party's submission as an explicit
+        /// disclosure: its contract ID, the contract's template ID in package-ID form, and the
+        /// participant's <c>created_event_blob</c>. <c>null</c> unless the snapshot was opened
+        /// with <c>includeDisclosure: true</c> and the participant returned a blob.
+        /// </summary>
+        public DisclosedContract? Disclosure { get; init; }
+    }
 
     /// <summary>
     /// A snapshot row the projector could not classify; surfaced, never dropped.

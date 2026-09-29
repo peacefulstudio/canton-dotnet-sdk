@@ -324,7 +324,7 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
         var client = ClientWith(transport, windowLimit);
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.At(9), TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.At(9), cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }
@@ -460,7 +460,7 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
 
         var entries = new List<AcsSnapshotEntry<TestTemplate>>();
         await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
-            Alice, LedgerOffset.Begin, TestContext.Current.CancellationToken))
+            Alice, LedgerOffset.Begin, cancellationToken: TestContext.Current.CancellationToken))
         {
             entries.Add(entry);
         }

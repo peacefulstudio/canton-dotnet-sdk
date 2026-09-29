@@ -30,6 +30,7 @@ internal sealed partial class SubmissionClient
     private readonly LedgerClientOptions _options;
     private readonly ILogger _logger;
     private readonly Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> _pointReadByOffset;
+    private readonly Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> _acsDeltaPointReadByOffset;
     private readonly Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionTree>> _treePointReadByOffset;
     private readonly GrpcCommandBuilder _commandBuilder;
 
@@ -41,6 +42,7 @@ internal sealed partial class SubmissionClient
         LedgerClientOptions options,
         ILogger logger,
         Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> pointReadByOffset,
+        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> acsDeltaPointReadByOffset,
         Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionTree>> treePointReadByOffset)
     {
         _invoker = invoker;
@@ -50,6 +52,7 @@ internal sealed partial class SubmissionClient
         _options = options;
         _logger = logger;
         _pointReadByOffset = pointReadByOffset;
+        _acsDeltaPointReadByOffset = acsDeltaPointReadByOffset;
         _treePointReadByOffset = treePointReadByOffset;
     }
 
@@ -231,9 +234,15 @@ internal sealed partial class SubmissionClient
                 LogSubmittingCommands(_logger, submission.Commands.Count);
 
                 var commands = _commandBuilder.BuildCommands(submission);
+                var submitter = SubmitterFrom(submission);
                 return TrySubmitCoreAsync(
-                    commands, transactionFormat: null, SubmitterFrom(submission), GrpcTransactionResultProjector.Project,
-                    _pointReadByOffset, timeout, token);
+                    commands,
+                    submitter is { } actingSubmitter ? GrpcSubscribeRequestBuilder.BuildTransactionFormat(actingSubmitter) : null,
+                    submitter,
+                    GrpcTransactionResultProjector.ProjectAcsDelta,
+                    _acsDeltaPointReadByOffset,
+                    timeout,
+                    token);
             },
             RecordOutcome,
             cancellationToken);

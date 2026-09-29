@@ -24,6 +24,7 @@ using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
 using ProtoRecord = Com.Daml.Ledger.Api.V2.Record;
 using ProtoValue = Com.Daml.Ledger.Api.V2.Value;
 using RpcStatus = Google.Rpc.Status;
+using RuntimeDisclosedContract = Daml.Runtime.Commands.DisclosedContract;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
@@ -1053,7 +1054,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
 
         var client = CreateClient();
         var events = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(
-            ActAs, LedgerOffset.At(42L), TestContext.Current.CancellationToken));
+            ActAs, LedgerOffset.At(42L), cancellationToken: TestContext.Current.CancellationToken));
 
         var unclassified = events.Should().ContainSingle().Subject
             .Should().BeOfType<AcsSnapshotEntry<FooBar>.Unclassified>().Subject;
@@ -1115,6 +1116,179 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         interfaceFilter.InterfaceId.EntityName.Should().Be("IFoo");
         interfaceFilter.InterfaceId.PackageId.Should().Be("#" + IFoo.PackageName);
         interfaceFilter.IncludeInterfaceView.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_asks_the_template_filter_for_the_created_event_blob_when_requested()
+    {
+        StubGetLedgerEnd(offset: 0L);
+        GetActiveContractsRequest? captured = null;
+        StubGetActiveContracts(captureRequest: r => captured = r);
+
+        var client = CreateClient();
+        _ = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(
+            ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        captured!.EventFormat.FiltersByParty[ActAs.Value].Cumulative[0].TemplateFilter
+            .IncludeCreatedEventBlob.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_leaves_the_created_event_blob_out_of_the_template_filter_by_default()
+    {
+        StubGetLedgerEnd(offset: 0L);
+        GetActiveContractsRequest? captured = null;
+        StubGetActiveContracts(captureRequest: r => captured = r);
+
+        var client = CreateClient();
+        _ = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        captured!.EventFormat.FiltersByParty[ActAs.Value].Cumulative[0].TemplateFilter
+            .IncludeCreatedEventBlob.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_for_interface_marker_asks_the_interface_filter_for_the_created_event_blob_when_requested()
+    {
+        StubGetLedgerEnd(offset: 0L);
+        GetActiveContractsRequest? captured = null;
+        StubGetActiveContracts(captureRequest: r => captured = r);
+
+        var client = CreateClient();
+        _ = await CollectActiveAsync(client.SubscribeActiveAsync(
+            FooViewDescriptor, ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        captured!.EventFormat.FiltersByParty[ActAs.Value].Cumulative[0].InterfaceFilter
+            .IncludeCreatedEventBlob.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_Created_carries_a_Disclosure_built_from_the_created_event_blob()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var response = MakeActiveContract("00foo", FooBarTemplate);
+        response.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x0A, 0x0B, 0x0C);
+        StubGetActiveContracts(response);
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(
+            ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().ContainSingle().Subject
+            .Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>()
+            .Which.Disclosure.Should().Be(new RuntimeDisclosedContract(
+                "00foo",
+                new RuntimeIdentifier("test-pkg", "Sample.Foo", "FooBar"),
+                new byte[] { 0x0A, 0x0B, 0x0C }) { SynchronizerId = new SynchronizerId("sync-1") });
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_IncompleteAssigned_Created_carries_a_Disclosure_built_from_its_created_event_blob()
+    {
+        StubGetLedgerEnd(offset: 0L);
+        StubGetActiveContracts(new GetActiveContractsResponse
+        {
+            IncompleteAssigned = new IncompleteAssigned
+            {
+                AssignedEvent = new AssignedEvent
+                {
+                    Source = "sync-a",
+                    Target = "sync-b",
+                    CreatedEvent = new ProtoCreatedEvent
+                    {
+                        ContractId = "00mid2",
+                        TemplateId = FooBarTemplate,
+                        CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
+                        CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x21, 0x22),
+                    },
+                },
+            },
+        });
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(
+            ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().ContainSingle().Subject
+            .Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>()
+            .Which.Disclosure.Should().Be(new RuntimeDisclosedContract(
+                "00mid2",
+                new RuntimeIdentifier("test-pkg", "Sample.Foo", "FooBar"),
+                new byte[] { 0x21, 0x22 }) { SynchronizerId = new SynchronizerId("sync-b") });
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_IncompleteUnassigned_Created_carries_a_Disclosure_on_the_source_synchronizer()
+    {
+        StubGetLedgerEnd(offset: 0L);
+        StubGetActiveContracts(new GetActiveContractsResponse
+        {
+            IncompleteUnassigned = new IncompleteUnassigned
+            {
+                CreatedEvent = new ProtoCreatedEvent
+                {
+                    ContractId = "00mid3",
+                    TemplateId = FooBarTemplate,
+                    CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
+                    CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x41, 0x42),
+                },
+                UnassignedEvent = new UnassignedEvent
+                {
+                    ContractId = "00mid3",
+                    TemplateId = FooBarTemplate,
+                    Source = "sync-a",
+                    Target = "sync-b",
+                    Offset = 500L,
+                },
+            },
+        });
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(
+            ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        events[0].Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>()
+            .Which.Disclosure.Should().Be(new RuntimeDisclosedContract(
+                "00mid3",
+                new RuntimeIdentifier("test-pkg", "Sample.Foo", "FooBar"),
+                new byte[] { 0x41, 0x42 }) { SynchronizerId = new SynchronizerId("sync-a") });
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_Created_carries_no_Disclosure_when_the_created_event_has_no_blob()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(MakeActiveContract("00foo", FooBarTemplate));
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().ContainSingle().Subject
+            .Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>()
+            .Which.Disclosure.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_for_interface_marker_Created_carries_a_Disclosure_naming_the_implementing_template()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var response = MakeActiveContractWithInterfaceView(
+            "00impl",
+            new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
+            new ProtoIdentifier { PackageId = "any-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" });
+        response.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x31, 0x32, 0x33, 0x34);
+        StubGetActiveContracts(response);
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync(
+            FooViewDescriptor, ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().ContainSingle().Subject
+            .Should().BeOfType<InterfaceAcsSnapshotEntry<IFoo, FooView>.Created>()
+            .Which.Disclosure.Should().Be(new RuntimeDisclosedContract(
+                "00impl",
+                new RuntimeIdentifier("impl-pkg", "Sample.Impl", "FooImpl"),
+                new byte[] { 0x31, 0x32, 0x33, 0x34 }) { SynchronizerId = new SynchronizerId("sync-1") });
     }
 
     [Fact]

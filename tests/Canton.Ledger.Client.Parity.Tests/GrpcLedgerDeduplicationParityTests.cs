@@ -65,7 +65,8 @@ public sealed class GrpcLedgerDeduplicationParityTests : LedgerDeduplicationPari
                     {
                         await LaneTeardown.ReleaseAsync(actAsRights, fixture).ConfigureAwait(false);
                     }
-                });
+                },
+                rightsGatedUserId: fixture.ValidatorUserId);
         }
         catch (Exception openFailure)
         {

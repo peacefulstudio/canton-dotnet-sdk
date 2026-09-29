@@ -262,6 +262,7 @@ internal sealed class RestReassignmentHarness
             var end = await LedgerEndAsync(cancellationToken);
             if (end > currentOffset)
             {
+                using var streamHold = await _lane.HoldStreamAsync(cancellationToken);
                 await foreach (var streamEvent in _lane.LedgerClient.SubscribeAsync<Asset>(
                     submitter, LedgerOffset.At(currentOffset), LedgerOffset.At(end), cancellationToken))
                 {

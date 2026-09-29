@@ -8,7 +8,8 @@
          Dictionary the first time a generated descriptor initializes, so two threads racing
          to touch a *Reflection type for the first time can corrupt it and throw
          TypeInitializationException. 3.35.1 is the last release without that cache; bump once
-         a release ships a thread-safe fix. See GoogleProtobufFileDescriptorCacheRegressionTests
+         a release ships a thread-safe fix; the known-bad versions are listed in the Dependabot
+         ignore (.github/dependabot.yaml). See GoogleProtobufFileDescriptorCacheRegressionTests
          for the guard. -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <!-- Grpc.Tools >= 2.69.0 ships a linux_arm64 protoc that segfaults (grpc/grpc#38538;
@@ -28,7 +29,7 @@
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="Polly.Core" Version="8.8.0" />
-    <PackageVersion Include="Refit" Version="16.1.0" />
+    <PackageVersion Include="Refit" Version="16.3.0" />
     <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.8.3.2" />
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
