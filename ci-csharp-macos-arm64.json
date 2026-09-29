@@ -1,1 +1,1 @@
-{"schemaVersion": 1, "label": "arm64", "message": "passing", "color": "#28a745", "namedLogo": "apple", "logoColor": "white"}
+{"schemaVersion": 1, "label": "arm64", "message": "failing", "color": "#d73a49", "namedLogo": "apple", "logoColor": "white"}
