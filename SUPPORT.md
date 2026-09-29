@@ -2,8 +2,8 @@
 
 ## Community help
 
-Questions, bug reports and feature requests are welcome as
-[GitHub issues](https://github.com/peacefulstudio/canton-dotnet-sdk/issues).
+For questions, bug reports and feature requests, open a
+[GitHub issue](https://github.com/peacefulstudio/canton-dotnet-sdk/issues).
 
 ## Security
 
