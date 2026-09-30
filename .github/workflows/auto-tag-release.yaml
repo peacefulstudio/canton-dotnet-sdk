@@ -51,7 +51,8 @@ jobs:
           held="$(gh pr list --state open --label hold-release --json number --jq 'length')"
           [ "${held}" = "0" ] || skip "${held} open pull request(s) carry hold-release"
 
-          read_at_head CHANGELOG.md | grep -qF "## [${version}]" \
+          changelog="$(read_at_head CHANGELOG.md)"
+          grep -qF "## [${version}]" <<<"${changelog}" \
             || { echo "::error::CHANGELOG.md has no section for ${version}; refusing to tag"; exit 1; }
 
           gh api -X POST "repos/${GH_REPO}/git/refs" -f "ref=refs/tags/${tag}" -f "sha=${HEAD_SHA}" >/dev/null
