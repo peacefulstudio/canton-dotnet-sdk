@@ -1,0 +1,350 @@
+name: Cross-version matrix
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-version-matrix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cell:
+    name: ${{ matrix.cell }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: ${{ !matrix.gating }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {order: 1, cell: 'Canton 3.5.18 (SDK baseline)', localnet-ref: v0.8.3-2, image-tag: '', expected-canton: 3.5.18, gating: true}
+          - {order: 2, cell: 'Canton 3.5.17 (Splice 0.8.1 images)', localnet-ref: v0.8.3-2, image-tag: 0.8.1, expected-canton: 3.5.17, gating: true}
+          - {order: 9, cell: 'LocalNet dev (canary)', localnet-ref: dev, image-tag: '', expected-canton: '', gating: false}
+    env:
+      LOCALNET_DIR: ${{ github.workspace }}/canton-localnet
+      LOCALNET_GRPC_URL: http://localhost:11901
+      LOCALNET_JSON_API_URL: http://localhost:11975
+      LOCALNET_TOKEN_URL: http://localhost:8082/realms/AValidator1/protocol/openid-connect/token
+      CELL_RESULTS_DIR: ${{ github.workspace }}/cross-version-cell
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout canton-localnet ${{ matrix.localnet-ref }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: peacefulstudio/canton-localnet
+          ref: ${{ matrix.localnet-ref }}
+          path: canton-localnet
+          persist-credentials: false
+
+      - name: Prepare the cell results directory
+        run: mkdir -p "${CELL_RESULTS_DIR}"
+
+      - name: Read validator OAuth2 client credentials from LocalNet fixtures
+        run: |
+          set -euo pipefail
+          oauth2_env="${LOCALNET_DIR}/compose/modules/keycloak/env/a-validator-1/on/oauth2.env"
+          read_fixture_value() {
+            value="$(grep -m 1 -oP "^${1}=\K\S+" "${oauth2_env}")" \
+              || { echo "::error::${1} not found in ${oauth2_env}" >&2; return 1; }
+            value="${value%\"}"
+            printf '%s' "${value#\"}"
+          }
+          client_id="$(read_fixture_value AUTH_A_VALIDATOR_1_VALIDATOR_CLIENT_ID)"
+          client_secret="$(read_fixture_value AUTH_A_VALIDATOR_1_VALIDATOR_CLIENT_SECRET)"
+          echo "::add-mask::${client_secret}"
+          {
+            echo "LOCALNET_CLIENT_ID=${client_id}"
+            echo "LOCALNET_CLIENT_SECRET=${client_secret}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Read PQS connection string from LocalNet fixtures
+        run: |
+          set -euo pipefail
+          common_env="${LOCALNET_DIR}/compose/modules/localnet/env/common.env"
+          raw="$(grep -m 1 -oP '^DB_PASSWORD=\K\S+' "${common_env}" || true)"
+          [[ -n "${raw}" ]] || { echo "::error::DB_PASSWORD not found in ${common_env}" >&2; exit 1; }
+          raw="${raw%\"}"
+          raw="${raw#\"}"
+          if [[ "${raw}" == "\${DB_PASSWORD:-"*"}" ]]; then
+            compose_default_db_password="${raw#\$\{DB_PASSWORD:-}"
+            compose_default_db_password="${compose_default_db_password%\}}"
+            db_password="${DB_PASSWORD:-${compose_default_db_password}}"
+          else
+            db_password="${raw}"
+          fi
+          echo "::add-mask::${db_password}"
+          pqs_conn="Host=localhost;Port=5432;Database=pqs-a-validator-1;Username=cnadmin;Password=${db_password}"
+          echo "::add-mask::${pqs_conn}"
+          echo "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING=${pqs_conn}" >> "${GITHUB_ENV}"
+
+      - name: Select Splice ${{ matrix.image-tag }} images over the release default
+        if: matrix.image-tag != ''
+        env:
+          CELL_IMAGE_TAG: ${{ matrix.image-tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo "SPLICE_VERSION=${CELL_IMAGE_TAG}"
+            echo "IMAGE_TAG=${CELL_IMAGE_TAG}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache-dependency-path: canton-localnet/cli/go.sum
+
+      - name: Build canton-localnet CLI
+        working-directory: canton-localnet/cli
+        run: |
+          set -euo pipefail
+          go build -o "${LOCALNET_DIR}/canton-localnet" ./cmd/canton-localnet
+
+      - name: Enable PQS and disable the observability stack
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          cat > canton-localnet.yaml <<'YAML'
+          schemaVersion: preview-1
+          modules:
+            obs: false
+            pqs: true
+          YAML
+
+      - name: Bring up LocalNet (one retry on the splice bootstrap race)
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          if ! "${LOCALNET_DIR}/canton-localnet" up; then
+            echo "::warning::canton-localnet up failed on first attempt — tearing down with volumes and retrying once"
+            "${LOCALNET_DIR}/canton-localnet" down --volumes || echo "::warning::pre-retry teardown failed; second up may fail with leaked state"
+            sleep 30
+            "${LOCALNET_DIR}/canton-localnet" up
+          fi
+
+      - name: Wait for ledger + PQS readiness
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          "${LOCALNET_DIR}/canton-localnet" wait-ready --timeout 15m --interval 5s
+
+      - name: Assert the participant runs the cell's Canton version
+        id: canton
+        env:
+          EXPECTED_CANTON: ${{ matrix.expected-canton }}
+        run: |
+          set -euo pipefail
+          body="$(curl -sS --fail --max-time 15 "${LOCALNET_JSON_API_URL}/v2/version")"
+          reported="$(jq -r '.version // empty' <<<"${body}")"
+          echo "reported=${reported}" >> "${GITHUB_OUTPUT}"
+          [ -n "${reported}" ] || { echo "::error::GET /v2/version carried no version: ${body}"; exit 1; }
+          echo "Participant reports Canton ${reported}"
+          if [ -n "${EXPECTED_CANTON}" ]; then
+            case "${reported}" in
+              "${EXPECTED_CANTON}" | "${EXPECTED_CANTON}"[-+.]*) ;;
+              *)
+                echo "::error::this cell targets Canton ${EXPECTED_CANTON} but the participant reports ${reported}"
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Restore
+        run: |
+          set -euo pipefail
+          dotnet restore tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj
+          dotnet restore tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj
+          dotnet restore tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj
+
+      - name: Build
+        id: build
+        run: |
+          set -euo pipefail
+          dotnet build --configuration Release --no-restore \
+            tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj
+          dotnet build --configuration Release --no-restore \
+            tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj
+          dotnet build --configuration Release --no-restore \
+            tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj
+
+      - name: gRPC integration tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.PqsRoundTripTests \
+            --minimum-expected-tests 1 \
+            --output Detailed 2>&1 | tee "${CELL_RESULTS_DIR}/grpc-integration.log"
+
+      - name: PQS round-trip test
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
+            -- --filter-class Canton.Ledger.Grpc.Client.Integration.Tests.PqsRoundTripTests \
+            --minimum-expected-tests 1 \
+            --output Detailed 2>&1 | tee "${CELL_RESULTS_DIR}/pqs-round-trip.log"
+
+      - name: REST conformance tests (JSON Ledger API, gated by LedgerApiVersionSkewGuard)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --minimum-expected-tests 1 \
+            --output Detailed 2>&1 | tee "${CELL_RESULTS_DIR}/rest-conformance.log"
+
+      - name: Cross-transport parity tests (Fake, gRPC, REST)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --minimum-expected-tests 1 \
+            --output Detailed 2>&1 | tee "${CELL_RESULTS_DIR}/parity.log"
+
+      - name: Record the cell result
+        if: always()
+        env:
+          CELL_ORDER: ${{ matrix.order }}
+          CELL_NAME: ${{ matrix.cell }}
+          CELL_LOCALNET_REF: ${{ matrix.localnet-ref }}
+          CELL_IMAGE_TAG: ${{ matrix.image-tag }}
+          CELL_EXPECTED_CANTON: ${{ matrix.expected-canton }}
+          CELL_REPORTED_CANTON: ${{ steps.canton.outputs.reported }}
+          CELL_GATING: ${{ matrix.gating }}
+          CELL_OUTCOME: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${CELL_RESULTS_DIR}"
+          jq -n \
+            --argjson order "${CELL_ORDER}" \
+            --arg cell "${CELL_NAME}" \
+            --arg localnet_ref "${CELL_LOCALNET_REF}" \
+            --arg image_tag "${CELL_IMAGE_TAG}" \
+            --arg expected_canton "${CELL_EXPECTED_CANTON}" \
+            --arg reported_canton "${CELL_REPORTED_CANTON}" \
+            --argjson gating "${CELL_GATING}" \
+            --arg outcome "${CELL_OUTCOME}" \
+            '{order: $order, cell: $cell, localnet_ref: $localnet_ref, image_tag: $image_tag,
+              expected_canton: $expected_canton, reported_canton: $reported_canton,
+              gating: $gating, outcome: $outcome}' \
+            > "${CELL_RESULTS_DIR}/cell.json"
+          cat "${CELL_RESULTS_DIR}/cell.json"
+
+      - name: Upload the cell result
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cross-version-cell-${{ matrix.order }}
+          path: ${{ env.CELL_RESULTS_DIR }}
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Capture LocalNet state on failure
+        if: failure()
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          make status > /tmp/localnet-status.txt 2>&1 || true
+          timeout 30 make logs > /tmp/localnet-logs.txt 2>&1 || true
+          docker ps -a > /tmp/docker-ps.txt 2>&1 || true
+          docker logs --timestamps pqs-a-validator-1 > /tmp/pqs-a-validator-1.log 2>&1 || true
+
+      - name: Upload LocalNet diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cross-version-diagnostics-${{ matrix.order }}
+          path: |
+            /tmp/localnet-status.txt
+            /tmp/localnet-logs.txt
+            /tmp/docker-ps.txt
+            /tmp/pqs-a-validator-1.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    name: Matrix results
+    needs: cell
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download every cell result
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: cross-version-cell-*
+          path: cross-version-matrix
+
+      - name: Upload the merged matrix results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cross-version-matrix
+          path: cross-version-matrix
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Write the results table to the job summary
+        run: |
+          set -euo pipefail
+          table="$(scripts/cross-version-matrix-table.sh render cross-version-matrix)"
+          {
+            echo "## Canton cross-version compatibility matrix"
+            echo ""
+            echo "${table}"
+            echo ""
+            echo "Gating cells fail the run; the canary never does. Render this table for release notes with \`scripts/cross-version-matrix-table.sh fetch --run ${GITHUB_RUN_ID}\`."
+          } >> "${GITHUB_STEP_SUMMARY}"
