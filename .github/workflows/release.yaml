@@ -24,7 +24,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: release-${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -51,6 +51,7 @@ jobs:
           VERSION_INPUT: ${{ inputs.version }}
           DRY_RUN_INPUT: ${{ inputs.dry_run }}
           CODEGEN_CS_INPUT: ${{ inputs.codegen_cs_version }}
+          OCI_PUBLISH_ENABLED: ${{ vars.OCI_PUBLISH_ENABLED }}
         run: |
           set -euo pipefail
           if [ -n "${VERSION_INPUT:-}" ]; then
@@ -76,6 +77,9 @@ jobs:
             [ -n "${pair#*=}" ] || { echo "::error::versions.yaml has no '${pair%%=*}' entry"; exit 1; }
           done
           DRY="${DRY_RUN_INPUT:-false}"
+          if [ "${DRY}" != "true" ] && [ "${OCI_PUBLISH_ENABLED:-}" != "true" ]; then
+            echo "::error::repository variable OCI_PUBLISH_ENABLED is not 'true'; every OCI check (oracle, smoke tests, stock-dpm pull) would be skipped while the workflow still reports success, so the release is refused"; exit 1
+          fi
           CGV="${CODEGEN_CS_INPUT:-}"; [ -z "$CGV" ] && CGV="${VERSION}"
           [ "$DRY" = "true" ] || CGV="${VERSION}"
           {
