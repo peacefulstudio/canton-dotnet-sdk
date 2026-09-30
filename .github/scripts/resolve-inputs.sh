@@ -14,7 +14,7 @@ Directory.Build.props <Version>, and export the resolved values to \$GITHUB_ENV.
 Reads (env):
   RUNTIME_VERSION_INPUT     Daml.Runtime version; empty => Directory.Build.props <Version>.
   CODEGEN_CS_VERSION_INPUT  codegen-cs version; empty => Directory.Build.props <Version>.
-  DAMLC_VERSION_INPUT       damlc component version (default: 3.5.2).
+  DAMLC_VERSION_INPUT       damlc component version (required).
   PACKAGE_LICENSE_INPUT     SPDX license expression (default: Apache-2.0).
   DRY_RUN_INPUT             dry-run flag, passed through verbatim.
   SOURCE_LABEL              Short label used in the resolved-summary line.
@@ -40,7 +40,7 @@ EFFECTIVE_CODEGEN_CS="${CODEGEN_CS_VERSION_INPUT:-}"
 if [ -z "$EFFECTIVE_CODEGEN_CS" ]; then
   EFFECTIVE_CODEGEN_CS=$(grep -oP '(?<=<Version>)[^<]+' "$REPO_ROOT/Directory.Build.props" | head -1 || true)
 fi
-EFFECTIVE_DAMLC="${DAMLC_VERSION_INPUT:-3.5.2}"
+EFFECTIVE_DAMLC="${DAMLC_VERSION_INPUT:-}"
 EFFECTIVE_PACKAGE_LICENSE="${PACKAGE_LICENSE_INPUT:-Apache-2.0}"
 EFFECTIVE_DRY_RUN="${DRY_RUN_INPUT:-}"
 

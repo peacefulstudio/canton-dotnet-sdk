@@ -5,9 +5,8 @@ on:
     inputs:
       daml_finance_version:
         description: 'Daml.Finance SDK release version (digital-asset/daml-finance sdk/<ver> tag).'
-        required: false
+        required: true
         type: string
-        default: '2.10.0'
       codegen_cs_version:
         description: 'Version of ghcr.io/peacefulstudio/dpm-codegen-cs to pull. Empty = Directory.Build.props <Version>.'
         required: false
@@ -15,9 +14,8 @@ on:
         default: ''
       damlc_version:
         description: 'damlc component version listed under daml.yaml components.'
-        required: false
+        required: true
         type: string
-        default: '3.5.2'
       runtime_version:
         description: 'Daml.Runtime NuGet version referenced from generated csprojs. Empty = Directory.Build.props <Version>.'
         required: false
@@ -28,60 +26,19 @@ on:
         required: false
         type: string
         default: 'Apache-2.0'
-      dry_run:
-        description: 'Build + pack + verify but skip the NuGet push AND the DAML_FINANCE_RELEASE_COUNTERS write-back.'
-        required: false
-        type: boolean
-        default: false
       release_tag:
-        description: 'Draft release tag to attach nupkgs to. Empty = v<codegen_cs_version>.'
-        required: false
+        description: 'Release tag to build from and attach nupkgs to (e.g. v0.4.0-preview.4).'
+        required: true
         type: string
-        default: ''
     secrets:
       RELEASE_COUNTERS_TOKEN:
         required: true
-      NUGET_USER:
-        required: true
-  workflow_dispatch:
-    inputs:
-      daml_finance_version:
-        description: 'Daml.Finance SDK release version (digital-asset/daml-finance sdk/<ver> tag).'
-        required: false
-        type: string
-        default: '2.10.0'
-      codegen_cs_version:
-        description: 'Version of ghcr.io/peacefulstudio/dpm-codegen-cs to pull. Empty = Directory.Build.props <Version>.'
-        required: false
-        type: string
-        default: ''
-      damlc_version:
-        description: 'damlc component version listed under daml.yaml components.'
-        required: false
-        type: string
-        default: '3.5.2'
-      runtime_version:
-        description: 'Daml.Runtime NuGet version referenced from generated csprojs. Empty = Directory.Build.props <Version>.'
-        required: false
-        type: string
-        default: ''
-      package_license:
-        description: 'SPDX license expression emitted into generated csprojs.'
-        required: false
-        type: string
-        default: 'Apache-2.0'
-      dry_run:
-        description: 'Build + pack + verify but skip the NuGet push AND the DAML_FINANCE_RELEASE_COUNTERS write-back.'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   publish:
     uses: ./.github/workflows/_publish-dar-packages.yaml
     permissions:
       contents: write
-      id-token: write
       packages: read
     with:
       source_label: DamlFinance
@@ -101,8 +58,6 @@ jobs:
       damlc_version: ${{ inputs.damlc_version }}
       runtime_version: ${{ inputs.runtime_version }}
       package_license: ${{ inputs.package_license }}
-      dry_run: ${{ inputs.dry_run }}
       release_tag: ${{ inputs.release_tag }}
     secrets:
       COUNTERS_TOKEN: ${{ secrets.RELEASE_COUNTERS_TOKEN }}
-      NUGET_USER: ${{ secrets.NUGET_USER }}

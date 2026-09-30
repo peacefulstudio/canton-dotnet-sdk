@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (no leading v, e.g. 0.4.0-preview.4). For a rehearsal, push a throwaway tag v<version> first.'
+        description: 'Version to release (no leading v, e.g. 0.4.0-preview.4). Every job builds from the existing tag v<version>.'
         required: true
         type: string
       dry_run:
-        description: 'Rehearsal: pack + attach to the draft, skip nuget.org push + counter bumps + GHCR push.'
+        description: 'Rehearsal: pack + attach to the draft, skip the nuget.org push, the GHCR push, the counter write-back and the release publish.'
         required: false
         type: boolean
         default: false
@@ -20,22 +20,18 @@ on:
         required: false
         type: string
         default: ''
-      splice_version:
-        description: 'Splice source version to package (e.g. 0.6.11). Empty on tag push = repo var SPLICE_VERSION.'
-        required: false
-        type: string
-        default: ''
-      daml_finance_version:
-        description: 'Daml.Finance source version to package. Empty on tag push = repo var DAML_FINANCE_VERSION or 2.10.0.'
-        required: false
-        type: string
-        default: ''
 
 permissions: {}
+
+concurrency:
+  group: release-${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   resolve:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.r.outputs.version }}
       tag: ${{ steps.r.outputs.tag }}
@@ -43,17 +39,18 @@ jobs:
       codegen_cs_version: ${{ steps.r.outputs.codegen_cs_version }}
       splice_version: ${{ steps.r.outputs.splice_version }}
       daml_finance_version: ${{ steps.r.outputs.daml_finance_version }}
+      damlc_version: ${{ steps.r.outputs.damlc_version }}
     steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
       - name: Resolve version + mode + source versions
         id: r
         env:
           VERSION_INPUT: ${{ inputs.version }}
           DRY_RUN_INPUT: ${{ inputs.dry_run }}
           CODEGEN_CS_INPUT: ${{ inputs.codegen_cs_version }}
-          SPLICE_INPUT: ${{ inputs.splice_version }}
-          FINANCE_INPUT: ${{ inputs.daml_finance_version }}
-          SPLICE_VAR: ${{ vars.SPLICE_VERSION }}
-          FINANCE_VAR: ${{ vars.DAML_FINANCE_VERSION }}
         run: |
           set -euo pipefail
           if [ -n "${VERSION_INPUT:-}" ]; then
@@ -66,14 +63,21 @@ jobs:
           if ! [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::'${VERSION}' is not a release version"; exit 1
           fi
+          PROPS_VERSION="$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props | head -1 || true)"
+          if [ "${PROPS_VERSION}" != "${VERSION}" ]; then
+            echo "::error::tag v${VERSION} does not match <Version> ${PROPS_VERSION} in Directory.Build.props at the tagged commit"; exit 1
+          fi
+          .github/scripts/changelog-section.sh "${VERSION}" > /dev/null
+          version_of() { awk -F': *' -v key="$1" '$1 == key { gsub(/["'"'"' ]/, "", $2); print $2 }' versions.yaml; }
+          SPLICE="$(version_of splice)"
+          FINANCE="$(version_of daml-finance)"
+          DAMLC="$(version_of daml-sdk)"
+          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAMLC}"; do
+            [ -n "${pair#*=}" ] || { echo "::error::versions.yaml has no '${pair%%=*}' entry"; exit 1; }
+          done
           DRY="${DRY_RUN_INPUT:-false}"
           CGV="${CODEGEN_CS_INPUT:-}"; [ -z "$CGV" ] && CGV="${VERSION}"
           [ "$DRY" = "true" ] || CGV="${VERSION}"
-          SPLICE="${SPLICE_INPUT:-}"; [ -z "$SPLICE" ] && SPLICE="${SPLICE_VAR:-}"
-          FINANCE="${FINANCE_INPUT:-}"; [ -z "$FINANCE" ] && FINANCE="${FINANCE_VAR:-}"; [ -z "$FINANCE" ] && FINANCE="2.10.0"
-          if [ -z "$SPLICE" ]; then
-            echo "::error::no Splice source version — pass splice_version or set repo var SPLICE_VERSION"; exit 1
-          fi
           {
             echo "version=${VERSION}"
             echo "tag=v${VERSION}"
@@ -81,6 +85,7 @@ jobs:
             echo "codegen_cs_version=${CGV}"
             echo "splice_version=${SPLICE}"
             echo "daml_finance_version=${FINANCE}"
+            echo "damlc_version=${DAMLC}"
           } >> "$GITHUB_OUTPUT"
 
   draft-bootstrap:
@@ -92,19 +97,17 @@ jobs:
       action: bootstrap
       tag: ${{ needs.resolve.outputs.tag }}
 
-  runtime-publish:
+  nuget-pack:
     needs: [resolve, draft-bootstrap]
     permissions:
       contents: write
-      id-token: write
-    uses: ./.github/workflows/publish.yaml
+    uses: ./.github/workflows/pack-nuget.yaml
     with:
       version: ${{ needs.resolve.outputs.version }}
-      dry_run: ${{ fromJSON(needs.resolve.outputs.dry_run) }}
-    secrets: inherit
+      tag: ${{ needs.resolve.outputs.tag }}
 
   oci-build:
-    needs: [resolve, runtime-publish]
+    needs: [resolve, draft-bootstrap]
     permissions:
       contents: write
       packages: write
@@ -114,53 +117,80 @@ jobs:
       version: ${{ needs.resolve.outputs.version }}
       push: ${{ !fromJSON(needs.resolve.outputs.dry_run) }}
 
-  splice-publish:
-    needs: [resolve, oci-build]
+  splice-pack:
+    needs: [resolve, nuget-pack, oci-build]
     permissions:
       contents: write
-      id-token: write
       packages: read
     uses: ./.github/workflows/publish-splice.yaml
     with:
       splice_version: ${{ needs.resolve.outputs.splice_version }}
+      damlc_version: ${{ needs.resolve.outputs.damlc_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
-      dry_run: ${{ fromJSON(needs.resolve.outputs.dry_run) }}
       release_tag: ${{ needs.resolve.outputs.tag }}
     secrets: inherit
 
-  daml-finance-publish:
-    needs: [resolve, oci-build]
+  daml-finance-pack:
+    needs: [resolve, nuget-pack, oci-build]
     permissions:
       contents: write
-      id-token: write
       packages: read
     uses: ./.github/workflows/publish-daml-finance.yaml
     with:
       daml_finance_version: ${{ needs.resolve.outputs.daml_finance_version }}
+      damlc_version: ${{ needs.resolve.outputs.damlc_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
-      dry_run: ${{ fromJSON(needs.resolve.outputs.dry_run) }}
       release_tag: ${{ needs.resolve.outputs.tag }}
     secrets: inherit
 
+  nuget-publish:
+    needs: [resolve, nuget-pack, oci-build, splice-pack, daml-finance-pack]
+    if: ${{ !fromJSON(needs.resolve.outputs.dry_run) }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish.yaml
+    with:
+      tag: ${{ needs.resolve.outputs.tag }}
+    secrets: inherit
+
+  publish-release:
+    needs: [resolve, nuget-publish]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_release-lifecycle.yaml
+    with:
+      action: finalize
+      tag: ${{ needs.resolve.outputs.tag }}
+
   complete:
-    needs: [resolve, runtime-publish, oci-build, splice-publish, daml-finance-publish]
+    needs: [resolve, nuget-pack, oci-build, splice-pack, daml-finance-pack, nuget-publish, publish-release]
     if: always()
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Summarise draft
+      - name: Summarise release
         env:
           DRY: ${{ needs.resolve.outputs.dry_run }}
           TAG: ${{ needs.resolve.outputs.tag }}
         run: |
           {
-            echo "## Release draft ${TAG} assembled (dry_run=${DRY})"
+            echo "## Release ${TAG} (dry_run=${DRY})"
             echo ""
-            echo "- runtime-publish: ${{ needs.runtime-publish.result }}"
+            echo "- nuget-pack: ${{ needs.nuget-pack.result }}"
             echo "- oci-build: ${{ needs.oci-build.result }}"
-            echo "- splice-publish: ${{ needs.splice-publish.result }}"
-            echo "- daml-finance-publish: ${{ needs.daml-finance-publish.result }}"
-            echo ""
-            echo "Draft is NOT published. Run **Finalize Release** (workflow_dispatch) to publish."
+            echo "- splice-pack: ${{ needs.splice-pack.result }}"
+            echo "- daml-finance-pack: ${{ needs.daml-finance-pack.result }}"
+            echo "- nuget-publish: ${{ needs.nuget-publish.result }}"
+            echo "- publish-release: ${{ needs.publish-release.result }}"
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail unless every stage succeeded
+        if: ${{ needs.resolve.outputs.dry_run != 'true' }}
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -euo pipefail
+          for result in ${RESULTS}; do
+            [ "${result}" = "success" ] || { echo "::error::a release stage ended '${result}'"; exit 1; }
+          done

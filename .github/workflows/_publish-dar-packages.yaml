@@ -30,9 +30,8 @@ on:
         default: ''
       damlc_version:
         description: 'damlc component version listed under daml.yaml components.'
-        required: false
+        required: true
         type: string
-        default: '3.5.2'
       runtime_version:
         description: 'Daml.Runtime NuGet version referenced from generated csprojs. Empty = Directory.Build.props <Version>.'
         required: false
@@ -43,22 +42,13 @@ on:
         required: false
         type: string
         default: 'Apache-2.0'
-      dry_run:
-        description: 'Build + pack + verify but skip the NuGet push AND the counter write-back.'
-        required: false
-        type: boolean
-        default: false
       release_tag:
-        description: 'Draft release tag to attach nupkgs to (e.g. v0.4.0-preview.4). Empty = v<codegen_cs_version>.'
-        required: false
+        description: 'Release tag to build from and attach nupkgs to (e.g. v0.4.0-preview.4).'
+        required: true
         type: string
-        default: ''
     secrets:
       COUNTERS_TOKEN:
         description: 'Token with Variables: read & write on this repo (used to read/persist the counter store).'
-        required: true
-      NUGET_USER:
-        description: 'nuget.org username for OIDC trusted publishing (NuGet/login).'
         required: true
 
 concurrency:
@@ -73,10 +63,8 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: nuget-publish
     permissions:
       contents: write
-      id-token: write
       packages: read
 
     env:
@@ -89,12 +77,12 @@ jobs:
       DAMLC_VERSION_INPUT: ${{ inputs.damlc_version }}
       RUNTIME_VERSION_INPUT: ${{ inputs.runtime_version }}
       PACKAGE_LICENSE_INPUT: ${{ inputs.package_license }}
-      DRY_RUN_INPUT: ${{ inputs.dry_run }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          ref: ${{ inputs.release_tag }}
           fetch-depth: 0
 
       - name: Setup .NET
@@ -158,7 +146,7 @@ jobs:
         run: |
           set -euo pipefail
           FEED="$RUNNER_TEMP/local-feed"
-          TAG="${RELEASE_TAG_INPUT:-v${CODEGEN_CS_VERSION}}"
+          TAG="${RELEASE_TAG_INPUT}"
           mkdir -p "$FEED"
           if gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.nupkg' --dir "$FEED" --clobber; then
             echo "Seeded the local feed from $TAG:"
@@ -191,57 +179,23 @@ jobs:
           DOTNET_NOLOGO: 1
         run: .github/scripts/verify-consumer.sh
 
-      - name: NuGet login (OIDC -> short-lived key)
-        id: login
-        if: env.DRY_RUN != 'true'
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Push to nuget.org
-        if: env.DRY_RUN != 'true'
-        env:
-          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
-        run: .github/scripts/push-packages.sh
-
-      - name: Persist release-counter store back to repo variable
-        if: env.DRY_RUN != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.COUNTERS_TOKEN }}
-        run: .github/scripts/persist-counters.sh
-
-      - name: Attach packages to draft release (best-effort, never fails)
+      - name: Attach packages to the draft release (upload only; never create/publish)
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
         run: |
-          set -uo pipefail
-          TAG="${RELEASE_TAG_INPUT:-v${CODEGEN_CS_VERSION}}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            shopt -s nullglob
-            files=("$NUPKG_DIR"/*.nupkg)
-            if [ ${#files[@]} -gt 0 ]; then
-              gh release upload "$TAG" "${files[@]}" --clobber || echo "release upload failed for $TAG; continuing"
-            else
-              echo "no nupkgs under $NUPKG_DIR to attach"
-            fi
-          else
-            echo "no draft release $TAG; skipping attach"
-          fi
-
-      - name: Note dry-run skip
-        if: env.DRY_RUN == 'true'
-        run: |
-          echo "dry_run=true — skipped NuGet push and ${COUNTER_VARIABLE_NAME} write-back. Counter values were NOT burned. nupkgs were still produced and uploaded as an artifact for inspection." | tee -a "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          shopt -s nullglob
+          files=("$NUPKG_DIR"/*.nupkg)
+          gh release upload "$RELEASE_TAG_INPUT" "${files[@]}" --clobber
 
       - name: Upload nupkgs as artifact
-        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ inputs.source_label }}-nuget
           path: ${{ env.NUPKG_DIR }}/*.nupkg
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Upload build logs on failure
         if: failure()
