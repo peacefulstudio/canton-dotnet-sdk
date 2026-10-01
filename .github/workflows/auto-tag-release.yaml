@@ -62,3 +62,4 @@ jobs:
           # Workaround: a tag pushed with GITHUB_TOKEN does not trigger `push` workflows (GitHub Actions
           # behaviour for events created by GITHUB_TOKEN), so the release is dispatched explicitly.
           gh workflow run release.yaml --ref "${tag}" -f "version=${version}"
+          gh workflow run integration-multisync.yaml --ref "${tag}"
