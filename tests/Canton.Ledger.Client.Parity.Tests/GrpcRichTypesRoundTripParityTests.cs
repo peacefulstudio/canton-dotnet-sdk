@@ -28,10 +28,6 @@ public sealed class GrpcRichTypesRoundTripParityTests : RichTypesRoundTripParity
         + "(or the legacy un-namespaced CANTON_LOCALNET_* globals) and bring up the localnet "
         + "(canton-localnet up && canton-localnet wait-ready) to run this parity test.";
 
-    protected override string? NestedOptionalDecodeQuarantine =>
-        "The gRPC read path decodes every proto Optional as a flat DamlOptional, so "
-        + "neither TypeCorners.FromRecord nor NestedOptionalTails.FromRecord can read an Optional (Optional Text) field back in any state.";
-
     protected override async Task<CapabilityLane<RichTypesSession>> OpenClientAsync(
         CancellationToken cancellationToken)
     {

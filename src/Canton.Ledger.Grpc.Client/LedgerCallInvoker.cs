@@ -28,7 +28,7 @@ internal sealed class LedgerCallInvoker
     {
         _options = options;
         _tokenProvider = tokenProvider;
-        _retryPipeline = RetryPipelineFactory.Create(_options.Retry, IsTransientRpcFailure, RecordRetryAttempt);
+        _retryPipeline = RetryPipelineFactory.Create(options.Retry, IsTransientRpcFailure, RecordRetryAttempt);
         (_serverAddress, _serverPort) = ActivityHelper.ParseServerEndpoint(_options.GrpcAddress);
     }
 
@@ -39,20 +39,26 @@ internal sealed class LedgerCallInvoker
     /// granted a fresh budget rather than sharing one budget across the whole sequence. A non-null
     /// <paramref name="timeout"/> is the caller's per-call deadline and takes precedence over the
     /// <see cref="LedgerClientOptions.Timeout"/> default; when both are null the call carries no
-    /// deadline. With retry disabled (the default) the pipeline is empty and the call runs exactly
+    /// deadline. A call that is not <paramref name="replayable"/> mutates participant state and skips
+    /// the retry pipeline entirely, so a committed call whose response was lost is never re-sent. With retry disabled (the default) the pipeline is empty and the call runs exactly
     /// once. The caller's <paramref name="cancellationToken"/> halts retries promptly.
     /// </summary>
     internal ValueTask<TResponse> InvokeAsync<TResponse>(
         Func<Metadata?, DateTime?, CancellationToken, AsyncUnaryCall<TResponse>> call,
         CancellationToken cancellationToken,
-        TimeSpan? timeout = null) =>
-        _retryPipeline.ExecuteAsync(
-            async token =>
-            {
-                var headers = await GetHeadersAsync(token).ConfigureAwait(false);
-                return await call(headers, GetDeadline(timeout), token).ConfigureAwait(false);
-            },
-            cancellationToken);
+        TimeSpan? timeout = null,
+        bool replayable = true)
+    {
+        async ValueTask<TResponse> Attempt(CancellationToken token)
+        {
+            var headers = await GetHeadersAsync(token).ConfigureAwait(false);
+            return await call(headers, GetDeadline(timeout), token).ConfigureAwait(false);
+        }
+
+        return replayable
+            ? _retryPipeline.ExecuteAsync(Attempt, cancellationToken)
+            : Attempt(cancellationToken);
+    }
 
     /// <summary>
     /// Runs a single unary RPC inside a client span and the retry pipeline, projecting the response.
@@ -73,12 +79,13 @@ internal sealed class LedgerCallInvoker
         Action<Activity?>? configureActivity = null,
         Predicate<RpcException>? isExpectedFailure = null,
         TimeSpan? timeout = null,
-        [CallerMemberName] string callerMemberName = "") =>
+        [CallerMemberName] string callerMemberName = "",
+        bool replayable = true) =>
         ExecuteTracedAsync<TClient, TProjected>(
             activitySource,
             service,
             method,
-            async (_, token) => project(await InvokeAsync(call, token, timeout).ConfigureAwait(false)),
+            async (_, token) => project(await InvokeAsync(call, token, timeout, replayable).ConfigureAwait(false)),
             cancellationToken,
             configureActivity,
             isExpectedFailure,
@@ -96,12 +103,13 @@ internal sealed class LedgerCallInvoker
         CancellationToken cancellationToken,
         Action<Activity?>? configureActivity = null,
         TimeSpan? timeout = null,
-        [CallerMemberName] string callerMemberName = "") =>
+        [CallerMemberName] string callerMemberName = "",
+        bool replayable = true) =>
         ExecuteTracedAsync<TClient, TResponse>(
             activitySource,
             service,
             method,
-            (_, token) => InvokeAsync(call, token, timeout).AsTask(),
+            (_, token) => InvokeAsync(call, token, timeout, replayable).AsTask(),
             cancellationToken,
             configureActivity,
             callerMemberName: callerMemberName);

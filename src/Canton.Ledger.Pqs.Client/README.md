@@ -1,6 +1,6 @@
 # Canton.Ledger.Pqs.Client
 
-Type-safe query client for the Canton Participant Query Store (PQS). Provides expression-based, SQL-injection-safe queries over active Daml contracts via PostgreSQL.
+Type-safe query client for the Canton Participant Query Store (PQS), part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). Provides expression-based, SQL-injection-safe queries over active Daml contracts via PostgreSQL.
 
 ## Overview
 
@@ -11,7 +11,7 @@ The query surface itself — `IPqsClient`, the `Filter`/`PqsFilter` DSL, `PqsPag
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Pqs.Client --prerelease
+dotnet add package Canton.Ledger.Pqs.Client --version 0.6.0-preview.3
 ```
 
 ## Usage
@@ -62,6 +62,24 @@ var myActive = await pqsClient.QueryAsync<Agreement>(
         Filter.Or(
             Filter.Field<Agreement>(a => a.Initiator, partyId),
             Filter.Field<Agreement>(a => a.Counterparty, partyId))));
+```
+
+`Filter.Field` parses its value as the field's Daml type, so `"42.5"` matches a `Numeric` stored as
+`42.5000000000`, and its selector may reach into nested records (`a => a.Terms.Currency`).
+
+`Filter.Where` translates a C# predicate over the generated bindings into parameterized SQL, typed by
+each field's Daml type. It supports comparisons (`<`, `>=`, … on `Int64`, `Numeric`, `Date` and `Time`),
+nested records, `Optional`, `List`, `Map`/`TextMap` and variant navigation, and `&&` / `||` / `!`:
+
+```csharp
+var large = await pqsClient.QueryAsync<Agreement>(
+    Filter.Where<Agreement>(a =>
+        a.Amount >= 1000m
+        && a.Terms.Expiry < cutoff
+        && a.Note != null
+        && a.Tags.Contains("priority")
+        && a.Limits["daily"] > 10
+        && a.State is AgreementState.Accepted));
 ```
 
 ### Fetching a Single Contract

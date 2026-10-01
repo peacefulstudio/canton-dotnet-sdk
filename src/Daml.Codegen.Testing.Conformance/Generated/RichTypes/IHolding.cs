@@ -36,19 +36,19 @@ public interface IHolding : IDamlInterface, IHasView<HoldingView>, IHasChoices<I
     static Identifier IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946", "RichTypes", "Holding");
+    public static new Identifier InterfaceId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "Holding");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946";
+    static string IDamlInterface.PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "richtypes-hd117e68b37cc";
+    static string IDamlInterface.PackageName => "richtypes-hecd531570c32";
 
     /// <summary>Gets the package version.</summary>
     static Version IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946", "RichTypes", "Holding"), DamlTypeKind.Interface, "richtypes-hd117e68b37cc");
+    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "Holding"), DamlTypeKind.Interface, "richtypes-hecd531570c32");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="HoldingView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static ViewDescriptor<IHolding, HoldingView> View { get; } = new();

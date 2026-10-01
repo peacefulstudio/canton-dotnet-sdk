@@ -59,7 +59,7 @@ scripts/refresh-snapshot.sh splice-amulet-name-service
 
 `intermediate.binpb` is the canonical codegen input for the drift test;
 `splice-amulet-name-service.dar` is the upstream Splice archive it was derived
-from (`splice-amulet-name-service-0.1.24.dar` from the Splice `0.8.2`
+from (`splice-amulet-name-service-0.1.24.dar` from the Splice `0.8.4`
 `splice-node` release tarball), kept alongside as the frozen upstream artifact
 and used as the regeneration input. Do not hand-edit `intermediate.binpb`: the
 refresh script regenerates it from this DAR on every run, and CI regenerates

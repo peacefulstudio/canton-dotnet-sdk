@@ -129,6 +129,19 @@ internal sealed partial class ChoiceEmitter
 
         switch (path[stepIndex])
         {
+            case ExerciseResultStep.TupleComponent { IsOptional: true } component:
+            {
+                var fields = $"fields{slotIndex}_{stepIndex}";
+                indent.AppendLine($"var {fields} = {value}.As<{context.Qualifier.Qualify(RuntimeTypeNames.DamlRecord)}>().Fields;");
+                indent.AppendLine($"if ({fields}.Count > {component.Index})");
+                indent.AppendLine("{");
+                indent.Indent();
+                WriteResultPathWalk(indent, path, stepIndex + 1, $"{fields}[{component.Index}].Value", slotIndex);
+                indent.Dedent();
+                indent.AppendLine("}");
+                return;
+            }
+
             case ExerciseResultStep.TupleComponent component:
                 WriteResultPathWalk(
                     indent,

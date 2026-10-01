@@ -36,7 +36,7 @@ scripts/refresh-snapshot.sh splice-api-token-holding-v2
 
 `intermediate.binpb` is the canonical codegen input for the drift test;
 `splice-api-token-holding-v2.dar` is the upstream Splice archive it was
-derived from (`splice-api-token-holding-v2-1.0.0.dar` from the Splice `0.8.2`
+derived from (`splice-api-token-holding-v2-1.0.0.dar` from the Splice `0.8.4`
 `splice-node` release tarball), kept alongside as the frozen upstream artifact
 and used as the regeneration input. Do not hand-edit `intermediate.binpb`: the
 refresh script regenerates it from this DAR on every run, and CI regenerates

@@ -195,11 +195,11 @@ public class DamlValueExtensionsTests
     }
 
     [Fact]
-    public void AsOptional_rejects_a_DamlOptionalChain_instead_of_wrapping_it_as_Some()
+    public void AsOptional_reads_a_DamlOptionalChain_as_the_DamlOptional_level_it_is_instead_of_wrapping_it_as_Some()
     {
-        var act = () => DamlOptionalChain.Some(new DamlText("deep")).AsOptional();
-
-        act.Should().Throw<InvalidCastException>().WithMessage("*DamlOptionalChain*");
+        DamlOptionalChain.Some(new DamlText("deep")).AsOptional()
+            .Should().Be(DamlOptional.Some(new DamlText("deep")));
+        DamlOptionalChain.None.AsOptional().Should().Be(DamlOptional.None);
     }
 
     [Fact]

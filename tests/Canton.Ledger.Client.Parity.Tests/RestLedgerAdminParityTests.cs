@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Rest.Client;
 using Canton.Ledger.Rest.Client.Integration.Tests;
@@ -68,5 +69,39 @@ public sealed class RestLedgerAdminParityTests : LiveLedgerAdminParityTests
             await fixture.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
+
+    [Fact]
+    public async Task GetCommandStatusAsync_is_not_served_by_the_JSON_API()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+
+        var act = () => lane.Capability.Admin.GetCommandStatusAsync(cancellationToken: cancellationToken);
+
+        await act.Should().ThrowAsync<NotSupportedException>();
+    }
+
+    [Fact]
+    public async Task UpdatePartyIdentityProviderIdAsync_is_not_served_by_the_JSON_API()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+
+        var act = () => lane.Capability.Admin.UpdatePartyIdentityProviderIdAsync(
+            new Daml.Runtime.Data.Party("nobody::1220"), null, "idp", cancellationToken);
+
+        await act.Should().ThrowAsync<NotSupportedException>();
+    }
+
+    [Fact]
+    public async Task PruneAsync_is_not_served_by_the_JSON_API()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+
+        var act = () => lane.Capability.Admin.PruneAsync(1, cancellationToken: cancellationToken);
+
+        await act.Should().ThrowAsync<NotSupportedException>();
     }
 }

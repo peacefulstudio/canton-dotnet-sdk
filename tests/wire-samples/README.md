@@ -97,22 +97,16 @@ depends on:
 
 ## Recapture
 
-The scripted rig that produced these files was removed when this branch was
-reworked down to evidence. It stays retrievable:
-
-```bash
-git fetch origin pull/728/head
-git checkout bda87db -- tests/wire-samples/capture/
-```
+The scripted rig that produced these files is no longer in the tree; the captures and the
+`daml/` model they came from are what remain.
 
 A recapture allocates a fresh party, so contract ids, party ids and offsets
 differ from the ones recorded here — the encodings are what these files pin,
 not the identifiers.
 
 To redo the LF 2.1 comparison, copy `daml/` with `--target=2.1` in `daml.yaml`,
-a distinct `name:`, and the `Keyed` template deleted; build it; then run the rig
-with `CAPTURE_DAR`, `CAPTURE_PKG` and `CAPTURE_OUT` pointed at the 2.1 artifacts
-and a scratch output directory. Compare the two sets by walking both JSON trees
+a distinct `name:`, and the `Keyed` template deleted; build it; then capture the
+same requests against the 2.1 artifacts into a scratch output directory. Compare the two sets by walking both JSON trees
 and asserting leaf values under `createArgument`, `choiceArgument`,
 `exerciseResult`, `contractKey` and `viewValue` — party ids and contract ids
 aside — while comparing only shape elsewhere, since offsets, update ids, record

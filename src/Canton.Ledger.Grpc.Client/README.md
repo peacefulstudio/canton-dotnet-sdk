@@ -1,6 +1,12 @@
 # Canton.Ledger.Grpc.Client
 
-High-level gRPC client for the Canton Ledger API with integration to `Daml.Runtime` types.
+High-level gRPC client for the Canton Ledger API with integration to `Daml.Runtime` types, part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk).
+
+## Installation
+
+```bash
+dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0-preview.3
+```
 
 ## Key Types
 
@@ -69,7 +75,7 @@ var asset = new Asset(new Party("Alice::1234..."), 100m);
 
 var outcome = await ledgerClient.TryCreateAsync(
     asset,
-    actAs: new Party("Alice::1234..."),
+    submitter: new Party("Alice::1234..."),
     workflowId: "create-asset");
 
 // Outcome is a discriminated union: One / None / Many / DamlError / InfraError / CommittedUndecodable.
@@ -92,7 +98,7 @@ var command = new ExerciseCommand(
 
 await ledgerClient.ExerciseAsync(
     command,
-    actAs: new Party("Alice::1234..."));
+    submitter: new Party("Alice::1234..."));
 ```
 
 ### Async Submission + Completions
@@ -222,7 +228,7 @@ services.AddLedgerClient(options => options.GrpcAddress = "https://localhost:500
 // Opt-in raw gRPC escape hatch — registers IGrpcCallInvokerFactory only
 services.AddLedgerRawGrpc(configuration.GetSection("Canton:Ledger"));
 
-// Health check — requires IAdminClient, calls GetParticipantIdAsync to verify connectivity
+// Health check — requires ILedgerClient, queries the ledger end to verify connectivity
 services.AddHealthChecks().AddLedgerClient(tags: ["grpc", "ready"]);
 ```
 

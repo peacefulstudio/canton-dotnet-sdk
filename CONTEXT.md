@@ -1,11 +1,15 @@
-# Daml C# Codegen
+# Canton .NET SDK
 
-Generates strongly-typed C# from Daml `.dar` archives. The codegen pipeline splits across two
-runtimes: a JVM-side helper wraps `daml-lf-archive` to decode a DAR into an intermediate
-representation, and a .NET-side emitter consumes that representation and writes idiomatic
-C#. End-user applications consuming generated code have no JVM dependency.
+Lets .NET applications talk to a Canton participant with full Daml type safety. The codegen
+generates strongly-typed C# from Daml `.dar` archives: a JVM-side helper wraps
+`daml-lf-archive` to decode a DAR into an intermediate representation, and a .NET-side emitter
+consumes that representation and writes idiomatic C#. The ledger client (`Canton.Ledger.*`)
+submits commands and reads streams over the gRPC or JSON Ledger API using those generated
+types. End-user applications have no JVM dependency.
 
 ## Language
+
+### Codegen
 
 **Intermediate AST** (IR):
 The protobuf message exchanged between the JVM helper and the C# emitter. Mirrors the
@@ -22,8 +26,7 @@ _Avoid_: "decoded DAR", "AST file"
 The Scala binary that reads a `.dar` via `daml-lf-archive` and emits an Intermediate DAR.
 Runs only at codegen time — never at application runtime. Coupling to `daml-lf-archive`
 is confined to this binary. Shipped as a JAR inside the `dpm codegen-cs` bundle and
-executed against the host JDK (a dpm install precondition). The helper ships
-inside that OCI bundle — its source is not part of the public repository. It is
+executed against the host JDK (a dpm install precondition). It is
 also packaged standalone as `daml-dar-to-proto`: from `0.6.0-preview.1`, GitHub releases
 attach the runnable jar and the Intermediate DAR proto schema, so non-C# SDKs can run the
 JVM helper directly to turn a `.dar` into an Intermediate DAR.
@@ -31,9 +34,10 @@ _Avoid_: "Scala helper", "decoder service", "ast extractor"
 
 **AstToIntermediate translator**:
 The single function inside the JVM helper that maps
-`Dar[(PackageId, Ast.PackageSignature)]` to `IntermediateDar`. The only place in the
-project that depends on Digital Asset's own Scala case-class shapes; everything else depends on
-the Intermediate AST.
+`Dar[(PackageId, Ast.PackageSignature)]`, together with the static party analyses, to
+`IntermediateDar`. It, the decoders and the party-expression analyzer beside it are the only
+code that depends on Digital Asset's own Scala case-class shapes; everything outside the JVM
+helper depends on the Intermediate AST.
 _Avoid_: "AST converter", "Scala-to-proto mapper"
 
 **C# emitter**:
@@ -49,11 +53,19 @@ proto file. The emitter is not a DLL and is never loaded into DPM's address spac
 _Avoid_: "the codegen", "generator" (both ambiguous between JVM helper + C# emitter),
 "the emitter DLL", "the plugin DLL", "the in-process emitter"
 
+**Full decode**:
+The JVM helper's default decode: `decodeArchivePayload` (returns full `Ast.Package`) keeps the
+signatory, observer and controller expressions so the static party analysis can read them,
+then erases everything but data signatures and the analysis verdicts. It is
+**patch-version-sensitive** — a patch release that changes a party expression changes the
+Intermediate AST. `dpm codegen-cs` always runs it.
+_Avoid_: "full parse", "expression decode"
+
 **Schema-mode decode**:
-Using `Decode.decodeArchivePayloadSchema` (returns `Ast.PackageSignature`) rather than
-`decodeArchivePayload` (returns full `Ast.Package`). Strips expressions and choice bodies,
-and is **patch-version-insensitive** — two patch-different versions of the same package
-produce identical Intermediate ASTs.
+The JVM helper's `--schema-only` opt-out: `decodeArchivePayloadSchema` (returns
+`Ast.PackageSignature`) strips expressions and choice bodies, so every party analysis is
+`Dynamic`. It is **patch-version-insensitive** — two patch-different versions of the same
+package produce identical Intermediate ASTs.
 _Avoid_: "signature decode", "lite parse"
 
 **`dpm codegen-cs`**:
@@ -76,17 +88,15 @@ The immutable value the C# emitter threads through its emit methods, one per Dam
 the module's namespace, the `TypeReferenceQualifier` scoped to it, and the package-wide
 data-type lookup and local enum / variant / interface / choice-argument name sets shared by
 every module of the package. `PackageEmitContext.ForPackage` scans a package once and hands
-back one context per module; read-only during emission. Replaces the mutable `_current*`
-/ `_local*` instance fields the emitter used to clear at the start of each package.
+back one context per module; read-only during emission.
 _Avoid_: "codegen state", "the current-package fields", "emit scratch"
 
-**`CrossPackageResolver`**:
-The DAR-scoped module (`ICrossPackageResolver`) that resolves a `DamlTypeRef` to a C# name.
-It owns the archive lookup, the foreign-choice-argument memo, and the set of external package
-ids it has discovered — read after emission to emit a `<PackageReference>` per id. Lives for
-one `Generate` call. Replaces `ResolveTypeRefName` plus the `_currentArchive` /
-`_foreignChoiceArgCache` / `_externalPackageIds` instance fields. The prod adapter
-(`DarCrossPackageResolver`) resolves against an `IDarSource`; tests use a canned stub.
+**`ICrossPackageResolver`**:
+The DAR-scoped module that resolves a `DamlTypeRef` to a C# name. It owns the archive lookup,
+the foreign-choice-argument memo, and the set of external package ids it has discovered —
+read after emission to emit a `<PackageReference>` per id. Lives for one `Generate` call. The
+prod adapter (`DarCrossPackageResolver`) resolves against an `IDarSource`; tests use a canned
+stub.
 _Avoid_: "type resolver", "package resolver service", "the cross-package cache"
 
 **`PartyAnalysis`**:
@@ -102,24 +112,22 @@ The module that turns a `DamlType` into C#: `MapType` (→ a C# type name), `ToV
 `FromValue` (→ serialize / deserialize expressions). An instance constructed per package over a
 `PackageEmitContext` and an `ICrossPackageResolver`, which it calls into for cross-package names
 — it does not own resolution. Pure functions of its inputs: `DamlType` in, C# fragment out, with
-a trivially-constructible context, so it is unit-testable without a real DAR. Extracted from the
-emitter's `MapDamlTypeToCSharp` / `GetToValueConversion` / `GetFromValueConversion` once
-`PackageEmitContext` exists.
+a trivially-constructible context, so it is unit-testable without a real DAR.
 _Avoid_: "type converter", "the mapping switch", "serializer"
 
 **`SubmissionExtensionsEmitter`**:
 The module that emits the template *create / submission* path — `TryCreateAsync`, the optional
-`Observers(payload)` helper, and the `SubmissionExtensions` class — deriving signatories and
-observers from the payload via `PartyAnalysis`. Distinct from `ChoiceEmitter`: creating a
-contract is not exercising a choice. Extracted from the `NamedSubmitters` partial.
+`Observers(payload)` helper, and the per-template `<Template>SubmissionExtensions` class —
+deriving signatories and observers from the payload via `PartyAnalysis`. Distinct from
+`ChoiceEmitter`: creating a contract is not exercising a choice.
 _Avoid_: "submitter", "the create wrapper", "named-submitter partial"
 
 **`ChoiceEmitter`**:
 The module that emits the C# to *exercise* a choice: the `<Choice>Arg` fallback type, the
-`Choice<Template, Arg, Result>` descriptor with its result decoder, the typed `Try<Choice>Async`
-exercisers (both the contract-id-returning and the value-returning flavour, kept as private
-detail of one home — not pre-split), and the interface-choice extensions. An instance
-constructed per package over a `PackageEmitContext`, an `ICrossPackageResolver`, the package's
+`Choice<TOwner, TArg, TResult>` descriptor with its result decoder, the typed `Try<Choice>Async`
+exercisers (both the contract-id-returning and the value-returning flavour, partials of one
+class), and the interface-choice extensions. An instance constructed per package over a
+`PackageEmitContext`, an `ICrossPackageResolver`, the codegen options, the package's
 `DamlTypeMapper`, and the shared `PartyAnalysis`; methods take `(IndentWriter, template/interface)`.
 It *calls* the mapper for every type fragment and *reads* — does not own — the resolved
 choice-argument metadata. The created-slot extraction (return type → list of `ContractId T`
@@ -133,13 +141,13 @@ as an ordinary argument so a call site infers all of them at once. C# performs n
 type-argument inference — a caller either supplies every type argument or none — so whenever
 a surface needs two related types and only one is spellable at the call site, the pair travels
 on a descriptor instead. `ViewDescriptor<TInterface, TView>` pairs an interface marker with its
-view record, `Choice<TTemplate, TArg, TResult>` pairs a template with a choice's argument and
-result, and `KeyDescriptor` pairs a keyed template with its key type. A descriptor may be
-empty (a pure type witness, like `ViewDescriptor`) or carry codecs (like `Choice`, and like
-`KeyDescriptor`, which carries the key decode). `Choice` and `ViewDescriptor` are plain statics
-on the type they describe. `KeyDescriptor` is instead reached through a `static abstract` member
-on a facet interface, so generic code finds it without reflection — that is the forward
-convention new descriptors follow, not a description of the existing two.
+view record, `Choice<TOwner, TArg, TResult>` pairs a template or interface with a choice's
+argument and result, and `KeyDescriptor<TTemplate, TKey>` pairs a keyed template with its key
+type. A descriptor may be empty (a pure type witness, like `ViewDescriptor`) or carry codecs
+(like `Choice`, and like `KeyDescriptor`, which carries the key decode). Each `Choice` and
+`ViewDescriptor` is a plain static on the type it describes. `KeyDescriptor` is instead
+reached through the `static abstract` `IHasKey.Key` member, so generic code finds it without
+reflection — that is the forward convention new descriptors follow.
 _Avoid_: "marker", "phantom type" (those name the facet interface, not the value), "the
 metadata object", "type token"
 
@@ -263,9 +271,14 @@ _Avoid_: "the binder" alone, "field owner"
 
 ### Ledger client domain
 
-Terms specific to the `Canton.Ledger.*` client, folded in from the ledger client's own domain
-glossary. `Active contract` and `Contract key` are shared with the codegen terms above and are
-not repeated here.
+Terms specific to the `Canton.Ledger.*` client. `Active contract` and `Contract key` are shared
+with the codegen terms above and are not repeated here.
+
+**Transport**:
+The Ledger API a client speaks to its participant: gRPC (`Canton.Ledger.Grpc.Client`) or JSON
+(`Canton.Ledger.Rest.Client`). Both serve the same `ICantonLedgerClient` surface, so
+application code does not change with the transport.
+_Avoid_: Backend, channel, protocol
 
 **Template**:
 A concrete Daml contract type. Templates can be created on-ledger and carry a template id.
@@ -289,6 +302,81 @@ _Avoid_: Submitter, signatory party
 A party whose contract visibility a submission reads in, without asserting its authorization.
 _Avoid_: Observer party, reader
 
+**Submitter info**:
+The act-as and read-as party sets one submission or subscription carries (`SubmitterInfo`).
+A subscription's visibility is the union of those parties. A single `Party` converts to it as
+the sole act-as party.
+_Avoid_: Credentials, identity
+
+**User**:
+A participant-local identity that a bearer token authenticates as. It holds user rights —
+act-as, read-as and execute-as over parties or any party, participant admin, identity-provider
+admin — and those rights, not the token, decide what a call may do. A party lives on the
+ledger; a user lives only on its participant.
+_Avoid_: Account, party
+
+**Execute-as**:
+A user right to prepare and execute submissions as a party without reading as it. Act-as
+implies it.
+_Avoid_: Submit-only right
+
+**Token provider**:
+The source of the bearer token a transport attaches to each call (`ITokenProvider`): a static
+token, or an OAuth2 client-credentials grant.
+_Avoid_: Auth handler, credential store
+
+**Command id**:
+The deduplication identifier of a submission (`CommandId`): the participant treats a second
+submission with the same command id from the same user and act-as parties within the
+deduplication period as a duplicate. A retry after an unknown outcome resubmits with the same
+command id. Distinct from a workflow id, which only correlates and is never deduplicated.
+_Avoid_: Request id, correlation id
+
+**Completion**:
+The participant's verdict on one submitted command — accepted with its update id, or rejected
+with a status — delivered on the completion stream to the parties that submitted it. It is how
+a fire-and-forget `SubmitAsync` learns what happened.
+_Avoid_: Receipt, acknowledgement
+
+**Exercise outcome**:
+The result a `Try*` write returns (`ExerciseOutcome<T>`) instead of throwing: `One` value,
+`None` or `Many` where exactly one was expected, a structured `DamlError`, an `InfraError` from
+the transport, or `CommittedUndecodable` — the command committed but the response could not be
+decoded, so the caller reads the transaction by its update id and never resubmits.
+_Avoid_: Result, response
+
+**Commit state**:
+Whether a failed write's command reached the ledger (`CommitState`): `NotCommitted` (retry
+freely), `Committed` (never resubmit) or `Unknown` (retry only with the same command id).
+_Avoid_: Retryable flag, success flag
+
+**Disclosed contract**:
+A contract attached to a submission as its created-event blob, so a party that does not see it
+natively can still use it. The blob comes from a created event read by a party that does see it.
+_Avoid_: Shared contract, attached contract
+
+**Interactive submission**:
+Submitting in three steps: the participant prepares the commands (interprets and hashes them
+without executing), the acting parties sign the hash outside the participant, and the
+participant executes the signed submission. The prepared transaction is opaque to the SDK; a
+signer that does not trust the preparing participant decodes it before signing.
+_Avoid_: Two-phase submit, offline submission
+
+**External party**:
+A party whose signing key is held outside every participant. It is onboarded by signing its own
+topology transactions, and it acts only through interactive submission.
+_Avoid_: Wallet party, self-custody party
+
+**Vetting**:
+A participant's declaration that it will use a package on a synchronizer. A transaction can use
+only packages every involved participant has vetted.
+_Avoid_: Package approval, package upload
+
+**Participant Query Store** (PQS):
+A PostgreSQL projection of a participant's ledger that `IPqsClient` queries for active
+contracts. It is fed from the participant's update stream, so it trails the ledger.
+_Avoid_: Read replica, ACS database, query store unqualified
+
 **Unclassified event**:
 A ledger event the participant delivered on a typed stream that the client could not attribute
 to the requested template or interface — surfaced to the consumer rather than dropped.
@@ -308,6 +396,46 @@ _Avoid_: Domain, sequencer, mediator
 The movement of a contract from one synchronizer to another — unassigned on the source,
 assigned on the target — observed as paired stream events.
 _Avoid_: Transfer, migration, move
+
+### Ledger client streams
+
+**Ledger offset**:
+A position in the participant's update stream (`LedgerOffset`); `LedgerOffset.Begin` precedes
+every update. A subscription starts strictly after its start offset and, when given an end
+offset, delivers the update at it and completes.
+_Avoid_: Sequence number, raw offset
+
+**Active-contract-set snapshot**:
+The active contracts the subscribing parties are stakeholders of at one offset, streamed by
+`SubscribeActiveAsync` and closed by exactly one terminal checkpoint — emitted even when the
+snapshot is empty — or by a stream error when the transport fails mid-snapshot.
+_Avoid_: ACS dump, contract query
+
+**ACS-delta stream**:
+The stakeholder-based update stream `SubscribeAsync` serves: creates, archives and
+reassignments of the subscribing parties' contracts, never exercises. It shares its visibility
+basis with the active-contract-set snapshot, so a snapshot followed by a resume from its
+terminal checkpoint rebuilds exactly the snapshot's contracts plus every later change.
+_Avoid_: Transaction stream, flat stream
+
+**Ledger-effects stream**:
+The witness-based update stream `SubscribeLedgerEffectsAsync` serves: every event the
+subscribing parties witnessed, exercises included. Its visibility basis differs from the
+snapshot's, so a stakeholder resume does not resume it.
+_Avoid_: Tree stream, transaction-tree stream
+
+**Stakeholder resume**:
+The resume ticket (`StakeholderResume`) an active-contract-set snapshot's terminal checkpoint
+hands back. Only the ACS-delta stream accepts it; its raw offset stays reachable for a
+deliberate cross-basis resume.
+_Avoid_: Snapshot offset, resume token
+
+**Pruned offset**:
+The offset up to which the participant has deleted its history (`PrunedOffsets`);
+`LedgerOffset.Begin` means nothing is pruned. A subscription starting before it fails, so a
+consumer whose resume offset has fallen behind it rebuilds from an active-contract-set
+snapshot.
+_Avoid_: Retention horizon, ledger begin
 
 ### Ledger client transport behaviour
 
@@ -458,10 +586,11 @@ _Avoid_: Contract test, wire test
 
 **Conformance corpus**:
 The Daml packages that state, executably, which type shapes and Daml-LF versions the codegen
-claims to emit. Owned by this repo and consumed by the ledger client as a package carrying the
+claims to emit. Shipped as the `Daml.Codegen.Testing.Conformance` package, carrying the
 compiled types together with the DAR they were generated from, so the two cannot drift apart.
-Its Daml-LF target and SDK version are the corpus's own: the ledger client names neither, and a
-question about which version a package carries is answered upstream. Despite the shared word it
+Its Daml-LF target and SDK version are the corpus's own: the ledger client's tests name
+neither, and a question about which version a package carries is answered by the corpus.
+Despite the shared word it
 is not a conformance test and is not built from them: a corpus is what a test runs against, and
 one corpus serves the offline emitter checks here and the live round-trips in the client.
 _Avoid_: Test fixture, testdata, richtypes (name the package, not one member)
@@ -492,6 +621,34 @@ by definition, which is why it stays public while the wired implementation it st
 does not.
 _Avoid_: Fake, mock, stub
 
+### Releasing
+
+**Public mirror**:
+The public repository. It receives source through promotion but authors its own `.github/`.
+_Avoid_: Public repo, OSS twin
+
+**Promote**:
+Copy the `.gitpublic`-listed set from a release-tagged `dev` commit into a pull request on the
+public mirror.
+_Avoid_: Publish, sync, dry-run promote
+
+**Release tag**:
+The `v<Version>` pair. The internal tag marks which `dev` commit went out and starts
+promotion; anyone may create it, and only the owner moves it (ruleset bypass) to a
+fix-up commit before release. The public tag is placed automatically on the
+first green `main` commit carrying an untagged `<Version>`; it ships and never moves.
+_Avoid_: Stage, re-bless
+
+**Hold**:
+The `hold-release` label on an open public pull request. While any such pull request is
+open, no public release tag is placed.
+_Avoid_: Freeze, block
+
+**Internal entry**:
+A CHANGELOG entry under an `### Internal` heading. It is never promoted to the public
+CHANGELOG.
+_Avoid_: Private entry
+
 ## Example dialogue
 
 > **Dev**: Where does the JVM dependency go? I thought consumers shouldn't need a JDK.
@@ -502,12 +659,14 @@ _Avoid_: Fake, mock, stub
 >
 > **Dev**: So if Splice ships a patch release, do we have to regenerate?
 >
-> **Domain expert**: No. Schema-mode decode is patch-version-insensitive — the
-> Intermediate AST is identical, so the C# emitter produces byte-identical output and
-> the NuGet hash doesn't move.
+> **Domain expert**: Only if the patch changed a signatory, observer or controller expression.
+> The default full decode reads those expressions, so such a patch changes the generated
+> code. Schema-mode decode is patch-version-insensitive — the Intermediate AST is identical,
+> so the C# emitter produces byte-identical output — at the cost of every party analysis
+> being `Dynamic`.
 >
 > **Dev**: And if DA renames an internal `PackageSignature` case class in a `daml-lf-archive`
 > release?
 >
-> **Domain expert**: Only the AstToIntermediate translator has to change. The
-> Intermediate AST stays stable; the C# emitter doesn't notice.
+> **Domain expert**: Only the JVM helper has to change. The Intermediate AST stays stable;
+> the C# emitter doesn't notice.

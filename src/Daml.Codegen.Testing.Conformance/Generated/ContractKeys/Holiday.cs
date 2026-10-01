@@ -28,13 +28,13 @@ public sealed partial record Holiday(
 ) : ITemplate, IHasKey<Holiday, global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey>, IHasChoices<Holiday>, IDamlRecord<Holiday>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050", "ContractKeys", "Holiday");
+    public static Identifier TemplateId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Holiday");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050";
+    public static string PackageId => "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "contractkeys-h61a17c769e62";
+    public static string PackageName => "contractkeys-h4fd930e5658f";
 
     /// <summary>Gets the package version.</summary>
     public static Version PackageVersion { get; } = new(0, 0, 1);

@@ -225,6 +225,97 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
             .Subject.Offset.Should().Be(LedgerOffset.At(7));
     }
 
+    private const string GetCompletionsPath = "/v2/commands/command-completions";
+
+    [Fact]
+    public async Task GetCompletionsAsync_posts_the_parties_and_begin_exclusive_offset_to_v2_commands_command_completions()
+    {
+        var transport = RespondingWith(CheckpointWindow);
+        var client = ClientWith(transport, userId: "app-1");
+        using var cancellation = new CancellationTokenSource();
+
+        await DrainUntilAsync(client.GetCompletionsAsync([Alice, Bob], LedgerOffset.At(17), cancellation.Token), cancellation, stopAfter: 1);
+
+        transport.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        transport.LastRequest.RequestUri!.AbsolutePath.Should().Be(GetCompletionsPath);
+        var request = JsonDocument.Parse(transport.LastRequestBody!).RootElement;
+        request.GetProperty("beginExclusive").GetString().Should().Be("17");
+        request.GetProperty("parties").EnumerateArray().Select(party => party.GetString())
+            .Should().Equal("party::alice", "party::bob");
+        request.TryGetProperty("userId", out _).Should().BeFalse("GetCompletions reads across every user's submissions");
+    }
+
+    [Fact]
+    public async Task GetCompletionsAsync_bounds_each_window_with_the_configured_limit_and_idle_timeout()
+    {
+        var transport = RespondingWith(CheckpointWindow);
+        var client = ClientWith(transport, limit: 5, idleTimeout: TimeSpan.FromMilliseconds(300));
+        using var cancellation = new CancellationTokenSource();
+
+        await DrainUntilAsync(client.GetCompletionsAsync([Alice], LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 1);
+
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be($"{GetCompletionsPath}?limit=5&stream_idle_timeout_ms=300");
+    }
+
+    [Fact]
+    public async Task GetCompletionsAsync_yields_accepted_and_rejected_completions_and_checkpoints()
+    {
+        var transport = RespondingWith(
+            """
+            [
+              {"completionResponse": {"Completion": {"value": {"commandId": "cmd-1", "updateId": "update-1", "offset": "42", "actAs": ["party::alice"], "status": {"code": 0}}}}},
+              {"completionResponse": {"Completion": {"value": {"commandId": "cmd-2", "offset": "43", "actAs": ["party::alice"], "status": {"code": 3, "message": "INVALID_ARGUMENT"}}}}},
+              {"completionResponse": {"OffsetCheckpoint": {"value": {"offset": "44"}}}}
+            ]
+            """);
+        var client = ClientWith(transport);
+        using var cancellation = new CancellationTokenSource();
+
+        var events = await DrainUntilAsync(
+            client.GetCompletionsAsync([Alice], LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 3);
+
+        events[0].Should().BeOfType<CompletionStreamEvent.CommandAccepted>().Subject.Completion.CommandId.Value.Should().Be("cmd-1");
+        events[1].Should().BeOfType<CompletionStreamEvent.CommandRejected>().Subject.Status.Code.Should().Be(3);
+        events[2].Should().BeOfType<CompletionStreamEvent.Checkpoint>().Subject.Offset.Should().Be(LedgerOffset.At(44));
+    }
+
+    [Fact]
+    public async Task GetCompletionsAsync_resumes_the_next_window_from_the_last_observed_offset()
+    {
+        var transport = RespondingWith(CheckpointWindow);
+        var client = ClientWith(transport);
+        using var cancellation = new CancellationTokenSource();
+
+        await DrainUntilAsync(client.GetCompletionsAsync([Alice], LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 2);
+
+        JsonDocument.Parse(transport.LastRequestBody!).RootElement.GetProperty("beginExclusive").GetString().Should().Be("7");
+    }
+
+    [Fact]
+    public async Task GetCompletionsAsync_ends_with_a_terminal_StreamError_on_a_non_success_response()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.ServiceUnavailable,
+            """{"code": "PARTICIPANT_BACKPRESSURE", "cause": "the participant is overloaded", "errorCategory": 2}""");
+        var client = ClientWith(transport);
+
+        var events = await DrainAsync(client.GetCompletionsAsync([Alice], cancellationToken: TestContext.Current.CancellationToken));
+
+        var error = events.Should().ContainSingle().Which.Should().BeOfType<CompletionStreamEvent.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.ServiceUnavailable));
+        error.Message.Should().Contain("the participant is overloaded");
+    }
+
+    [Fact]
+    public void GetCompletionsAsync_rejects_a_null_party_list()
+    {
+        var client = ClientWith(new RecordingHttpHandler());
+
+        var act = () => client.GetCompletionsAsync(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
     [Fact]
     public async Task CompletionStreamAsync_ends_with_a_terminal_StreamError_on_a_non_success_response()
     {

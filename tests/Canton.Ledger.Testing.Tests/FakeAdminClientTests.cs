@@ -342,4 +342,318 @@ public class FakeAdminClientTests
         alice.Should().NotBeNull();
         bob.Should().BeNull();
     }
+
+    [Fact]
+    public async Task ListPackagesAsync_returns_the_staged_package_ids()
+    {
+        var client = FakeAdminClient.Create().WithPackageIds("pkg-a", "pkg-b").Build();
+
+        var ids = await client.ListPackagesAsync(TestContext.Current.CancellationToken);
+
+        ids.Should().Equal("pkg-a", "pkg-b");
+    }
+
+    [Fact]
+    public async Task ListPackagesAsync_unstaged_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.ListPackagesAsync();
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("WithPackageIds");
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_returns_the_staged_status()
+    {
+        var client = FakeAdminClient.Create().WithPackageStatus("pkg-a", PackageStatus.Registered).Build();
+
+        var status = await client.GetPackageStatusAsync("pkg-a", TestContext.Current.CancellationToken);
+
+        status.Should().Be(PackageStatus.Registered);
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_for_an_unstaged_package_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().WithPackageStatus("pkg-a", PackageStatus.Registered).Build();
+
+        var act = () => client.GetPackageStatusAsync("pkg-b");
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("pkg-b").And.Contain("WithPackageStatus");
+    }
+
+    [Fact]
+    public async Task GetTimeAsync_returns_the_staged_time()
+    {
+        var time = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var client = FakeAdminClient.Create().WithTime(time).Build();
+
+        var result = await client.GetTimeAsync(TestContext.Current.CancellationToken);
+
+        result.Should().Be(time);
+    }
+
+    [Fact]
+    public async Task SetTimeAsync_advances_the_staged_time()
+    {
+        var start = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var later = start.AddHours(1);
+        var client = FakeAdminClient.Create().WithTime(start).Build();
+
+        await client.SetTimeAsync(start, later, TestContext.Current.CancellationToken);
+
+        (await client.GetTimeAsync(TestContext.Current.CancellationToken)).Should().Be(later);
+    }
+
+    [Fact]
+    public async Task SetTimeAsync_with_a_stale_current_time_throws_LedgerOperationException()
+    {
+        var start = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var client = FakeAdminClient.Create().WithTime(start).Build();
+
+        var act = () => client.SetTimeAsync(start.AddMinutes(1), start.AddHours(1));
+
+        await act.Should().ThrowAsync<Daml.Ledger.Abstractions.LedgerOperationException>();
+    }
+
+    [Fact]
+    public async Task SetTimeAsync_with_a_new_time_not_later_throws_LedgerOperationException()
+    {
+        var start = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var client = FakeAdminClient.Create().WithTime(start).Build();
+
+        var act = () => client.SetTimeAsync(start, start);
+
+        await act.Should().ThrowAsync<Daml.Ledger.Abstractions.LedgerOperationException>();
+    }
+
+    [Fact]
+    public async Task GetTimeAsync_unstaged_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.GetTimeAsync();
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("WithTime");
+    }
+
+    private static ExternalPartyTopology Topology() => new(
+        new Party("ext::1220ab"), "1220ab", [new byte[] { 1 }, new byte[] { 2 }], new byte[] { 3 });
+
+    private static ExternalPartyTopologyRequest TopologyRequest() => new(
+        new SynchronizerId("sync-1"),
+        "ext",
+        new SigningPublicKey(PublicKeyFormat.DerX509SubjectPublicKeyInfo, new byte[] { 7 }, SigningKeySpec.EcP256));
+
+    private static ExternalPartyAllocation Allocation() => new(new SynchronizerId("sync-1"), [], []);
+
+    [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_returns_the_staged_topology()
+    {
+        var topology = Topology();
+        var client = FakeAdminClient.Create().WithExternalPartyTopology(topology).Build();
+
+        var result = await client.GenerateExternalPartyTopologyAsync(TopologyRequest(), TestContext.Current.CancellationToken);
+
+        result.Should().BeSameAs(topology);
+    }
+
+    [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_without_a_staged_topology_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.GenerateExternalPartyTopologyAsync(TopologyRequest());
+
+        (await act.Should().ThrowAsync<NotSupportedException>())
+            .Which.Message.Should().Contain("WithExternalPartyTopology");
+    }
+
+    [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_rejects_a_null_request()
+    {
+        var client = FakeAdminClient.Create().WithExternalPartyTopology(Topology()).Build();
+
+        var act = () => client.GenerateExternalPartyTopologyAsync(null!);
+
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task AllocateExternalPartyAsync_returns_the_staged_party()
+    {
+        var client = FakeAdminClient.Create().WithAllocatedExternalParty(new Party("ext::1220ab")).Build();
+
+        var result = await client.AllocateExternalPartyAsync(Allocation(), TestContext.Current.CancellationToken);
+
+        result.Should().Be(new Party("ext::1220ab"));
+    }
+
+    [Fact]
+    public async Task AllocateExternalPartyAsync_without_a_staged_party_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.AllocateExternalPartyAsync(Allocation());
+
+        (await act.Should().ThrowAsync<NotSupportedException>())
+            .Which.Message.Should().Contain("WithAllocatedExternalParty");
+    }
+
+    [Fact]
+    public async Task AllocateExternalPartyAsync_rejects_a_null_allocation()
+    {
+        var client = FakeAdminClient.Create().WithAllocatedExternalParty(new Party("ext::1220ab")).Build();
+
+        var act = () => client.AllocateExternalPartyAsync(null!);
+
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+}
+
+public class FakeAdminClientUpdateTests
+{
+    [Fact]
+    public async Task UpdateUserAsync_returns_the_staged_user()
+    {
+        var user = new UserDetails("alice", new Party("alice::1220"));
+        var client = FakeAdminClient.Create().WithUser(user).Build();
+
+        var result = await client.UpdateUserAsync(
+            "alice", new UserUpdate { IsDeactivated = true }, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(user);
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_for_an_unstaged_user_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.UpdateUserAsync("alice", new UserUpdate { IsDeactivated = true });
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("WithUser");
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_rejects_an_update_that_changes_nothing()
+    {
+        var client = FakeAdminClient.Create().WithUser(new UserDetails("alice", null)).Build();
+
+        var act = () => client.UpdateUserAsync("alice", new UserUpdate());
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task UpdatePartyDetailsAsync_returns_the_staged_known_party()
+    {
+        var details = new PartyDetails(new Party("alice::1220"), IsLocal: true);
+        var client = FakeAdminClient.Create().WithParties(details).Build();
+
+        var result = await client.UpdatePartyDetailsAsync(
+            details.Party,
+            new PartyUpdate { Annotations = new Dictionary<string, string>() },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(details);
+    }
+
+    [Fact]
+    public async Task GetCommandStatusAsync_filters_the_staged_statuses_by_prefix_state_and_limit()
+    {
+        var pendingOne = new CommandStatus("cmd-1", CommandState.Pending, null, null, "sync");
+        var pendingTwo = new CommandStatus("cmd-2", CommandState.Pending, null, null, "sync");
+        var failed = new CommandStatus("cmd-3", CommandState.Failed, null, null, "sync");
+        var other = new CommandStatus("other-1", CommandState.Pending, null, null, "sync");
+        var client = FakeAdminClient.Create().WithCommandStatuses(pendingOne, pendingTwo, failed, other).Build();
+
+        var result = await client.GetCommandStatusAsync(
+            "cmd-", CommandState.Pending, 1, TestContext.Current.CancellationToken);
+
+        result.Should().Equal(pendingOne);
+    }
+
+    [Fact]
+    public async Task GetCommandStatusAsync_for_unstaged_client_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.GetCommandStatusAsync();
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("WithCommandStatuses");
+    }
+
+    [Fact]
+    public async Task DeleteUserAsync_completes_without_staging()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.DeleteUserAsync("alice");
+
+        await act.Should().NotThrowAsync();
+    }
+}
+
+public class FakeAdminClientIdpVettingTests
+{
+    private static readonly IdentityProviderConfig Config = new("idp-1", false, "https://issuer.invalid", "https://issuer.invalid/jwks", "aud");
+
+    [Fact]
+    public async Task IdentityProviderConfigs_are_served_from_the_staged_list()
+    {
+        var client = FakeAdminClient.Create().WithIdentityProviderConfigs(Config).Build();
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        (await client.ListIdentityProviderConfigsAsync(cancellationToken)).Should().Equal(Config);
+        (await client.GetIdentityProviderConfigAsync("idp-1", cancellationToken)).Should().Be(Config);
+        (await client.GetIdentityProviderConfigAsync("other", cancellationToken)).Should().BeNull();
+        (await client.CreateIdentityProviderConfigAsync(Config, cancellationToken)).Should().Be(Config);
+        (await client.UpdateIdentityProviderConfigAsync(
+            "idp-1", new IdentityProviderConfigUpdate { Audience = "x" }, cancellationToken)).Should().Be(Config);
+    }
+
+    [Fact]
+    public async Task ListIdentityProviderConfigsAsync_for_unstaged_client_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.ListIdentityProviderConfigsAsync();
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("WithIdentityProviderConfigs");
+    }
+
+    [Fact]
+    public async Task UpdateVettedPackagesAsync_returns_the_staged_result()
+    {
+        var result = new VettedPackagesUpdateResult(null, new VettedPackagesSnapshot([], "participant", "sync", 2));
+        var client = FakeAdminClient.Create().WithVettedPackagesUpdateResult(result).Build();
+
+        var returned = await client.UpdateVettedPackagesAsync([], cancellationToken: TestContext.Current.CancellationToken);
+
+        returned.Should().Be(result);
+    }
+
+    [Fact]
+    public async Task UpdateVettedPackagesAsync_for_unstaged_client_throws_descriptive_NotSupportedException()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var act = () => client.UpdateVettedPackagesAsync([]);
+
+        (await act.Should().ThrowAsync<NotSupportedException>()).Which.Message.Should().Contain("WithVettedPackagesUpdateResult");
+    }
+
+    [Fact]
+    public async Task PruneAsync_and_DeleteIdentityProviderConfigAsync_complete_without_staging()
+    {
+        var client = FakeAdminClient.Create().Build();
+
+        var prune = () => client.PruneAsync(1);
+        var delete = () => client.DeleteIdentityProviderConfigAsync("idp-1");
+
+        await prune.Should().NotThrowAsync();
+        await delete.Should().NotThrowAsync();
+    }
 }

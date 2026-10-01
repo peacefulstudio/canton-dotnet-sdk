@@ -1,6 +1,6 @@
 # Daml.Codegen.Intermediate
 
-The intermediate DAR contract shared by every Daml C# codegen path. It carries
+The intermediate DAR contract shared by every Daml C# codegen path in the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). It carries
 two things:
 
 - the C# types generated from `intermediate_dar.proto`, the versioned wire
@@ -15,7 +15,7 @@ own consumer of the intermediate representation.
 ## Installation
 
 ```bash
-dotnet add package Daml.Codegen.Intermediate --prerelease
+dotnet add package Daml.Codegen.Intermediate --version 0.6.0-preview.3
 ```
 
 ## Usage

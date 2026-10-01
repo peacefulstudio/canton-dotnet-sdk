@@ -248,14 +248,14 @@ public class TypeCornersRoundTripTests
             + "participant accepts - which is why codegen refuses to emit that substitution and this "
             + "composition can only be reached by hand");
 
-        var decodingTheAcceptedForm = () => Crate<Optional<string>>.FromRecord(
+        var decodedAcceptedForm = Crate<Optional<string>>.FromRecord(
             DamlRecord.Create(DamlField.Create(
                 "item", DamlOptionalChain.Some(DamlOptionalChain.None))),
             value => Optional<string>.FromValue(value, text => text.As<DamlText>().Value));
 
-        decodingTheAcceptedForm.Should().Throw<InvalidCastException>(
-                "the strict As of DamlOptional in Optional.FromValue makes the gap loud rather than silent")
-            .WithMessage("*DamlOptionalChain*DamlOptional*");
+        decodedAcceptedForm.Should().Be(substituted,
+            "the read takes a chain level and a flat level alike, so the form the participant accepts "
+            + "decodes to the value that was substituted");
     }
 
     [Fact]

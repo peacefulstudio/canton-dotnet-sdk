@@ -174,11 +174,12 @@ services.PostConfigure<LedgerClientOptions>(options =>
 
 ## Health checks
 
-Both client packages ship an `IHealthChecksBuilder` extension; each takes optional `name`, `failureStatus`, `tags`, and `timeout` parameters.
+Each client package ships an `IHealthChecksBuilder` extension; each takes optional `name`, `failureStatus`, `tags`, and `timeout` parameters.
 
 | Extension | Default name | Probe | Requires |
 |---|---|---|---|
 | `AddLedgerClient()` (`Canton.Ledger.Grpc.Client`) | `canton-ledger` | Queries the ledger end. Not gated behind participant-admin rights, so a healthy least-privilege deployment reports healthy. | `ILedgerClient` registered |
+| `AddRestLedgerClient()` (`Canton.Ledger.Rest.Client`) | `canton-ledger-rest` | Queries the ledger end over HTTP through the REST adapter's own registration, so a host wiring both transports probes the HTTP endpoint specifically. Not gated behind participant-admin rights. | `AddRestLedgerClient(...)` registered |
 | `AddPqsClient()` (`Canton.Ledger.Pqs.Client`) | `pqs` | Opens a connection from the configured `ConnectionString` and runs `SELECT 1`. | `PqsClientOptions` registered |
 
 ```csharp
@@ -193,5 +194,6 @@ services.AddHealthChecks()
 ## See also
 
 - [Architecture overview](architecture-overview.md) — how the codegen pipeline, `Daml.Runtime`, and the client packages fit together.
+- The root `README.md` — the `dpm codegen-cs` command line and its emitter options.
 - [Observability](observability.md) — the `ActivitySource` names, `AddCantonLedgerInstrumentation()`, and `traceparent` propagation across transports.
 - The per-package READMEs under `src/` — shipped inside each NuGet package — for the API surface of each client.

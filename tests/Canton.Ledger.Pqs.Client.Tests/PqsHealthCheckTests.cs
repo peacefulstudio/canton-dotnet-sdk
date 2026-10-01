@@ -71,25 +71,30 @@ public class PqsHealthCheckTests
     [Fact]
     public async Task CheckHealth_dials_the_injected_data_source_instead_of_the_connection_string()
     {
+        await using var connectionStringTarget = new ConnectionCountingListener();
+        await using var dataSourceTarget = new ConnectionCountingListener();
         var options = Options.Create(new PqsClientOptions
         {
-            ConnectionString = "Host=127.0.0.1;Port=1;Database=pqs;Timeout=1"
+            ConnectionString = $"Host=127.0.0.1;Port={connectionStringTarget.Port};Database=pqs;Timeout=30"
         });
-        await using var dataSource = NpgsqlDataSource.Create("Host=127.0.0.1;Port=2;Database=pqs;Timeout=1");
+        await using var dataSource = NpgsqlDataSource.Create($"Host=127.0.0.1;Port={dataSourceTarget.Port};Database=pqs;Timeout=30");
         var healthCheck = new PqsHealthCheck(options, dataSource);
 
         var result = await healthCheck.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
 
         result.Exception.Should().NotBeNull();
-        result.Exception!.ToString().Should().Contain("127.0.0.1:2").And.NotContain("127.0.0.1:1");
+        dataSourceTarget.AcceptedConnections.Should().BeGreaterThan(0);
+        connectionStringTarget.AcceptedConnections.Should().Be(0);
     }
 
     [Fact]
     public async Task CheckHealth_resolved_from_DI_dials_the_registered_data_source()
     {
+        await using var connectionStringTarget = new ConnectionCountingListener();
+        await using var dataSourceTarget = new ConnectionCountingListener();
         var services = new ServiceCollection();
-        services.AddPqsClient(o => o.ConnectionString = "Host=127.0.0.1;Port=1;Database=pqs;Timeout=1");
-        services.AddSingleton(NpgsqlDataSource.Create("Host=127.0.0.1;Port=2;Database=pqs;Timeout=1"));
+        services.AddPqsClient(o => o.ConnectionString = $"Host=127.0.0.1;Port={connectionStringTarget.Port};Database=pqs;Timeout=30");
+        services.AddSingleton(NpgsqlDataSource.Create($"Host=127.0.0.1;Port={dataSourceTarget.Port};Database=pqs;Timeout=30"));
         services.AddHealthChecks().AddPqsClient();
         await using var provider = services.BuildServiceProvider();
         var registration = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>()
@@ -98,7 +103,9 @@ public class PqsHealthCheckTests
 
         var result = await healthCheck.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
 
-        result.Exception!.ToString().Should().Contain("127.0.0.1:2");
+        result.Exception.Should().NotBeNull();
+        dataSourceTarget.AcceptedConnections.Should().BeGreaterThan(0);
+        connectionStringTarget.AcceptedConnections.Should().Be(0);
     }
 
     [Fact]

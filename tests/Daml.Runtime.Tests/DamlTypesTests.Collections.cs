@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Daml.Runtime.Data;
+using Daml.Runtime.Stdlib;
 using AwesomeAssertions;
 using Xunit;
 
@@ -369,9 +370,12 @@ public partial class DamlTypesTests
     {
         var record = DamlRecord.Create();
 
-        var item = record.GetTypeParameterField("item", value => value.As<DamlOptionalChain>().Value);
+        var item = record.GetTypeParameterField(
+            "item",
+            value => Optional<Optional<string>>.FromChainValue(
+                value, inner => Optional<string>.FromChainValue(inner, text => text.As<DamlText>().Value)));
 
-        item.Should().BeNull();
+        item.Should().Be(new Optional<Optional<string>>.None());
     }
 
     [Fact]

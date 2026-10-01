@@ -27,7 +27,7 @@ vendored.
 
 The emitter now emits an `IImplements<TInterface>` facet in each template
 record's base list — one entry per interface the template implements, resolved
-to that interface's C# marker type. `DarParser` captures each template's
+to that interface's C# marker type. The DAR decoder captures each template's
 implemented interfaces into `DamlTemplate.Implements` (via
 `IntermediateDarReader`), the field is carried all the way into the
 `IntermediateDar` proto, and `TemplateEmitter` now consults it. The 7
@@ -127,7 +127,7 @@ scripts/refresh-snapshot.sh splice-test-token-v1
 
 `intermediate.binpb` is the canonical codegen input for the drift test;
 `splice-test-token-v1.dar` is the upstream Splice archive it was derived from
-(`splice-test-token-v1-1.0.1.dar` from the Splice `0.8.2` `splice-node`
+(`splice-test-token-v1-1.0.1.dar` from the Splice `0.8.4` `splice-node`
 release tarball), kept alongside as the frozen upstream artifact and used as
 the regeneration input. Do not hand-edit `intermediate.binpb`: the refresh
 script regenerates it from this DAR on every run, and CI regenerates it the

@@ -40,6 +40,9 @@ public class ContractIdChoiceProjectorTests
     private static DamlType Tuple2(DamlType first, DamlType second) =>
         new DamlTypeApp(new DamlTypeRef(StdlibPackageId, "DA.Types", "Tuple2"), [first, second]);
 
+    private static DamlType OptionalOf(DamlType inner) =>
+        new DamlTypeApp(new DamlPrimitiveType(DamlPrimitive.Optional), [inner]);
+
     private static DamlChoice ChoiceReturning(string name, DamlType returnType) =>
         new()
         {
@@ -102,6 +105,11 @@ public class ContractIdChoiceProjectorTests
                     [
                         ChoiceReturning("Trade", Tuple2(ContractIdOf("Buyer"), ContractIdOf("Seller"))),
                         ChoiceReturning("Split", Tuple2(ContractIdOf("Half"), ContractIdOf("Half"))),
+                        ChoiceReturning("Offer", Tuple2(ContractIdOf("Buyer"), OptionalOf(ContractIdOf("Seller")))),
+                        ChoiceReturning("Nested", Tuple2(ContractIdOf("Buyer"), Tuple2(ContractIdOf("Half"), OptionalOf(ContractIdOf("Seller"))))),
+                        ChoiceReturning("Roster", new DamlTypeApp(
+                            new DamlPrimitiveType(DamlPrimitive.List),
+                            [Tuple2(ContractIdOf("Buyer"), OptionalOf(ContractIdOf("Seller")))])),
                         ChoiceReturning("Maybe", new DamlTypeApp(new DamlPrimitiveType(DamlPrimitive.Optional), [ContractIdOf("Buyer")])),
                         ChoiceReturning("Batch", new DamlTypeApp(
                             new DamlPrimitiveType(DamlPrimitive.List),
@@ -353,5 +361,86 @@ public class ContractIdChoiceProjectorTests
         CaseOf(outcome).Should().Be("CommittedUndecodable");
         outcome.GetType().GetProperty("UpdateId")!.GetValue(outcome).Should().Be("update-desk");
         outcome.GetType().GetProperty("Message")!.GetValue(outcome).Should().Be("Cannot cast DamlContractId to DamlRecord");
+    }
+
+    [Fact]
+    public void Offer_projects_an_omitted_trailing_optional_component_to_no_contract_id()
+    {
+        var tx = Transaction([], DeskExercised("Offer", DamlRecord.Create(new DamlField("_1", new DamlContractId("buyer-1")))));
+
+        var outcome = Project("Offer", tx);
+
+        CaseOf(outcome).Should().Be("One");
+        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
+        SlotOf(outcome, "Seller").Should().BeNull();
+    }
+
+    [Fact]
+    public void Offer_projects_a_present_trailing_optional_component_to_its_contract_id()
+    {
+        var tx = Transaction([], DeskExercised("Offer", Pair(new DamlContractId("buyer-1"), DamlOptional.Some(new DamlContractId("seller-1")))));
+
+        var outcome = Project("Offer", tx);
+
+        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
+        CidOf(SlotOf(outcome, "Seller")).Should().Be("seller-1");
+    }
+
+    [Fact]
+    public void Offer_returns_CommittedUndecodable_when_the_non_optional_first_component_is_omitted()
+    {
+        var tx = Transaction([], DeskExercised("Offer", DamlRecord.Create()));
+
+        var outcome = Project("Offer", tx);
+
+        CaseOf(outcome).Should().Be("CommittedUndecodable");
+    }
+
+    [Fact]
+    public void Trade_returns_CommittedUndecodable_when_the_non_optional_second_component_is_omitted()
+    {
+        var tx = Transaction([], DeskExercised("Trade", DamlRecord.Create(new DamlField("_1", new DamlContractId("buyer-1")))));
+
+        var outcome = Project("Trade", tx);
+
+        CaseOf(outcome).Should().Be("CommittedUndecodable");
+    }
+
+    [Fact]
+    public void Nested_projects_an_omitted_trailing_optional_of_an_inner_tuple_to_no_contract_id()
+    {
+        var inner = DamlRecord.Create(new DamlField("_1", new DamlContractId("half-1")));
+        var tx = Transaction([], DeskExercised("Nested", Pair(new DamlContractId("buyer-1"), inner)));
+
+        var outcome = Project("Nested", tx);
+
+        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
+        CidOf(SlotOf(outcome, "Half")).Should().Be("half-1");
+        SlotOf(outcome, "Seller").Should().BeNull();
+    }
+
+    [Fact]
+    public void Nested_returns_CommittedUndecodable_when_the_inner_tuple_omits_a_non_optional_component()
+    {
+        var tx = Transaction([], DeskExercised("Nested", Pair(new DamlContractId("buyer-1"), DamlRecord.Create())));
+
+        var outcome = Project("Nested", tx);
+
+        CaseOf(outcome).Should().Be("CommittedUndecodable");
+    }
+
+    [Fact]
+    public void Roster_projects_each_listed_tuple_with_an_omitted_trailing_optional_component()
+    {
+        var tx = Transaction([], DeskExercised("Roster", new DamlList(
+        [
+            DamlRecord.Create(new DamlField("_1", new DamlContractId("buyer-1"))),
+            Pair(new DamlContractId("buyer-2"), DamlOptional.Some(new DamlContractId("seller-2"))),
+        ])));
+
+        var outcome = Project("Roster", tx);
+
+        CidsOf(SlotOf(outcome, "Buyer")).Should().Equal("buyer-1", "buyer-2");
+        CidOf(SlotOf(outcome, "Seller")).Should().Be("seller-2");
     }
 }

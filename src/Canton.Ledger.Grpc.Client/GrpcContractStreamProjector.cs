@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
@@ -230,6 +231,60 @@ internal static class GrpcContractStreamProjector
             synchronizerId,
             LedgerWireConversions.ToPartyList(created.WitnessParties));
     }
+
+    public static CreatedContract<T> ProjectCreatedContract<T>(ProtoCreatedEvent? created)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        if (created is null)
+        {
+            throw MalformedResponse.MissingRequiredField("the GetContract response has no created_event");
+        }
+
+        RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
+        if (!GrpcMarkerMatcher<T>.MatchesProtoCreated(created) || !TryResolveCreatedPayload<T>(created, out var payload))
+        {
+            throw new InvalidOperationException(
+                $"Contract '{created.ContractId}' is a {created.TemplateId.ModuleName}.{created.TemplateId.EntityName}, "
+                + $"which cannot be read as {typeof(T).Name}.");
+        }
+
+        return new CreatedContract<T>(
+            new ContractId<T>(created.ContractId),
+            payload,
+            ContractKeyOf(created),
+            LedgerWireConversions.ToPartyList(created.WitnessParties));
+    }
+
+    public static ContractLifecycle<T> ProjectContractLifecycle<T>(GetEventsByContractIdResponse response)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        ContractStreamEvent<T>.Created? created = null;
+        if (response.Created is { CreatedEvent: { } createdEvent } createdEnvelope)
+        {
+            var synchronizerId = RequireSynchronizer(createdEnvelope.SynchronizerId, createdEvent.ContractId);
+            created = CreatedFromProto<T>(createdEvent, synchronizerId, createdEvent.Offset)
+                as ContractStreamEvent<T>.Created
+                ?? throw new InvalidOperationException(
+                    $"Contract '{createdEvent.ContractId}' cannot be read as {typeof(T).Name}: its interface view is unavailable.");
+        }
+
+        ContractStreamEvent<T>.Archived? archived = null;
+        if (response.Archived is { ArchivedEvent: { } archivedEvent } archivedEnvelope)
+        {
+            RequireTemplateId(archivedEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archivedEvent.ContractId);
+            archived = new ContractStreamEvent<T>.Archived(
+                new ContractId<T>(archivedEvent.ContractId),
+                LedgerOffset.At(archivedEvent.Offset),
+                RequireSynchronizer(archivedEnvelope.SynchronizerId, archivedEvent.ContractId),
+                LedgerWireConversions.ToPartyList(archivedEvent.WitnessParties));
+        }
+
+        return new ContractLifecycle<T>(created, archived);
+    }
+
+    private static SynchronizerId RequireSynchronizer(string? wireSynchronizerId, string contractId) =>
+        StreamEventClassifier.Synchronizer(wireSynchronizerId)
+        ?? throw MalformedResponse.MissingRequiredField($"the event for contract '{contractId}' has no synchronizer_id");
 
     internal static ContractKey? ContractKeyOf(ProtoCreatedEvent created)
     {

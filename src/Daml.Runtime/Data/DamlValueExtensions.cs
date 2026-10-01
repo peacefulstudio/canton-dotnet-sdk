@@ -13,30 +13,25 @@ public static class DamlValueExtensions
 {
     /// <summary>
     /// Normalizes a value into a <see cref="DamlOptional"/>: an existing
-    /// <see cref="DamlOptional"/> passes through unchanged and any other value is
-    /// wrapped as Some. Ledger JSON flattens Some to the inner value, so
+    /// <see cref="DamlOptional"/> passes through unchanged, a <see cref="DamlOptionalChain"/>
+    /// level becomes the <see cref="DamlOptional"/> carrying the same value, and any other value
+    /// is wrapped as Some. Ledger JSON flattens Some to the inner value, so
     /// schema-aware readers use this to recover the Optional wrapper that
-    /// <see cref="DamlValue.As{T}"/> would reject.
+    /// <see cref="DamlValue.As{T}"/> would reject. A chain level is already an Optional, in the
+    /// array encoding rather than the flat one, so it is never wrapped as Some.
     /// </summary>
     /// <param name="value">The value to normalize.</param>
     /// <returns>The value as a <see cref="DamlOptional"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidCastException"><paramref name="value"/> is a
-    /// <see cref="DamlOptionalChain"/>. A chain level is already an Optional, in the array
-    /// encoding rather than the flat one, so wrapping it as Some would add a level that
-    /// neither the ledger nor <see cref="Stdlib.Optional{T}.FromChainValue"/> expects.
-    /// Decode a chain through <see cref="Stdlib.Optional{T}.FromChainValue"/> instead.</exception>
     public static DamlOptional AsOptional(this DamlValue value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        if (value is DamlOptionalChain)
+        return value switch
         {
-            throw new InvalidCastException(
-                "Cannot normalize a DamlOptionalChain to DamlOptional. A chain level is already an "
-                + "Optional in the array wire encoding; wrapping it as Some would add a level. "
-                + "Decode a nested Optional chain through Optional<T>.FromChainValue.");
-        }
-        return value as DamlOptional ?? DamlOptional.Some(value);
+            DamlOptional optional => optional,
+            DamlOptionalChain chain => new DamlOptional(chain.Value),
+            _ => DamlOptional.Some(value),
+        };
     }
 
     /// <summary>

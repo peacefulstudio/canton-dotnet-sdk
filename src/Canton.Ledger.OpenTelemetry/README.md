@@ -1,8 +1,14 @@
 # Canton.Ledger.OpenTelemetry
 
-Opt-in OpenTelemetry wiring for the Canton Ledger API clients. The gRPC (`Canton.Ledger.Grpc.Client`), JSON (`Canton.Ledger.Rest.Client`), and PQS (`Canton.Ledger.Pqs.Client`) clients emit only BCL `System.Diagnostics.Activity` spans and take no OpenTelemetry dependency — this package is the only assembly in the repo that references the OpenTelemetry SDK, and a consumer who never references it pays no OpenTelemetry cost at all.
+Opt-in OpenTelemetry wiring for the Canton Ledger API clients in the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). The gRPC (`Canton.Ledger.Grpc.Client`), JSON (`Canton.Ledger.Rest.Client`), and PQS (`Canton.Ledger.Pqs.Client`) clients emit only BCL `System.Diagnostics.Activity` spans and take no OpenTelemetry dependency — this package is the only assembly in the SDK that references the OpenTelemetry SDK, and a consumer who never references it pays no OpenTelemetry cost at all.
 
 The source names come from `Canton.Ledger.Kernel`, which is this package's only project dependency: enabling tracing never drags a concrete client assembly — or its transport stack — into a host that does not use it.
+
+## Installation
+
+```bash
+dotnet add package Canton.Ledger.OpenTelemetry --version 0.6.0-preview.3
+```
 
 ## Key Types
 

@@ -52,6 +52,30 @@ public interface IAdminClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Asks the participant to generate the topology transactions that onboard an external party
+    /// controlled by <see cref="ExternalPartyTopologyRequest.PublicKey"/>. Nothing is allocated: sign
+    /// <see cref="ExternalPartyTopology.MultiHash"/> and pass the result to
+    /// <see cref="AllocateExternalPartyAsync"/>.
+    /// </summary>
+    /// <param name="request">What to generate the topology for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ExternalPartyTopology> GenerateExternalPartyTopologyAsync(
+        ExternalPartyTopologyRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Allocates an external party from topology transactions its key has signed. The call is not
+    /// retried by the opt-in retry pipeline, because replaying a committed allocation is not
+    /// idempotent.
+    /// </summary>
+    /// <param name="allocation">The signed onboarding topology.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The allocated party.</returns>
+    Task<Party> AllocateExternalPartyAsync(
+        ExternalPartyAllocation allocation,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets details for the specified parties. Only parties the participant knows come back, so a
     /// read of several parties can answer with fewer details than it asked for, and an unknown
     /// party is an absence rather than an error.
@@ -151,6 +175,23 @@ public interface IAdminClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the ids of the packages the participant serves through <c>PackageService.ListPackages</c>;
+    /// <see cref="ListKnownPackagesAsync"/> lists the same packages with their metadata.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<string>> ListPackagesAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the status of a single package through <c>PackageService.GetPackageStatus</c>.
+    /// </summary>
+    /// <param name="packageId">The ID of the requested package.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<PackageStatus> GetPackageStatusAsync(
+        string packageId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Downloads the archive of a single package.
     /// </summary>
     /// <param name="packageId">The ID of the requested package.</param>
@@ -235,6 +276,204 @@ public interface IAdminClient
     Task ValidateDarAsync(
         byte[] darFile,
         SynchronizerId synchronizerId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the properties of a user that <paramref name="update"/> sets. Never retried, even
+    /// when retry is enabled: the call mutates participant state.
+    /// </summary>
+    /// <param name="userId">The user to update.</param>
+    /// <param name="update">The changes to apply; it must change at least one property.</param>
+    /// <param name="identityProviderId">
+    /// The identity provider managing the user, or <see langword="null"/> for the default one.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The user as the participant stored it after the update.</returns>
+    Task<UserDetails> UpdateUserAsync(
+        string userId,
+        UserUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a user. Never retried, even when retry is enabled: the call mutates participant state.
+    /// </summary>
+    /// <param name="userId">The user to delete.</param>
+    /// <param name="identityProviderId">
+    /// The identity provider managing the user, or <see langword="null"/> for the default one.
+    /// The JSON Ledger API has no identity-provider-scoped user delete, so the REST client throws
+    /// <see cref="NotSupportedException"/> for a non-default identity provider.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task DeleteUserAsync(
+        string userId,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves a user from one identity provider to another. Never retried, even when retry is
+    /// enabled: the call mutates participant state.
+    /// </summary>
+    /// <param name="userId">The user to move.</param>
+    /// <param name="sourceIdentityProviderId">The user's current identity provider; <see langword="null"/> is the default one.</param>
+    /// <param name="targetIdentityProviderId">The identity provider to move the user to; <see langword="null"/> is the default one.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UpdateUserIdentityProviderIdAsync(
+        string userId,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the participant-local details of a party that <paramref name="update"/> sets. Never
+    /// retried, even when retry is enabled: the call mutates participant state.
+    /// </summary>
+    /// <param name="party">The party to update.</param>
+    /// <param name="update">The changes to apply; it must change at least one property.</param>
+    /// <param name="identityProviderId">
+    /// The identity provider managing the party, or <see langword="null"/> for the default one.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The party's details as the participant stored them after the update.</returns>
+    Task<PartyDetails> UpdatePartyDetailsAsync(
+        Party party,
+        PartyUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves a party from one identity provider to another. The JSON Ledger API serves no route
+    /// for this, so the REST implementation throws <see cref="NotSupportedException"/>; use the gRPC
+    /// <see cref="IAdminClient"/>. Never retried, even when retry is enabled.
+    /// </summary>
+    /// <param name="party">The party to move.</param>
+    /// <param name="sourceIdentityProviderId">The party's current identity provider; <see langword="null"/> is the default one.</param>
+    /// <param name="targetIdentityProviderId">The identity provider to move the party to; <see langword="null"/> is the default one.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UpdatePartyIdentityProviderIdAsync(
+        Party party,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the status of commands the participant's command inspection tracks. The JSON Ledger
+    /// API serves no route for this, so the REST implementation throws
+    /// <see cref="NotSupportedException"/>; use the gRPC <see cref="IAdminClient"/>.
+    /// </summary>
+    /// <param name="commandIdPrefix">Only commands whose id starts with this prefix; empty matches every command.</param>
+    /// <param name="state">Only commands in this state; <see cref="CommandState.Unspecified"/> matches every state.</param>
+    /// <param name="limit">The most statuses to return, or <see langword="null"/> for the participant's default.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CommandStatus>> GetCommandStatusAsync(
+        string commandIdPrefix = "",
+        CommandState state = CommandState.Unspecified,
+        int? limit = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Registers an identity provider configuration. Never retried, even when retry is enabled.
+    /// </summary>
+    /// <param name="config">The configuration to create.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The configuration as the participant stored it.</returns>
+    Task<IdentityProviderConfig> CreateIdentityProviderConfigAsync(
+        IdentityProviderConfig config,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Reads one identity provider configuration.</summary>
+    /// <param name="identityProviderId">The configuration's id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The configuration, or <see langword="null"/> when the participant has none with that id.</returns>
+    Task<IdentityProviderConfig?> GetIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Lists every identity provider configuration.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<IdentityProviderConfig>> ListIdentityProviderConfigsAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates an identity provider configuration. Only the properties set on <paramref name="update"/>
+    /// change. Never retried, even when retry is enabled.
+    /// </summary>
+    /// <param name="identityProviderId">The configuration to update.</param>
+    /// <param name="update">The changes to apply; it must change at least one property.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The configuration as the participant stored it after the update.</returns>
+    Task<IdentityProviderConfig> UpdateIdentityProviderConfigAsync(
+        string identityProviderId,
+        IdentityProviderConfigUpdate update,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes an identity provider configuration. Never retried, even when retry is enabled.
+    /// </summary>
+    /// <param name="identityProviderId">The configuration to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task DeleteIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Vets or unvets packages on a synchronizer. Never retried, even when retry is enabled.
+    /// </summary>
+    /// <param name="changes">The changes to apply, in order.</param>
+    /// <param name="dryRun">When <see langword="true"/>, computes and returns the result without applying it.</param>
+    /// <param name="synchronizerId">The synchronizer to update; <see langword="null"/> is only accepted when the participant is connected to exactly one.</param>
+    /// <param name="expectedTopologySerial">The serial the vetting state must be at for the update to apply, or <see langword="null"/> for no check.</param>
+    /// <param name="safetyOverrides">Safety checks to skip.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The vetting state before and after the update.</returns>
+    Task<VettedPackagesUpdateResult> UpdateVettedPackagesAsync(
+        IReadOnlyList<VettedPackagesChange> changes,
+        bool dryRun = false,
+        SynchronizerId? synchronizerId = null,
+        ExpectedTopologySerial? expectedTopologySerial = null,
+        VettingOverrides safetyOverrides = VettingOverrides.None,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Prunes the participant's ledger up to an offset. Destructive and irreversible. The JSON Ledger
+    /// API serves no route for this, so the REST implementation throws <see cref="NotSupportedException"/>;
+    /// use the gRPC <see cref="IAdminClient"/>. Never retried, even when retry is enabled.
+    /// </summary>
+    /// <param name="pruneUpTo">The offset to prune up to, inclusive.</param>
+    /// <param name="submissionId">A submission id for tracing, or <see langword="null"/> to have one generated.</param>
+    /// <param name="pruneAllDivulgedContracts">Whether to also prune divulged contracts that were never archived.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task PruneAsync(
+        long pruneUpTo,
+        string? submissionId = null,
+        bool pruneAllDivulgedContracts = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the ledger's current time through <c>TimeService.GetTime</c>. Only a participant running
+    /// in static-time mode serves the time service; a wall-clock participant answers
+    /// <c>UNIMPLEMENTED</c>, which surfaces as a <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>.
+    /// The JSON Ledger API serves no route for it, so the REST transport throws
+    /// <see cref="NotSupportedException"/>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<DateTimeOffset> GetTimeAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Advances the ledger's static time through <c>TimeService.SetTime</c>. The call mutates the
+    /// participant, so it is sent exactly once even when <c>LedgerClientOptions.Retry</c> is
+    /// enabled for the client's reads. The participant refuses a <paramref name="currentTime"/> that is
+    /// not its current time, and a <paramref name="newTime"/> that is not later than it.
+    /// The JSON Ledger API serves no route for it, so the REST transport throws
+    /// <see cref="NotSupportedException"/>.
+    /// </summary>
+    /// <param name="currentTime">The time the caller believes the ledger is at.</param>
+    /// <param name="newTime">The time to advance the ledger to.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task SetTimeAsync(
+        DateTimeOffset currentTime,
+        DateTimeOffset newTime,
         CancellationToken cancellationToken = default);
 }
 

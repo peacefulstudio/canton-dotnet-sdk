@@ -10,6 +10,9 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Canton.Ledger.Pqs.Client" />
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client" />
+    <InternalsVisibleTo Include="Canton.Ledger.Rest.Client" />
+    <InternalsVisibleTo Include="Canton.Ledger.Testing" />
     <InternalsVisibleTo Include="Canton.Ledger.Pqs.Client.Tests" />
   </ItemGroup>
 

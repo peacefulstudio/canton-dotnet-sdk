@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Canton.Ledger.Pqs.Client\Canton.Ledger.Pqs.Client.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
   </ItemGroup>
 
   <ItemGroup>

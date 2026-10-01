@@ -4,18 +4,17 @@ End-to-end localnet integration tests proving that the published `Daml.*` C# pac
 
 ## Fixtures
 
-No Daml fixture lives in this repo. Both fixtures the live lane uploads, `richtypes` and
-`contractkeys`, ship prebuilt — DAR and generated C# both — inside the
-`Daml.Codegen.Testing.Conformance` package: the generated types under
+The live lane uploads two fixtures, `richtypes` and `contractkeys`, from the `Daml.Codegen.Testing.Conformance`
+project (a project reference, so the tests always run against the corpus in the same checkout). The corpus
+ships prebuilt — DAR and generated C# both: the generated types under
 `Daml.Codegen.Testing.Conformance.RichTypes` / `.ContractKeys`, the DARs through
 `ConformanceCorpus.OpenDar(ConformancePackage.RichTypes)` and `(ConformancePackage.ContractKeys)`.
 `RichTypesDar` materializes the `richtypes` DAR beside the test assembly for the path-based upload
 APIs, and the gRPC, REST and parity projects share it.
 
-The only control point here is the package pin in `Directory.Packages.props`; bump that to take a new
-corpus. This repo names no Daml SDK version and no Daml-LF target for either fixture — which target a
-fixture is built at is decided upstream, in `canton-dotnet-sdk`, and a request for a different one is
-filed there.
+A new Daml shape is added to the corpus under `conformance/` (see `conformance/README.md`), never to a local
+fixture in this project. The Daml SDK version and Daml-LF target of each fixture are set in the corpus
+package's `daml.yaml`.
 
 ## Running the tests
 
@@ -44,7 +43,7 @@ Legacy un-namespaced `CANTON_LOCALNET_*` globals are also accepted as fallbacks.
 ### 4. Run
 
 ```bash
-dotnet test tests/Canton.Ledger.Grpc.Client.Integration.Tests
+dotnet test --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj
 ```
 
 ## Party rights on a long-lived LocalNet

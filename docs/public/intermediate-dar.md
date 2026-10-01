@@ -13,15 +13,13 @@ for you.
 Daml package set: modules, data types (records, variants, enums), templates with their
 choices, keys, signatories and observers, and interfaces with their methods and view
 types. It is a snapshot of a DAR's *type* surface, not its logic — choice and update
-bodies are erased, so the message is safe to diff across patch releases of the same DAR.
+bodies are erased. Produced with `--schema-only` (see [below](#why---schema-only)), the
+message is also safe to diff across patch releases of the same DAR.
 
 **The reference producer is the JVM tool, `daml-dar-to-proto`.** It wraps Digital Asset's
 `daml-lf-archive` library, the same decoder the official Daml SDK tooling uses, so its
-output is the closest thing to ground truth this project can offer. This repository also
-carries a second, pure-.NET producer (used internally on the JDK-free MSBuild path); that
-producer exists to avoid a JVM dependency for .NET consumers, not to define the format.
-When you want an oracle to check your own decoder against, diff against `daml-dar-to-proto`,
-not against anything .NET-shaped.
+output is the closest thing to ground truth this project can offer. When you want an
+oracle to check your own decoder against, diff against `daml-dar-to-proto`.
 
 ## Release assets
 

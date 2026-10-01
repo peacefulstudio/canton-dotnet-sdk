@@ -1,8 +1,10 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Grpc.Client;
+using Daml.Ledger.Abstractions;
 using Canton.Ledger.Testing.Localnet;
 using Microsoft.Extensions.DependencyInjection;
 using Peaceful.Canton.Localnet.Testing;
@@ -73,5 +75,28 @@ public sealed class GrpcLedgerAdminParityTests : LiveLedgerAdminParityTests
             await fixture.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
+
+    [Fact]
+    public async Task GetCommandStatusAsync_with_an_unmatched_prefix_returns_an_empty_list()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+
+        var statuses = await lane.Capability.Admin.GetCommandStatusAsync(
+            $"no-such-command-{Guid.NewGuid():N}", cancellationToken: cancellationToken);
+
+        statuses.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PruneAsync_with_a_negative_offset_is_refused_before_anything_is_pruned()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+
+        var act = () => lane.Capability.Admin.PruneAsync(-1, cancellationToken: cancellationToken);
+
+        await act.Should().ThrowAsync<LedgerOperationException>();
     }
 }

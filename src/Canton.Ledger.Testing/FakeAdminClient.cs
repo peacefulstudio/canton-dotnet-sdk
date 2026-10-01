@@ -17,7 +17,8 @@ namespace Canton.Ledger.Testing;
 /// naming the missing setup, so a test never silently exercises unconfigured behaviour. The
 /// mutation-only members with no return payload — <see cref="GrantUserRightsAsync"/>,
 /// <see cref="RevokeUserRightsAsync"/>, <see cref="UploadDarAsync(byte[], string?, CancellationToken)"/>,
-/// <see cref="ValidateDarAsync(byte[], CancellationToken)"/>
+/// <see cref="ValidateDarAsync(byte[], CancellationToken)"/>, <see cref="DeleteUserAsync"/>,
+/// <see cref="UpdateUserIdentityProviderIdAsync"/>, <see cref="UpdatePartyIdentityProviderIdAsync"/>, <see cref="DeleteIdentityProviderConfigAsync"/>, <see cref="PruneAsync"/>
 /// — are unconditional no-op successes instead, the same way <see cref="FakeLedgerClient.Dispose"/>
 /// is: there is no return value to fake, so requiring staging first would add ceremony without
 /// adding safety. <see cref="CreateUserAsync"/> and <see cref="AllocatePartyAsync"/> sit between
@@ -35,7 +36,7 @@ namespace Canton.Ledger.Testing;
 /// allocating a party or creating a user makes it listable. Stage both sides explicitly if your test
 /// exercises an allocate/create-then-list flow. Construct instances through <see cref="Create"/>.
 /// </remarks>
-public sealed class FakeAdminClient : IAdminClient
+public sealed partial class FakeAdminClient : IAdminClient
 {
     private readonly string? _participantId;
     private readonly IReadOnlyDictionary<string, PartyDetails> _allocatedParties;
@@ -46,6 +47,11 @@ public sealed class FakeAdminClient : IAdminClient
     private readonly IReadOnlyList<PackageDetails>? _knownPackages;
     private readonly IReadOnlyDictionary<string, PackageArchive> _packages;
     private readonly IReadOnlyList<VettedPackage>? _vettedPackages;
+    private readonly IReadOnlyList<CommandStatus>? _commandStatuses;
+    private readonly IReadOnlyList<IdentityProviderConfig>? _identityProviderConfigs;
+    private readonly VettedPackagesUpdateResult? _vettedPackagesUpdateResult;
+    private readonly ExternalPartyTopology? _externalPartyTopology;
+    private readonly Party? _allocatedExternalParty;
 
     internal FakeAdminClient(
         string? participantId,
@@ -56,7 +62,12 @@ public sealed class FakeAdminClient : IAdminClient
         IReadOnlyDictionary<string, IReadOnlyList<UserRight>> userRights,
         IReadOnlyList<PackageDetails>? knownPackages,
         IReadOnlyDictionary<string, PackageArchive> packages,
-        IReadOnlyList<VettedPackage>? vettedPackages)
+        IReadOnlyList<VettedPackage>? vettedPackages,
+        IReadOnlyList<CommandStatus>? commandStatuses,
+        IReadOnlyList<IdentityProviderConfig>? identityProviderConfigs,
+        VettedPackagesUpdateResult? vettedPackagesUpdateResult,
+        ExternalPartyTopology? externalPartyTopology,
+        Party? allocatedExternalParty)
     {
         _participantId = participantId;
         _allocatedParties = allocatedParties;
@@ -67,6 +78,11 @@ public sealed class FakeAdminClient : IAdminClient
         _knownPackages = knownPackages;
         _packages = packages;
         _vettedPackages = vettedPackages;
+        _commandStatuses = commandStatuses;
+        _identityProviderConfigs = identityProviderConfigs;
+        _vettedPackagesUpdateResult = vettedPackagesUpdateResult;
+        _externalPartyTopology = externalPartyTopology;
+        _allocatedExternalParty = allocatedExternalParty;
     }
 
     /// <summary>Starts a new fluent builder for a <see cref="FakeAdminClient"/>.</summary>
@@ -175,6 +191,164 @@ public sealed class FakeAdminClient : IAdminClient
             "known users", "them", "WithUsers(...)"));
 
     /// <inheritdoc />
+    public Task<UserDetails> UpdateUserAsync(
+        string userId,
+        UserUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentNullException.ThrowIfNull(update);
+        _ = update.UpdatePaths();
+
+        if (_users.TryGetValue(userId, out var details))
+        {
+            return Task.FromResult(details);
+        }
+
+        throw StagingMissing(
+            "user", "one", $"WithUser(new UserDetails(\"{userId}\", ...))", $" for user id '{userId}'");
+    }
+
+    /// <inheritdoc />
+    public Task DeleteUserAsync(
+        string userId,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task UpdateUserIdentityProviderIdAsync(
+        string userId,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<PartyDetails> UpdatePartyDetailsAsync(
+        Party party,
+        PartyUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        _ = update.UpdatePaths();
+
+        return Task.FromResult(KnownParties().FirstOrDefault(details => details.Party == party)
+            ?? throw StagingMissing(
+                "known party", "it", "WithParties(...)", $" for party '{party.Value}'"));
+    }
+
+    /// <inheritdoc />
+    public Task UpdatePartyIdentityProviderIdAsync(
+        Party party,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<CommandStatus>> GetCommandStatusAsync(
+        string commandIdPrefix = "",
+        CommandState state = CommandState.Unspecified,
+        int? limit = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(commandIdPrefix);
+
+        var statuses = _commandStatuses ?? throw StagingMissing(
+            "command statuses", "them", "WithCommandStatuses(...)");
+        var matching = statuses
+            .Where(status => status.CommandId.StartsWith(commandIdPrefix, StringComparison.Ordinal))
+            .Where(status => state == CommandState.Unspecified || status.State == state);
+        return Task.FromResult<IReadOnlyList<CommandStatus>>(
+            (limit is > 0 ? matching.Take(limit.Value) : matching).ToList());
+    }
+
+    /// <inheritdoc />
+    public Task<IdentityProviderConfig> CreateIdentityProviderConfigAsync(
+        IdentityProviderConfig config,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        return Task.FromResult(StagedIdentityProviderConfig(config.IdentityProviderId));
+    }
+
+    /// <inheritdoc />
+    public Task<IdentityProviderConfig?> GetIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+        return Task.FromResult(StagedIdentityProviderConfigs()
+            .FirstOrDefault(config => config.IdentityProviderId == identityProviderId));
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<IdentityProviderConfig>> ListIdentityProviderConfigsAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(StagedIdentityProviderConfigs());
+
+    /// <inheritdoc />
+    public Task<IdentityProviderConfig> UpdateIdentityProviderConfigAsync(
+        string identityProviderId,
+        IdentityProviderConfigUpdate update,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+        ArgumentNullException.ThrowIfNull(update);
+        _ = update.UpdatePaths();
+        return Task.FromResult(StagedIdentityProviderConfig(identityProviderId));
+    }
+
+    /// <inheritdoc />
+    public Task DeleteIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<VettedPackagesUpdateResult> UpdateVettedPackagesAsync(
+        IReadOnlyList<VettedPackagesChange> changes,
+        bool dryRun = false,
+        SynchronizerId? synchronizerId = null,
+        ExpectedTopologySerial? expectedTopologySerial = null,
+        VettingOverrides safetyOverrides = VettingOverrides.None,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        return Task.FromResult(_vettedPackagesUpdateResult ?? throw StagingMissing(
+            "vetted packages update result", "it", "WithVettedPackagesUpdateResult(...)"));
+    }
+
+    /// <inheritdoc />
+    public Task PruneAsync(
+        long pruneUpTo,
+        string? submissionId = null,
+        bool pruneAllDivulgedContracts = false,
+        CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    private IReadOnlyList<IdentityProviderConfig> StagedIdentityProviderConfigs() =>
+        _identityProviderConfigs ?? throw StagingMissing(
+            "identity provider configs", "them", "WithIdentityProviderConfigs(...)");
+
+    private IdentityProviderConfig StagedIdentityProviderConfig(string identityProviderId) =>
+        StagedIdentityProviderConfigs().FirstOrDefault(config => config.IdentityProviderId == identityProviderId)
+        ?? throw StagingMissing(
+            "identity provider config", "one", "WithIdentityProviderConfigs(...)", $" for id '{identityProviderId}'");
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<PackageDetails>> ListKnownPackagesAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(_knownPackages as IReadOnlyList<PackageDetails> ?? throw StagingMissing(
             "known packages", "them", "WithKnownPackages(...)"));
@@ -251,6 +425,26 @@ public sealed class FakeAdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<ExternalPartyTopology> GenerateExternalPartyTopologyAsync(
+        ExternalPartyTopologyRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Task.FromResult(_externalPartyTopology ?? throw StagingMissing(
+            "external party topology", "one", "WithExternalPartyTopology(...)"));
+    }
+
+    /// <inheritdoc />
+    public Task<Party> AllocateExternalPartyAsync(
+        ExternalPartyAllocation allocation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(allocation);
+        return Task.FromResult(_allocatedExternalParty ?? throw StagingMissing(
+            "allocated external party", "one", "WithAllocatedExternalParty(...)"));
     }
 
     private static void ThrowIfNullOrEmpty(byte[] darFile)

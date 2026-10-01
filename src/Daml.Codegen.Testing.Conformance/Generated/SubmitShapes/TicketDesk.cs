@@ -28,13 +28,13 @@ public sealed partial record TicketDesk(
 ) : ITemplate, IHasChoices<TicketDesk>, IDamlRecord<TicketDesk>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946", "SubmitShapes", "TicketDesk");
+    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "SubmitShapes", "TicketDesk");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946";
+    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hd117e68b37cc";
+    public static string PackageName => "richtypes-hecd531570c32";
 
     /// <summary>Gets the package version.</summary>
     public static Version PackageVersion { get; } = new(0, 0, 1);
@@ -99,6 +99,20 @@ public sealed partial record TicketDesk(
     };
 
     /// <summary>
+    /// Exercise the Pair choice.
+    /// </summary>
+    public static Choice<TicketDesk, Pair, Tuple2<ContractId<Ticket>, Optional<ContractId<Ephemeral>>>> ChoicePair { get; } = new()
+    {
+        Name = new ChoiceName("Pair"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => Pair.FromRecord(val.As<DamlRecord>()),
+        ResultDecoder = val => Tuple2<ContractId<Ticket>, Optional<ContractId<Ephemeral>>>.FromRecord(val.As<DamlRecord>(), __v0 => new ContractId<Ticket>(__v0.As<DamlContractId>().Value), __v1 => Optional<ContractId<Ephemeral>>.FromValue(__v1, __optional1 => new ContractId<Ephemeral>(__optional1.As<DamlContractId>().Value))),
+        ArgumentJsonReader = (json, context) => TicketDesk.Pair.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json1, __ctx1))),
+    };
+
+    /// <summary>
     /// Exercise the Reserve choice.
     /// </summary>
     public static Choice<TicketDesk, Reserve, ContractId<Ticket>> ChoiceReserve { get; } = new()
@@ -127,7 +141,7 @@ public sealed partial record TicketDesk(
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceIssue, ChoiceReserve, ChoiceRetire];
+    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceIssue, ChoicePair, ChoiceReserve, ChoiceRetire];
 
 }
 
@@ -186,6 +200,91 @@ public sealed record IssueResult(
 
         return new ExerciseOutcome<IssueResult>.One(new IssueResult(
             Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0])
+        ));
+    }
+
+}
+
+/// <summary>
+/// Typed projection of the contracts created by the Pair choice.
+/// One field per template the choice creates; cardinality follows the choice's
+/// return type (single, optional, list).
+/// </summary>
+public sealed record PairResult(
+    ContractId<Ticket> Ticket,
+    ContractId<Ephemeral>? Ephemeral
+)
+{
+    /// <summary>
+    /// Projects an upstream transaction's created contracts to a typed <see cref="PairResult"/>.
+    /// Returns:
+    /// <list type="bullet">
+    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
+    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
+    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
+    /// </list>
+    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
+    /// </summary>
+    public static ExerciseOutcome<PairResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
+    {
+        ArgumentNullException.ThrowIfNull(created);
+        var templateMatches0 = new List<string>();
+        var templateMatches1 = new List<string>();
+        foreach (var item in created)
+        {
+            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.ModuleName, StringComparison.Ordinal)
+                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.EntityName, StringComparison.Ordinal))
+            {
+                templateMatches0.Add(item.ContractId);
+            }
+            else if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral.TemplateId.ModuleName, StringComparison.Ordinal)
+                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral.TemplateId.EntityName, StringComparison.Ordinal))
+            {
+                templateMatches1.Add(item.ContractId);
+            }
+        }
+        var matches0 = new List<string>();
+        var matches1 = new List<string>();
+        var templateMatchIndex0 = 0;
+        if (templateMatchIndex0 < templateMatches0.Count)
+        {
+            matches0.Add(templateMatches0[templateMatchIndex0]);
+            templateMatchIndex0++;
+        }
+        while (templateMatchIndex0 < templateMatches0.Count)
+        {
+            matches0.Add(templateMatches0[templateMatchIndex0]);
+            templateMatchIndex0++;
+        }
+        var templateMatchIndex1 = 0;
+        if (templateMatchIndex1 < templateMatches1.Count)
+        {
+            matches1.Add(templateMatches1[templateMatchIndex1]);
+            templateMatchIndex1++;
+        }
+        while (templateMatchIndex1 < templateMatches1.Count)
+        {
+            matches1.Add(templateMatches1[templateMatchIndex1]);
+            templateMatchIndex1++;
+        }
+
+        if (matches0.Count == 0)
+        {
+            return new ExerciseOutcome<PairResult>.None();
+        }
+        if (matches0.Count > 1)
+        {
+            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches0));
+        }
+
+        if (matches1.Count > 1)
+        {
+            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches1));
+        }
+
+        return new ExerciseOutcome<PairResult>.One(new PairResult(
+            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0]),
+            Ephemeral: matches1.Count == 1 ? new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>(matches1[0]) : null
         ));
     }
 
@@ -480,6 +579,249 @@ public static class TicketDeskExtensions
 
         return new ExerciseOutcome<IssueResult>.One(new IssueResult(
             Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0])
+        ));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Pair choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static ExerciseCommand PairCommand(
+        this ContractId<TicketDesk> contractId,
+        TicketDesk.Pair argument)
+    {
+        ArgumentNullException.ThrowIfNull(contractId);
+        ArgumentNullException.ThrowIfNull(argument);
+        return new ExerciseCommand(
+            TicketDesk.TemplateId,
+            contractId,
+            new ChoiceName("Pair"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the Pair choice and projects the choice's exercise result to a typed <see cref="PairResult"/>.
+    /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
+    /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
+    /// dispatching to <c>ILedgerWriter</c>.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="patron">Controller party from the Daml <c>controller</c> clause, routed into the submission's <c>actAs</c> set.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static Task<ExerciseOutcome<PairResult>> TryPairAsync(
+        this ContractId<TicketDesk> contractId,
+        ILedgerWriter client,
+        TicketDesk.Pair argument,
+        Party patron,
+        string? workflowId = null,
+        CommandId? commandId = null,
+        TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        SubmitterInfo submitter = patron;
+
+        return contractId.TryPairAsync(
+            client,
+            argument,
+            submitter,
+            workflowId,
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exercises the Pair choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="PairResult"/>.
+    /// Companion to the named-<c>Party</c> overload for the case where the submitter must
+    /// read contracts it does not act as — the choice's created contracts are visible to an
+    /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task<ExerciseOutcome<PairResult>> TryPairAsync(
+        this ContractId<TicketDesk> contractId,
+        ILedgerWriter client,
+        TicketDesk.Pair argument,
+        SubmitterInfo submitter,
+        string? workflowId = null,
+        CommandId? commandId = null,
+        TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.PairCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectPairResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Exercises the Pair choice on a fetched <see cref="TicketDesk"/> contract,
+    /// reading every controller and observer party off the contract payload so the
+    /// caller passes no parties. Delegates to the
+    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// </summary>
+    /// <param name="contract">The fetched contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static Task<ExerciseOutcome<PairResult>> TryPairAsync(
+        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
+        ILedgerWriter client,
+        TicketDesk.Pair argument,
+        string? workflowId = null,
+        CommandId? commandId = null,
+        TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(argument);
+
+        return contract.Id.TryPairAsync(
+            client,
+            argument,
+            contract.Data.Patron,
+            workflowId,
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exercises the Pair choice on a fetched <see cref="TicketDesk"/> contract with an
+    /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
+    /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
+    /// payload cannot name. Delegates to the
+    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// </summary>
+    /// <param name="contract">The fetched contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static Task<ExerciseOutcome<PairResult>> TryPairAsync(
+        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
+        ILedgerWriter client,
+        TicketDesk.Pair argument,
+        SubmitterInfo submitter,
+        string? workflowId = null,
+        CommandId? commandId = null,
+        TimeSpan? timeout = null,
+        Func<CommandsSubmission, CommandsSubmission>? configure = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(argument);
+
+        return contract.Id.TryPairAsync(
+            client,
+            argument,
+            submitter,
+            workflowId,
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
+    }
+
+    private static ExerciseOutcome<PairResult> ProjectPairResult(TransactionResult tx, string contractId)
+    {
+        var fromCreatedContracts = PairResult.FromCreatedContracts(tx.CreatedContracts);
+        if (fromCreatedContracts is ExerciseOutcome<PairResult>.Many)
+        {
+            return fromCreatedContracts;
+        }
+
+        foreach (var exercised in tx.ExercisedEvents)
+        {
+            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
+                && string.Equals(exercised.TemplateId.ModuleName, TicketDesk.TemplateId.ModuleName, StringComparison.Ordinal)
+                && string.Equals(exercised.TemplateId.EntityName, TicketDesk.TemplateId.EntityName, StringComparison.Ordinal)
+                && string.Equals(exercised.ChoiceName.Value, "Pair", StringComparison.Ordinal))
+            {
+                try
+                {
+                    return DecodePairResult(exercised.ExerciseResult);
+                }
+                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
+                {
+                    return new ExerciseOutcome<PairResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
+                }
+            }
+        }
+
+        return fromCreatedContracts;
+    }
+
+    private static ExerciseOutcome<PairResult> DecodePairResult(DamlValue exerciseResult)
+    {
+        var matches0 = new List<string>();
+        var matches1 = new List<string>();
+        matches0.Add(exerciseResult.As<DamlRecord>().Fields[0].Value.As<DamlContractId>().Value);
+        var fields1_0 = exerciseResult.As<DamlRecord>().Fields;
+        if (fields1_0.Count > 1)
+        {
+            if (fields1_0[1].Value switch
+            {
+                DamlOptional optional => optional.Value,
+                DamlOptionalChain chain => chain.Value,
+                var bare => bare,
+            } is { } present1_1)
+            {
+                matches1.Add(present1_1.As<DamlContractId>().Value);
+            }
+        }
+
+        if (matches0.Count == 0)
+        {
+            return new ExerciseOutcome<PairResult>.None();
+        }
+        if (matches0.Count > 1)
+        {
+            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches0));
+        }
+
+        if (matches1.Count > 1)
+        {
+            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches1));
+        }
+
+        return new ExerciseOutcome<PairResult>.One(new PairResult(
+            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0]),
+            Ephemeral: matches1.Count == 1 ? new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>(matches1[0]) : null
         ));
     }
 

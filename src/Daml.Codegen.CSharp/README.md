@@ -1,6 +1,6 @@
 # Daml.Codegen.CSharp
 
-C# code generator library for Daml smart contracts. Consumes an
+C# code generator library for Daml smart contracts, part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). Consumes an
 `IntermediateDar` protobuf (produced by the JVM helper bundled in
 `dpm codegen-cs`) and emits strongly-typed C# bindings for Daml templates,
 data types, and interfaces.
@@ -8,7 +8,7 @@ data types, and interfaces.
 ## Installation
 
 ```bash
-dotnet add package Daml.Codegen.CSharp --prerelease
+dotnet add package Daml.Codegen.CSharp --version 0.6.0-preview.3
 ```
 
 ## Usage

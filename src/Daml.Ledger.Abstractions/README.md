@@ -1,6 +1,12 @@
 # Daml.Ledger.Abstractions
 
-Transport-agnostic abstractions for Daml ledger clients.
+Transport-agnostic abstractions for Daml ledger clients, part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk).
+
+## Installation
+
+```bash
+dotnet add package Daml.Ledger.Abstractions --version 0.6.0-preview.3
+```
 
 `ILedgerClient` is the composition of three capability interfaces, each
 covering one slice of ledger interaction:
@@ -13,8 +19,8 @@ covering one slice of ledger interaction:
 A transport implements the split interfaces (and therefore `ILedgerClient`);
 a consumer that only needs to read or stream can depend on `ILedgerReader` or
 `ILedgerStreamer` alone. Implementations live in their own packages,
-published to NuGet.org from
-[`canton-dotnet-sdk`](https://github.com/peacefulstudio/canton-dotnet-sdk):
+published to NuGet.org from the same
+[repository](https://github.com/peacefulstudio/canton-dotnet-sdk):
 
 - `Canton.Ledger.Grpc.Client` — gRPC client for Canton participants
 - `Canton.Ledger.Rest.Client` — HTTP client for the Canton JSON Ledger API
@@ -33,7 +39,7 @@ primitives never has it in scope.
 
 Two interfaces, one client. The transport packages above register the same
 client instance under two interfaces: `ILedgerClient` (this package) and
-`Canton.Ledger.Abstractions.ICantonLedgerClient` (the ledger repo), where
+`Canton.Ledger.Abstractions.ICantonLedgerClient`, where
 `ICantonLedgerClient : ILedgerClient` adds the operations specific to a
 Canton participant — fire-and-forget submission, the command completion
 stream, connected-synchronizer and Ledger API version discovery, and
@@ -45,7 +51,7 @@ plus the Canton-only operations; and at the top the concrete transport
 clients, which implement `ICantonLedgerClient` and add nothing public of
 their own. Depend on the lowest layer that has what you need: a capability
 slice when you only read or stream, `ILedgerClient` for portable
-application code (it is all this codegen's generated extensions ever
+application code (it is all the generated `Try<Choice>Async` extensions ever
 require), and `ICantonLedgerClient` only where you call a Canton-specific
 operation. Never downcast to a concrete client class — every method the
 concretes expose is already on one of the registered interfaces, and
@@ -70,11 +76,8 @@ Generated codegen output (`Try<Choice>Async` extensions, projector helpers)
 references this package — never a transport-specific one — so consumers
 that only need projectors do not transitively depend on a gRPC stack.
 
-Versioned in lockstep with `Daml.Runtime` and `Daml.Codegen.CSharp`. The
-`Canton.Ledger.*` transport packages track this line by minor: a client
-`0.N.x` embeds `Daml.* 0.N.x`, so the package version alone tells you which
-Daml line a transport carries, while patch and `-preview.N` counters evolve
-independently per repo.
+Every package in the SDK — `Daml.*` and `Canton.Ledger.*` alike — is versioned in lockstep, so one version number
+selects a consistent set.
 
 Interface-only package. `Daml.Ledger.Abstractions.Testing.Conformance` ships the
 shared behavioral conformance kit — a transport implementation subclasses it

@@ -28,6 +28,16 @@ public sealed class FakeLedgerAdminParityTests : LedgerAdminParityTests
             .WithUserRights(scenario.UserId, new UserRight.ActAs(party))
             .WithVettedPackages(vettedPackage)
             .WithPackage(VettedPackageId, packageArchive)
+            .WithIdentityProviderConfigs(scenario.NewIdentityProviderConfig())
+            .WithVettedPackagesUpdateResult(new VettedPackagesUpdateResult(
+                null,
+                new VettedPackagesSnapshot(
+                    [new VettedPackageEntry(VettedPackageId, "fake-vetted-package", "1.0.0", null, null)],
+                    "participant::1220fake",
+                    synchronizerId.Value,
+                    1)))
+            .WithPackageIds(VettedPackageId)
+            .WithPackageStatus(VettedPackageId, PackageStatus.Registered)
             .Build();
         var capability = new AdminCapability(client, synchronizerId, IsMultiSynchronizer: false);
         return Task.FromResult(new CapabilityLane<AdminCapability>(capability, () => ValueTask.CompletedTask));
