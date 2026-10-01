@@ -374,7 +374,7 @@ jobs:
         with:
           name: bundle-${{ matrix.rid }}
           path: dpm-codegen-cs-*.tar.gz
-          retention-days: 30
+          retention-days: 3
           if-no-files-found: error
 
       - name: Smoke test bundle
