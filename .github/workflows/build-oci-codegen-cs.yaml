@@ -91,6 +91,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: v${{ needs.validate-inputs.outputs.version }}
 
       - name: Setup JDK
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
@@ -144,10 +146,11 @@ jobs:
       contents: read
     env:
       VERSION_INPUT: ${{ needs.validate-inputs.outputs.version }}
-      PINNED_RICHTYPES_INTERMEDIATE_SHA256: 'c86338c15831c1860e6d574733f90fdaf59dd7d47507733f696908d4292f1cd3'
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: v${{ needs.validate-inputs.outputs.version }}
 
       - name: Setup JDK
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
@@ -173,18 +176,8 @@ jobs:
           chmod +x "${BIN}"
           echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
 
-      - name: Assert richtypes.dar full-decode matches the internal twin's determinism oracle (tests/determinism/shas/intermediate.sha256)
-        run: |
-          set -euo pipefail
-          OUT="${RUNNER_TEMP}/richtypes-full-decode.binpb"
-          java -jar jvm-helper-artifact/daml-dar-to-proto.jar \
-            --dar conformance/richtypes/richtypes.dar --out "${OUT}"
-          ACTUAL="$(sha256sum "${OUT}" | awk '{print $1}')"
-          if [ "${ACTUAL}" != "${PINNED_RICHTYPES_INTERMEDIATE_SHA256}" ]; then
-            echo "::error::richtypes.dar full-decode sha256 (${ACTUAL}) does not match the internal twin's pinned tests/determinism/shas/intermediate.sha256 (${PINNED_RICHTYPES_INTERMEDIATE_SHA256}) — the public jar's IntermediateDar output has drifted from the determinism oracle."
-            exit 1
-          fi
-          echo "richtypes.dar full-decode matches the pinned determinism oracle: ${ACTUAL}"
+      - name: Assert richtypes.dar full-decode matches the determinism oracle (tests/determinism/shas/intermediate.sha256)
+        run: .github/scripts/check-intermediate-oracle.sh jvm-helper-artifact/daml-dar-to-proto.jar
 
       - name: Decode every corpus DAR (--schema-only) and convert to canonical JSON
         run: |
@@ -303,6 +296,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: v${{ needs.validate-inputs.outputs.version }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
@@ -698,6 +693,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: v${{ needs.validate-inputs.outputs.version }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
@@ -781,8 +778,8 @@ jobs:
 
   attach-to-draft-release:
     name: Attach OCI bundles to draft release
-    needs: [build-per-rid, compose-index]
-    if: github.event_name == 'push' && github.ref_type == 'tag' && vars.OCI_PUBLISH_ENABLED == 'true'
+    needs: [validate-inputs, build-per-rid, compose-index]
+    if: needs.validate-inputs.outputs.push == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -798,9 +795,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RESOLVED_VERSION: ${{ needs.validate-inputs.outputs.version }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
+          TAG="v${RESOLVED_VERSION}"
           if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
             :
           elif printf '%s' "$release_err" | grep -qi 'release not found'; then
@@ -823,13 +821,15 @@ jobs:
   attach-standalone-assets-to-draft-release:
     name: Attach standalone dar-to-proto assets to draft release
     needs: [validate-inputs, build-jvm-helper, build-per-rid, build-intermediate-fixtures]
-    if: github.event_name == 'push' && github.ref_type == 'tag' && vars.OCI_PUBLISH_ENABLED == 'true'
+    if: needs.validate-inputs.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: v${{ needs.validate-inputs.outputs.version }}
 
       - name: Download JVM helper JAR
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -850,7 +850,7 @@ jobs:
           RESOLVED_VERSION: ${{ needs.validate-inputs.outputs.version }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
+          TAG="v${RESOLVED_VERSION}"
           if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
             :
           elif printf '%s' "$release_err" | grep -qi 'release not found'; then

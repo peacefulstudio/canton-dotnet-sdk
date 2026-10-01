@@ -1,147 +1,91 @@
-name: Publish NuGet Packages
+name: Publish NuGet Packages (reusable)
 
 on:
   workflow_call:
     inputs:
-      version:
-        description: 'Version to publish (no leading v). Required when called from the orchestrator.'
+      tag:
+        description: 'Release tag the packages were built from (e.g. v0.4.0-preview.4).'
         required: true
         type: string
-      dry_run:
-        description: 'Pack + attach to the draft but skip the nuget.org push.'
-        required: false
-        type: boolean
-        default: false
-    outputs:
-      version:
-        description: 'The version that was packed/published.'
-        value: ${{ jobs.publish.outputs.version }}
-      published:
-        description: "'true' when packages were pushed to nuget.org; 'false' on dry_run or skip."
-        value: ${{ jobs.publish.outputs.published }}
     secrets:
       NUGET_USER:
         description: 'nuget.org username for OIDC trusted publishing (NuGet/login).'
-        required: false
-  workflow_dispatch:
-    inputs:
-      version_override:
-        description: 'Override version (leave empty for auto-calculated)'
-        required: false
-        type: string
+        required: true
+      RELEASE_COUNTERS_TOKEN:
+        description: 'Token with Variables: read & write on this repo (persists the release-counter stores).'
+        required: true
+
+env:
+  NUGET_SOURCE: https://api.nuget.org/v3/index.json
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     environment: nuget-publish
     permissions:
-      contents: write
+      contents: read
       id-token: write
-    outputs:
-      version: ${{ steps.ver.outputs.version }}
-      published: ${{ steps.ver.outputs.published }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
-      - name: Resolve version
-        id: ver
-        env:
-          VERSION_OVERRIDE: ${{ inputs.version_override }}
-          VERSION_INPUT: ${{ inputs.version }}
-          DRY_RUN_INPUT: ${{ inputs.dry_run }}
-        run: |
-          set -euo pipefail
-          if [ -n "${VERSION_OVERRIDE:-}" ]; then
-            RESOLVED="${VERSION_OVERRIDE}"
-          elif [ -n "${VERSION_INPUT:-}" ]; then
-            RESOLVED="${VERSION_INPUT}"
-          else
-            echo "::warning::no version_override and no workflow_call version — skipping publish"
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            echo "published=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if ! [[ "${RESOLVED}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::warning::'${RESOLVED}' is not a release version; skipping publish"
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            echo "published=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "Publishing version: ${RESOLVED} (dry_run=${DRY_RUN_INPUT:-false})"
-          echo "version=${RESOLVED}" >> "$GITHUB_OUTPUT"
-          echo "should_publish=true" >> "$GITHUB_OUTPUT"
-          if [ "${DRY_RUN_INPUT:-false}" = "true" ]; then
-            echo "published=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "published=true" >> "$GITHUB_OUTPUT"
-          fi
+          ref: ${{ inputs.tag }}
       - name: Setup .NET
-        if: steps.ver.outputs.should_publish == 'true'
         uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
-        if: steps.ver.outputs.should_publish == 'true'
-        run: dotnet restore
-      - name: Build
-        if: steps.ver.outputs.should_publish == 'true'
-        env:
-          PACKAGE_VERSION: ${{ steps.ver.outputs.version }}
-        run: dotnet build --configuration Release --no-restore -p:Version="$PACKAGE_VERSION" -p:ContinuousIntegrationBuild=true
-      - name: Test
-        if: steps.ver.outputs.should_publish == 'true'
-        run: dotnet test --configuration Release --no-build
-      - name: Pack
-        if: steps.ver.outputs.should_publish == 'true'
-        env:
-          PACKAGE_VERSION: ${{ steps.ver.outputs.version }}
-        run: |
-          set -euo pipefail
-          dotnet pack --configuration Release --no-build \
-            -p:PackageVersion="$PACKAGE_VERSION" \
-            -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg \
-            -o "$GITHUB_WORKSPACE/output/nuget"
-      - name: Upload packages as artifacts
-        if: steps.ver.outputs.should_publish == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Download core packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: nuget-packages
-          path: |
-            output/nuget/*.nupkg
-            output/nuget/*.snupkg
-          if-no-files-found: error
-          retention-days: 30
-      - name: Verify the packed set and its dependency-first push order
-        if: steps.ver.outputs.should_publish == 'true'
-        run: scripts/order-nuget-push.sh output/nuget
+          path: output/nuget/core
+      - name: Download Splice packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: Splice-nuget
+          path: output/nuget/splice
+      - name: Download Daml.Finance packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: DamlFinance-nuget
+          path: output/nuget/finance
+      - name: Download release-counter snapshots
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-counters-snapshot-*
+          path: output/counters
+      - name: Verify the core set and its dependency-first push order
+        run: scripts/order-nuget-push.sh output/nuget/core
       - name: NuGet login (OIDC -> short-lived key)
         id: login
-        if: steps.ver.outputs.should_publish == 'true' && inputs.dry_run != true
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           user: ${{ secrets.NUGET_USER }}
-      - name: Push to nuget.org in dependency order
-        if: steps.ver.outputs.should_publish == 'true' && inputs.dry_run != true
+      - name: Push core packages in dependency order
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
-        run: scripts/order-nuget-push.sh output/nuget --push https://api.nuget.org/v3/index.json
-      - name: Attach packages to draft release (upload only; never create/publish)
-        if: steps.ver.outputs.should_publish == 'true'
+        run: scripts/order-nuget-push.sh output/nuget/core --push "$NUGET_SOURCE"
+      - name: Push Splice packages
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -uo pipefail
-          TAG="v${{ steps.ver.outputs.version }}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            shopt -s nullglob
-            files=(output/nuget/*.nupkg output/nuget/*.snupkg)
-            if [ ${#files[@]} -gt 0 ]; then
-              gh release upload "$TAG" "${files[@]}" --clobber || echo "upload failed for $TAG; continuing"
-            else
-              echo "no packages under output/nuget to attach"
-            fi
-          else
-            echo "no draft release $TAG; skipping attach (bootstrap creates it in the orchestrator)"
-          fi
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          NUPKG_DIR: output/nuget/splice
+          COUNTER_VARIABLE_NAME: SPLICE_RELEASE_COUNTERS
+        run: .github/scripts/push-packages.sh
+      - name: Push Daml.Finance packages
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          NUPKG_DIR: output/nuget/finance
+          COUNTER_VARIABLE_NAME: DAML_FINANCE_RELEASE_COUNTERS
+        run: .github/scripts/push-packages.sh
+      - name: Persist Splice release-counter store
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_COUNTERS_TOKEN }}
+          COUNTERS_PATH: output/counters/release-counters-snapshot-Splice/release-counters.json
+          COUNTER_VARIABLE_NAME: SPLICE_RELEASE_COUNTERS
+        run: .github/scripts/persist-counters.sh
+      - name: Persist Daml.Finance release-counter store
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_COUNTERS_TOKEN }}
+          COUNTERS_PATH: output/counters/release-counters-snapshot-DamlFinance/release-counters.json
+          COUNTER_VARIABLE_NAME: DAML_FINANCE_RELEASE_COUNTERS
+        run: .github/scripts/persist-counters.sh

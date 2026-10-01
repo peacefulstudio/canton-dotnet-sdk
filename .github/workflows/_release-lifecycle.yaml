@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       action:
-        description: "'bootstrap' (ensure a draft prerelease exists) or 'finalize' (flip the draft to published)."
+        description: "'bootstrap' (ensure a draft prerelease exists) or 'finalize' (fill the notes from the CHANGELOG section and publish the draft)."
         required: true
         type: string
       tag:
@@ -38,6 +38,11 @@ jobs:
       release_url: ${{ steps.run.outputs.release_url }}
       created: ${{ steps.run.outputs.created }}
     steps:
+      - name: Checkout the release tag
+        if: inputs.action == 'finalize'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.tag }}
       - name: Run ${{ inputs.action }} for ${{ inputs.tag }}
         id: run
         env:
@@ -53,6 +58,10 @@ jobs:
           case "$ACTION" in
             bootstrap)
               if gh release view "$TAG" >/dev/null 2>&1; then
+                if [ "$(gh release view "$TAG" --json isDraft --jq '.isDraft')" != "true" ]; then
+                  echo "::error::release $TAG is already published; refusing to rebuild, re-push to GHCR or re-attach assets for a released version"
+                  exit 1
+                fi
                 echo "created=false" >> "$GITHUB_OUTPUT"
                 echo "draft $TAG already exists"
               else
@@ -70,7 +79,12 @@ jobs:
               if [ "$is_draft" != "true" ]; then
                 echo "::warning::release $TAG is already published; nothing to finalize"
               else
-                gh release edit "$TAG" --draft=false
+                version="${TAG#v}"
+                notes_file="$RUNNER_TEMP/release-notes.md"
+                .github/scripts/changelog-section.sh "$version" > "$notes_file"
+                prerelease=false
+                [[ "$version" == *-* ]] && prerelease=true
+                gh release edit "$TAG" --notes-file "$notes_file" --prerelease="$prerelease" --draft=false
                 echo "published $TAG"
               fi
               echo "created=false" >> "$GITHUB_OUTPUT"

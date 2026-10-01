@@ -41,6 +41,26 @@ jobs:
       - name: Verify the packed set and its dependency-first push order
         run: scripts/order-nuget-push.sh output/nuget
 
+  intermediate-oracle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup sbt
+        uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b # v1.2.1
+      - name: Assemble the helper jar
+        working-directory: jvm-helper
+        run: sbt 'clean; assembly'
+      - name: Assert richtypes.dar full-decode matches the determinism oracle
+        run: .github/scripts/check-intermediate-oracle.sh jvm-helper/target/scala-2.13/daml-dar-to-proto.jar
+
   badges:
     needs: [csharp-ci, jvm-helper-ci, assemble-badge-data]
     if: ${{ github.ref == 'refs/heads/main' && !cancelled() }}
