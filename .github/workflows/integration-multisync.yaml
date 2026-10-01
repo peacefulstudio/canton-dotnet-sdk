@@ -115,9 +115,6 @@ jobs:
             obs: false
             pqs: false
           multiSync: true
-          validators:
-            c-validator-1:
-              enabled: false
           YAML
 
       - name: Bring up the multi-synchronizer LocalNet (one retry on the splice bootstrap race)
