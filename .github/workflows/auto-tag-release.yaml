@@ -28,6 +28,11 @@ jobs:
       GH_REPO: ${{ github.repository }}
       HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
+      - name: Checkout the green main commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
       - name: Tag the green main commit and start the release
         run: |
           set -euo pipefail
@@ -36,10 +41,7 @@ jobs:
           main_tip="$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq '.object.sha')"
           [ "${main_tip}" = "${HEAD_SHA}" ] || skip "${HEAD_SHA} is no longer the tip of main; a newer CI run decides"
 
-          read_at_head() {
-            gh api -H "Accept: application/vnd.github.raw+json" "repos/${GH_REPO}/contents/$1?ref=${HEAD_SHA}"
-          }
-          version="$(read_at_head Directory.Build.props | grep -oP '(?<=<Version>)[^<]+' | head -1 || true)"
+          version="$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props | head -1 || true)"
           [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$ ]] \
             || { echo "::error::'${version}' in Directory.Build.props is not a release version"; exit 1; }
           tag="v${version}"
@@ -51,13 +53,12 @@ jobs:
           held="$(gh pr list --state open --label hold-release --json number --jq 'length')"
           [ "${held}" = "0" ] || skip "${held} open pull request(s) carry hold-release"
 
-          changelog="$(read_at_head CHANGELOG.md)"
-          grep -qF "## [${version}]" <<<"${changelog}" \
-            || { echo "::error::CHANGELOG.md has no section for ${version}; refusing to tag"; exit 1; }
+          .github/scripts/changelog-section.sh "${version}" > /dev/null \
+            || { echo "::error::CHANGELOG.md has no non-empty section for ${version}; refusing to tag"; exit 1; }
 
           gh api -X POST "repos/${GH_REPO}/git/refs" -f "ref=refs/tags/${tag}" -f "sha=${HEAD_SHA}" >/dev/null
           echo "Tagged ${HEAD_SHA} as ${tag}"
 
           # Workaround: a tag pushed with GITHUB_TOKEN does not trigger `push` workflows (GitHub Actions
           # behaviour for events created by GITHUB_TOKEN), so the release is dispatched explicitly.
-          gh workflow run release.yaml --ref main -f "version=${version}"
+          gh workflow run release.yaml --ref "${tag}" -f "version=${version}"
