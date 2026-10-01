@@ -505,7 +505,7 @@ Before `0.6.0` the `Canton.Ledger.*` packages had their own version line:
 
 The clients support Canton 3.5 only — running them against a 3.4.x participant is untested and unsupported. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.5.18`. Any `3.5.x` patch release is fine for the gRPC client: the vendored surface is stable within the minor. The REST client needs Canton `3.5.10` or later, the first patch that serves `POST /v2/state/active-contracts-page`, which every REST active-contract-set read pages over.
 
-A weekly [cross-version matrix](docs/public/cross-version-matrix.md) runs the live-ledger suites against the baseline Canton release, other 3.5 patches and a non-gating `dev` canary, and publishes a results table per run.
+A weekly [cross-version matrix](docs/public/cross-version-matrix.md) runs the live-ledger suites against the baseline Canton release, other 3.5 patches and a non-gating LocalNet unreleased (`dev`) cell, and publishes a results table per run.
 
 ### Further Reading
 

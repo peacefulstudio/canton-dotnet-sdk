@@ -17,8 +17,9 @@ three kinds:
   patches are added as canton-localnet releases ship them. A cell takes a canton-localnet
   release tag and, when no release carries that patch, overrides the Splice image tag on a
   release whose compose tree is unchanged across those Splice releases.
-- **`dev` canary.** canton-localnet's `dev` branch, with no version expectation. It is
-  non-gating: a red canary never fails the run.
+- **LocalNet unreleased (`dev`).** Runs canton-localnet's unreleased `dev` branch with no
+  version expectation, as an early warning for the next LocalNet release. It is non-gating, so
+  a red result never fails the run.
 
 Each cell:
 

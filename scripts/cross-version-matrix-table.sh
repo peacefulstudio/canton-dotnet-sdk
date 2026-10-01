@@ -83,7 +83,7 @@ render() {
       "| \(.cell) | `\(.localnet_ref)` | \(if .image_tag == "" then "release default" else "`\(.image_tag)`" end) | "
       + "\(if .expected_canton == "" then "any 3.5" else "`\(.expected_canton)`" end) | "
       + "\(if .reported_canton == "" then "UNAVAILABLE" else "`\(.reported_canton)`" end) | "
-      + "\(if .gating then "yes" else "no (canary)" end) | \($result) |"
+      + "\(if .gating then "yes" else "no" end) | \($result) |"
     ' "${cell_file}"
   done <<<"${cell_files}"
 

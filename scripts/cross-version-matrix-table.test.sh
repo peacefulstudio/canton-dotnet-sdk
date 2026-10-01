@@ -12,7 +12,7 @@ Regression test for scripts/cross-version-matrix-table.sh. Builds a results
 directory holding two cells, then asserts:
 
   1. render prints the cell table in 'order', not directory order, with the
-     release-default image, the canary and the unavailable version spelled out;
+     release-default image, the unreleased dev cell and the unavailable version spelled out;
   2. render prints one per-suite row per MTP log, summing ANSI-coloured
      multi-assembly summaries, and flags a log with no summary and a cell
      with no log;
@@ -86,13 +86,13 @@ LOG
 }
 
 results="${work_dir}/results"
-mkdir -p "${results}/a-canary" "${results}/z-baseline"
+mkdir -p "${results}/a-unreleased" "${results}/z-baseline"
 
 cat >"${results}/z-baseline/cell.json" <<'JSON'
 {"order":1,"cell":"Canton 3.5.18","localnet_ref":"v0.8.3-2","image_tag":"","expected_canton":"3.5.18","reported_canton":"3.5.18","gating":true,"outcome":"success"}
 JSON
-cat >"${results}/a-canary/cell.json" <<'JSON'
-{"order":2,"cell":"LocalNet dev","localnet_ref":"dev","image_tag":"0.8.1","expected_canton":"","reported_canton":"","gating":false,"outcome":"failure"}
+cat >"${results}/a-unreleased/cell.json" <<'JSON'
+{"order":2,"cell":"LocalNet unreleased (dev)","localnet_ref":"dev","image_tag":"0.8.1","expected_canton":"","reported_canton":"","gating":false,"outcome":"failure"}
 JSON
 write_summary "${results}/z-baseline/grpc-integration.log" 12 10 2
 write_summary "${results}/z-baseline/grpc-integration.log" 8 8 0
@@ -105,13 +105,13 @@ expect_output "render prints the cell table in order, then one row per suite" \
 | Cell | LocalNet | Splice images | Expected Canton | Participant reports | Gating | Result |
 | --- | --- | --- | --- | --- | --- | --- |
 | Canton 3.5.18 | `v0.8.3-2` | release default | `3.5.18` | `3.5.18` | yes | pass |
-| LocalNet dev | `dev` | `0.8.1` | any 3.5 | UNAVAILABLE | no (canary) | FAIL |
+| LocalNet unreleased (dev) | `dev` | `0.8.1` | any 3.5 | UNAVAILABLE | no | FAIL |
 
 | Cell | Suite | Succeeded | Failed | Skipped | Total |
 | --- | --- | --- | --- | --- | --- |
 | Canton 3.5.18 | grpc-integration | 18 | 0 | 2 | 20 |
 | Canton 3.5.18 | rest-conformance | - | - | - | no test summary |
-| LocalNet dev | - | - | - | - | no suite ran |
+| LocalNet unreleased (dev) | - | - | - | - | no suite ran |
 EOF
 )" \
   "${renderer}" render "${results}"
