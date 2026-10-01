@@ -22,8 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {order: 1, cell: 'Canton 3.5.18 (SDK baseline)', localnet-ref: v0.8.3-2, image-tag: '', expected-canton: 3.5.18, gating: true}
-          - {order: 2, cell: 'Canton 3.5.17 (Splice 0.8.1 images)', localnet-ref: v0.8.3-2, image-tag: 0.8.1, expected-canton: 3.5.17, gating: true}
+          - {order: 1, cell: 'Canton 3.5.19 (SDK baseline)', localnet-ref: v0.8.4-1, image-tag: '', expected-canton: 3.5.19, gating: true}
+          - {order: 2, cell: 'Canton 3.5.18 (previous baseline)', localnet-ref: v0.8.3-2, image-tag: '', expected-canton: 3.5.18, gating: true}
+          - {order: 3, cell: 'Canton 3.5.17 (Splice 0.8.1 images)', localnet-ref: v0.8.3-2, image-tag: 0.8.1, expected-canton: 3.5.17, gating: true}
           - {order: 9, cell: 'LocalNet dev (canary)', localnet-ref: dev, image-tag: '', expected-canton: '', gating: false}
     env:
       LOCALNET_DIR: ${{ github.workspace }}/canton-localnet
