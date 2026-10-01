@@ -118,6 +118,31 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
     }
 
     [Fact]
+    public async Task EstimateTrafficCostAsync_reads_the_estimate_off_a_served_body_carrying_the_prepared_transaction_as_base64()
+    {
+        var client = ClientWith(TransportServing(
+            """
+            {
+              "preparedTransaction": "CgMyLjESBTAuMS4w",
+              "preparedTransactionHash": "3q2+7w==",
+              "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V2",
+              "costEstimation": {
+                "estimationTimestamp": "2026-08-15T09:30:00Z",
+                "confirmationRequestTrafficCostEstimation": 3000,
+                "confirmationResponseTrafficCostEstimation": 1096,
+                "totalTrafficCostEstimation": 4096
+              }
+            }
+            """));
+
+        var estimate = await client.EstimateTrafficCostAsync(
+            SingleCreateSubmission(), cancellationToken: TestContext.Current.CancellationToken);
+
+        estimate.Should().NotBeNull();
+        estimate!.TotalCost.Should().Be(4096L);
+    }
+
+    [Fact]
     public async Task EstimateTrafficCostAsync_returns_null_when_participant_omits_cost_estimation()
     {
         var client = ClientWith(TransportServing("{}"));
@@ -214,7 +239,7 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
     }
 
     [Fact]
-    public async Task EstimateTrafficCostAsync_omits_the_synchronizer_id_when_the_submission_names_none()
+    public async Task EstimateTrafficCostAsync_sends_the_empty_synchronizer_id_and_package_preference_the_participant_requires()
     {
         var transport = TransportServing("{}");
         var client = ClientWith(transport);
@@ -223,7 +248,8 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
             SingleCreateSubmission(), cancellationToken: TestContext.Current.CancellationToken);
 
         using var body = JsonDocument.Parse(transport.LastRequestBody!);
-        body.RootElement.TryGetProperty("synchronizerId", out _).Should().BeFalse();
+        body.RootElement.GetProperty("synchronizerId").GetString().Should().Be("");
+        body.RootElement.GetProperty("packageIdSelectionPreference").GetRawText().Should().Be("[]");
     }
 
     [Fact]

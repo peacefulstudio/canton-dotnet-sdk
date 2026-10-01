@@ -17,7 +17,7 @@ namespace Canton.Ledger.Testing;
 /// <see cref="FakeLedgerClient.Create"/>, chain <c>With*</c> calls, then call
 /// <see cref="Build"/>.
 /// </summary>
-public sealed class FakeLedgerClientBuilder
+public sealed partial class FakeLedgerClientBuilder
 {
     private readonly Dictionary<Type, object> _activeContracts = [];
     private readonly Dictionary<Type, object> _contractEvents = [];
@@ -38,6 +38,11 @@ public sealed class FakeLedgerClientBuilder
     private ExerciseOutcome<TransactionResult>? _submissionOutcome;
     private ExerciseOutcome<TransactionTree>? _transactionTreeOutcome;
     private StagedTrafficCostEstimate? _trafficCostEstimate;
+    private PreparedSubmission? _preparedSubmission;
+    private ExecutedSubmission? _executedSubmission;
+    private TransactionResult? _executedTransaction;
+    private PreferredPackages? _preferredPackages;
+    private StagedPackagePreference? _packagePreference;
 
     /// <summary>
     /// Stages the offset <see cref="FakeLedgerClient.GetLedgerEndAsync"/> starts from. The end
@@ -387,6 +392,73 @@ public sealed class FakeLedgerClientBuilder
         return this;
     }
 
+    /// <summary>
+    /// Stages the submission <see cref="FakeLedgerClient.PrepareSubmissionAsync"/> returns for every
+    /// call. Leaving it unstaged makes that member throw.
+    /// </summary>
+    /// <param name="prepared">The prepared submission to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithPreparedSubmission(PreparedSubmission prepared)
+    {
+        ArgumentNullException.ThrowIfNull(prepared);
+        _preparedSubmission = prepared;
+        return this;
+    }
+
+    /// <summary>
+    /// Stages the result <see cref="FakeLedgerClient.ExecuteSubmissionAndWaitAsync"/> returns. Each
+    /// such call is a committed write and advances the ledger end by one offset. Leaving it unstaged
+    /// makes that member throw.
+    /// </summary>
+    /// <param name="executed">The execution result to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithExecutedSubmission(ExecutedSubmission executed)
+    {
+        ArgumentNullException.ThrowIfNull(executed);
+        _executedSubmission = executed;
+        return this;
+    }
+
+    /// <summary>
+    /// Stages the transaction <see cref="FakeLedgerClient.ExecuteSubmissionAndWaitForTransactionAsync"/>
+    /// returns. Each such call is a committed write and advances the ledger end by one offset.
+    /// Leaving it unstaged makes that member throw.
+    /// </summary>
+    /// <param name="transaction">The transaction to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithExecutedTransaction(TransactionResult transaction)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+        _executedTransaction = transaction;
+        return this;
+    }
+
+    /// <summary>
+    /// Stages the answer <see cref="FakeLedgerClient.GetPreferredPackagesAsync"/> returns for every
+    /// request. Leaving it unstaged makes that member throw.
+    /// </summary>
+    /// <param name="preferred">The preferred packages to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithPreferredPackages(PreferredPackages preferred)
+    {
+        ArgumentNullException.ThrowIfNull(preferred);
+        _preferredPackages = preferred;
+        return this;
+    }
+
+    /// <summary>
+    /// Stages the answer <see cref="FakeLedgerClient.GetPreferredPackageVersionAsync"/> returns for
+    /// every request. Staging <see langword="null"/> replays a participant on which no package
+    /// satisfies the requirements, while leaving it unstaged makes that member throw.
+    /// </summary>
+    /// <param name="preference">The preference to reply with, or <see langword="null"/> for none.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithPackagePreference(PackagePreference? preference)
+    {
+        _packagePreference = new StagedPackagePreference(preference);
+        return this;
+    }
+
     /// <summary>Builds a <see cref="FakeLedgerClient"/> from the currently staged behaviour.</summary>
     /// <returns>
     /// A fake whose behaviour is a snapshot of this builder; later mutation of the builder does
@@ -410,8 +482,17 @@ public sealed class FakeLedgerClientBuilder
             new Dictionary<LedgerOffset, TransactionResult>(_updatesByOffset),
             new Dictionary<string, TransactionResult>(_updatesById),
             new Dictionary<LedgerOffset, TransactionTree>(_updateTreesByOffset)),
+        new FakeInteractiveSurface(
+            _preparedSubmission,
+            _executedSubmission,
+            _executedTransaction,
+            _preferredPackages,
+            _packagePreference),
         new FakeInterfaceStreams(
             new Dictionary<Type, object>(_activeInterfaceContracts),
             new Dictionary<Type, object>(_interfaceEvents),
-            new Dictionary<Type, object>(_interfaceLedgerEffects)));
+            new Dictionary<Type, object>(_interfaceLedgerEffects)))
+    {
+        TypedReads = SnapshotTypedReads(),
+    };
 }

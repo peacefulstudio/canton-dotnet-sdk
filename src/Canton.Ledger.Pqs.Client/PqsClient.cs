@@ -241,17 +241,17 @@ internal sealed partial class PqsClient : IPqsClient
             cancellationToken);
     }
 
-    internal static (string Sql, IReadOnlyList<(string Name, string Value)> Parameters) BuildFilteredQuery(
+    internal static (string Sql, IReadOnlyList<(string Name, object Value)> Parameters) BuildFilteredQuery(
         PqsFilter filter)
     {
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var whereClause = filter.ToSqlClause(parameters, ref paramIndex);
 
         return ($"{SelectActiveSql} WHERE {whereClause}", parameters);
     }
 
-    private static void ApplyParameters(NpgsqlCommand cmd, IReadOnlyList<(string Name, string Value)> parameters)
+    private static void ApplyParameters(NpgsqlCommand cmd, IReadOnlyList<(string Name, object Value)> parameters)
     {
         foreach (var (name, value) in parameters)
             cmd.Parameters.AddWithValue(name, value);

@@ -155,6 +155,14 @@ template TypeCorners
       do
         create this with boxedText = replacement
 
+template OptionalCounts
+  with
+    owner : Party
+    label : Text
+    maybeCount : Optional Int
+  where
+    signatory owner
+
 template GenericResults
   with
     owner : Party
@@ -246,3 +254,20 @@ template NestedOptionalTails
       controller owner
       do
         pure this
+
+data AnnotationView = AnnotationView
+  with
+    label : Text
+    nested : Optional (Optional Text)
+  deriving (Eq, Show)
+
+interface Annotated where
+  viewtype AnnotationView
+
+template NestedOptionalShapes
+  with
+    owner : Party
+    boxed : Box (Optional (Optional Text))
+    trailing : (Text, Optional (Optional Text))
+  where
+    signatory owner

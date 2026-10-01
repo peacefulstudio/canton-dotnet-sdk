@@ -200,20 +200,25 @@ internal sealed partial class RestLedgerClient
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return CompletionStreamAsyncCore(submitter, (beginExclusiveOffset ?? LedgerOffset.Begin).Value, cancellationToken);
+        return StreamCompletionsAsync(
+            CompletionsPath,
+            (beginExclusiveOffset ?? LedgerOffset.Begin).Value,
+            beginExclusive => RestSubscribeRequestBuilder.BuildCompletionStreamRequest(
+                submitter, beginExclusive, _userId),
+            cancellationToken);
     }
 
-    private async IAsyncEnumerable<CompletionStreamEvent> CompletionStreamAsyncCore(
-        RuntimeCommands.SubmitterInfo submitter,
+    private async IAsyncEnumerable<CompletionStreamEvent> StreamCompletionsAsync(
+        string path,
         long beginExclusiveOffset,
+        Func<long, object> buildRequest,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var windows = ReadWindowsAsync<WireCompletionStreamResponse>(
-            CompletionsPath,
+            path,
             beginExclusiveOffset,
             endInclusive: null,
-            beginExclusive => RestSubscribeRequestBuilder.BuildCompletionStreamRequest(
-                submitter, beginExclusive, _userId),
+            buildRequest,
             CompletionResumeOffset,
             cancellationToken);
 

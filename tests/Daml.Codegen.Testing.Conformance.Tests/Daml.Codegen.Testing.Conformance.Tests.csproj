@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
     <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions.Testing.Conformance\Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Runtime.Grpc\Daml.Runtime.Grpc.csproj" />
   </ItemGroup>
 
 </Project>

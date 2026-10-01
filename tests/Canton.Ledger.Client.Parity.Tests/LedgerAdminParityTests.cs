@@ -17,15 +17,32 @@ namespace Canton.Ledger.Client.Parity.Tests;
 /// <param name="PartyHint">The party id hint the test allocates.</param>
 /// <param name="UserId">The user the test creates with the allocated party as primary party.</param>
 /// <param name="UnknownUserId">A user id no provider knows.</param>
-public sealed record AdminParityScenario(string PartyHint, string UserId, string UnknownUserId)
+/// <param name="IdentityProviderId">The identity provider configuration the test creates and deletes.</param>
+public sealed record AdminParityScenario(
+    string PartyHint, string UserId, string UnknownUserId, string IdentityProviderId)
 {
     /// <summary>Creates a scenario whose ids are unique to this call.</summary>
     public static AdminParityScenario CreateUnique()
     {
         var suffix = Guid.NewGuid().ToString("N");
         return new AdminParityScenario(
-            $"admin-parity-{suffix}", $"admin-parity-user-{suffix}", $"admin-parity-unknown-{suffix}");
+            $"admin-parity-{suffix}",
+            $"admin-parity-user-{suffix}",
+            $"admin-parity-unknown-{suffix}",
+            $"admin-parity-idp-{suffix}");
     }
+
+    /// <summary>The issuer this scenario moves its identity provider configuration to; unique because the participant rejects duplicate issuers.</summary>
+    public string UpdatedIssuer => $"https://updated-{IdentityProviderId}.invalid";
+
+    /// <summary>The identity provider configuration this scenario creates.</summary>
+    public IdentityProviderConfig NewIdentityProviderConfig() =>
+        new(
+            IdentityProviderId,
+            IsDeactivated: false,
+            Issuer: $"https://{IdentityProviderId}.invalid",
+            JwksUrl: $"https://{IdentityProviderId}.invalid/jwks.json",
+            Audience: "admin-parity");
 }
 
 /// <summary>
@@ -59,6 +76,29 @@ public abstract class LedgerAdminParityTests
         var participantId = await lane.Capability.Admin.GetParticipantIdAsync(cancellationToken);
 
         participantId.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task ListPackagesAsync_returns_at_least_one_package_id()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+
+        var packageIds = await lane.Capability.Admin.ListPackagesAsync(cancellationToken);
+
+        packageIds.Should().NotBeEmpty().And.OnlyContain(id => !string.IsNullOrWhiteSpace(id));
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_reports_a_listed_package_as_registered()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+        var listed = (await lane.Capability.Admin.ListPackagesAsync(cancellationToken))[0];
+
+        var status = await lane.Capability.Admin.GetPackageStatusAsync(listed, cancellationToken);
+
+        status.Should().Be(PackageStatus.Registered);
     }
 
     [Fact]
@@ -171,6 +211,93 @@ public abstract class LedgerAdminParityTests
         archive.Payload.Length.Should().BeGreaterThan(0);
         archive.Hash.Should().Be(packageId);
     }
+
+    [Fact]
+    public async Task UpdateUserAsync_annotating_a_created_user_keeps_its_primary_party_and_the_user_is_deleted_afterwards()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var allocated = await lane.Capability.Admin.AllocatePartyAsync(
+            scenario.PartyHint, synchronizerId: lane.Capability.GlobalSynchronizerId, cancellationToken: cancellationToken);
+        var party = allocated.Party;
+        await lane.Capability.Admin.CreateUserAsync(
+            scenario.UserId, party, [new UserRight.ActAs(party)], cancellationToken);
+
+        try
+        {
+            var updated = await lane.Capability.Admin.UpdateUserAsync(
+                scenario.UserId,
+                new UserUpdate { Annotations = new Dictionary<string, string> { ["parity"] = "annotated" } },
+                cancellationToken: cancellationToken);
+
+            updated.Should().Be(new UserDetails(scenario.UserId, party));
+        }
+        finally
+        {
+            await lane.Capability.Admin.DeleteUserAsync(scenario.UserId, cancellationToken: CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task UpdatePartyDetailsAsync_annotating_an_allocated_party_returns_the_local_party()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var allocated = await lane.Capability.Admin.AllocatePartyAsync(
+            scenario.PartyHint, synchronizerId: lane.Capability.GlobalSynchronizerId, cancellationToken: cancellationToken);
+
+        var updated = await lane.Capability.Admin.UpdatePartyDetailsAsync(
+            allocated.Party,
+            new PartyUpdate { Annotations = new Dictionary<string, string> { ["parity"] = "annotated" } },
+            cancellationToken: cancellationToken);
+
+        updated.Should().Be(new PartyDetails(allocated.Party, IsLocal: true));
+    }
+
+    [Fact]
+    public async Task CreateIdentityProviderConfigAsync_is_readable_by_id_and_listed_and_is_deleted_afterwards()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var config = scenario.NewIdentityProviderConfig();
+
+        try
+        {
+            var created = await lane.Capability.Admin.CreateIdentityProviderConfigAsync(config, cancellationToken);
+            var read = await lane.Capability.Admin.GetIdentityProviderConfigAsync(scenario.IdentityProviderId, cancellationToken);
+            var listed = await lane.Capability.Admin.ListIdentityProviderConfigsAsync(cancellationToken);
+
+            created.Should().Be(config);
+            read.Should().Be(config);
+            listed.Should().Contain(config);
+        }
+        finally
+        {
+            await lane.Capability.Admin.DeleteIdentityProviderConfigAsync(
+                scenario.IdentityProviderId, CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateVettedPackagesAsync_dry_run_vetting_an_already_vetted_package_reports_it_vetted()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenAdminAsync(AdminParityScenario.CreateUnique(), cancellationToken);
+        var vetted = await lane.Capability.Admin.ListVettedPackagesAsync(cancellationToken: cancellationToken);
+        var packageId = vetted[0].PackageId;
+
+        var result = await lane.Capability.Admin.UpdateVettedPackagesAsync(
+            [new VettedPackagesChange.Vet([new PackageSelector(packageId)])],
+            dryRun: true,
+            synchronizerId: lane.Capability.GlobalSynchronizerId,
+            cancellationToken: cancellationToken);
+
+        result.New.Should().NotBeNull();
+        result.New!.Packages.Select(package => package.PackageId).Should().Contain(packageId);
+    }
 }
 
 /// <summary>
@@ -216,6 +343,76 @@ public abstract class LiveLedgerAdminParityTests : LedgerAdminParityTests
         user.Should().NotBeNull();
         user!.UserId.Should().NotBeNullOrWhiteSpace();
         rights.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteUserAsync_removes_a_user_the_test_created()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var allocated = await lane.Capability.Admin.AllocatePartyAsync(
+            scenario.PartyHint, synchronizerId: lane.Capability.GlobalSynchronizerId, cancellationToken: cancellationToken);
+        await lane.Capability.Admin.CreateUserAsync(
+            scenario.UserId, allocated.Party, [new UserRight.ActAs(allocated.Party)], cancellationToken);
+
+        await lane.Capability.Admin.DeleteUserAsync(scenario.UserId, cancellationToken: cancellationToken);
+        var read = await lane.Capability.Admin.GetUserAsync(scenario.UserId, cancellationToken);
+
+        read.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_clearing_the_primary_party_of_a_created_user_leaves_it_without_one()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var allocated = await lane.Capability.Admin.AllocatePartyAsync(
+            scenario.PartyHint, synchronizerId: lane.Capability.GlobalSynchronizerId, cancellationToken: cancellationToken);
+        await lane.Capability.Admin.CreateUserAsync(
+            scenario.UserId, allocated.Party, [new UserRight.ActAs(allocated.Party)], cancellationToken);
+
+        try
+        {
+            var updated = await lane.Capability.Admin.UpdateUserAsync(
+                scenario.UserId, new UserUpdate { ClearPrimaryParty = true }, cancellationToken: cancellationToken);
+
+            updated.Should().Be(new UserDetails(scenario.UserId, null));
+        }
+        finally
+        {
+            await lane.Capability.Admin.DeleteUserAsync(scenario.UserId, cancellationToken: CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateIdentityProviderConfigAsync_changes_the_issuer_of_a_created_config_and_the_config_is_deleted_afterwards()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var config = scenario.NewIdentityProviderConfig();
+        await lane.Capability.Admin.CreateIdentityProviderConfigAsync(config, cancellationToken);
+
+        try
+        {
+            var updated = await lane.Capability.Admin.UpdateIdentityProviderConfigAsync(
+                scenario.IdentityProviderId,
+                new IdentityProviderConfigUpdate { Issuer = scenario.UpdatedIssuer, IsDeactivated = true },
+                cancellationToken);
+
+            updated.Should().Be(config with { Issuer = scenario.UpdatedIssuer, IsDeactivated = true });
+        }
+        finally
+        {
+            await lane.Capability.Admin.DeleteIdentityProviderConfigAsync(
+                scenario.IdentityProviderId, CancellationToken.None);
+        }
+
+        var afterDelete = await lane.Capability.Admin.GetIdentityProviderConfigAsync(
+            scenario.IdentityProviderId, cancellationToken);
+        afterDelete.Should().BeNull();
     }
 
     [Fact]

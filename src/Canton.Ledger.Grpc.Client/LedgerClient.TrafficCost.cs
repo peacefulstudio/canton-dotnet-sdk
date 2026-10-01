@@ -30,7 +30,7 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        var request = BuildPrepareSubmissionRequest(submission);
+        var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: true);
 
         return _invoker.ExecuteTracedAsync<LedgerClient, TrafficCostEstimate?>(
             LedgerCallInvoker.Source,
@@ -55,7 +55,7 @@ internal sealed partial class LedgerClient
             cancellationToken);
     }
 
-    private static TrafficCostEstimate? ProjectTrafficCostEstimate(Interactive.CostEstimation? estimation) =>
+    internal static TrafficCostEstimate? ProjectTrafficCostEstimate(Interactive.CostEstimation? estimation) =>
         estimation is null
             ? null
             : new TrafficCostEstimate(
@@ -71,7 +71,8 @@ internal sealed partial class LedgerClient
                 $"The participant reports a {component} traffic cost of {reportedCost} bytes, which exceeds the supported maximum of {long.MaxValue}.");
 
     private Interactive.PrepareSubmissionRequest BuildPrepareSubmissionRequest(
-        RuntimeCommands.CommandsSubmission submission)
+        RuntimeCommands.CommandsSubmission submission,
+        bool estimateTrafficCost)
     {
         var commands = _commandBuilder.BuildCommands(submission);
         var request = new Interactive.PrepareSubmissionRequest
@@ -79,8 +80,17 @@ internal sealed partial class LedgerClient
             UserId = commands.UserId,
             CommandId = commands.CommandId,
             SynchronizerId = commands.SynchronizerId,
-            EstimateTrafficCost = new Interactive.CostEstimationHints(),
         };
+
+        if (submission.MinLedgerTime is { } minLedgerTime)
+        {
+            request.MinLedgerTime = ToWireMinLedgerTime(minLedgerTime);
+        }
+
+        if (estimateTrafficCost)
+        {
+            request.EstimateTrafficCost = new Interactive.CostEstimationHints();
+        }
 
         request.ActAs.AddRange(commands.ActAs);
         request.ReadAs.AddRange(commands.ReadAs);

@@ -79,7 +79,7 @@ public sealed record DamlPrimitiveCatalogRow(
 /// <c>BUILTIN_TYPE_UNSPECIFIED</c> = 0 through <c>BUILTIN_TYPE_FAILURE_CATEGORY</c> = 22
 /// in <c>proto/intermediate_dar.proto</c>), recording each builtin's model mapping, Daml-LF
 /// arity, disposition, and rationale. This is the "adding a Daml primitive" checklist living
-/// as queryable code instead of prose: the reader, the writer, and the DarParser type
+/// as queryable code instead of prose: the reader, the writer, and the DAR type
 /// converter consult the catalog instead of mirroring independent switch tables, and
 /// reflection completeness tests assert the row set stays in bijection with the proto enum
 /// and that every <see cref="DamlPrimitiveDisposition.SupportedValue"/> row keeps its

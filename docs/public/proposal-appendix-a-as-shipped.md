@@ -2,9 +2,7 @@
 
 The [2026-03 grant proposal](https://github.com/canton-foundation/canton-dev-fund/blob/main/proposals/2026-03-Peaceful%20Studio-csharp-dotnet-sdk.md)'s Appendix A illustrated the developer experience this SDK would deliver, ahead of any of it existing. Some of it undershot what shipped (A.7's reassignment events, framed as forward-looking design intent, are live today); some of it named APIs that were never built the way the proposal sketched them (a `Created` outcome arm, an implicitly-`string`-convertible `Party`, a `TransferAsync` that throws).
 
-This page pairs every one of the proposal's A.1–A.11 snippets with the real, compiling equivalent against the shipped API on `dev`. Every fenced "shipped" block below is copied verbatim from
-[`tests/Canton.Ledger.ReadmeSnippets.Tests/ProposalAppendixASnippets.cs`](../../tests/Canton.Ledger.ReadmeSnippets.Tests/ProposalAppendixASnippets.cs), which compiles against the real packages, and
-[`ProposalAppendixASnippetsCompileTests.cs`](../../tests/Canton.Ledger.ReadmeSnippets.Tests/ProposalAppendixASnippetsCompileTests.cs) fails the build if this page's text drifts from that file by even a character.
+This page pairs every one of the proposal's A.1–A.11 snippets with the real, compiling equivalent against the shipped API. Every fenced "shipped" block below is copied verbatim from a test file that compiles against the real packages, and a companion test fails the build if this page's text drifts from that file by even a character.
 
 ## A.1 — Type-safe contracts from Daml codegen
 

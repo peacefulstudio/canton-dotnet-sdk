@@ -46,20 +46,21 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
         var mainModules = PackageEmitContext.ForPackage(dar.MainPackage, options, isMainPackage: true, logger,
             mainPackageSibling: null,
             depSiblings: dar.Dependencies);
-        var dependencyModules = options.IncludeDependencies
-            ? dar.Dependencies
-                .Select((dep, i) => PackageEmitContext.ForPackage(dep, options, isMainPackage: false, logger,
-                    mainPackageSibling: dar.MainPackage,
-                    depSiblings: dar.Dependencies.Where((_, j) => j != i).ToList()))
-                .ToList()
+        var emittedDependencies = options.IncludeDependencies
+            ? dar.Dependencies.Where(dep => !IsProvidedByRuntime(dep)).ToList()
             : [];
+        var dependencyModules = emittedDependencies
+            .Select(dep => PackageEmitContext.ForPackage(dep, options, isMainPackage: false, logger,
+                mainPackageSibling: dar.MainPackage,
+                depSiblings: dar.Dependencies.Where(other => !ReferenceEquals(other, dep)).ToList()))
+            .ToList();
 
         ModuleNamespaceGuards.Check(
             mainModules.Concat(dependencyModules.SelectMany(modules => modules)).Select(EmittedModuleOf).ToList());
 
         files.AddRange(GeneratePackage(resolver, mainModules));
 
-        foreach (var (dep, modules) in dar.Dependencies.Zip(dependencyModules))
+        foreach (var (dep, modules) in emittedDependencies.Zip(dependencyModules))
         {
             LogGeneratingDependency(_log, dep.Name);
             files.AddRange(GeneratePackage(resolver, modules));
@@ -76,7 +77,7 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
                     LogExternalPackageMissing(_log, id[..Math.Min(16, id.Length)]);
                     continue;
                 }
-                if (IsStdlibPackage(pkg.Name) || IsPlaceholderPackageName(pkg.Name))
+                if (IsProvidedByRuntime(pkg))
                 {
                     continue;
                 }
@@ -90,6 +91,9 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
         return files;
     }
+
+    private static bool IsProvidedByRuntime(DamlPackage package) =>
+        IsStdlibPackage(package.Name) || IsPlaceholderPackageName(package.Name);
 
     private static bool IsStdlibPackage(string packageName) => StdlibPackages.IsStdlibPackage(packageName);
 

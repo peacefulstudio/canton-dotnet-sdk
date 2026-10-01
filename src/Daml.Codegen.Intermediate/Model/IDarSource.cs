@@ -7,9 +7,8 @@ namespace Daml.Codegen.Intermediate.Model;
 /// Emitter input contract — a main package plus dependency packages, with
 /// per-package-id lookup. Two production adapters implement it: the
 /// proto-direct <see cref="DarModel"/>, produced by
-/// <c>IntermediateDarReader</c> from an <c>IntermediateDar</c> message, and the
-/// DAR-direct <c>DarArchive</c> in <c>Daml.Codegen.DarParser</c>, produced by
-/// reading a <c>.dar</c> file. Keeps the emitter library decoupled from how the
+/// <c>IntermediateDarReader</c> from an <c>IntermediateDar</c> message, and a
+/// DAR-direct adapter, produced by reading a <c>.dar</c> file. Keeps the emitter library decoupled from how the
 /// DAR is decoded.
 /// </summary>
 public interface IDarSource

@@ -135,3 +135,12 @@ template Enrollment
     choice Toggle : ContractId Enrollment
       controller custodian
       do create this with active = not active
+
+template Registration
+  with
+    custodian : Party
+    tag : Optional (Optional Text)
+  where
+    signatory custodian
+    key (custodian, tag) : (Party, Optional (Optional Text))
+    maintainer key._1

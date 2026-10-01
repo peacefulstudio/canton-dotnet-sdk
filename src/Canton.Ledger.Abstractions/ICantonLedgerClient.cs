@@ -439,4 +439,233 @@ public interface ICantonLedgerClient : ILedgerClient
         RuntimeCommands.CommandsSubmission submission,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads one contract by id through <c>ContractService.GetContract</c>, decoded into
+    /// <typeparamref name="T"/>. The <paramref name="submitter"/>'s combined <c>ActAs ∪ ReadAs</c>
+    /// parties are the querying parties whose visibility scopes the lookup. The result carries no
+    /// offset, because the participant never populates the created event's offset on this call.
+    /// </summary>
+    /// <param name="contractId">The id of the contract to read.</param>
+    /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's configured request timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<CreatedContract<T>> GetContractAsync<T>(
+        ContractId<T> contractId,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>;
+
+    /// <summary>
+    /// Reads the creation and archival of one contract through
+    /// <c>EventQueryService.GetEventsByContractId</c>, decoded into <typeparamref name="T"/>. The
+    /// <paramref name="submitter"/>'s combined <c>ActAs ∪ ReadAs</c> parties scope visibility.
+    /// </summary>
+    /// <param name="contractId">The id of the contract whose events to read.</param>
+    /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's configured request timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ContractLifecycle<T>> GetEventsByContractIdAsync<T>(
+        ContractId<T> contractId,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>;
+
+    /// <summary>
+    /// Reads one page of the active-contract snapshot for <typeparamref name="T"/> through
+    /// <c>StateService.GetActiveContractsPage</c>. The first call omits <paramref name="pageToken"/>;
+    /// each following call passes the previous page's <see cref="AcsPage{T}.NextPageToken"/> together with
+    /// its <see cref="AcsPage{T}.ActiveAtOffset"/> as <paramref name="activeAtOffset"/>.
+    /// </summary>
+    /// <param name="submitter">The parties whose visibility scopes the snapshot.</param>
+    /// <param name="activeAtOffset">
+    /// The offset to compute the snapshot at; the current ledger end when omitted.
+    /// </param>
+    /// <param name="maxPageSize">The most entries a page may hold; the participant's default when omitted.</param>
+    /// <param name="pageToken">The token of the page to read; the first page when omitted.</param>
+    /// <param name="includeDisclosure">
+    /// When set, each created entry carries the disclosure needed to use the contract in an explicit-disclosure submission.
+    /// </param>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's configured request timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
+        RuntimeCommands.SubmitterInfo submitter,
+        LedgerOffset? activeAtOffset = null,
+        int? maxPageSize = null,
+        LedgerPageToken? pageToken = null,
+        bool includeDisclosure = false,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>;
+
+    /// <summary>
+    /// Reads the offsets the participant has pruned up to through
+    /// <c>StateService.GetLatestPrunedOffsets</c>.
+    /// </summary>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's configured request timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads one page of transactions through <c>UpdateService.GetUpdatesPage</c>, projected the same
+    /// way as <see cref="GetUpdateByIdAsync"/>. The <paramref name="submitter"/>'s combined
+    /// <c>ActAs ∪ ReadAs</c> parties scope visibility.
+    /// </summary>
+    /// <param name="submitter">The parties whose visibility scopes the page.</param>
+    /// <param name="beginExclusive">The exclusive lower offset bound; ledger begin when omitted.</param>
+    /// <param name="endInclusive">The inclusive upper offset bound; the ledger end when omitted.</param>
+    /// <param name="maxPageSize">The most updates a page may hold; the participant's default when omitted.</param>
+    /// <param name="descendingOrder">Whether to return the newest updates first.</param>
+    /// <param name="pageToken">The token of the page to read; the first page when omitted.</param>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's configured request timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="InvalidOperationException">
+    /// A returned update is a reassignment or topology transaction rather than a ledger transaction, or its
+    /// payload is malformed and cannot be projected.
+    /// </exception>
+    Task<UpdatesPage> GetUpdatesPageAsync(
+        RuntimeCommands.SubmitterInfo submitter,
+        LedgerOffset? beginExclusive = null,
+        LedgerOffset? endInclusive = null,
+        int? maxPageSize = null,
+        bool descendingOrder = false,
+        LedgerPageToken? pageToken = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Streams the completions of <paramref name="parties"/> through
+    /// <c>CommandCompletionService.GetCompletions</c>, which reads across every user's submissions
+    /// where <see cref="CompletionStreamAsync"/> reads the configured user's. The fault contract is
+    /// that of <see cref="CompletionStreamAsync"/>. Over REST it reads <c>POST /v2/commands/command-completions</c>
+    /// through the same window loop as <see cref="CompletionStreamAsync"/>.
+    /// </summary>
+    /// <param name="parties">
+    /// The parties whose completions to stream. Only a user with the <c>CanReadAsAnyParty</c> right may pass none.
+    /// </param>
+    /// <param name="beginExclusiveOffset">The exclusive offset to start from; ledger begin when omitted.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    IAsyncEnumerable<CompletionStreamEvent> GetCompletionsAsync(
+        IEnumerable<Party> parties,
+        LedgerOffset? beginExclusiveOffset = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asks the participant to interpret and hash <paramref name="submission"/> without executing it,
+    /// the first step of the external-signing flow: sign <see cref="PreparedSubmission.Hash"/>, then
+    /// execute with <see cref="ExecuteSubmissionAsync"/>, <see cref="ExecuteSubmissionAndWaitAsync"/> or
+    /// <see cref="ExecuteSubmissionAndWaitForTransactionAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// The workflow id on <paramref name="submission"/> is not carried — the prepare step has no field
+    /// for it. The caller's token needs only read rights for the acting parties.
+    /// </remarks>
+    /// <param name="submission">The commands to prepare, exactly as they would be submitted.</param>
+    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    Task<PreparedSubmission> PrepareSubmissionAsync(
+        RuntimeCommands.CommandsSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a signed prepared submission and returns once the participant has accepted it, without
+    /// waiting for it to commit; follow the completion stream for the outcome. The call is not retried
+    /// by the opt-in retry pipeline, because replaying an executed submission is not idempotent.
+    /// </summary>
+    /// <param name="submission">The prepared submission and its signatures.</param>
+    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    Task ExecuteSubmissionAsync(
+        SignedSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a signed prepared submission and waits for it to commit. The call is not retried by
+    /// the opt-in retry pipeline, because replaying an executed submission is not idempotent.
+    /// </summary>
+    /// <param name="submission">The prepared submission and its signatures.</param>
+    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>The update id and completion offset of the committed transaction.</returns>
+    Task<ExecutedSubmission> ExecuteSubmissionAndWaitAsync(
+        SignedSubmission submission,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a signed prepared submission, waits for it to commit and returns the transaction,
+    /// projected the same way as <see cref="GetUpdateByIdAsync"/>. The call is not retried by the opt-in
+    /// retry pipeline, because replaying an executed submission is not idempotent.
+    /// </summary>
+    /// <param name="submission">The prepared submission and its signatures.</param>
+    /// <param name="submitter">The parties whose visibility scopes the returned transaction.</param>
+    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    Task<TransactionResult> ExecuteSubmissionAndWaitForTransactionAsync(
+        SignedSubmission submission,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves the preferred package for each of <paramref name="requirements"/>: the highest version
+    /// that every participant hosting the requirement's parties has vetted.
+    /// </summary>
+    /// <param name="requirements">The package names to resolve, each with the parties that must have vetted it.</param>
+    /// <param name="synchronizerId">
+    /// The synchronizer whose topology state the vetting is resolved against, or <see langword="null"/>
+    /// to resolve against every synchronizer the participant is connected to.
+    /// </param>
+    /// <param name="vettingValidAt">
+    /// The time to compute vetting validity at, or <see langword="null"/> for the participant's current time.
+    /// </param>
+    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    Task<PreferredPackages> GetPreferredPackagesAsync(
+        IEnumerable<PackageVettingRequirement> requirements,
+        SynchronizerId? synchronizerId = null,
+        DateTimeOffset? vettingValidAt = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves the preferred version of one package: the highest version that every participant
+    /// hosting <paramref name="parties"/> has vetted. Canton deprecates the underlying route for
+    /// removal in 3.6; prefer <see cref="GetPreferredPackagesAsync"/>.
+    /// </summary>
+    /// <param name="parties">The parties whose hosting participants must have vetted the package.</param>
+    /// <param name="packageName">The package name to resolve a preferred version for.</param>
+    /// <param name="synchronizerId">
+    /// The synchronizer whose topology state the vetting is resolved against, or <see langword="null"/>
+    /// to resolve against every synchronizer the participant is connected to.
+    /// </param>
+    /// <param name="vettingValidAt">
+    /// The time to compute vetting validity at, or <see langword="null"/> for the participant's current time.
+    /// </param>
+    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>The preference, or <see langword="null"/> when no package satisfies the requirements.</returns>
+    Task<PackagePreference?> GetPreferredPackageVersionAsync(
+        IEnumerable<Party> parties,
+        string packageName,
+        SynchronizerId? synchronizerId = null,
+        DateTimeOffset? vettingValidAt = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
 }

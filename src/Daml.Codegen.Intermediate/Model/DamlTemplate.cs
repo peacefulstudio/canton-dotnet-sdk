@@ -180,7 +180,7 @@ public sealed class DamlInterface
     /// Gets the methods declared on this interface — the Daml-LF
     /// <c>method</c> declarations (<c>method owner : Party</c>), distinct
     /// from interface choices. Defaults to empty: producers that do not
-    /// populate it (the .NET DarParser producer, which still drops methods)
+    /// populate it (the .NET DAR producer, which still drops methods)
     /// construct interfaces without setting this property. Ordering rule: the reader
     /// preserves the wire order of the entries it reads; the writer applies
     /// the same ordinal sort-on-write discipline as choices

@@ -935,19 +935,40 @@ public class StdlibTests
     }
 
     [Fact]
-    public void Optional_FromChainValue_should_reject_a_flat_DamlOptional()
+    public void Optional_FromChainValue_should_read_a_flat_DamlOptional_level()
     {
-        var act = () => Optional<string>.FromChainValue(DamlOptional.Some(new DamlText("deep")), Optional_FromText);
-
-        act.Should().Throw<InvalidCastException>().WithMessage("*Cannot cast DamlOptional to DamlOptionalChain*");
+        Optional<string>.FromChainValue(DamlOptional.Some(new DamlText("deep")), Optional_FromText)
+            .Should().Be(new Optional<string>.Some("deep"));
+        Optional<string>.FromChainValue(DamlOptional.None, Optional_FromText)
+            .Should().Be(new Optional<string>.None());
     }
 
     [Fact]
-    public void Optional_FromValue_should_reject_a_chain_node()
+    public void Optional_FromValue_should_read_a_chain_level()
     {
-        var act = () => Optional<string>.FromValue(DamlOptionalChain.Some(new DamlText("deep")), Optional_FromText);
+        Optional<string>.FromValue(DamlOptionalChain.Some(new DamlText("deep")), Optional_FromText)
+            .Should().Be(new Optional<string>.Some("deep"));
+        Optional<string>.FromValue(DamlOptionalChain.None, Optional_FromText)
+            .Should().Be(new Optional<string>.None());
+    }
 
-        act.Should().Throw<InvalidCastException>().WithMessage("*Cannot cast DamlOptionalChain to DamlOptional*");
+    [Fact]
+    public void Optional_FromValue_should_still_reject_a_value_that_is_neither_Optional_tag()
+    {
+        var act = () => Optional<string>.FromValue(new DamlText("deep"), Optional_FromText);
+
+        act.Should().Throw<InvalidCastException>().WithMessage("*Cannot cast DamlText to DamlOptional*");
+    }
+
+    [Fact]
+    public void Optional_should_read_a_nested_value_whose_levels_carry_mixed_tags()
+    {
+        var mixed = DamlOptional.Some(DamlOptionalChain.Some(new DamlText("deep")));
+
+        var read = Optional<Optional<string>>.FromChainValue(
+            mixed, inner => Optional<string>.FromValue(inner, Optional_FromText));
+
+        read.Should().Be(new Optional<Optional<string>>.Some(new Optional<string>.Some("deep")));
     }
 
     [Fact]

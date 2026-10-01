@@ -30,7 +30,7 @@
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="Polly.Core" Version="8.8.0" />
     <PackageVersion Include="Refit" Version="16.3.0" />
-    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.8.3.2" />
+    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.8.4.1" />
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />

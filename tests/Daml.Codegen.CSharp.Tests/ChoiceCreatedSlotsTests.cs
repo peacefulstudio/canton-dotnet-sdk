@@ -233,6 +233,17 @@ public class ChoiceCreatedSlotsTests
     }
 
     [Fact]
+    public void ChoiceCreatedSlots_tuple_component_flags_only_an_optional_declared_type_as_omittable()
+    {
+        var slots = Extract(Tuple(ContractIdOf(Ref("Buyer")), OptionalOf(ContractIdOf(Ref("Seller")))));
+
+        slots[0].ResultPath.Should().Equal(new ExerciseResultStep.TupleComponent(0, IsOptional: false));
+        slots[1].ResultPath.Should().Equal(
+            new ExerciseResultStep.TupleComponent(1, IsOptional: true),
+            new ExerciseResultStep.OptionalValue());
+    }
+
+    [Fact]
     public void ChoiceCreatedSlots_list_of_tuples_steps_into_each_element_then_the_component_outermost_first()
     {
         var slots = Extract(ListOf(Tuple(new DamlPrimitiveType(DamlPrimitive.Int64), ContractIdOf(Ref("Agreement")))));

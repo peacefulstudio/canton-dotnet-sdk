@@ -100,7 +100,9 @@ public abstract record Optional<T>
 
     /// <summary>
     /// Reconstructs an <see cref="Optional{T}"/> from its flat <see cref="DamlValue"/> wire
-    /// representation.
+    /// representation. A <see cref="DamlOptionalChain"/> level reads the same way: the tag only
+    /// selects the array encoding on write, so a reader that cannot know the nesting, such as the
+    /// gRPC converter, is served by either.
     /// </summary>
     /// <param name="value">The wire value.</param>
     /// <param name="convert">Converter for the carried value.</param>
@@ -110,8 +112,7 @@ public abstract record Optional<T>
     {
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(convert);
-        var optional = value.As<DamlOptional>();
-        return optional.Value is null ? new None() : new Some(convert(optional.Value));
+        return ReadLevel(value, convert);
     }
 
     /// <summary>
@@ -131,7 +132,8 @@ public abstract record Optional<T>
 
     /// <summary>
     /// Reconstructs an <see cref="Optional{T}"/> from the array encoding a nested Optional
-    /// chain carries.
+    /// chain carries. A flat <see cref="DamlOptional"/> level reads the same way, which is how the
+    /// gRPC converter returns every level of a nested Optional.
     /// </summary>
     /// <param name="value">The wire value.</param>
     /// <param name="convert">Converter for the carried value.</param>
@@ -141,8 +143,17 @@ public abstract record Optional<T>
     {
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(convert);
-        var chain = value.As<DamlOptionalChain>();
-        return chain.Value is null ? new None() : new Some(convert(chain.Value));
+        return ReadLevel(value, convert);
+    }
+
+    private static Optional<T> ReadLevel(DamlValue value, Func<DamlValue, T> convert)
+    {
+        var carried = value switch
+        {
+            DamlOptionalChain chain => chain.Value,
+            _ => value.As<DamlOptional>().Value,
+        };
+        return carried is null ? new None() : new Some(convert(carried));
     }
 
     /// <summary>

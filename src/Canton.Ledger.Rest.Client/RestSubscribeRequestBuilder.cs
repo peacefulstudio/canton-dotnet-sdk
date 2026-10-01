@@ -117,7 +117,7 @@ internal static class RestSubscribeRequestBuilder
             TransactionShape = Raw.TransactionFormatTransactionShape.TRANSACTION_SHAPE_LEDGER_EFFECTS,
         };
 
-    private static WireEventFormat BuildEventFormat<T>(
+    public static WireEventFormat BuildEventFormat<T>(
         RuntimeCommands.SubmitterInfo submitter, bool includeDisclosure = false)
         where T : IDamlType =>
         new()

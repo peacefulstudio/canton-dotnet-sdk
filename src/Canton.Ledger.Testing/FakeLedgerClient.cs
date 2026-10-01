@@ -41,6 +41,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     private readonly ExerciseOutcome<TransactionResult>? _submissionOutcome;
     private readonly LedgerOffset? _ledgerEnd;
     private readonly FakeCantonSurface _canton;
+    private readonly FakeInteractiveSurface _interactive;
     private readonly FakeInterfaceStreams _interfaces;
     private readonly ConcurrentQueue<CommandId> _submittedCommandIds = new();
     private long _committedWrites;
@@ -54,6 +55,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         ExerciseOutcome<TransactionResult>? submissionOutcome,
         LedgerOffset? ledgerEnd,
         FakeCantonSurface canton,
+        FakeInteractiveSurface interactive,
         FakeInterfaceStreams interfaces)
     {
         _activeContracts = activeContracts;
@@ -64,6 +66,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         _submissionOutcome = submissionOutcome;
         _ledgerEnd = ledgerEnd;
         _canton = canton;
+        _interactive = interactive;
         _interfaces = interfaces;
     }
 

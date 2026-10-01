@@ -9,8 +9,6 @@ using Daml.Ledger.Abstractions;
 using RuntimeCommands = Daml.Runtime.Commands;
 using WireCostEstimation = Canton.Ledger.Rest.Client.Raw.CostEstimation;
 using WireCostEstimationHints = Canton.Ledger.Rest.Client.Raw.CostEstimationHints;
-using WirePrepareSubmissionRequest = Canton.Ledger.Rest.Client.Raw.PrepareSubmissionRequest;
-using WirePrepareSubmissionResponse = Canton.Ledger.Rest.Client.Raw.PrepareSubmissionResponse;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -59,9 +57,9 @@ internal sealed partial class RestLedgerClient
     {
         ArgumentNullException.ThrowIfNull(submission);
 
-        return _calls.SendAsync<WirePrepareSubmissionResponse, TrafficCostEstimate?>(
+        return _calls.SendAsync<ServedPrepareSubmissionResponse, TrafficCostEstimate?>(
             new RestCall(
-                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission),
+                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission, new WireCostEstimationHints()),
                 MissingPreparedSubmissionMessage, MalformedTrafficCostBodyPrefix),
             body => ProjectTrafficCostEstimate(body.CostEstimation),
             timeout,
@@ -94,27 +92,5 @@ internal sealed partial class RestLedgerClient
             ? (long)parsed
             : throw new InvalidOperationException(
                 $"The participant reports a {component} traffic cost of {parsed} bytes, which exceeds the supported maximum of {long.MaxValue}.");
-    }
-
-    private WirePrepareSubmissionRequest BuildPrepareSubmissionRequest(RuntimeCommands.CommandsSubmission submission)
-    {
-        var commands = RestCommandBuilder.BuildCommands(submission, _userId);
-        var request = new WirePrepareSubmissionRequest
-        {
-            UserId = commands.UserId,
-            CommandId = commands.CommandId,
-            SynchronizerId = commands.SynchronizerId,
-            ActAs = commands.ActAs,
-            ReadAs = commands.ReadAs,
-            Commands = commands.CommandList,
-            EstimateTrafficCost = new WireCostEstimationHints(),
-        };
-
-        if (commands.DisclosedContracts is { Count: > 0 } disclosedContracts)
-        {
-            request.DisclosedContracts = disclosedContracts;
-        }
-
-        return request;
     }
 }

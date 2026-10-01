@@ -53,6 +53,18 @@ template TicketDesk
       do
         create Ticket with issuer, holder = issuer
 
+    nonconsuming choice Pair : (ContractId Ticket, Optional (ContractId Ephemeral))
+      with
+        withSecond : Bool
+      controller patron
+      do
+        first <- create Ticket with issuer, holder = issuer
+        if withSecond
+          then do
+            second <- create Ephemeral with owner = issuer, tag = "second"
+            pure (first, Some second)
+          else pure (first, None)
+
     nonconsuming choice Retire : ()
       with
         retiring : ContractId Ticket

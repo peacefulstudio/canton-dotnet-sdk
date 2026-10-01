@@ -18,7 +18,7 @@ bindings:
 Commit the changed `daml.yaml`, DAR and `Generated/` tree together. Also refresh the
 pinned SHAs the determinism gate compares against
 (`scripts/codegen-determinism.sh --update`); it reads this DAR.
-An internal drift test reads the shipped DAR fresh and fails if a step was skipped.
+A drift test reads the shipped DAR fresh and fails if a step was skipped.
 
 `RichRecord` covers the primitive, collection and nominal shapes; `TypeCorners`
 covers the harder corners — parameterized records and variants (`Box`, `Slot`)
@@ -43,7 +43,7 @@ driven by its own `outer`/`inner` arguments. `ReturnGenMap`'s result is written 
 `DA.Map`'s `Map` rather than the bare `GenMap` primitive on purpose: `Map` is a type
 synonym for `GenMap`, not a distinct Daml-LF shape — `TypeCorners.quotaByParty` and
 `.labelByRank` above already pin that erasure for `Map`-typed fields, and
-`RichTypesCorpusDarCharacterizationTests` pins it again for this choice's result — so
+a characterization test pins it again for this choice's result — so
 one choice proves both the `GenMap` and the `Map` family from this corpus's
 top-level-generic-family choice-return conformance requirement; a second choice under a
 different Daml spelling would characterize the same `DamlTypeApp(GenMap, ...)` shape a
@@ -83,7 +83,7 @@ main-package read coverage *this corpus* pins — the vendored Splice snapshots 
 2.1 dependency read floor stays regardless: at the SDK version pinned here, it is held by the
 twenty-seven per-module `daml-prim`/`daml-stdlib` component packages a DAR bundles whatever
 its target, not by this corpus. So keys live in their own package below.
-`RichTypesCorpusDarCharacterizationTests` asserts both the pin and the absence of
+A characterization test asserts both the pin and the absence of
 keyed templates, so moving the pin or adding a keyed template here has to be a
 deliberate act.
 
@@ -107,7 +107,7 @@ The package also carries one unkeyed template, `Offer` (module `Disclosure`),
 whose only signatory is its issuer and whose nonconsuming `Inspect` choice is
 controlled by whichever `reader` party the exercise names, so a party that is no
 stakeholder of the contract can exercise it only by disclosing it explicitly.
-`ContractKeysCorpusDarCharacterizationTests` reads the DAR and
+A characterization test reads the DAR and
 asserts each of them, so a fixture edit that flattens a shape fails rather than
 quietly narrowing the evidence. It also carries a content-addressed package name
 (see above); rebuild its DAR, and refresh the `Generated/ContractKeys/` sources the
@@ -143,7 +143,7 @@ choice nowhere, so a scaffolded project hands the toolchain a version the rest
 of this corpus never exercises. The omission is load-bearing: adding
 `--target=` here — to any version, including the one currently emitted — turns
 the fixture into a restatement of the pin and stops it tracking the default.
-`DefaultTargetDarCharacterizationTests` reads this DAR off disk and asserts the
+A characterization test reads this DAR off disk and asserts the
 version it actually carries, so a moved default surfaces as a failing
 assertion rather than as silence. It is a shipped package too: the emitter runs
 over it and `Daml.Codegen.Testing.Conformance` compiles and ships the result, so
@@ -157,6 +157,3 @@ Like `contractkeys`, rebuilding this DAR also requires refreshing the generated
 tree (`scripts/refresh-conformance.sh`). The determinism gate reads only
 `richtypes`, so `codegen-determinism.sh` does not need re-running for a
 default-target-only change.
-
-The decision record for the conformance package and its live-ledger gate is
-kept in the project's internal ADR collection.

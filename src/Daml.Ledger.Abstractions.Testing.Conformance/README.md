@@ -5,6 +5,8 @@ xUnit base class, `LedgerClientConformanceTests<TProbe>`, that verifies the
 behavioral contract `Daml.Ledger.Abstractions` documents but cannot enforce
 by itself.
 
+Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk).
+
 This kit is for *implementers* of `ILedgerClient`. To unit-test
 *application code* that consumes an `ILedgerClient`, don't hand-roll a fake
 — use `Canton.Ledger.Testing` (published from
@@ -12,6 +14,12 @@ This kit is for *implementers* of `ILedgerClient`. To unit-test
 its `FakeLedgerClient` is a stageable in-memory implementation, with
 builders for the fiddly event/result types and no mocking framework
 required.
+
+## Installation
+
+```bash
+dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.6.0-preview.3
+```
 
 A transport package subclasses it, supplying a client factory and the
 submitter whose visibility scopes the reads. `TProbe` is a Daml template in the
@@ -134,7 +142,7 @@ rather than being smuggled past the check by a `default(CommandId)`. Leaving it 
 
 Each of those overrides wants a client that proves one behavior and nothing else, and
 `ILedgerClient` has twelve members. Derive from `NotSupportedLedgerClient`, the abstract
-base this package publishes: every member is `virtual` and throws
+base this package publishes: every member is `virtual` and all but `Dispose` throw
 `NotSupportedException`, so a fake overrides the ones its check drives and stubs none of
 the rest.
 

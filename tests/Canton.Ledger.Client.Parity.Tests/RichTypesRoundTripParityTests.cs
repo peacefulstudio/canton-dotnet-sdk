@@ -29,13 +29,6 @@ public abstract class RichTypesRoundTripParityTests
     private static readonly TimeSpan ReadBackBudget = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Why this lane cannot decode an <c>Optional (Optional Text)</c> field it reads back, or
-    /// <see langword="null"/> when it can. Only the <see cref="TypeCorners"/> and
-    /// <see cref="NestedOptionalTails"/> rows skip with this reason.
-    /// </summary>
-    protected virtual string? NestedOptionalDecodeQuarantine => null;
-
-    /// <summary>
     /// Opens a lane over this provider's <see cref="ICantonLedgerClient"/> for one test, with a
     /// party the client may act as and <c>richtypes.dar</c> uploaded.
     /// </summary>
@@ -206,6 +199,43 @@ public abstract class RichTypesRoundTripParityTests
     }
 
     [Fact]
+    public async Task Pair_projects_the_ticket_and_no_ephemeral_when_the_ledger_omits_the_trailing_None()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+
+        var outcome = await desk.TryPairAsync(
+            client, new TicketDesk.Pair(false), patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var pair = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>(
+            "the choice committed and returned (ticket, None), whose trailing None the ledger may leave out; got {0}", outcome)
+            .Subject.Result;
+        (await ReadBackAsync(lane, pair.Ticket, issuer)).Should().Be(new Ticket(issuer, issuer));
+        pair.Ephemeral.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Pair_projects_the_ticket_and_the_ephemeral_when_the_trailing_Optional_is_present()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, patron) = lane.Capability;
+        var issuer = lane.Capability.Counterparty;
+        var desk = await CreateAsync(client, issuer, new TicketDesk(issuer, patron));
+
+        var outcome = await desk.TryPairAsync(
+            client, new TicketDesk.Pair(true), patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var pair = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>(
+            "the choice committed and returned (ticket, Some ephemeral); got {0}", outcome).Subject.Result;
+        (await ReadBackAsync(lane, pair.Ticket, issuer)).Should().Be(new Ticket(issuer, issuer));
+        pair.Ephemeral.Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task Retire_flat_submit_reports_no_archive_of_a_contract_its_submitter_only_witnesses()
     {
         await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
@@ -234,11 +264,6 @@ public abstract class RichTypesRoundTripParityTests
     [MemberData(nameof(MaybeMaybeNoteStates))]
     public async Task TypeCorners_round_trips_both_Maps_and_the_nested_Optional_through_the_ledger(string maybeMaybeNoteState)
     {
-        if (NestedOptionalDecodeQuarantine is { } quarantine)
-        {
-            Assert.Skip(quarantine);
-        }
-
         await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
         var (client, owner) = lane.Capability;
         var submitted = TypeCornersOwnedBy(owner, MaybeMaybeNote(maybeMaybeNoteState));
@@ -291,11 +316,6 @@ public abstract class RichTypesRoundTripParityTests
     public async Task NestedOptionalTails_round_trips_every_nested_None_position_through_the_ledger(
         string midState, string tailState)
     {
-        if (NestedOptionalDecodeQuarantine is { } quarantine)
-        {
-            Assert.Skip(quarantine);
-        }
-
         await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
         var (client, owner) = lane.Capability;
         var submitted = new NestedOptionalTails(owner, MaybeMaybeNote(midState), MaybeMaybeNote(tailState));
@@ -311,11 +331,6 @@ public abstract class RichTypesRoundTripParityTests
     public async Task EchoNestedOptionalTails_result_decodes_every_nested_None_position(
         string midState, string tailState)
     {
-        if (NestedOptionalDecodeQuarantine is { } quarantine)
-        {
-            Assert.Skip(quarantine);
-        }
-
         await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
         var (client, owner) = lane.Capability;
         var createdCid = await CreateAsync(

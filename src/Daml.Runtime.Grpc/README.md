@@ -1,6 +1,12 @@
 # Daml.Runtime.Grpc
 
-Bidirectional conversion between `Daml.Runtime` value types and Canton Ledger API v2 protobuf messages.
+Bidirectional conversion between `Daml.Runtime` value types and Canton Ledger API v2 protobuf messages, part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk).
+
+## Installation
+
+```bash
+dotnet add package Daml.Runtime.Grpc --version 0.6.0-preview.3
+```
 
 ## Overview
 

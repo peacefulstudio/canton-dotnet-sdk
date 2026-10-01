@@ -448,6 +448,70 @@ public sealed class RestAdminClientTests : IDisposable
     }
 
     [Fact]
+    public async Task ListPackagesAsync_reads_the_package_ids_from_v2_packages()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"packageIds": ["1220aa", "1220bb"]}""");
+        IAdminClient client = ClientWith(transport);
+
+        var packageIds = await client.ListPackagesAsync(TestContext.Current.CancellationToken);
+
+        packageIds.Should().Equal("1220aa", "1220bb");
+        transport.LastRequest!.Method.Should().Be(HttpMethod.Get);
+        transport.LastRequest.RequestUri!.PathAndQuery.Should().Be("/v2/packages");
+    }
+
+    [Theory]
+    [InlineData("PACKAGE_STATUS_REGISTERED", PackageStatus.Registered)]
+    [InlineData("PACKAGE_STATUS_UNSPECIFIED", PackageStatus.Unspecified)]
+    public async Task GetPackageStatusAsync_maps_the_served_status(string wireStatus, PackageStatus expected)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, $$"""{"packageStatus": "{{wireStatus}}"}""");
+        IAdminClient client = ClientWith(transport);
+
+        var status = await client.GetPackageStatusAsync("1220 aa", TestContext.Current.CancellationToken);
+
+        status.Should().Be(expected);
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/packages/1220%20aa/status");
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_reads_an_absent_status_as_unspecified()
+    {
+        IAdminClient client = ClientWith(new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}"));
+
+        var status = await client.GetPackageStatusAsync("1220aa", TestContext.Current.CancellationToken);
+
+        status.Should().Be(PackageStatus.Unspecified);
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_throws_ArgumentException_for_a_blank_package_id()
+    {
+        IAdminClient client = ClientWith(new RecordingHttpHandler());
+
+        var act = () => client.GetPackageStatusAsync(" ", TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GetTimeAsync_and_SetTimeAsync_throw_NotSupportedException_without_calling_the_participant()
+    {
+        var transport = new RecordingHttpHandler();
+        IAdminClient client = ClientWith(transport);
+        var instant = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
+        var getTime = () => client.GetTimeAsync(TestContext.Current.CancellationToken);
+        var setTime = () => client.SetTimeAsync(instant, instant.AddHours(1), TestContext.Current.CancellationToken);
+
+        const string message =
+            "The participant's TimeService is not available over the JSON Ledger API: it serves no route for GetTime or SetTime. Use the gRPC IAdminClient registered by AddAdminClient.";
+        (await getTime.Should().ThrowAsync<NotSupportedException>()).WithMessage(message);
+        (await setTime.Should().ThrowAsync<NotSupportedException>()).WithMessage(message);
+        transport.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task ListVettedPackagesAsync_posts_the_name_prefixes_to_v2_package_vetting_list_and_follows_the_page_token()
     {
         var transport = new RecordingHttpHandler().WithResponseSequence(

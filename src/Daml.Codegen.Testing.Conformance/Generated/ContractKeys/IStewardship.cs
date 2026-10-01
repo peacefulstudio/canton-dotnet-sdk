@@ -35,19 +35,19 @@ public interface IStewardship : IDamlInterface, IHasView<StewardshipView>, IHasC
     static Identifier IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050", "ContractKeys", "Stewardship");
+    public static new Identifier InterfaceId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Stewardship");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050";
+    static string IDamlInterface.PackageId => "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "contractkeys-h61a17c769e62";
+    static string IDamlInterface.PackageName => "contractkeys-h4fd930e5658f";
 
     /// <summary>Gets the package version.</summary>
     static Version IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("a50e65b27c48e43439a7901d1c7055684792cd7c36059befca53b9057c52d050", "ContractKeys", "Stewardship"), DamlTypeKind.Interface, "contractkeys-h61a17c769e62");
+    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Stewardship"), DamlTypeKind.Interface, "contractkeys-h4fd930e5658f");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="StewardshipView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static ViewDescriptor<IStewardship, StewardshipView> View { get; } = new();

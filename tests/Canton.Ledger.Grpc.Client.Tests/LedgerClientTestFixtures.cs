@@ -35,6 +35,14 @@ internal static class LedgerClientTestFixtures
         },
     };
 
+    internal static Com.Daml.Ledger.Api.V2.Record OwnerArgumentsFor(string ownerParty) => new()
+    {
+        Fields =
+        {
+            new RecordField { Label = "owner", Value = new ProtoValue { Party = ownerParty } },
+        },
+    };
+
     internal static Com.Daml.Ledger.Api.V2.Record OwnerArgumentsWith(string label, ProtoValue value)
     {
         var arguments = OwnerArguments();

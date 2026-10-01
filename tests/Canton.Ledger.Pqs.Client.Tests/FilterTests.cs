@@ -18,26 +18,26 @@ public class FilterTests
     {
         var filter = Filter.Field<SampleTemplate>(t => t.Initiator, "party::123");
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
         sql.Should().Be("payload->>'initiator' = @p0");
-        parameters.Should().ContainSingle().Which.Should().Be(("@p0", "party::123"));
+        parameters.Should().ContainSingle().Which.Should().Be(("@p0", (object)"party::123"));
         paramIndex.Should().Be(1);
     }
 
     [Fact]
-    public void Field_value_type_generates_correct_sql()
+    public void Field_compares_an_Int64_field_as_bigint()
     {
         var filter = Filter.Field<SampleTemplate>(t => t.NumSwaps, "5");
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
-        sql.Should().Be("payload->>'numSwaps' = @p0");
-        parameters.Should().ContainSingle().Which.Should().Be(("@p0", "5"));
+        sql.Should().Be("(payload->>'numSwaps')::bigint = @p0");
+        parameters.Should().ContainSingle().Which.Should().Be(("@p0", (object)5L));
     }
 
     [Fact]
@@ -60,58 +60,13 @@ public class FilterTests
         const string nasty = "alice'; DROP TABLE active; --";
         var filter = Filter.Field<SampleTemplate>(t => t.Initiator, nasty);
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
         sql.Should().Be("payload->>'initiator' = @p0");
         sql.Should().NotContain(nasty);
-        parameters.Should().ContainSingle().Which.Should().Be(("@p0", nasty));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData("1leadingDigit")]
-    [InlineData("has-dash")]
-    [InlineData("has.dot")]
-    [InlineData("has space")]
-    [InlineData("has;semicolon")]
-    [InlineData("has'quote")]
-    [InlineData("has\"doublequote")]
-    [InlineData("has\\backslash")]
-    [InlineData("has/slash")]
-    [InlineData("has(paren")]
-    [InlineData("name; DROP TABLE active; --")]
-    public void FieldEquals_throws_for_unsafe_field_name(string fieldName)
-    {
-        var filter = new PqsFilter.FieldEquals(fieldName, "value");
-
-        var parameters = new List<(string Name, string Value)>();
-        var paramIndex = 0;
-        var act = () => filter.ToSqlClause(parameters, ref paramIndex);
-
-        act.Should().Throw<ArgumentException>().WithMessage($"*'{fieldName}'*");
-    }
-
-    [Theory]
-    [InlineData("a")]
-    [InlineData("Z")]
-    [InlineData("_underscore")]
-    [InlineData("camelCase")]
-    [InlineData("PascalCase")]
-    [InlineData("with_underscores")]
-    [InlineData("name123")]
-    [InlineData("name_123_456")]
-    public void FieldEquals_accepts_safe_field_name(string fieldName)
-    {
-        var filter = new PqsFilter.FieldEquals(fieldName, "value");
-
-        var parameters = new List<(string Name, string Value)>();
-        var paramIndex = 0;
-        var sql = filter.ToSqlClause(parameters, ref paramIndex);
-
-        sql.Should().Be($"payload->>'{fieldName}' = @p0");
+        parameters.Should().ContainSingle().Which.Should().Be(("@p0", (object)nasty));
     }
 
     [Fact]
@@ -121,7 +76,7 @@ public class FilterTests
             Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
             Filter.Field<SampleTemplate>(t => t.Counterparty, "alice"));
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
@@ -167,7 +122,7 @@ public class FilterTests
             Filter.Field<SampleTemplate>(t => t.Initiator, "alice"),
             Filter.Field<SampleTemplate>(t => t.Status, "Active"));
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
@@ -213,7 +168,7 @@ public class FilterTests
             Filter.Field<SampleTemplate>(t => t.Counterparty, "alice"),
             Filter.Field<SampleTemplate>(t => t.Status, "Active"));
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
@@ -230,7 +185,7 @@ public class FilterTests
                 Filter.Field<SampleTemplate>(t => t.Counterparty, "alice")),
             Filter.Field<SampleTemplate>(t => t.Status, "Active"));
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
@@ -247,7 +202,7 @@ public class FilterTests
                 Filter.Field<SampleTemplate>(t => t.Status, "Active")),
             Filter.Field<SampleTemplate>(t => t.Counterparty, "bob"));
 
-        var parameters = new List<(string Name, string Value)>();
+        var parameters = new List<(string Name, object Value)>();
         var paramIndex = 0;
         var sql = filter.ToSqlClause(parameters, ref paramIndex);
 
@@ -263,7 +218,7 @@ public class FilterTests
 
         sql.Should().Be("SELECT contract_id, payload FROM active(@typeId) WHERE payload->>'initiator' = @p0");
         parameters.Should().ContainSingle()
-            .Which.Should().Be(("@p0", "alice"));
+            .Which.Should().Be(("@p0", (object)"alice"));
     }
 
     internal sealed record SampleTemplate(

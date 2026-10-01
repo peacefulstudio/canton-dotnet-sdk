@@ -25,11 +25,25 @@ internal sealed partial class RestAdminClient : IAdminClient
     private const string PackagesPath = "/v2/packages";
     private const string PackageHashHeader = "Canton-Package-Hash";
     private const string VettedPackagesPath = "/v2/package-vetting/list";
+    private const string UpdateVettedPackagesPath = "/v2/package-vetting/update";
+    private const string IdentityProviderConfigsPath = "/v2/idps";
     private const string DarsPath = "/v2/dars";
     private const string ValidateDarPath = "/v2/dars/validate";
 
     private const string ListKnownPackagesUnsupported =
         "ListKnownPackagesAsync is not available over the JSON Ledger API: it serves no route for PackageManagementService.ListKnownPackages. Use ListVettedPackagesAsync, or the gRPC IAdminClient registered by AddAdminClient.";
+
+    private const string UpdatePartyIdentityProviderIdUnsupported =
+        "UpdatePartyIdentityProviderIdAsync is not available over the JSON Ledger API: it serves no route for PartyManagementService.UpdatePartyIdentityProviderId. Use the gRPC IAdminClient registered by AddAdminClient.";
+
+    private const string DeleteUserWithIdentityProviderUnsupported =
+        "DeleteUserAsync with an identityProviderId is not available over the JSON Ledger API: REST has no identity-provider-scoped user delete (DELETE /v2/users/{user-id} takes no query parameter). Use the gRPC IAdminClient registered by AddAdminClient.";
+
+    private const string GetCommandStatusUnsupported =
+        "GetCommandStatusAsync is not available over the JSON Ledger API: it serves no route for CommandInspectionService.GetCommandStatus. Use the gRPC IAdminClient registered by AddAdminClient.";
+
+    private const string PruneUnsupported =
+        "PruneAsync is not available over the JSON Ledger API: it serves no route for ParticipantPruningService.Prune. Use the gRPC IAdminClient registered by AddAdminClient.";
 
     private static readonly ActivitySource ActivitySource = LedgerActivitySource.Create<RestAdminClient>();
 
@@ -264,6 +278,125 @@ internal sealed partial class RestAdminClient : IAdminClient
             response => response.NextPageToken,
             response => (response.Users ?? []).Select(FromWire)));
 
+    public Task<UserDetails> UpdateUserAsync(
+        string userId,
+        UserUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentNullException.ThrowIfNull(update);
+
+        var user = new Raw.User
+        {
+            Id = userId,
+            PrimaryParty = update.PrimaryParty?.Value ?? string.Empty,
+            IsDeactivated = update.IsDeactivated,
+            PrimaryPartyAuthentication = update.PrimaryPartyAuthentication,
+        };
+        if (identityProviderId is not null)
+            user.IdentityProviderId = identityProviderId;
+        if (ToWireMetadata(update.Annotations) is { } metadata)
+            user.Metadata = metadata;
+        var request = new WireUpdateUserRequest(user, new WireFieldMask(update.UpdatePaths()));
+
+        return TracedAsync(
+            nameof(UpdateUserAsync),
+            () => _calls.SendAsync<Raw.UpdateUserResponse, UserDetails>(
+                Mutate(HttpMethod.Patch, UserPath(userId), request, "updated user"),
+                response => FromWire(response.User),
+                timeout: null,
+                cancellationToken),
+            (LedgerActivityTagNames.CantonUserId, userId));
+    }
+
+    public Task DeleteUserAsync(
+        string userId,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        if (identityProviderId is { Length: > 0 })
+            return Task.FromException(new NotSupportedException(DeleteUserWithIdentityProviderUnsupported));
+
+        var path = UserPath(userId);
+        return TracedAsync(
+            nameof(DeleteUserAsync),
+            () => _calls.SendAsync(
+                new RestCall(HttpMethod.Delete, path, Body: null, MissingBody("user deletion"), MalformedBody("user deletion"), Replayable: false),
+                IgnoreBodyAsync,
+                timeout: null,
+                cancellationToken),
+            (LedgerActivityTagNames.CantonUserId, userId));
+    }
+
+    public Task UpdateUserIdentityProviderIdAsync(
+        string userId,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        var request = new Raw.UpdateUserIdentityProviderIdRequest { UserId = userId };
+        if (sourceIdentityProviderId is not null)
+            request.SourceIdentityProviderId = sourceIdentityProviderId;
+        if (targetIdentityProviderId is not null)
+            request.TargetIdentityProviderId = targetIdentityProviderId;
+        return TracedAsync(
+            nameof(UpdateUserIdentityProviderIdAsync),
+            () => _calls.SendAsync(
+                Mutate(HttpMethod.Patch, $"{UserPath(userId)}/identity-provider-id", request, "user identity provider update"),
+                IgnoreBodyAsync,
+                timeout: null,
+                cancellationToken),
+            (LedgerActivityTagNames.CantonUserId, userId));
+    }
+
+    public Task<PartyDetails> UpdatePartyDetailsAsync(
+        Party party,
+        PartyUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        var details = new Raw.PartyDetails { Party = party.Value };
+        if (identityProviderId is not null)
+            details.IdentityProviderId = identityProviderId;
+        if (ToWireMetadata(update.Annotations) is { } metadata)
+            details.LocalMetadata = metadata;
+        var request = new WireUpdatePartyDetailsRequest(details, new WireFieldMask(update.UpdatePaths()));
+
+        return TracedAsync(
+            nameof(UpdatePartyDetailsAsync),
+            () => _calls.SendAsync<Raw.UpdatePartyDetailsResponse, PartyDetails>(
+                Mutate(HttpMethod.Patch, $"{PartiesPath}/{Uri.EscapeDataString(party.Value)}", request, "updated party"),
+                response => FromWire(response.PartyDetails),
+                timeout: null,
+                cancellationToken));
+    }
+
+    public Task UpdatePartyIdentityProviderIdAsync(
+        Party party,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException(new NotSupportedException(UpdatePartyIdentityProviderIdUnsupported));
+
+    public Task<IReadOnlyList<CommandStatus>> GetCommandStatusAsync(
+        string commandIdPrefix = "",
+        CommandState state = CommandState.Unspecified,
+        int? limit = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException<IReadOnlyList<CommandStatus>>(new NotSupportedException(GetCommandStatusUnsupported));
+
+    private static Raw.ObjectMeta? ToWireMetadata(IReadOnlyDictionary<string, string>? annotations) =>
+        annotations is null
+            ? null
+            : new Raw.ObjectMeta { Annotations = new Dictionary<string, string>(annotations) };
+
     public Task<IReadOnlyList<PackageDetails>> ListKnownPackagesAsync(CancellationToken cancellationToken = default) =>
         Task.FromException<IReadOnlyList<PackageDetails>>(new NotSupportedException(ListKnownPackagesUnsupported));
 
@@ -297,6 +430,128 @@ internal sealed partial class RestAdminClient : IAdminClient
         var payload = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         return new PackageArchive(payload, hash, HashFunction.Sha256);
     }
+
+    public Task<IdentityProviderConfig> CreateIdentityProviderConfigAsync(
+        IdentityProviderConfig config,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+
+        var request = new Raw.CreateIdentityProviderConfigRequest { IdentityProviderConfig = ToWire(config) };
+        return TracedAsync(
+            nameof(CreateIdentityProviderConfigAsync),
+            () => _calls.SendAsync<Raw.CreateIdentityProviderConfigResponse, IdentityProviderConfig>(
+                Mutate(HttpMethod.Post, IdentityProviderConfigsPath, request, "created identity provider config"),
+                response => FromWire(response.IdentityProviderConfig),
+                timeout: null,
+                cancellationToken));
+    }
+
+    public Task<IdentityProviderConfig?> GetIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+
+        return TracedAsync(
+            nameof(GetIdentityProviderConfigAsync),
+            () => NullWhenNotFoundAsync(_calls.SendAsync<Raw.GetIdentityProviderConfigResponse, IdentityProviderConfig?>(
+                Read(IdentityProviderConfigPath(identityProviderId), "identity provider config"),
+                response => FromWire(response.IdentityProviderConfig),
+                timeout: null,
+                cancellationToken)));
+    }
+
+    public Task<IReadOnlyList<IdentityProviderConfig>> ListIdentityProviderConfigsAsync(
+        CancellationToken cancellationToken = default) =>
+        TracedAsync(nameof(ListIdentityProviderConfigsAsync), () => _calls.SendAsync<Raw.ListIdentityProviderConfigsResponse, IReadOnlyList<IdentityProviderConfig>>(
+            Read(IdentityProviderConfigsPath, "identity provider configs"),
+            response => (response.IdentityProviderConfigs ?? []).Select(FromWire).ToList(),
+            timeout: null,
+            cancellationToken));
+
+    public Task<IdentityProviderConfig> UpdateIdentityProviderConfigAsync(
+        string identityProviderId,
+        IdentityProviderConfigUpdate update,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+        ArgumentNullException.ThrowIfNull(update);
+
+        var config = new Raw.IdentityProviderConfig
+        {
+            IdentityProviderId = identityProviderId,
+            IsDeactivated = update.IsDeactivated,
+            Issuer = update.Issuer ?? string.Empty,
+            JwksUrl = update.JwksUrl ?? string.Empty,
+            Audience = update.Audience ?? string.Empty,
+        };
+        var request = new WireUpdateIdentityProviderConfigRequest(config, new WireFieldMask(update.UpdatePaths()));
+
+        return TracedAsync(
+            nameof(UpdateIdentityProviderConfigAsync),
+            () => _calls.SendAsync<Raw.UpdateIdentityProviderConfigResponse, IdentityProviderConfig>(
+                Mutate(HttpMethod.Patch, IdentityProviderConfigPath(identityProviderId), request, "updated identity provider config"),
+                response => FromWire(response.IdentityProviderConfig),
+                timeout: null,
+                cancellationToken));
+    }
+
+    public Task DeleteIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+
+        return TracedAsync(
+            nameof(DeleteIdentityProviderConfigAsync),
+            () => _calls.SendAsync(
+                new RestCall(
+                    HttpMethod.Delete,
+                    IdentityProviderConfigPath(identityProviderId),
+                    Body: null,
+                    MissingBody("identity provider config deletion"),
+                    MalformedBody("identity provider config deletion"),
+                    Replayable: false),
+                IgnoreBodyAsync,
+                timeout: null,
+                cancellationToken));
+    }
+
+    public Task<VettedPackagesUpdateResult> UpdateVettedPackagesAsync(
+        IReadOnlyList<VettedPackagesChange> changes,
+        bool dryRun = false,
+        SynchronizerId? synchronizerId = null,
+        ExpectedTopologySerial? expectedTopologySerial = null,
+        VettingOverrides safetyOverrides = VettingOverrides.None,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+
+        var request = new WireUpdateVettedPackagesRequest(
+            changes.Select(ToWire).ToList(),
+            dryRun,
+            synchronizerId?.Value,
+            expectedTopologySerial is null ? null : ToWire(expectedTopologySerial),
+            ToWireForceFlags(safetyOverrides));
+
+        return TracedAsync(
+            nameof(UpdateVettedPackagesAsync),
+            () => _calls.SendAsync<Raw.UpdateVettedPackagesResponse, VettedPackagesUpdateResult>(
+                Mutate(HttpMethod.Post, UpdateVettedPackagesPath, request, "vetted packages update"),
+                response => new VettedPackagesUpdateResult(
+                    FromWireSnapshot(response.PastVettedPackages),
+                    FromWireSnapshot(response.NewVettedPackages)),
+                timeout: null,
+                cancellationToken));
+    }
+
+    public Task PruneAsync(
+        long pruneUpTo,
+        string? submissionId = null,
+        bool pruneAllDivulgedContracts = false,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException(new NotSupportedException(PruneUnsupported));
 
     public Task<IReadOnlyList<VettedPackage>> ListVettedPackagesAsync(
         IEnumerable<string>? packageNamePrefixes = null,
@@ -510,6 +765,96 @@ internal sealed partial class RestAdminClient : IAdminClient
 
     private static PartyDetails FromWire(Raw.PartyDetails details) =>
         new(new Party(details.Party), details.IsLocal ?? false);
+
+    private static string IdentityProviderConfigPath(string identityProviderId) =>
+        $"{IdentityProviderConfigsPath}/{Uri.EscapeDataString(identityProviderId)}";
+
+    private static Raw.IdentityProviderConfig ToWire(IdentityProviderConfig config) =>
+        new()
+        {
+            IdentityProviderId = config.IdentityProviderId,
+            IsDeactivated = config.IsDeactivated,
+            Issuer = config.Issuer,
+            JwksUrl = config.JwksUrl,
+            Audience = config.Audience,
+        };
+
+    private static IdentityProviderConfig FromWire(Raw.IdentityProviderConfig config) =>
+        new(
+            config.IdentityProviderId,
+            config.IsDeactivated ?? false,
+            config.Issuer ?? string.Empty,
+            config.JwksUrl ?? string.Empty,
+            config.Audience ?? string.Empty);
+
+    private static Raw.VettedPackagesRef ToWire(PackageSelector selector) =>
+        new()
+        {
+            PackageId = selector.PackageId,
+            PackageName = selector.PackageName,
+            PackageVersion = selector.PackageVersion,
+        };
+
+    private static Raw.VettedPackagesChange ToWire(VettedPackagesChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+
+        return change switch
+        {
+            VettedPackagesChange.Vet vet => new Raw.VettedPackagesChange
+            {
+                Operation = new Raw.VettedPackagesChangeOperation
+                {
+                    Vet = new Raw.VettedPackagesChange_Vet
+                    {
+                        Packages = vet.Packages.Select(ToWire).ToList(),
+                        NewValidFromInclusive = vet.ValidFromInclusive,
+                        NewValidUntilExclusive = vet.ValidUntilExclusive,
+                    },
+                },
+            },
+            VettedPackagesChange.Unvet unvet => new Raw.VettedPackagesChange
+            {
+                Operation = new Raw.VettedPackagesChangeOperation
+                {
+                    Unvet = new Raw.VettedPackagesChange_Unvet { Packages = unvet.Packages.Select(ToWire).ToList() },
+                },
+            },
+            _ => throw new NotSupportedException($"Unknown vetted packages change '{change.GetType().Name}'."),
+        };
+    }
+
+    private static Raw.PriorTopologySerial ToWire(ExpectedTopologySerial expected) =>
+        new()
+        {
+            Serial = expected.Prior is { } prior
+                ? new Raw.PriorTopologySerialSerial { Prior = checked((int)prior) }
+                : new Raw.PriorTopologySerialSerial { NoPrior = new Raw.PriorTopologySerial_NoPrior() },
+        };
+
+    private static List<string> ToWireForceFlags(VettingOverrides overrides)
+    {
+        var flags = new List<string>();
+        if (overrides.HasFlag(VettingOverrides.AllowVetIncompatibleUpgrades))
+            flags.Add("UPDATE_VETTED_PACKAGES_FORCE_FLAG_ALLOW_VET_INCOMPATIBLE_UPGRADES");
+        if (overrides.HasFlag(VettingOverrides.AllowUnvettedDependencies))
+            flags.Add("UPDATE_VETTED_PACKAGES_FORCE_FLAG_ALLOW_UNVETTED_DEPENDENCIES");
+        return flags;
+    }
+
+    private static VettedPackagesSnapshot? FromWireSnapshot(Raw.VettedPackages? snapshot) =>
+        snapshot is null
+            ? null
+            : new VettedPackagesSnapshot(
+                (snapshot.Packages ?? []).Select(package => new VettedPackageEntry(
+                    package.PackageId,
+                    package.PackageName,
+                    package.PackageVersion,
+                    package.ValidFromInclusive,
+                    package.ValidUntilExclusive)).ToList(),
+                snapshot.ParticipantId,
+                snapshot.SynchronizerId,
+                (uint)(snapshot.TopologySerial ?? 0));
 
     private static UserDetails FromWire(Raw.User user) =>
         new(user.Id, string.IsNullOrEmpty(user.PrimaryParty) ? null : new Party(user.PrimaryParty));

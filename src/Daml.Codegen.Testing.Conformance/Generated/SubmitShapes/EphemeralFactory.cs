@@ -27,13 +27,13 @@ public sealed partial record EphemeralFactory(
 ) : ITemplate, IHasChoices<EphemeralFactory>, IDamlRecord<EphemeralFactory>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946", "SubmitShapes", "EphemeralFactory");
+    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "SubmitShapes", "EphemeralFactory");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946";
+    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hd117e68b37cc";
+    public static string PackageName => "richtypes-hecd531570c32";
 
     /// <summary>Gets the package version.</summary>
     public static Version PackageVersion { get; } = new(0, 0, 1);

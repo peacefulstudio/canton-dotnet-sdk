@@ -21,7 +21,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 /// </summary>
 public sealed class RestGenericChoiceResultDecodeTests : IDisposable
 {
-    private const string GenericResultsPackageId = "1c5c0e53077a2ff6f627e8dd1317ab482fa5d70e490665093bb4b982413dd946";
+    private const string GenericResultsPackageId = "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
     private static readonly Party Alice = new("party::alice");
 
     private readonly List<StubHttpClientFactory> _factories = [];

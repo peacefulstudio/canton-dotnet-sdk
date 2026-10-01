@@ -78,9 +78,9 @@ public sealed record DamlRecord(
 
     /// <summary>
     /// Gets and converts a field whose Daml type is a type parameter. An omitted field is handed
-    /// to <paramref name="convert"/> as <see cref="DamlOptional.None"/>, then as
-    /// <see cref="DamlOptionalChain.None"/>, so it reads as <c>None</c> when the instantiation is a
-    /// flat or a nested <c>Optional</c>, for the reasons <see cref="GetOptionalField"/> gives.
+    /// to <paramref name="convert"/> as <see cref="DamlOptional.None"/>, so it reads as <c>None</c>
+    /// when the instantiation is a flat or a nested <c>Optional</c>, for the reasons
+    /// <see cref="GetOptionalField"/> gives: both read a flat level and a chain level alike.
     /// Called by generated <c>FromRecord</c> methods and the stdlib tuples.
     /// </summary>
     /// <typeparam name="T">The instantiation's C# type.</typeparam>
@@ -99,30 +99,13 @@ public sealed record DamlRecord(
             return convert(value);
         }
 
-        foreach (var omittedNone in OmittedOptionalEncodings)
-        {
-            if (TryConvertOmitted(convert, omittedNone, out var converted))
-            {
-                return converted;
-            }
-        }
-
-        throw MissingField(name);
-    }
-
-    private static readonly DamlValue[] OmittedOptionalEncodings = [DamlOptional.None, DamlOptionalChain.None];
-
-    private static bool TryConvertOmitted<T>(Func<DamlValue, T> convert, DamlValue omittedNone, out T converted)
-    {
         try
         {
-            converted = convert(omittedNone);
-            return true;
+            return convert(DamlOptional.None);
         }
         catch (InvalidCastException)
         {
-            converted = default!;
-            return false;
+            throw MissingField(name);
         }
     }
 

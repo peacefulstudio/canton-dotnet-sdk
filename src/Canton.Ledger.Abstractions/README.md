@@ -1,6 +1,12 @@
 # Canton.Ledger.Abstractions
 
-The transport-neutral Canton contract layer: the Canton-participant surface types that both the gRPC client (`Canton.Ledger.Grpc.Client`) and the HTTP client (`Canton.Ledger.Rest.Client`) implement, and that the `Canton.Ledger.Testing` fakes stand in for — including `ITokenProvider`, the authentication contract both transports resolve bearer tokens through. It also declares the Participant Query Store read surface `IPqsClient` and its signature types, so `FakePqsClient` is as neutral as the other fakes; `Canton.Ledger.Pqs.Client` supplies the PostgreSQL-backed implementation. It parallels upstream `Daml.Ledger.Abstractions` — Canton contracts extend the Daml-neutral ones — and its dependency direction is `Canton.Ledger.Abstractions` → `Daml.Ledger.Abstractions` + `Daml.Runtime` only. It drags in neither transport nor a database driver: no `Google.Protobuf`, no `Grpc.*`, no `Canton.Ledger.Grpc`, no `Npgsql`. This keeps the shared contract assembly usable by a REST-only consumer without pulling in the gRPC stack.
+Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). The transport-neutral Canton contract layer: the Canton-participant surface types that both the gRPC client (`Canton.Ledger.Grpc.Client`) and the HTTP client (`Canton.Ledger.Rest.Client`) implement, and that the `Canton.Ledger.Testing` fakes stand in for — including `ITokenProvider`, the authentication contract both transports resolve bearer tokens through. It also declares the Participant Query Store read surface `IPqsClient` and its signature types, so `FakePqsClient` is as neutral as the other fakes; `Canton.Ledger.Pqs.Client` supplies the PostgreSQL-backed implementation. It parallels upstream `Daml.Ledger.Abstractions` — Canton contracts extend the Daml-neutral ones — and its dependency direction is `Canton.Ledger.Abstractions` → `Daml.Ledger.Abstractions` + `Daml.Runtime` only. It drags in neither transport nor a database driver: no `Google.Protobuf`, no `Grpc.*`, no `Canton.Ledger.Grpc`, no `Npgsql`. This keeps the shared contract assembly usable by a REST-only consumer without pulling in the gRPC stack.
+
+## Installation
+
+```bash
+dotnet add package Canton.Ledger.Abstractions --version 0.6.0-preview.3
+```
 
 ## Key Types
 
@@ -35,7 +41,7 @@ The transport-neutral Canton contract layer: the Canton-participant surface type
 | `ITokenProvider.None` | Static singleton signalling unauthenticated access; the clients detect it and send no Authorization header |
 | `IPqsClient` | The Participant Query Store read surface — active-contract queries by template or interface, filtered, paged, by contract id, and existence checks |
 | `PqsFilter` | A filter condition on a PQS query. Opaque by design: it declares no public members and its cases are internal, so a filter can only be built through `Filter` |
-| `Filter` | Builds `PqsFilter`s from strongly-typed expressions — `Filter.Field<T>(t => t.Prop, value)`, composed with `Filter.And`/`Filter.Or`. Field names come from codegen `[DamlField]` metadata, never from user input |
+| `Filter` | Builds `PqsFilter`s from strongly-typed expressions — `Filter.Field<T>(t => t.Prop, value)` and `Filter.Where<T>(t => predicate)`, composed with `Filter.And`/`Filter.Or`. Comparisons are typed by each field's Daml type; field names come from codegen `[DamlField]` metadata, never from user input |
 | `PqsPage` | A bounded page of query results (`Limit`, `Offset`), applied as `LIMIT`/`OFFSET` on the query itself |
 | `InterfaceContract<TInterface, TView>` | An active contract observed through a Daml interface — its interface-typed `ContractId` paired with the participant-computed view |
 

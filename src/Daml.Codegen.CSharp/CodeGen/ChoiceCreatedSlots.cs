@@ -51,7 +51,11 @@ internal abstract record ExerciseResultStep
 
     /// <summary>Into one component of a <c>DA.Types</c> tuple, by its zero-based position.</summary>
     /// <param name="Index">The component's position in the tuple.</param>
-    public sealed record TupleComponent(int Index) : ExerciseResultStep;
+    /// <param name="IsOptional">
+    /// Whether the component's declared type is <c>Optional</c>. The ledger leaves out a trailing
+    /// <c>None</c>, so only such a component may be missing from the tuple's fields.
+    /// </param>
+    public sealed record TupleComponent(int Index, bool IsOptional = false) : ExerciseResultStep;
 }
 
 /// <summary>
@@ -194,13 +198,16 @@ internal static class ChoiceCreatedSlots
                 when tupleName.StartsWith("Tuple", StringComparison.Ordinal):
                 for (var i = 0; i < app.Arguments.Count; i++)
                 {
-                    Walk(context, resolver, mapper, app.Arguments[i], slots, parentCardinality, [.. resultPath, new ExerciseResultStep.TupleComponent(i)]);
+                    Walk(context, resolver, mapper, app.Arguments[i], slots, parentCardinality, [.. resultPath, new ExerciseResultStep.TupleComponent(i, IsOptionalType(app.Arguments[i]))]);
                 }
                 return;
             default:
                 return;
         }
     }
+
+    private static bool IsOptionalType(DamlType type) =>
+        type is DamlOptionalType or DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional } };
 
     private static (string FieldName, string CSharpTemplateType, InterfaceMatcher? Interface) ResolveContractIdTarget(PackageEmitContext context, ICrossPackageResolver resolver, DamlTypeMapper mapper, DamlType arg)
     {

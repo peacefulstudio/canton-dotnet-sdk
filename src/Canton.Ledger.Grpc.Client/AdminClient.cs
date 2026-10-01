@@ -7,18 +7,29 @@ using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using Com.Daml.Ledger.Api.V2.Admin;
+using Com.Daml.Ledger.Api.V2.Testing;
 using Daml.Runtime.Data;
 using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using CommandState = Canton.Ledger.Abstractions.CommandState;
+using CommandStatus = Canton.Ledger.Abstractions.CommandStatus;
 using HashFunction = Canton.Ledger.Abstractions.HashFunction;
+using IdentityProviderConfig = Canton.Ledger.Abstractions.IdentityProviderConfig;
 using PackageDetails = Canton.Ledger.Abstractions.PackageDetails;
+using PackageStatus = Canton.Ledger.Abstractions.PackageStatus;
 using PartyDetails = Canton.Ledger.Abstractions.PartyDetails;
 using VettedPackage = Canton.Ledger.Abstractions.VettedPackage;
+using VettedPackagesChange = Canton.Ledger.Abstractions.VettedPackagesChange;
+using WireIdentityProviderConfig = Com.Daml.Ledger.Api.V2.Admin.IdentityProviderConfig;
+using WireVettedPackages = Com.Daml.Ledger.Api.V2.VettedPackages;
+using WireVettedPackagesChange = Com.Daml.Ledger.Api.V2.Admin.VettedPackagesChange;
 using WireHashFunction = Com.Daml.Ledger.Api.V2.HashFunction;
+using WirePackageStatus = Com.Daml.Ledger.Api.V2.PackageStatus;
 
 namespace Canton.Ledger.Grpc.Client;
 
@@ -38,6 +49,10 @@ internal sealed partial class AdminClient : IAdminClient
     private readonly UserManagementService.UserManagementServiceClient _userService;
     private readonly PackageManagementService.PackageManagementServiceClient _packageManagementService;
     private readonly PackageService.PackageServiceClient _packageService;
+    private readonly CommandInspectionService.CommandInspectionServiceClient _commandInspectionService;
+    private readonly IdentityProviderConfigService.IdentityProviderConfigServiceClient _identityProviderConfigService;
+    private readonly ParticipantPruningService.ParticipantPruningServiceClient _pruningService;
+    private readonly TimeService.TimeServiceClient _timeService;
     private readonly LedgerClientOptions _options;
     private readonly ITokenProvider? _tokenProvider;
     private readonly LedgerCallInvoker _invoker;
@@ -64,6 +79,10 @@ internal sealed partial class AdminClient : IAdminClient
         _userService = new UserManagementService.UserManagementServiceClient(_channel);
         _packageManagementService = new PackageManagementService.PackageManagementServiceClient(_channel);
         _packageService = new PackageService.PackageServiceClient(_channel);
+        _commandInspectionService = new CommandInspectionService.CommandInspectionServiceClient(_channel);
+        _identityProviderConfigService = new IdentityProviderConfigService.IdentityProviderConfigServiceClient(_channel);
+        _pruningService = new ParticipantPruningService.ParticipantPruningServiceClient(_channel);
+        _timeService = new TimeService.TimeServiceClient(_channel);
 
         CallContextHelper.LogStartupDiagnostics(
             _logger, _tokenProvider, _options.GrpcAddress, nameof(AdminClient), "AddAdminClient");
@@ -77,7 +96,11 @@ internal sealed partial class AdminClient : IAdminClient
         ITokenProvider? tokenProvider = null,
         PackageManagementService.PackageManagementServiceClient? packageManagementService = null,
         PackageService.PackageServiceClient? packageService = null,
-        ILogger<AdminClient>? logger = null)
+        ILogger<AdminClient>? logger = null,
+        CommandInspectionService.CommandInspectionServiceClient? commandInspectionService = null,
+        IdentityProviderConfigService.IdentityProviderConfigServiceClient? identityProviderConfigService = null,
+        ParticipantPruningService.ParticipantPruningServiceClient? pruningService = null,
+        TimeService.TimeServiceClient? timeService = null)
     {
         _options = options;
         _channel = channel;
@@ -85,6 +108,10 @@ internal sealed partial class AdminClient : IAdminClient
         _userService = userService;
         _packageManagementService = packageManagementService ?? new PackageManagementService.PackageManagementServiceClient(channel);
         _packageService = packageService ?? new PackageService.PackageServiceClient(channel);
+        _commandInspectionService = commandInspectionService ?? new CommandInspectionService.CommandInspectionServiceClient(channel);
+        _identityProviderConfigService = identityProviderConfigService ?? new IdentityProviderConfigService.IdentityProviderConfigServiceClient(channel);
+        _pruningService = pruningService ?? new ParticipantPruningService.ParticipantPruningServiceClient(channel);
+        _timeService = timeService ?? new TimeService.TimeServiceClient(channel);
         _tokenProvider = tokenProvider;
         _logger = logger ?? NullLogger<AdminClient>.Instance;
         _invoker = new LedgerCallInvoker(options, tokenProvider);
@@ -384,6 +411,198 @@ internal sealed partial class AdminClient : IAdminClient
     }
 
     /// <inheritdoc />
+    public Task<UserDetails> UpdateUserAsync(
+        string userId,
+        UserUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentNullException.ThrowIfNull(update);
+
+        var request = new UpdateUserRequest
+        {
+            User = new User
+            {
+                Id = userId,
+                PrimaryParty = update.PrimaryParty?.Value ?? string.Empty,
+                IsDeactivated = update.IsDeactivated ?? false,
+                PrimaryPartyAuthentication = update.PrimaryPartyAuthentication ?? false,
+                IdentityProviderId = identityProviderId ?? string.Empty,
+                Metadata = ToProtoMetadata(update.Annotations),
+            },
+            UpdateMask = new FieldMask { Paths = { update.UpdatePaths() } },
+        };
+
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateUserResponse, UserDetails>(
+            ActivitySource,
+            UserManagementService.Descriptor,
+            "UpdateUser",
+            (headers, deadline, token) => _userService.UpdateUserAsync(request, headers, deadline, token),
+            response => FromProtoUser(response.User),
+            cancellationToken,
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task DeleteUserAsync(
+        string userId,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        var request = new DeleteUserRequest { UserId = userId, IdentityProviderId = identityProviderId ?? string.Empty };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, DeleteUserResponse>(
+            ActivitySource,
+            UserManagementService.Descriptor,
+            "DeleteUser",
+            (headers, deadline, token) => _userService.DeleteUserAsync(request, headers, deadline, token),
+            cancellationToken,
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task UpdateUserIdentityProviderIdAsync(
+        string userId,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        var request = new UpdateUserIdentityProviderIdRequest
+        {
+            UserId = userId,
+            SourceIdentityProviderId = sourceIdentityProviderId ?? string.Empty,
+            TargetIdentityProviderId = targetIdentityProviderId ?? string.Empty,
+        };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateUserIdentityProviderIdResponse>(
+            ActivitySource,
+            UserManagementService.Descriptor,
+            "UpdateUserIdentityProviderId",
+            (headers, deadline, token) => _userService.UpdateUserIdentityProviderIdAsync(request, headers, deadline, token),
+            cancellationToken,
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task<PartyDetails> UpdatePartyDetailsAsync(
+        Party party,
+        PartyUpdate update,
+        string? identityProviderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        var request = new UpdatePartyDetailsRequest
+        {
+            PartyDetails = new Com.Daml.Ledger.Api.V2.Admin.PartyDetails
+            {
+                Party = party.Value,
+                IdentityProviderId = identityProviderId ?? string.Empty,
+                LocalMetadata = ToProtoMetadata(update.Annotations),
+            },
+            UpdateMask = new FieldMask { Paths = { update.UpdatePaths() } },
+        };
+
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdatePartyDetailsResponse, PartyDetails>(
+            ActivitySource,
+            PartyManagementService.Descriptor,
+            "UpdatePartyDetails",
+            (headers, deadline, token) => _partyService.UpdatePartyDetailsAsync(request, headers, deadline, token),
+            response => FromProtoPartyDetails(response.PartyDetails),
+            cancellationToken,
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task UpdatePartyIdentityProviderIdAsync(
+        Party party,
+        string? sourceIdentityProviderId,
+        string? targetIdentityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new UpdatePartyIdentityProviderIdRequest
+        {
+            Party = party.Value,
+            SourceIdentityProviderId = sourceIdentityProviderId ?? string.Empty,
+            TargetIdentityProviderId = targetIdentityProviderId ?? string.Empty,
+        };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdatePartyIdentityProviderIdResponse>(
+            ActivitySource,
+            PartyManagementService.Descriptor,
+            "UpdatePartyIdentityProviderId",
+            (headers, deadline, token) => _partyService.UpdatePartyIdentityProviderIdAsync(request, headers, deadline, token),
+            cancellationToken,
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<CommandStatus>> GetCommandStatusAsync(
+        string commandIdPrefix = "",
+        CommandState state = CommandState.Unspecified,
+        int? limit = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(commandIdPrefix);
+        ArgumentOutOfRangeException.ThrowIfNegative(limit ?? 0, nameof(limit));
+
+        var request = new GetCommandStatusRequest
+        {
+            CommandIdPrefix = commandIdPrefix,
+            State = ToProtoCommandState(state),
+            Limit = (uint)(limit ?? 0),
+        };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetCommandStatusResponse, IReadOnlyList<CommandStatus>>(
+            ActivitySource,
+            CommandInspectionService.Descriptor,
+            "GetCommandStatus",
+            (headers, deadline, token) => _commandInspectionService.GetCommandStatusAsync(request, headers, deadline, token),
+            response => response.CommandStatus.Select(FromProtoCommandStatus).ToList(),
+            cancellationToken));
+    }
+
+    private static ObjectMeta? ToProtoMetadata(IReadOnlyDictionary<string, string>? annotations)
+    {
+        if (annotations is null)
+            return null;
+
+        var metadata = new ObjectMeta();
+        foreach (var (key, value) in annotations)
+            metadata.Annotations[key] = value;
+        return metadata;
+    }
+
+    private static Com.Daml.Ledger.Api.V2.Admin.CommandState ToProtoCommandState(CommandState state) => state switch
+    {
+        CommandState.Unspecified => Com.Daml.Ledger.Api.V2.Admin.CommandState.Unspecified,
+        CommandState.Pending => Com.Daml.Ledger.Api.V2.Admin.CommandState.Pending,
+        CommandState.Succeeded => Com.Daml.Ledger.Api.V2.Admin.CommandState.Succeeded,
+        CommandState.Failed => Com.Daml.Ledger.Api.V2.Admin.CommandState.Failed,
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown command state."),
+    };
+
+    private static CommandState FromProtoCommandState(Com.Daml.Ledger.Api.V2.Admin.CommandState state) => state switch
+    {
+        Com.Daml.Ledger.Api.V2.Admin.CommandState.Pending => CommandState.Pending,
+        Com.Daml.Ledger.Api.V2.Admin.CommandState.Succeeded => CommandState.Succeeded,
+        Com.Daml.Ledger.Api.V2.Admin.CommandState.Failed => CommandState.Failed,
+        _ => CommandState.Unspecified,
+    };
+
+    private static CommandStatus FromProtoCommandStatus(Com.Daml.Ledger.Api.V2.Admin.CommandStatus status) =>
+        new(
+            status.Completion?.CommandId ?? string.Empty,
+            FromProtoCommandState(status.State),
+            status.Started?.ToDateTimeOffset(),
+            status.Completed?.ToDateTimeOffset(),
+            status.SynchronizerId);
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<PackageDetails>> ListKnownPackagesAsync(
         CancellationToken cancellationToken = default) =>
         SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, ListKnownPackagesResponse, IReadOnlyList<PackageDetails>>(
@@ -406,6 +625,240 @@ internal sealed partial class AdminClient : IAdminClient
             cancellationToken));
 
     /// <inheritdoc />
+    public Task<IdentityProviderConfig> CreateIdentityProviderConfigAsync(
+        IdentityProviderConfig config,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+
+        var request = new CreateIdentityProviderConfigRequest { IdentityProviderConfig = ToProtoIdentityProviderConfig(config) };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, CreateIdentityProviderConfigResponse, IdentityProviderConfig>(
+            ActivitySource,
+            IdentityProviderConfigService.Descriptor,
+            "CreateIdentityProviderConfig",
+            (headers, deadline, token) => _identityProviderConfigService.CreateIdentityProviderConfigAsync(request, headers, deadline, token),
+            response => FromProtoIdentityProviderConfig(response.IdentityProviderConfig),
+            cancellationToken,
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task<IdentityProviderConfig?> GetIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+
+        return SurfaceLedgerErrorsAsync(GetIdentityProviderConfigCoreAsync(identityProviderId, cancellationToken));
+    }
+
+    private async Task<IdentityProviderConfig?> GetIdentityProviderConfigCoreAsync(
+        string identityProviderId, CancellationToken cancellationToken)
+    {
+        var request = new GetIdentityProviderConfigRequest { IdentityProviderId = identityProviderId };
+        try
+        {
+            return await _invoker.InvokeTracedAsync<AdminClient, GetIdentityProviderConfigResponse, IdentityProviderConfig?>(
+                ActivitySource,
+                IdentityProviderConfigService.Descriptor,
+                "GetIdentityProviderConfig",
+                (headers, deadline, token) => _identityProviderConfigService.GetIdentityProviderConfigAsync(request, headers, deadline, token),
+                response => FromProtoIdentityProviderConfig(response.IdentityProviderConfig),
+                cancellationToken,
+                isExpectedFailure: IsNotFound).ConfigureAwait(false);
+        }
+        catch (RpcException ex) when (IsNotFound(ex))
+        {
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<IdentityProviderConfig>> ListIdentityProviderConfigsAsync(
+        CancellationToken cancellationToken = default) =>
+        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, ListIdentityProviderConfigsResponse, IReadOnlyList<IdentityProviderConfig>>(
+            ActivitySource,
+            IdentityProviderConfigService.Descriptor,
+            "ListIdentityProviderConfigs",
+            (headers, deadline, token) => _identityProviderConfigService.ListIdentityProviderConfigsAsync(new ListIdentityProviderConfigsRequest(), headers, deadline, token),
+            response => response.IdentityProviderConfigs.Select(FromProtoIdentityProviderConfig).ToList(),
+            cancellationToken));
+
+    /// <inheritdoc />
+    public Task<IdentityProviderConfig> UpdateIdentityProviderConfigAsync(
+        string identityProviderId,
+        IdentityProviderConfigUpdate update,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+        ArgumentNullException.ThrowIfNull(update);
+
+        var request = new UpdateIdentityProviderConfigRequest
+        {
+            IdentityProviderConfig = new WireIdentityProviderConfig
+            {
+                IdentityProviderId = identityProviderId,
+                IsDeactivated = update.IsDeactivated ?? false,
+                Issuer = update.Issuer ?? string.Empty,
+                JwksUrl = update.JwksUrl ?? string.Empty,
+                Audience = update.Audience ?? string.Empty,
+            },
+            UpdateMask = new FieldMask { Paths = { update.UpdatePaths() } },
+        };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateIdentityProviderConfigResponse, IdentityProviderConfig>(
+            ActivitySource,
+            IdentityProviderConfigService.Descriptor,
+            "UpdateIdentityProviderConfig",
+            (headers, deadline, token) => _identityProviderConfigService.UpdateIdentityProviderConfigAsync(request, headers, deadline, token),
+            response => FromProtoIdentityProviderConfig(response.IdentityProviderConfig),
+            cancellationToken,
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task DeleteIdentityProviderConfigAsync(
+        string identityProviderId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
+
+        var request = new DeleteIdentityProviderConfigRequest { IdentityProviderId = identityProviderId };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, DeleteIdentityProviderConfigResponse>(
+            ActivitySource,
+            IdentityProviderConfigService.Descriptor,
+            "DeleteIdentityProviderConfig",
+            (headers, deadline, token) => _identityProviderConfigService.DeleteIdentityProviderConfigAsync(request, headers, deadline, token),
+            cancellationToken,
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task<VettedPackagesUpdateResult> UpdateVettedPackagesAsync(
+        IReadOnlyList<VettedPackagesChange> changes,
+        bool dryRun = false,
+        SynchronizerId? synchronizerId = null,
+        ExpectedTopologySerial? expectedTopologySerial = null,
+        VettingOverrides safetyOverrides = VettingOverrides.None,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+
+        var request = new UpdateVettedPackagesRequest
+        {
+            DryRun = dryRun,
+            SynchronizerId = synchronizerId?.Value ?? string.Empty,
+        };
+        request.Changes.AddRange(changes.Select(ToProtoVettedPackagesChange));
+        if (expectedTopologySerial is not null)
+            request.ExpectedTopologySerial = ToProtoPriorTopologySerial(expectedTopologySerial);
+        request.UpdateVettedPackagesForceFlags.AddRange(ToProtoForceFlags(safetyOverrides));
+
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateVettedPackagesResponse, VettedPackagesUpdateResult>(
+            ActivitySource,
+            PackageManagementService.Descriptor,
+            "UpdateVettedPackages",
+            (headers, deadline, token) => _packageManagementService.UpdateVettedPackagesAsync(request, headers, deadline, token),
+            response => new VettedPackagesUpdateResult(
+                FromProtoVettedPackages(response.PastVettedPackages),
+                FromProtoVettedPackages(response.NewVettedPackages)),
+            cancellationToken,
+            replayable: false));
+    }
+
+    /// <inheritdoc />
+    public Task PruneAsync(
+        long pruneUpTo,
+        string? submissionId = null,
+        bool pruneAllDivulgedContracts = false,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new PruneRequest
+        {
+            PruneUpTo = pruneUpTo,
+            SubmissionId = submissionId ?? string.Empty,
+            PruneAllDivulgedContracts = pruneAllDivulgedContracts,
+        };
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, PruneResponse>(
+            ActivitySource,
+            ParticipantPruningService.Descriptor,
+            "Prune",
+            (headers, deadline, token) => _pruningService.PruneAsync(request, headers, deadline, token),
+            cancellationToken,
+            replayable: false));
+    }
+
+    private static WireIdentityProviderConfig ToProtoIdentityProviderConfig(IdentityProviderConfig config) =>
+        new()
+        {
+            IdentityProviderId = config.IdentityProviderId,
+            IsDeactivated = config.IsDeactivated,
+            Issuer = config.Issuer,
+            JwksUrl = config.JwksUrl,
+            Audience = config.Audience,
+        };
+
+    private static IdentityProviderConfig FromProtoIdentityProviderConfig(WireIdentityProviderConfig config) =>
+        new(config.IdentityProviderId, config.IsDeactivated, config.Issuer, config.JwksUrl, config.Audience);
+
+    private static VettedPackagesRef ToProtoPackageSelector(PackageSelector reference) =>
+        new()
+        {
+            PackageId = reference.PackageId,
+            PackageName = reference.PackageName,
+            PackageVersion = reference.PackageVersion,
+        };
+
+    private static WireVettedPackagesChange ToProtoVettedPackagesChange(VettedPackagesChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+
+        switch (change)
+        {
+            case VettedPackagesChange.Vet vet:
+                var vetOperation = new WireVettedPackagesChange.Types.Vet();
+                vetOperation.Packages.AddRange(vet.Packages.Select(ToProtoPackageSelector));
+                if (vet.ValidFromInclusive is { } from)
+                    vetOperation.NewValidFromInclusive = Timestamp.FromDateTimeOffset(from);
+                if (vet.ValidUntilExclusive is { } until)
+                    vetOperation.NewValidUntilExclusive = Timestamp.FromDateTimeOffset(until);
+                return new WireVettedPackagesChange { Vet = vetOperation };
+            case VettedPackagesChange.Unvet unvet:
+                var unvetOperation = new WireVettedPackagesChange.Types.Unvet();
+                unvetOperation.Packages.AddRange(unvet.Packages.Select(ToProtoPackageSelector));
+                return new WireVettedPackagesChange { Unvet = unvetOperation };
+            default:
+                throw new NotSupportedException($"Unknown vetted packages change '{change.GetType().Name}'.");
+        }
+    }
+
+    private static PriorTopologySerial ToProtoPriorTopologySerial(ExpectedTopologySerial expected) =>
+        expected.Prior is { } prior
+            ? new PriorTopologySerial { Prior = prior }
+            : new PriorTopologySerial { NoPrior = new Empty() };
+
+    private static IEnumerable<UpdateVettedPackagesForceFlag> ToProtoForceFlags(VettingOverrides flags)
+    {
+        if (flags.HasFlag(VettingOverrides.AllowVetIncompatibleUpgrades))
+            yield return UpdateVettedPackagesForceFlag.AllowVetIncompatibleUpgrades;
+        if (flags.HasFlag(VettingOverrides.AllowUnvettedDependencies))
+            yield return UpdateVettedPackagesForceFlag.AllowUnvettedDependencies;
+    }
+
+    private static VettedPackagesSnapshot? FromProtoVettedPackages(WireVettedPackages? snapshot) =>
+        snapshot is null
+            ? null
+            : new VettedPackagesSnapshot(
+                snapshot.Packages.Select(package => new VettedPackageEntry(
+                    package.PackageId,
+                    package.PackageName,
+                    package.PackageVersion,
+                    package.ValidFromInclusive?.ToDateTimeOffset(),
+                    package.ValidUntilExclusive?.ToDateTimeOffset())).ToList(),
+                snapshot.ParticipantId,
+                snapshot.SynchronizerId,
+                snapshot.TopologySerial);
+
+    /// <inheritdoc />
     public Task<PackageArchive> GetPackageAsync(
         string packageId,
         CancellationToken cancellationToken = default)
@@ -423,6 +876,69 @@ internal sealed partial class AdminClient : IAdminClient
                 MapHashFunction(response.HashFunction)),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId)));
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> ListPackagesAsync(CancellationToken cancellationToken = default) =>
+        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, ListPackagesResponse, IReadOnlyList<string>>(
+            ActivitySource,
+            PackageService.Descriptor,
+            "ListPackages",
+            (headers, deadline, token) => _packageService.ListPackagesAsync(new ListPackagesRequest(), headers, deadline, token),
+            response => response.PackageIds.ToList(),
+            cancellationToken));
+
+    /// <inheritdoc />
+    public Task<PackageStatus> GetPackageStatusAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetPackageStatusResponse, PackageStatus>(
+            ActivitySource,
+            PackageService.Descriptor,
+            "GetPackageStatus",
+            (headers, deadline, token) => _packageService.GetPackageStatusAsync(new GetPackageStatusRequest { PackageId = packageId }, headers, deadline, token),
+            response => MapPackageStatus(response.PackageStatus),
+            cancellationToken,
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId)));
+    }
+
+    private static PackageStatus MapPackageStatus(WirePackageStatus status) => status switch
+    {
+        WirePackageStatus.Unspecified => PackageStatus.Unspecified,
+        WirePackageStatus.Registered => PackageStatus.Registered,
+        _ => PackageStatus.Unrecognized,
+    };
+
+    /// <inheritdoc />
+    public Task<DateTimeOffset> GetTimeAsync(CancellationToken cancellationToken = default) =>
+        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetTimeResponse, DateTimeOffset>(
+            ActivitySource,
+            TimeService.Descriptor,
+            "GetTime",
+            (headers, deadline, token) => _timeService.GetTimeAsync(new GetTimeRequest(), headers, deadline, token),
+            response => response.CurrentTime.ToDateTimeOffset(),
+            cancellationToken));
+
+    /// <inheritdoc />
+    public Task SetTimeAsync(
+        DateTimeOffset currentTime,
+        DateTimeOffset newTime,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new SetTimeRequest
+        {
+            CurrentTime = Timestamp.FromDateTimeOffset(currentTime),
+            NewTime = Timestamp.FromDateTimeOffset(newTime),
+        };
+
+        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, Empty>(
+            ActivitySource,
+            TimeService.Descriptor,
+            "SetTime",
+            (headers, deadline, token) => _timeService.SetTimeAsync(request, headers, deadline, token),
+            cancellationToken,
+            replayable: false));
     }
 
     private static HashFunction MapHashFunction(WireHashFunction hashFunction) => hashFunction switch

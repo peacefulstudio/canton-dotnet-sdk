@@ -110,7 +110,7 @@ internal static class RestCommandBuilder
             absolute: instant => (instant, null),
             relative: delay => (null, RestWireConversions.ToWireDuration(delay)));
 
-    private static WireDeduplicationPeriod? ToWireDeduplicationPeriod(RuntimeCommands.DeduplicationPeriod? period) =>
+    internal static WireDeduplicationPeriod? ToWireDeduplicationPeriod(RuntimeCommands.DeduplicationPeriod? period) =>
         period switch
         {
             RuntimeCommands.DeduplicationPeriod.Duration duration => new WireDeduplicationPeriod

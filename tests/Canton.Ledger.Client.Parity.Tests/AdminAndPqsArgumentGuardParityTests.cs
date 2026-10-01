@@ -70,6 +70,56 @@ public sealed class AdminAndPqsArgumentGuardParityTests
 
     [Theory]
     [MemberData(nameof(AdminClients))]
+    public void UpdateUserAsync_rejects_a_null_userId_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "userId", client => client.UpdateUserAsync(null!, new UserUpdate { IsDeactivated = true }));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void UpdateUserAsync_rejects_a_null_update_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "update", client => client.UpdateUserAsync("alice", null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void DeleteUserAsync_rejects_a_null_userId_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "userId", client => client.DeleteUserAsync(null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void UpdateUserIdentityProviderIdAsync_rejects_a_null_userId_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "userId", client => client.UpdateUserIdentityProviderIdAsync(null!, null, "idp"));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void UpdatePartyDetailsAsync_rejects_a_null_update_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "update", client => client.UpdatePartyDetailsAsync(new Party("party::alice"), null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void CreateIdentityProviderConfigAsync_rejects_a_null_config_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "config", client => client.CreateIdentityProviderConfigAsync(null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void GetIdentityProviderConfigAsync_rejects_a_null_identityProviderId_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "identityProviderId", client => client.GetIdentityProviderConfigAsync(null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void UpdateIdentityProviderConfigAsync_rejects_a_null_update_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "update", client => client.UpdateIdentityProviderConfigAsync("idp", null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void DeleteIdentityProviderConfigAsync_rejects_a_null_identityProviderId_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "identityProviderId", client => client.DeleteIdentityProviderConfigAsync(null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
+    public void UpdateVettedPackagesAsync_rejects_a_null_changes_synchronously(string flavour) =>
+        AssertAdminRejectsNull(flavour, "changes", client => client.UpdateVettedPackagesAsync(null!));
+
+    [Theory]
+    [MemberData(nameof(AdminClients))]
     public void GetPackageAsync_rejects_a_null_packageId_synchronously(string flavour) =>
         AssertAdminRejectsNull(flavour, "packageId", client => client.GetPackageAsync(null!));
 

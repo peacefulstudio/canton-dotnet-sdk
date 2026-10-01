@@ -242,7 +242,7 @@ public partial class IntermediateDarReaderTests
 
         iface.Methods.Should().NotBeNull(
             "an intermediate produced without the methods field (proto3 repeated-field absence — what every "
-            + ".NET-DarParser-produced intermediate carries today) must read as an empty list, never null and never an error");
+            + ".NET-produced intermediate carries today) must read as an empty list, never null and never an error");
         iface.Methods.Should().BeEmpty();
     }
 

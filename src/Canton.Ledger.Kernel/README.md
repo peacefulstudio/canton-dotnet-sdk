@@ -1,6 +1,12 @@
 # Canton.Ledger.Kernel
 
-The transport-neutral client kernel for Canton participant nodes: the `Authentication`, `Telemetry`, `Resilience`, `Streams`, `Trees`, `Results`, and `Wire` modules — the token providers that implement `Canton.Ledger.Abstractions.ITokenProvider`, the OpenTelemetry `ActivitySource` naming convention, an opt-in Polly retry pipeline, and the decisions both transports must make identically once their own wire vocabulary is decoded: rebuilding a transaction's hierarchy from its node ids, folding an exercise outcome, and naming a participant body that could not be read. Both the gRPC client and the future JSON client consume this package as peers — neither depends on the other. `Authentication` sits at the bottom of the kernel's namespace DAG (it depends on neither of the other modules), so it can later be extracted into its own package without a breaking change.
+Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). The transport-neutral client kernel for Canton participant nodes: the `Authentication`, `Telemetry`, `Resilience`, `Streams`, `Trees`, `Results`, and `Wire` modules — the token providers that implement `Canton.Ledger.Abstractions.ITokenProvider`, the OpenTelemetry `ActivitySource` naming convention, an opt-in Polly retry pipeline, and the decisions both transports must make identically once their own wire vocabulary is decoded: rebuilding a transaction's hierarchy from its node ids, folding an exercise outcome, and naming a participant body that could not be read. Both the gRPC client and the JSON client consume this package as peers — neither depends on the other. `Authentication` sits at the bottom of the kernel's namespace DAG (it depends on neither of the other modules), so it can later be extracted into its own package without a breaking change.
+
+## Installation
+
+```bash
+dotnet add package Canton.Ledger.Kernel --version 0.6.0-preview.3
+```
 
 ## Key Types
 
@@ -8,7 +14,7 @@ The transport-neutral client kernel for Canton participant nodes: the `Authentic
 |------|---------|
 | `StaticTokenProvider` | Returns a fixed token string. Use for short-lived processes or testing. Implements `Canton.Ledger.Abstractions.ITokenProvider` |
 | `ClientCredentialsProvider` | OAuth2 client-credentials flow with thread-safe TTL cache (`SemaphoreSlim` + `Volatile` reads/writes) |
-| `ClientCredentialsOptions` | Config: `Domain`, `ClientId`, `ClientSecret`, `Audience`, `TokenEndpoint`, `SafetyMargin`, `AllowInsecureTokenEndpoint` |
+| `ClientCredentialsOptions` | Config: `Domain`, `ClientId`, `ClientSecret`, `Audience`, `TokenEndpoint`, `SafetyMargin`, `AllowInsecureTokenEndpoint`, `TokenAcquisitionTimeout`, `Tls` |
 | `Telemetry.LedgerActivitySourceNames` | The well-known source names of every Canton client (`All` plus one constant each), so a host can register the whole set without referencing a concrete client assembly |
 | `Telemetry.LedgerActivityTagNames` | The SDK-owned `daml.*` / `canton.*` / `retry.*` span attribute names the clients emit (`All` plus one constant each), so a dashboard query, sampling rule or redaction filter can name one without hardcoding the string |
 | `Resilience.RetryOptions` | Config for the opt-in retry pipeline, set via `LedgerClientOptions.Retry` / `RestLedgerClientOptions.Retry`. `Enabled` defaults to `false` |
@@ -96,11 +102,16 @@ BCL `System.Diagnostics.Activity` only — no OpenTelemetry SDK dependency.
 `RetryOptions` configures the retry pipeline each transport builds for itself, via `LedgerClientOptions.Retry` (gRPC) or `RestLedgerClientOptions.Retry` (REST):
 
 ```csharp
+using Canton.Ledger.Kernel.Resilience;
+
 services.AddLedgerClient(options =>
 {
-    options.Retry.Enabled = true;
-    options.Retry.MaxRetryAttempts = 3;
-    options.Retry.Delay = TimeSpan.FromMilliseconds(200);
+    options.Retry = new RetryOptions
+    {
+        Enabled = true,
+        MaxRetryAttempts = 3,
+        Delay = TimeSpan.FromMilliseconds(200),
+    };
 });
 ```
 

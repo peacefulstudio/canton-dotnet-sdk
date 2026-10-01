@@ -79,7 +79,7 @@ internal static class GrpcSubscribeRequestBuilder
         bool isInterface) =>
         BuildEventFormat(submitter, filterId, isInterface);
 
-    private static EventFormat BuildEventFormat(
+    public static EventFormat BuildEventFormat(
         RuntimeCommands.SubmitterInfo submitter,
         ProtoIdentifier filterId,
         bool isInterface,

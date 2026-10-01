@@ -1,11 +1,11 @@
 # Daml.Runtime
 
-Runtime library for Daml C# code generation. This package provides the base types and serialization support required by C# code generated from Daml templates.
+Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sdk). This package provides the base types and serialization support required by C# code generated from Daml templates.
 
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --prerelease
+dotnet add package Daml.Runtime --version 0.6.0-preview.3
 ```
 
 ## Usage
@@ -199,17 +199,17 @@ It also lists the converter for `EquatableArray<T>` explicitly, though the struc
 same factory as a `[JsonConverter]` attribute of its own, so a list member reads and writes
 on bare options with or without the registration — the two produce byte-identical JSON. What
 `AddDamlConverters` adds is the half no converter can supply: a `JsonTypeInfo` modifier that
-turns a member the payload never mentions into a `JsonException` naming it, for the five types
+turns a member the payload never mentions into a `JsonException` naming it, for the six types
 whose absence binds a value the payload never stated — `EquatableArray<T>`, whose default is
 the empty list, `LedgerOffset`, whose default is `Begin`, and the Daml stdlib collections
-`Set<T>`, `Map<TKey, TValue>` and `NonEmpty<T>`, whose default is a `null` the slot's own
+`Set<T>`, `Map<TKey, TValue>`, `NonEmpty<T>` and `TransportStatus`, whose default is a `null` the slot's own
 declared type forbids.
 `WitnessParties`, `Signatories` and `Observers` are constructor parameters precisely because
 an empty list means the event named nobody, not that a producer skipped the slot; the same
 holds for `CompletionOffset`, where `Begin` means the participant reported the start of the
 stream. Unlike the flag above, the modifier is not serializer-wide — it marks required only
 the constructor parameters typed `EquatableArray<T>`, `LedgerOffset`, `Set<T>`,
-`Map<TKey, TValue>` or `NonEmpty<T>`, so an ordinary
+`Map<TKey, TValue>`, `NonEmpty<T>` or `TransportStatus`, so an ordinary
 optional such as `TransactionResult.CommandId`, which the Ledger API omits on transactions
 this participant did not submit, still reads as absent. The members that are meant to default
 — `InterfaceIds`, `ExercisedEvents` — are init-only properties, and stay absent-means-empty,
@@ -221,7 +221,7 @@ a `TypeInfoResolver` the host has already installed rather than replacing it.
 
 Like `RespectNullableAnnotations` above, the modifier reads the declaring type's nullable
 annotations, so it reaches a nullable-annotated declaration only: a type compiled under
-`#nullable disable` — or generated with `DamlNullable=false` / `--nullable false`, which omits
+`#nullable disable` — or generated with `--nullable false`, which omits
 the `#nullable enable` the emitter otherwise writes — carries no annotation to read, none of its
 parameters is marked required, and an absent member binds to `null`. The CHANGELOG records that
 limit in full.
@@ -242,7 +242,7 @@ options alone.
 
 `TransactionResult` round-trips — with `DamlValueJsonConverter` added alongside for the
 `DamlRecord` payloads its created contracts carry — and the converters on its two scalar
-members are what make it. `CompletionOffset` and `CommandId` are `readonly record struct`s
+members are what make it. `LedgerOffset` (the type of `CompletionOffset`) and `CommandId` are `readonly record struct`s
 exposing only a get-only
 `Value`, and `System.Text.Json` prefers a struct's implicit parameterless constructor unless
 told otherwise, so before those converters existed it default-constructed both and never
@@ -298,6 +298,10 @@ also account for a level the use site substitutes in.
 The two wire nodes are not interchangeable. A flat `DamlOptional` writes JSON `null` or
 its bare value; each `DamlOptionalChain` level writes the array form, `[]` when absent and
 `[v]` when present, which is what a participant accepts in a nested position.
+
+The tag matters only on write. A read takes either node at every Optional level, so a
+generated `FromRecord` decodes a nested `Optional` from a gRPC value, whose converter returns
+a flat `DamlOptional` at every level, as well as from the JSON reader's chain.
 
 ### Collection fields compare by content
 

@@ -11,11 +11,22 @@ because they are versioned in lockstep:
 - `Daml.Codegen.CSharp` — C# emitter library (NuGet package)
 - `Daml.Codegen.Intermediate` — intermediate DAR contract (protobuf types + shared Daml model)
 - `Daml.Runtime` — runtime types referenced by generated code
+- `Daml.Runtime.Grpc` — conversion between Ledger API proto values and `Daml.Runtime` values
 - `Daml.Ledger.Abstractions` — transport-agnostic ledger client contract
   (`ILedgerClient`, composed of `ILedgerWriter`/`ILedgerReader`/`ILedgerStreamer`)
 - `Daml.Ledger.Abstractions.Testing.Conformance` — behavioral conformance test kit
   for `ILedgerClient` implementations
 - `Daml.Codegen.Testing.Conformance` — compiled conformance corpus types + embedded DAR
+- `Canton.Ledger.Abstractions` — transport-neutral Canton contract layer
+  (`ICantonLedgerClient`, `IAdminClient`, `ITokenProvider`, `IPqsClient`)
+- `Canton.Ledger.Kernel` — shared client plumbing: token providers, telemetry names, retry, TLS
+- `Canton.Ledger.Grpc` — generated gRPC stubs for the Canton Ledger API
+- `Canton.Ledger.Grpc.Client` — gRPC ledger and admin clients
+- `Canton.Ledger.Rest` — raw Refit surface over the JSON Ledger API (experimental)
+- `Canton.Ledger.Rest.Client` — JSON Ledger API ledger and admin clients
+- `Canton.Ledger.Pqs.Client` — Participant Query Store client
+- `Canton.Ledger.OpenTelemetry` — OpenTelemetry SDK registration for the clients' spans
+- `Canton.Ledger.Testing` — in-memory test doubles for every client surface
 
 > **Versioning and stability.** This project is pre-1.0: under SemVer 0.x, any
 > release may change the public API without a major-version bump. The first
@@ -25,17 +36,106 @@ because they are versioned in lockstep:
 
 ## [Unreleased]
 
+## [0.6.0-preview.3] — 2026-09-30
+
 ### Added
 
-### Changed
+- **The non-admin ledger reads and the participant clock, toward the grant's all-endpoints scope**
+  (`Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`,
+  `Canton.Ledger.Testing`). `ICantonLedgerClient` gains
+  `GetContractAsync<T>`, `GetEventsByContractIdAsync<T>`, `GetActiveContractsPageAsync<T>`,
+  `GetUpdatesPageAsync`, `GetLatestPrunedOffsetsAsync` and `GetCompletionsAsync`, and `IAdminClient`
+  gains `ListPackagesAsync`, `GetPackageStatusAsync`, `GetTimeAsync` and `SetTimeAsync`. Typed reads
+  return decoded templates (`CreatedContract<T>`, `ContractLifecycle<T>`, `AcsPage<T>`); pages are
+  walked with `LedgerPageToken`. `CreatedContract<T>` carries no offset, because the participant
+  never populates the created event's offset on `GetContract`. gRPC serves all ten; on Canton 3.5.18
+  the gRPC `GetContractAsync` payload comes from `GetEventsByContractId`, because `GetContract`
+  returns unlabelled arguments. REST serves all
+  but `GetTimeAsync` and `SetTimeAsync`, which the JSON Ledger API has no route for and which throw
+  `NotSupportedException`. REST `GetCompletionsAsync` reads `POST /v2/commands/command-completions`
+  through the same window loop as `CompletionStreamAsync`, and `GetLatestPrunedOffsetsAsync` reads an
+  absent pruned offset as 0 on an unpruned participant. `SetTimeAsync` is never retried, so a clock
+  change is applied at most once.
+  `FakeLedgerClientBuilder` and `FakeAdminClientBuilder` gain `WithContract`, `WithContractLifecycle`,
+  `WithActiveContractsPages`, `WithUpdatesPages`, `WithPrunedOffsets`, `WithPackageIds`,
+  `WithPackageStatus` and `WithTime`; an unstaged read throws a `NotSupportedException` naming the
+  builder call. Implementers of `ICantonLedgerClient` or `IAdminClient` must add the new members.
 
-### Deprecated
+- **`Filter.Where<T>(Expression<Func<T, bool>>)` filters PQS queries with a C# predicate over the
+  generated bindings** (`Canton.Ledger.Abstractions`). The predicate is translated into
+  parameterized SQL over the PQS JSON payload, typed by each field's Daml type. It supports `==` / `!=` on any leaf field, `<` / `<=` / `>` / `>=`
+  on `Int64`, `Numeric`, `Date` and `Time`, nested record fields and tuple components, `Optional`
+  (`== null`, `.HasValue`, `is Optional<T>.Some` / `.None`, `.Value`, `.GetValueOrDefault()`, which reads an
+  absent value type as its C# default such as `0` or `false`),
+  variant and `Either` constructors (`is` a constructor, and a cast to one to read its `Value`),
+  `List` (`Contains`, `Any`, `All`), `Map` and `TextMap` entries (`map[key]`, `ContainsKey`), and
+  `&&` / `||` / `!`. `Filter.Field` selectors may now reach nested record fields too
+  (`t => t.Profile.Level`).
+- **Typed user and party updates, user deletion and command status on `IAdminClient`**
+  (`Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`,
+  `Canton.Ledger.Testing`). `UpdateUserAsync` and `UpdatePartyDetailsAsync` take a `UserUpdate` /
+  `PartyUpdate` whose set properties become the request's field mask, so an unset property is left
+  untouched; `DeleteUserAsync`, `UpdateUserIdentityProviderIdAsync`, `UpdatePartyIdentityProviderIdAsync`
+  and `GetCommandStatusAsync` (with `CommandStatus` / `CommandState`) complete the admin surface. None
+  of the mutating calls is replayed by the opt-in retry pipeline. The REST client throws
+  `NotSupportedException` for `UpdatePartyIdentityProviderIdAsync` and `GetCommandStatusAsync`, which
+  the JSON Ledger API does not serve, and for `DeleteUserAsync` with an identity provider id, which
+  `DELETE /v2/users/{user-id}` cannot scope. `FakeAdminClient` gains `WithCommandStatuses`. Implementers of
+  `IAdminClient` add the six members.
+- **Typed identity provider config, vetted-package updates and pruning on `IAdminClient`**
+  (`Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`,
+  `Canton.Ledger.Testing`). `CreateIdentityProviderConfigAsync`, `GetIdentityProviderConfigAsync`
+  (`null` when absent), `ListIdentityProviderConfigsAsync`, `UpdateIdentityProviderConfigAsync`
+  (takes an `IdentityProviderConfigUpdate` whose set properties become the field mask) and
+  `DeleteIdentityProviderConfigAsync` manage `IdentityProviderConfig`s;
+  `UpdateVettedPackagesAsync` applies `VettedPackagesChange.Vet` / `Unvet` changes with `dryRun`, an
+  optional `ExpectedTopologySerial` and `VettingOverrides`, and returns the state before and after;
+  `PruneAsync` prunes the ledger up to an offset. None of these mutating calls is replayed by the
+  opt-in retry pipeline. The REST client throws `NotSupportedException` for `PruneAsync`, which the
+  JSON Ledger API does not serve. `FakeAdminClient` gains `WithIdentityProviderConfigs` and
+  `WithVettedPackagesUpdateResult`. Implementers of `IAdminClient` add the seven members.
+- **Typed interactive-submission and external-party RPCs on every transport** (`Canton.Ledger.Abstractions`, `Canton.Ledger.Grpc.Client`, `Canton.Ledger.Rest.Client`, `Canton.Ledger.Testing`). The Ledger API v2 external-signing flow no longer needs the raw channel. `ICantonLedgerClient` gains `PrepareSubmissionAsync`, `ExecuteSubmissionAsync`, `ExecuteSubmissionAndWaitAsync`, `ExecuteSubmissionAndWaitForTransactionAsync`, `GetPreferredPackagesAsync` and `GetPreferredPackageVersionAsync`; `IAdminClient` gains `GenerateExternalPartyTopologyAsync` and `AllocateExternalPartyAsync`. The SDK never signs and holds no key: the caller signs `PreparedSubmission.Hash` and `ExternalPartyTopology.MultiHash` and passes `LedgerSignature`s back. `ExecuteSubmission*` and `AllocateExternalParty` are never replayed by the opt-in retry pipeline on either transport. `FakeLedgerClient` and `FakeAdminClient` stage the new answers. Adding interface members is a source-breaking change for third-party implementers of `ICantonLedgerClient` and `IAdminClient`.
+- **New templates and an interface in the conformance corpus** (`Daml.Codegen.Testing.Conformance`). `contractkeys` gains `ContractKeys.Registration`, keyed on a party and an `Optional (Optional Text)`. `richtypes` gains `RichTypes.IAnnotated` (view `AnnotationView`), `NestedOptionalShapes`, `OptionalCounts` and the `TicketDesk.Pair` choice.
 
-### Removed
+### Changed — BREAKING
+
+- **The `richtypes` and `contractkeys` conformance packages have new package names and ids again** (`Daml.Codegen.Testing.Conformance`).
+  - `richtypes` moves from `richtypes-hd117e68b37cc` to `richtypes-hecd531570c32`, and `contractkeys` from `contractkeys-h61a17c769e62` to `contractkeys-h4fd930e5658f`. Their corpus gained the templates listed above, which re-hashes both.
+  - Every generated `PackageId`, `TemplateId` and `PackageName` constant in the two packages changes with them.
+  - **Update any assertion against either literal package name or id.**
 
 ### Fixed
 
-### Security
+- **`Filter.Field` compares a field by its Daml type instead of as text** (`Canton.Ledger.Abstractions`).
+  A `Numeric` is stored in PQS padded to its scale, so `Filter.Field<T>(t => t.Amount, "42.5")` used
+  to match no rows against a stored `42.5000000000`. The value is now parsed with the invariant culture
+  as the field's Daml type (`Int64`, `Numeric`, `Bool`, `Date`, `Time`, `Party`, `ContractId`, enum)
+  and compared as that type; a `Numeric` keeps every digit it is given, beyond the precision of `decimal`.
+  A value that does not parse as the field's type throws `ArgumentException` when the filter is built.
+
+- **`--include-dependencies` no longer aborts on the `daml-prim` / `daml-stdlib` `LibraryModules`
+  collision** (`Daml.Codegen.CSharp`, `dpm codegen-cs`). Every real DAR carries both packages, and each
+  declares a module named `LibraryModules`, so the flag failed with "map to the same C# namespace
+  'LibraryModules'". Packages that `Daml.Runtime` already provides (`daml-prim`, `daml-stdlib`,
+  `ghc-stdlib`) are no longer emitted as dependency bindings; references into them resolve to the
+  matching `Daml.Runtime.Stdlib.*` type where one exists. Output without the flag is unchanged, and two other dependencies that declare a
+  same-named module are still rejected.
+- **A generated `Try<Choice>Async` no longer returns `CommittedUndecodable` when a tuple result's
+  trailing `Optional` component is `None`** (`Daml.Codegen.CSharp` output). The ledger leaves out a
+  trailing `None`, so a `(ContractId A, Optional (ContractId B))` result arrives with one field, and
+  the private `Project<Choice>Result` emitted since 0.6.0-preview.2 indexed the missing field and threw
+  `ArgumentOutOfRangeException` after the command had committed. A tuple component declared `Optional`
+  now reads as absent when the field is missing, at any depth of a tuple, list or optional path; a
+  missing component of any other type still reports `CommittedUndecodable`. Regenerate checked-in
+  generated code.
+- **A gRPC read now decodes an `Optional (Optional a)` field** (`Daml.Runtime`, `Canton.Ledger.Grpc.Client`).
+  `Optional<T>.FromChainValue`, which generated `FromRecord` methods call for a nested Optional,
+  threw `InvalidCastException` on the gRPC transport for `None`, `Some None` and `Some (Some x)`
+  alike, because the gRPC converter returns every level as a flat `DamlOptional`. `FromValue`,
+  `FromChainValue` and `DamlValueExtensions.AsOptional` now read either tag at every level; the
+  tag only selects the array encoding on write. `AsOptional` no longer throws for a
+  `DamlOptionalChain`: it returns the `DamlOptional` level carrying the same value.
+- **`RestLedgerClient.EstimateTrafficCostAsync` reads the prepare response the participant serves** (`Canton.Ledger.Rest.Client`). It deserialized `preparedTransaction` as an object while the participant sends a base64 string, and omitted the `synchronizerId` and `packageIdSelectionPreference` fields the served prepare request carries.
 
 ## [0.6.0-preview.2] — 2026-09-29
 
@@ -352,6 +452,16 @@ A `Numeric 0` field read from the ledger decodes instead of failing.
   for clients that discover generated types at startup; discovery may still use reflection.
 - The conformance packages include generic choice results, tuple and optional tuple keys,
   and a keyed template implementing an interface with a non-Unit choice.
+- New `IKeyDescriptor` (`Daml.Runtime.Contracts`), the erased facet of `KeyDescriptor<TTemplate, TKey>`:
+  a call site that knows neither type parameter can read a contract key from Daml-LF JSON
+  (`ReadKeyJson`) and decode it (`DecodeKey`). `IChoice` likewise gains `ReadArgumentJson` and
+  `ReadResultJson`, the raw JSON readers of a choice's argument and result.
+- New `IHasChoices<TSelf>` facet (`Daml.Runtime.Contracts`) exposing a type's choice list
+  without reflection through `static abstract IReadOnlyList<IChoice> Choices`. Every generated
+  template implements it, and so does every generated interface marker with at least one choice.
+
+- REST interface choices remain unsupported on the ledger side: the emitted descriptors are in
+  place and the ledger wiring is a follow-up.
 
 ### Changed — BREAKING
 
@@ -383,6 +493,9 @@ A `Numeric 0` field read from the ledger decodes instead of failing.
   enforced is `Math.Min(configuredMaxDepth, 20)`. A `MaxDepth` larger than 20 no longer opts
   into recursion deeper than 20 on this write path. This replaces the prior guarantee of no
   hardcoded cap below the configured `MaxDepth`.
+- `Choice<TTemplate, TArg, TResult>` is renamed `Choice<TOwner, TArg, TResult>`
+  (`Daml.Runtime.Commands`): its constraint loosens from `ITemplate` to `IDamlType`, and it
+  implements the new `IChoice` facet. Generated code is unaffected.
 
 ### Deprecated
 
@@ -405,6 +518,21 @@ A `Numeric 0` field read from the ledger decodes instead of failing.
   `JsonException`. The guard now also checks `RuntimeHelpers.TryEnsureSufficientExecutionStack()`
   before recursing, so it trips before the native stack is exhausted on every platform and
   architecture.
+- Fix the emitter leaving a view record field named like a choice descriptor or its
+  `IHasChoices<TSelf>.Choices` implementation to collide with it: the view record is no longer
+  stamped with its marker in that case.
+- `DamlLfJsonDecodeContext` obtained through `default` or `new()` instead of `Root` now decodes
+  with the shared hardened limits and the root path `"$"` rather than an unusable zero-limit,
+  empty-path state, and `Root(path, limits)` still accepts an explicit `MaxArrayElements: 0`.
+
+- `Dictionary<TKey,_>` and `IReadOnlyDictionary<TKey,_>` keyed by `Party`, `SynchronizerId`,
+  `CommandId`, `ChoiceName`, `WorkflowId` or a `ContractId<T>` now serialize and deserialize through
+  `System.Text.Json` instead of throwing `NotSupportedException`, which also fixes generated
+  `Map Party v` fields.
+- Generated code no longer fails to compile, or binds to the wrong type, for a template with a
+  choice named `DamlRecord`, `DamlField` or `DamlFieldAttribute` whose argument is a same-package
+  record: the runtime types are now root-qualified wherever the nested choice-argument record
+  shadows them.
 
 ## [0.5.0-preview.2] — 2026-09-08
 
@@ -2574,14 +2702,17 @@ A `Numeric 0` field read from the ledger decodes instead of failing.
   is a throwing `ITemplate` placeholder stub with no `InterfaceId` member, so those
   slots cannot safely reference a generated symbol.
 
-
-## [0.2.0-preview.1] — 2026-06-30
+## [0.2.0-preview.1] — 2026-06-29
 
 ### Added
 
 - Generated record properties now carry `[DamlField]` attributes recording the
   original Daml field name alongside the C# property, so consumers and tooling can
   recover the on-ledger field naming without re-deriving it from the type.
+- Generated `<Choice>Async` exercisers gain an overload taking the generated nested
+  `<Template>.Contract` receiver next to the `ContractId<T>` one. When a choice's controllers
+  resolve to payload fields, it reads them off `contract.Data`, so a contract from
+  `<Template>.Contract.FromCreatedEvent` exercises a choice with no restated parties.
 
 ### Changed
 
@@ -2602,6 +2733,13 @@ A `Numeric 0` field read from the ledger decodes instead of failing.
 - `SubscribeActiveAsync<T>` (active-contract-set subscription) now accepts any
   `IDamlType`, widening the previous constraint so a broader set of generated
   types can be subscribed directly.
+- **Breaking:** a Daml `ContractId I`, where `I` is an interface (every Splice Token
+  Standard `Holding`, for example), now generates `ContractId<IHolding>` in every position
+  (scalar, list and nested generics such as optional) instead of `ContractId<Holding>`, which
+  bound the id to the placeholder record whose metadata accessors throw, so `ToRecord()` and
+  `ToDamlValue()` failed with `InvalidOperationException` for any record carrying such a field.
+  Contract ids to a concrete template are unchanged. Regenerate bindings; code that named
+  `ContractId<Holding>` explicitly must use `ContractId<IHolding>`.
 
 ### Fixed
 
@@ -3362,7 +3500,8 @@ the GitHub Packages NuGet feed
 (`nuget.pkg.github.com/peacefulstudio`) during development and have
 since been pruned. They are not supported.
 
-[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.2...HEAD
+[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.3...HEAD
+[0.6.0-preview.3]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.2...v0.6.0-preview.3
 [0.6.0-preview.2]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.1...v0.6.0-preview.2
 [0.6.0-preview.1]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.5.0-preview.3...v0.6.0-preview.1
 [0.5.0-preview.3]: https://github.com/peacefulstudio/daml-codegen-csharp/compare/v0.5.0-preview.2...v0.5.0-preview.3

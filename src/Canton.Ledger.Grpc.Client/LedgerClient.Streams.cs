@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Canton.Ledger.Abstractions;
@@ -57,8 +58,17 @@ internal sealed partial class LedgerClient
             deadline: null,
             cancellationToken: cancellationToken);
 
-        var stream = call.ResponseStream;
+        await foreach (var completionEvent in DrainCompletionStreamAsync(call.ResponseStream, activity, cancellationToken).ConfigureAwait(false))
+        {
+            yield return completionEvent;
+        }
+    }
 
+    private async IAsyncEnumerable<CompletionStreamEvent> DrainCompletionStreamAsync(
+        IAsyncStreamReader<CompletionStreamResponse> stream,
+        Activity? activity,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         while (true)
         {
             var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);

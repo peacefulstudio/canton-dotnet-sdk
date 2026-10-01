@@ -31,6 +31,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
     private readonly StateService.StateServiceClient _stateService;
     private readonly CommandCompletionService.CommandCompletionServiceClient _commandCompletionService;
     private readonly VersionService.VersionServiceClient _versionService;
+    private readonly ContractService.ContractServiceClient _contractService;
+    private readonly EventQueryService.EventQueryServiceClient _eventQueryService;
     private readonly Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient _interactiveSubmissionService;
     private readonly GrpcCommandBuilder _commandBuilder;
     private readonly LedgerClientOptions _options;
@@ -57,6 +59,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         var commandSubmissionService = new CommandSubmissionService.CommandSubmissionServiceClient(_channel);
         _commandCompletionService = new CommandCompletionService.CommandCompletionServiceClient(_channel);
         _versionService = new VersionService.VersionServiceClient(_channel);
+        _contractService = new ContractService.ContractServiceClient(_channel);
+        _eventQueryService = new EventQueryService.EventQueryServiceClient(_channel);
         _interactiveSubmissionService =
             new Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient(_channel);
 
@@ -121,6 +125,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         ITokenProvider? tokenProvider = null,
         VersionService.VersionServiceClient? versionService = null,
         Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient? interactiveSubmissionService = null,
+        ContractService.ContractServiceClient? contractService = null,
+        EventQueryService.EventQueryServiceClient? eventQueryService = null,
         ILogger<LedgerClient>? logger = null)
     {
         _options = options;
@@ -129,6 +135,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         _stateService = stateService;
         _commandCompletionService = commandCompletionService;
         _versionService = versionService ?? new VersionService.VersionServiceClient(channel);
+        _contractService = contractService ?? new ContractService.ContractServiceClient(channel);
+        _eventQueryService = eventQueryService ?? new EventQueryService.EventQueryServiceClient(channel);
         _interactiveSubmissionService = interactiveSubmissionService
             ?? new Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient(channel);
         _logger = logger ?? NullLogger<LedgerClient>.Instance;
