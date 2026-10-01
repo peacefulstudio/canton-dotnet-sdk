@@ -25,7 +25,7 @@ jobs:
           - {order: 1, cell: 'Canton 3.5.19 (SDK baseline)', localnet-ref: v0.8.4-1, image-tag: '', expected-canton: 3.5.19, gating: true}
           - {order: 2, cell: 'Canton 3.5.18 (previous baseline)', localnet-ref: v0.8.3-2, image-tag: '', expected-canton: 3.5.18, gating: true}
           - {order: 3, cell: 'Canton 3.5.17 (Splice 0.8.1 images)', localnet-ref: v0.8.3-2, image-tag: 0.8.1, expected-canton: 3.5.17, gating: true}
-          - {order: 9, cell: 'LocalNet dev (canary)', localnet-ref: dev, image-tag: '', expected-canton: '', gating: false}
+          - {order: 9, cell: 'LocalNet unreleased (dev)', localnet-ref: dev, image-tag: '', expected-canton: '', gating: false}
     env:
       LOCALNET_DIR: ${{ github.workspace }}/canton-localnet
       LOCALNET_GRPC_URL: http://localhost:11901
@@ -347,5 +347,5 @@ jobs:
             echo ""
             echo "${table}"
             echo ""
-            echo "Gating cells fail the run; the canary never does. Render this table for release notes with \`scripts/cross-version-matrix-table.sh fetch --run ${GITHUB_RUN_ID}\`."
+            echo "Gating cells fail the run; LocalNet unreleased never does. Render this table for release notes with \`scripts/cross-version-matrix-table.sh fetch --run ${GITHUB_RUN_ID}\`."
           } >> "${GITHUB_STEP_SUMMARY}"
