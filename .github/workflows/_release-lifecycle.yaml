@@ -58,6 +58,10 @@ jobs:
           case "$ACTION" in
             bootstrap)
               if gh release view "$TAG" >/dev/null 2>&1; then
+                if [ "$(gh release view "$TAG" --json isDraft --jq '.isDraft')" != "true" ]; then
+                  echo "::error::release $TAG is already published; refusing to rebuild, re-push to GHCR or re-attach assets for a released version"
+                  exit 1
+                fi
                 echo "created=false" >> "$GITHUB_OUTPUT"
                 echo "draft $TAG already exists"
               else
