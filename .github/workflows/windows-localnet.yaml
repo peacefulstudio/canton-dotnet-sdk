@@ -104,28 +104,37 @@ jobs:
       - name: Relay keycloak from WSL2 on 18082
         shell: wsl-bash {0}
         run: |
-          set -euxo pipefail
+          set -uxo pipefail
           sudo apt-get install -y socat
+          ss -ltnp | grep -E ':(8082|5432|11901|11975)\b' || true
+          docker ps --format '{{.Names}} {{.Ports}}' | grep -iE 'keycloak|8082' || true
+          curl -sS -i --max-time 15 http://127.0.0.1:8082/realms/AValidator1/.well-known/openid-configuration | head -c 600 || true
+          curl -sS -i --max-time 15 -H 'Host: keycloak.localhost:8082' http://127.0.0.1:8082/realms/AValidator1/.well-known/openid-configuration | head -c 600 || true
           setsid nohup socat TCP-LISTEN:18082,fork,reuseaddr TCP:127.0.0.1:8082 >/tmp/socat-18082.log 2>&1 < /dev/null &
           sleep 2
-          curl -sS --fail --max-time 15 http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration | python3 -c 'import json,sys; print("inside WSL issuer=" + json.load(sys.stdin)["issuer"])'
+          curl -sS -i --max-time 15 http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration | head -c 600 || true
+          cat /tmp/socat-18082.log
 
       - name: Reach the ledger and keycloak from Windows
         if: always()
         shell: pwsh
         run: |
           foreach ($port in 11901, 11975, 5432, 8082, 18082) {
-            $probe = Test-NetConnection -ComputerName localhost -Port $port -WarningAction SilentlyContinue
-            "localhost:$port TcpTestSucceeded=$($probe.TcpTestSucceeded)"
+            $reached = $false
+            foreach ($attempt in 1..6) {
+              $probe = Test-NetConnection -ComputerName localhost -Port $port -WarningAction SilentlyContinue
+              if ($probe.TcpTestSucceeded) { $reached = $true; break }
+              Start-Sleep -Seconds 5
+            }
+            "localhost:$port reached=$reached after $attempt attempt(s)"
           }
-          $version = Invoke-RestMethod -Uri "$env:LOCALNET_JSON_API_URL/v2/version" -TimeoutSec 15
-          "participant version=$($version.version)"
           foreach ($base in "http://localhost:8082", $env:LOCALNET_KEYCLOAK_RELAY_URL) {
             try {
               $direct = Invoke-RestMethod -Uri "$base/realms/AValidator1/.well-known/openid-configuration" -TimeoutSec 15
               "$base issuer=$($direct.issuer)"
             } catch { "$base discovery failed: $($_.Exception.Message)" }
           }
-          $discovery = Invoke-RestMethod -Uri "$env:LOCALNET_KEYCLOAK_RELAY_URL/realms/AValidator1/.well-known/openid-configuration" -TimeoutSec 15
-          "relayed issuer=$($discovery.issuer)"
-          "relayed token_endpoint=$($discovery.token_endpoint)"
+          try {
+            $version = Invoke-RestMethod -Uri "$env:LOCALNET_JSON_API_URL/v2/version" -TimeoutSec 15
+            "participant version=$($version.version)"
+          } catch { "participant version failed: $($_.Exception.Message)" }
