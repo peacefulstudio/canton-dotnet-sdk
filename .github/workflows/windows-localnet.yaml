@@ -108,7 +108,7 @@ jobs:
           sudo apt-get install -y socat
           setsid nohup socat TCP-LISTEN:18082,fork,reuseaddr TCP:127.0.0.1:8082 >/tmp/socat-18082.log 2>&1 < /dev/null &
           sleep 2
-          curl -sS --fail --max-time 15 http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration | jq -r '"inside WSL issuer=" + .issuer'
+          curl -sS --fail --max-time 15 http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration | python3 -c 'import json,sys; print("inside WSL issuer=" + json.load(sys.stdin)["issuer"])'
 
       - name: Reach the ledger and keycloak from Windows
         if: always()
@@ -120,6 +120,12 @@ jobs:
           }
           $version = Invoke-RestMethod -Uri "$env:LOCALNET_JSON_API_URL/v2/version" -TimeoutSec 15
           "participant version=$($version.version)"
+          foreach ($base in "http://localhost:8082", $env:LOCALNET_KEYCLOAK_RELAY_URL) {
+            try {
+              $direct = Invoke-RestMethod -Uri "$base/realms/AValidator1/.well-known/openid-configuration" -TimeoutSec 15
+              "$base issuer=$($direct.issuer)"
+            } catch { "$base discovery failed: $($_.Exception.Message)" }
+          }
           $discovery = Invoke-RestMethod -Uri "$env:LOCALNET_KEYCLOAK_RELAY_URL/realms/AValidator1/.well-known/openid-configuration" -TimeoutSec 15
           "relayed issuer=$($discovery.issuer)"
           "relayed token_endpoint=$($discovery.token_endpoint)"
