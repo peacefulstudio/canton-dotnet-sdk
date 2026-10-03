@@ -93,14 +93,16 @@ jobs:
           ./canton-localnet wait-ready --timeout 30m --interval 5s || exit 1
           echo "LocalNet ready after $(( $(date +%s) - start ))s"
 
-      # Workaround: the WSL2 localhost relay on Windows intermittently drops 8082 (keycloak) while
-      # 11901/11975 stay reachable; a socat listener inside WSL2 on 18082 gives Windows a second path.
-      - name: Relay keycloak from WSL2 on 18082
+      # Workaround: the WSL2 localhost relay on Windows intermittently drops 8082 (keycloak) and 5432
+      # (postgres) while 11901/11975 stay reachable; socat listeners inside WSL2 on 18082 and 15432
+      # give Windows a second path.
+      - name: Relay keycloak and postgres from WSL2 on 18082 and 15432
         shell: wsl-bash {0}
         run: |
           set -euxo pipefail
           sudo apt-get install -y socat
           setsid nohup socat TCP-LISTEN:18082,fork,reuseaddr TCP:127.0.0.1:8082 >/tmp/socat-18082.log 2>&1 < /dev/null &
+          setsid nohup socat TCP-LISTEN:15432,fork,reuseaddr TCP:127.0.0.1:5432 >/tmp/socat-15432.log 2>&1 < /dev/null &
           for i in $(seq 1 15); do
             curl -sS --fail --max-time 5 -o /dev/null http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration && exit 0
             sleep 2
@@ -112,7 +114,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          foreach ($port in 11901, 11975, 5432, 8082, 18082) {
+          foreach ($port in 11901, 11975, 5432, 15432, 8082, 18082) {
             $reached = $false
             foreach ($attempt in 1..6) {
               $probe = Test-NetConnection -ComputerName localhost -Port $port -WarningAction SilentlyContinue
