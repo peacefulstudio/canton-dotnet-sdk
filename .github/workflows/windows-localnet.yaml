@@ -93,27 +93,20 @@ jobs:
           ./canton-localnet wait-ready --timeout 30m --interval 5s || exit 1
           echo "LocalNet ready after $(( $(date +%s) - start ))s"
 
-      - name: Diagnose why Windows cannot reach keycloak on 8082
-        if: always()
-        shell: pwsh
-        run: |
-          Get-NetTCPConnection -LocalPort 8082 -ErrorAction SilentlyContinue | Format-Table -AutoSize | Out-String
-          netsh int ipv4 show excludedportrange tcp
-          Test-NetConnection localhost -Port 8082 -WarningAction SilentlyContinue | Format-List ComputerName, RemoteAddress, RemotePort, TcpTestSucceeded
-
+      # Workaround: the WSL2 localhost relay on Windows intermittently drops 8082 (keycloak) while
+      # 11901/11975 stay reachable; a socat listener inside WSL2 on 18082 gives Windows a second path.
       - name: Relay keycloak from WSL2 on 18082
         shell: wsl-bash {0}
         run: |
-          set -uxo pipefail
+          set -euxo pipefail
           sudo apt-get install -y socat
-          ss -ltnp | grep -E ':(8082|5432|11901|11975)\b' || true
-          docker ps --format '{{.Names}} {{.Ports}}' | grep -iE 'keycloak|8082' || true
-          curl -sS -i --max-time 15 http://127.0.0.1:8082/realms/AValidator1/.well-known/openid-configuration | head -c 600 || true
-          curl -sS -i --max-time 15 -H 'Host: keycloak.localhost:8082' http://127.0.0.1:8082/realms/AValidator1/.well-known/openid-configuration | head -c 600 || true
           setsid nohup socat TCP-LISTEN:18082,fork,reuseaddr TCP:127.0.0.1:8082 >/tmp/socat-18082.log 2>&1 < /dev/null &
-          sleep 2
-          curl -sS -i --max-time 15 http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration | head -c 600 || true
+          for i in $(seq 1 15); do
+            curl -sS --fail --max-time 5 -o /dev/null http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration && exit 0
+            sleep 2
+          done
           cat /tmp/socat-18082.log
+          exit 1
 
       - name: Reach the ledger and keycloak from Windows
         if: always()
