@@ -1,0 +1,135 @@
+name: Windows LocalNet
+
+on:
+  push:
+    branches: [main, ci/windows-localnet]
+    tags: ['v*']
+  schedule:
+    - cron: '43 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-localnet-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  LOCALNET_REF: v0.8.4-1
+  LOCALNET_GRPC_URL: http://localhost:11901
+  LOCALNET_JSON_API_URL: http://localhost:11975
+  LOCALNET_KEYCLOAK_RELAY_URL: http://localhost:18082
+
+jobs:
+  windows-x64:
+    name: Windows x64 over WSL2 LocalNet
+    runs-on: windows-2025
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout canton-localnet
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: peacefulstudio/canton-localnet
+          ref: ${{ env.LOCALNET_REF }}
+          path: canton-localnet
+          persist-credentials: false
+
+      - name: Size the WSL2 VM
+        shell: pwsh
+        run: |
+          "[wsl2]`nmemory=13GB`nswap=8GB`n" | Set-Content -Path "$env:USERPROFILE\.wslconfig" -Encoding ascii
+          Get-Content "$env:USERPROFILE\.wslconfig"
+
+      - name: Setup WSL2 Ubuntu-24.04
+        uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7.0.0
+        with:
+          distribution: Ubuntu-24.04
+          wsl-version: 2
+
+      - name: Install Docker in WSL2
+        shell: wsl-bash {0}
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://get.docker.com | sh
+          for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
+          docker version --format '{{.Server.Os}}/{{.Server.Arch}} {{.Server.Version}}'
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache-dependency-path: canton-localnet/cli/go.sum
+
+      - name: Cross-build the canton-localnet CLI for linux/amd64
+        shell: bash
+        working-directory: canton-localnet/cli
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: go build -o ../canton-localnet-linux ./cmd/canton-localnet
+
+      - name: Bring up LocalNet inside WSL2 (one retry on the splice bootstrap race)
+        shell: wsl-bash {0}
+        run: |
+          set -uxo pipefail
+          start=$(date +%s)
+          git clone --quiet --depth 1 --branch "${{ env.LOCALNET_REF }}" https://github.com/peacefulstudio/canton-localnet.git ~/canton-localnet
+          install -m 0755 "$(wslpath -u '${{ github.workspace }}')/canton-localnet/canton-localnet-linux" ~/canton-localnet/canton-localnet
+          cd ~/canton-localnet
+          printf 'schemaVersion: preview-1\nmodules:\n  obs: false\n  pqs: true\n' > canton-localnet.yaml
+          if ! ./canton-localnet up; then
+            echo "::warning::canton-localnet up failed on first attempt after $(( $(date +%s) - start ))s; tearing down with volumes and retrying once"
+            ./canton-localnet down --volumes || echo "::warning::pre-retry teardown failed"
+            sleep 30
+            ./canton-localnet up || exit 1
+          fi
+          ./canton-localnet wait-ready --timeout 30m --interval 5s || exit 1
+          echo "LocalNet ready after $(( $(date +%s) - start ))s"
+
+      # Workaround: the WSL2 localhost relay on Windows intermittently drops 8082 (keycloak) and 5432
+      # (postgres) while 11901/11975 stay reachable; socat listeners inside WSL2 on 18082 and 15432
+      # give Windows a second path.
+      - name: Relay keycloak and postgres from WSL2 on 18082 and 15432
+        shell: wsl-bash {0}
+        run: |
+          set -euxo pipefail
+          sudo apt-get install -y socat
+          setsid nohup socat TCP-LISTEN:18082,fork,reuseaddr TCP:127.0.0.1:8082 >/tmp/socat-18082.log 2>&1 < /dev/null &
+          setsid nohup socat TCP-LISTEN:15432,fork,reuseaddr TCP:127.0.0.1:5432 >/tmp/socat-15432.log 2>&1 < /dev/null &
+          for i in $(seq 1 15); do
+            curl -sS --fail --max-time 5 -o /dev/null http://127.0.0.1:18082/realms/AValidator1/.well-known/openid-configuration && exit 0
+            sleep 2
+          done
+          cat /tmp/socat-18082.log
+          exit 1
+
+      - name: Reach the ledger and keycloak from Windows
+        if: always()
+        shell: pwsh
+        run: |
+          foreach ($port in 11901, 11975, 5432, 15432, 8082, 18082) {
+            $reached = $false
+            foreach ($attempt in 1..6) {
+              $probe = Test-NetConnection -ComputerName localhost -Port $port -WarningAction SilentlyContinue
+              if ($probe.TcpTestSucceeded) { $reached = $true; break }
+              Start-Sleep -Seconds 5
+            }
+            "localhost:$port reached=$reached after $attempt attempt(s)"
+          }
+          foreach ($base in "http://localhost:8082", $env:LOCALNET_KEYCLOAK_RELAY_URL) {
+            try {
+              $direct = Invoke-RestMethod -Uri "$base/realms/AValidator1/.well-known/openid-configuration" -TimeoutSec 15
+              "$base issuer=$($direct.issuer)"
+            } catch { "$base discovery failed: $($_.Exception.Message)" }
+          }
+          try {
+            $version = Invoke-RestMethod -Uri "$env:LOCALNET_JSON_API_URL/v2/version" -TimeoutSec 15
+            "participant version=$($version.version)"
+          } catch { "participant version failed: $($_.Exception.Message)" }
