@@ -47,6 +47,7 @@ jobs:
           Get-Content "$env:USERPROFILE\.wslconfig"
 
       - name: Setup WSL2 Ubuntu-24.04
+        timeout-minutes: 10
         uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7.0.0
         with:
           distribution: Ubuntu-24.04
@@ -305,6 +306,7 @@ jobs:
           pqs_conn="Host=localhost;Port=5432;Database=pqs-a-validator-1;Username=cnadmin;Password=${db_password}"
           echo "::add-mask::${pqs_conn}"
           echo "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING=${pqs_conn}" >> "${GITHUB_ENV}"
+          echo "PQS_DB_PASSWORD=${db_password}" >> "${GITHUB_ENV}"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -366,6 +368,21 @@ jobs:
         run: |
           set -euo pipefail
           "${LOCALNET_DIR}/canton-localnet" wait-ready --timeout 30m --interval 5s
+
+      - name: Wait for the PQS schema
+        env:
+          PGPASSWORD: ${{ env.PQS_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            if psql -h localhost -p 5432 -U cnadmin -d pqs-a-validator-1 -tAc "select 1 from pg_proc where proname = 'active'" | grep -q 1; then
+              echo "PQS schema ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::PQS active() function not created within 5 minutes"
+          exit 1
 
       - name: Memory after bring-up
         run: |
