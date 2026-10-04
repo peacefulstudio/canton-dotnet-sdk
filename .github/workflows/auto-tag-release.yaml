@@ -62,8 +62,14 @@ jobs:
           main_tip="$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq '.object.sha')"
           [ "${main_tip}" = "${HEAD_SHA}" ] || skip "${HEAD_SHA} is no longer the tip of main; a newer CI run decides"
 
+          lanes_status=0
           lanes_waited_on="$(.github/scripts/required-lanes-green.sh "${HEAD_SHA}" ci.yaml localnet.yaml integration-multisync.yaml)" \
-            || skip "${lanes_waited_on}"
+            || lanes_status=$?
+          case "${lanes_status}" in
+            0) ;;
+            1) skip "${lanes_waited_on}" ;;
+            *) echo "::error::${lanes_waited_on}"; exit 1 ;;
+          esac
 
           version="$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props | head -1 || true)"
           [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$ ]] \

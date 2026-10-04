@@ -18,6 +18,10 @@ while [ $# -gt 0 ]; do
   [ "$1" = "--jq" ] && filter="$2"
   shift
 done
+if [ -f "${RUNS_DIR}/${workflow}.error" ]; then
+  cat "${RUNS_DIR}/${workflow}.error" >&2
+  exit 1
+fi
 jq "${filter}" "${RUNS_DIR}/${workflow}.json"
 STUB
 chmod +x "${work}/bin/gh"
@@ -89,5 +93,12 @@ set_runs multisync.yaml "${pending}"
 run_gate
 expect "every waited-on lane is named" 1 "multisync.yaml"
 [[ "${output}" == *"ci.yaml"* ]] || { echo "FAIL both lanes named: ${output}"; failures=$((failures + 1)); }
+
+reset_all_green
+printf 'HTTP 502: bad gateway' > "${RUNS_DIR}/localnet.yaml.error"
+run_gate
+rm "${RUNS_DIR}/localnet.yaml.error"
+expect "a failed gh lookup exits 2 and prints the error" 2 "HTTP 502: bad gateway"
+[ "${status}" -eq 2 ] || { echo "FAIL lookup failure status is ${status}, not 2"; failures=$((failures + 1)); }
 
 [ "${failures}" -eq 0 ]
