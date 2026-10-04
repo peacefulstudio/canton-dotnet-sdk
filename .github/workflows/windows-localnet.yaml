@@ -20,6 +20,7 @@ env:
   LOCALNET_GRPC_URL: http://localhost:11901
   LOCALNET_JSON_API_URL: http://localhost:11975
   LOCALNET_KEYCLOAK_RELAY_URL: http://localhost:18082
+  LOCALNET_TOKEN_URL: http://localhost:18082/realms/AValidator1/protocol/openid-connect/token
 
 jobs:
   windows-x64:
@@ -133,3 +134,115 @@ jobs:
             $version = Invoke-RestMethod -Uri "$env:LOCALNET_JSON_API_URL/v2/version" -TimeoutSec 15
             "participant version=$($version.version)"
           } catch { "participant version failed: $($_.Exception.Message)" }
+
+      - name: Read validator OAuth2 client credentials from LocalNet fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          oauth2_env="$(cygpath -u "${GITHUB_WORKSPACE}")/canton-localnet/compose/modules/keycloak/env/a-validator-1/on/oauth2.env"
+          read_fixture_value() {
+            value="$(tr -d '\r' < "${oauth2_env}" | grep -m 1 -oP "^${1}=\K\S+")" \
+              || { echo "::error::${1} not found in ${oauth2_env}" >&2; return 1; }
+            value="${value%\"}"
+            printf '%s' "${value#\"}"
+          }
+          client_id="$(read_fixture_value AUTH_A_VALIDATOR_1_VALIDATOR_CLIENT_ID)"
+          client_secret="$(read_fixture_value AUTH_A_VALIDATOR_1_VALIDATOR_CLIENT_SECRET)"
+          echo "::add-mask::${client_secret}"
+          {
+            echo "LOCALNET_CLIENT_ID=${client_id}"
+            echo "LOCALNET_CLIENT_SECRET=${client_secret}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Read PQS connection string from LocalNet fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          common_env="$(cygpath -u "${GITHUB_WORKSPACE}")/canton-localnet/compose/modules/localnet/env/common.env"
+          raw="$(tr -d '\r' < "${common_env}" | grep -m 1 -oP '^DB_PASSWORD=\K\S+' || true)"
+          [[ -n "${raw}" ]] || { echo "::error::DB_PASSWORD not found in ${common_env}" >&2; exit 1; }
+          raw="${raw%\"}"
+          raw="${raw#\"}"
+          if [[ "${raw}" == "\${DB_PASSWORD:-"*"}" ]]; then
+            compose_default_db_password="${raw#\$\{DB_PASSWORD:-}"
+            compose_default_db_password="${compose_default_db_password%\}}"
+            db_password="${DB_PASSWORD:-${compose_default_db_password}}"
+          else
+            db_password="${raw}"
+          fi
+          echo "::add-mask::${db_password}"
+          pqs_conn="Host=localhost;Port=15432;Database=pqs-a-validator-1;Username=cnadmin;Password=${db_password}"
+          echo "::add-mask::${pqs_conn}"
+          echo "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING=${pqs_conn}" >> "${GITHUB_ENV}"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          for project in tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj; do
+            dotnet restore "${project}"
+            dotnet build --configuration Release --no-restore "${project}"
+          done
+
+      - name: gRPC integration tests (including the PQS round trip)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          log="$(cygpath -u "${RUNNER_TEMP}")/grpc-integration.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --output Detailed 2>&1 | tee "${log}"
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 19 5
+
+      - name: REST conformance tests (JSON Ledger API)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          log="$(cygpath -u "${RUNNER_TEMP}")/rest-conformance.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --output Detailed 2>&1 | tee "${log}"
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 4
+
+      - name: Cross-transport parity tests (Fake, gRPC, REST)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          log="$(cygpath -u "${RUNNER_TEMP}")/parity.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --output Detailed 2>&1 | tee "${log}"
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "Cross-transport parity tests" 264 0
