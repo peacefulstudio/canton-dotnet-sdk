@@ -207,7 +207,7 @@ jobs:
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --output Detailed 2>&1 | tee "${log}"
-          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 19 5
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 5
 
       - name: REST conformance tests (JSON Ledger API)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
