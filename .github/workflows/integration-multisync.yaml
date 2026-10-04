@@ -172,6 +172,25 @@ jobs:
             --minimum-expected-tests 2 \
             --output Detailed
 
+      - name: Party allocation without a synchronizerId parity fact, gRPC and REST
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+          CANTON_REASSIGNMENT_REQUIRE_MULTI_SYNC: '1'
+          PARITY_FACT: AllocatePartyAsync_without_a_synchronizerId_succeeds_on_a_single_synchronizer_participant_and_fails_on_a_multi_synchronizer_one
+        run: |
+          set -euo pipefail
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj \
+            -- --filter-method "Canton.Ledger.Client.Parity.Tests.GrpcLedgerAdminParityTests.${PARITY_FACT}" \
+            --filter-method "Canton.Ledger.Client.Parity.Tests.RestLedgerAdminParityTests.${PARITY_FACT}" \
+            --minimum-expected-tests 2 \
+            --output Detailed
+
       - name: gRPC reassignment rejection conformance tests
         env:
           CANTON_LOCALNET_PROFILE: a-validator-1
@@ -209,25 +228,6 @@ jobs:
             --minimum-expected-tests 2 \
             --output Detailed 2>&1 | tee "${log}"
           .github/scripts/assert-tests-ran.sh "${log}" "REST reassignment rejection tests" 2 0
-
-      - name: Party allocation without a synchronizerId parity fact, gRPC and REST
-        env:
-          CANTON_LOCALNET_PROFILE: a-validator-1
-          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
-          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
-          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
-          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
-          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
-          CANTON_REASSIGNMENT_REQUIRE_MULTI_SYNC: '1'
-          PARITY_FACT: AllocatePartyAsync_without_a_synchronizerId_succeeds_on_a_single_synchronizer_participant_and_fails_on_a_multi_synchronizer_one
-        run: |
-          set -euo pipefail
-          dotnet test --configuration Release --no-build \
-            --project tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj \
-            -- --filter-method "Canton.Ledger.Client.Parity.Tests.GrpcLedgerAdminParityTests.${PARITY_FACT}" \
-            --filter-method "Canton.Ledger.Client.Parity.Tests.RestLedgerAdminParityTests.${PARITY_FACT}" \
-            --minimum-expected-tests 2 \
-            --output Detailed
 
       - name: Memory after tests
         if: always()
