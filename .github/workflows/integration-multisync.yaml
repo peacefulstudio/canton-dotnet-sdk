@@ -5,13 +5,13 @@ on:
   schedule:
     - cron: '47 4 * * 1'
   push:
-    tags: ['v*']
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: integration-multisync-${{ github.ref }}
+  group: integration-multisync-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
