@@ -2,7 +2,7 @@ name: Windows LocalNet
 
 on:
   push:
-    branches: [main, ci/windows-localnet]
+    branches: [main]
     tags: ['v*']
   schedule:
     - cron: '43 5 * * 1'
