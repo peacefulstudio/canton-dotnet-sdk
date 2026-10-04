@@ -2,7 +2,7 @@ name: LocalNet
 
 on:
   push:
-    branches: [main, ci/release-gate]
+    branches: [main]
   schedule:
     - cron: '43 5 * * 1'
   workflow_dispatch:
@@ -406,7 +406,7 @@ jobs:
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 5
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 3
 
       - name: REST conformance tests (JSON Ledger API)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -424,7 +424,7 @@ jobs:
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 4
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 2
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
