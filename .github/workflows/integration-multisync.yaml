@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '47 4 * * 1'
   push:
-    tags: ['v*']
+    branches: [main]
 
 permissions:
   contents: read

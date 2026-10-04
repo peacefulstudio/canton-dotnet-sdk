@@ -1,8 +1,8 @@
-name: Windows LocalNet
+name: LocalNet
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci/release-gate]
   schedule:
     - cron: '43 5 * * 1'
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-localnet-${{ github.ref }}
+  group: localnet-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -245,3 +245,234 @@ jobs:
             -- --filter-trait "Category=Integration" \
             --output Detailed 2>&1 | tee "${log}"
           "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "Cross-transport parity tests" 209 0
+
+  linux-x64:
+    name: Linux x64 LocalNet
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      LOCALNET_DIR: ${{ github.workspace }}/canton-localnet
+      LOCALNET_LINUX_TOKEN_URL: http://localhost:8082/realms/AValidator1/protocol/openid-connect/token
+      MEMORY_SAMPLES: ${{ github.workspace }}/memory-samples.txt
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout canton-localnet
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: peacefulstudio/canton-localnet
+          ref: ${{ env.LOCALNET_REF }}
+          path: canton-localnet
+          persist-credentials: false
+
+      - name: Read validator OAuth2 client credentials from LocalNet fixtures
+        run: |
+          set -euo pipefail
+          oauth2_env="${LOCALNET_DIR}/compose/modules/keycloak/env/a-validator-1/on/oauth2.env"
+          read_fixture_value() {
+            value="$(grep -m 1 -oP "^${1}=\K\S+" "${oauth2_env}")" \
+              || { echo "::error::${1} not found in ${oauth2_env}" >&2; return 1; }
+            value="${value%\"}"
+            printf '%s' "${value#\"}"
+          }
+          client_id="$(read_fixture_value AUTH_A_VALIDATOR_1_VALIDATOR_CLIENT_ID)"
+          client_secret="$(read_fixture_value AUTH_A_VALIDATOR_1_VALIDATOR_CLIENT_SECRET)"
+          echo "::add-mask::${client_secret}"
+          {
+            echo "LOCALNET_CLIENT_ID=${client_id}"
+            echo "LOCALNET_CLIENT_SECRET=${client_secret}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Read PQS connection string from LocalNet fixtures
+        run: |
+          set -euo pipefail
+          common_env="${LOCALNET_DIR}/compose/modules/localnet/env/common.env"
+          raw="$(grep -m 1 -oP '^DB_PASSWORD=\K\S+' "${common_env}" || true)"
+          [[ -n "${raw}" ]] || { echo "::error::DB_PASSWORD not found in ${common_env}" >&2; exit 1; }
+          raw="${raw%\"}"
+          raw="${raw#\"}"
+          if [[ "${raw}" == "\${DB_PASSWORD:-"*"}" ]]; then
+            compose_default_db_password="${raw#\$\{DB_PASSWORD:-}"
+            compose_default_db_password="${compose_default_db_password%\}}"
+            db_password="${DB_PASSWORD:-${compose_default_db_password}}"
+          else
+            db_password="${raw}"
+          fi
+          echo "::add-mask::${db_password}"
+          pqs_conn="Host=localhost;Port=5432;Database=pqs-a-validator-1;Username=cnadmin;Password=${db_password}"
+          echo "::add-mask::${pqs_conn}"
+          echo "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING=${pqs_conn}" >> "${GITHUB_ENV}"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache-dependency-path: canton-localnet/cli/go.sum
+
+      - name: Build canton-localnet CLI
+        working-directory: canton-localnet/cli
+        run: |
+          set -euo pipefail
+          go build -o "${LOCALNET_DIR}/canton-localnet" ./cmd/canton-localnet
+
+      - name: Build
+        id: build
+        run: |
+          set -euo pipefail
+          for project in tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj; do
+            dotnet restore "${project}"
+            dotnet build --configuration Release --no-restore "${project}"
+          done
+
+      - name: Stop the build servers before LocalNet bring-up
+        run: |
+          set -euo pipefail
+          dotnet build-server shutdown
+          free -m
+
+      - name: Start the memory sampler
+        run: |
+          set -euo pipefail
+          nohup sh -c 'while true; do echo "$(date +%s) $(free -m | awk "/^Mem:/ {print \$3, \$7}")"; sleep 5; done' > "${MEMORY_SAMPLES}" 2>&1 &
+
+      - name: Configure the single-synchronizer LocalNet
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          printf 'schemaVersion: preview-1\nmodules:\n  obs: false\n  pqs: true\n' > canton-localnet.yaml
+
+      - name: Bring up LocalNet (one retry on the splice bootstrap race)
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          free -m
+          if ! "${LOCALNET_DIR}/canton-localnet" up; then
+            echo "::warning::canton-localnet up failed on first attempt, tearing down with volumes and retrying once"
+            "${LOCALNET_DIR}/canton-localnet" down --volumes || echo "::warning::pre-retry teardown failed; second up may fail with leaked state"
+            sleep 30
+            "${LOCALNET_DIR}/canton-localnet" up
+          fi
+
+      - name: Wait for ledger readiness
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          "${LOCALNET_DIR}/canton-localnet" wait-ready --timeout 30m --interval 5s
+
+      - name: Memory after bring-up
+        run: |
+          set -euo pipefail
+          free -m
+          docker stats --no-stream
+
+      - name: gRPC integration tests (including the PQS round trip)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_LINUX_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/grpc-integration.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --output Detailed 2>&1 | tee "${log}"
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 5
+
+      - name: REST conformance tests (JSON Ledger API)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_LINUX_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/rest-conformance.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --output Detailed 2>&1 | tee "${log}"
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 4
+
+      - name: Cross-transport parity tests (Fake, gRPC, REST)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_LINUX_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/parity.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj \
+            -- --filter-trait "Category=Integration" \
+            --output Detailed 2>&1 | tee "${log}"
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "Cross-transport parity tests" 209 0
+
+      - name: Memory after tests
+        if: always()
+        run: |
+          set -euo pipefail
+          free -m
+          docker stats --no-stream || true
+          {
+            echo "## LocalNet lane memory"
+            if [ -s "${MEMORY_SAMPLES}" ]; then
+              sort -k2 -n -r "${MEMORY_SAMPLES}" | head -1 | awk '{print "Peak used: " $2 " MiB, available at that sample: " $3 " MiB"}'
+              sort -k3 -n "${MEMORY_SAMPLES}" | head -1 | awk '{print "Lowest available: " $3 " MiB"}'
+            fi
+          } | tee -a "${GITHUB_STEP_SUMMARY}"
+
+      - name: Capture LocalNet state on failure
+        if: failure()
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          free -m > /tmp/free.txt 2>&1 || true
+          docker stats --no-stream > /tmp/docker-stats.txt 2>&1 || true
+          make status > /tmp/localnet-status.txt 2>&1 || true
+          timeout 30 make logs > /tmp/localnet-logs.txt 2>&1 || true
+          docker ps -a > /tmp/docker-ps.txt 2>&1 || true
+          cp "${MEMORY_SAMPLES}" /tmp/memory-samples.txt || true
+          dmesg 2>/dev/null | grep -i "out of memory\|oom" > /tmp/oom.txt || true
+
+      - name: Upload LocalNet diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: localnet-linux-diagnostics
+          path: |
+            /tmp/free.txt
+            /tmp/docker-stats.txt
+            /tmp/localnet-status.txt
+            /tmp/localnet-logs.txt
+            /tmp/docker-ps.txt
+            /tmp/memory-samples.txt
+            /tmp/oom.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Tear down LocalNet
+        if: always()
+        working-directory: canton-localnet
+        run: |
+          set -euo pipefail
+          "${LOCALNET_DIR}/canton-localnet" down --volumes || echo "::warning::teardown failed"
