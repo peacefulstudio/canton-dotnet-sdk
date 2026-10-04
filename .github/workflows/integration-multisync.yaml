@@ -172,6 +172,44 @@ jobs:
             --minimum-expected-tests 2 \
             --output Detailed
 
+      - name: gRPC reassignment rejection conformance tests
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+          CANTON_REASSIGNMENT_REQUIRE_MULTI_SYNC: '1'
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/grpc-reassignment-rejection.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
+            -- --filter-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
+            --minimum-expected-tests 2 \
+            --output Detailed 2>&1 | tee "${log}"
+          .github/scripts/assert-tests-ran.sh "${log}" "gRPC reassignment rejection tests" 2 0
+
+      - name: REST reassignment rejection conformance tests
+        env:
+          CANTON_LOCALNET_PROFILE: a-validator-1
+          CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL: ${{ env.LOCALNET_GRPC_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL: ${{ env.LOCALNET_JSON_API_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_TOKEN_URL: ${{ env.LOCALNET_TOKEN_URL }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_ID: ${{ env.LOCALNET_CLIENT_ID }}
+          CANTON_LOCALNET_A_VALIDATOR_1_CLIENT_SECRET: ${{ env.LOCALNET_CLIENT_SECRET }}
+          CANTON_REASSIGNMENT_REQUIRE_MULTI_SYNC: '1'
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/rest-reassignment-rejection.log"
+          dotnet test --configuration Release --no-build \
+            --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
+            -- --filter-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
+            --minimum-expected-tests 2 \
+            --output Detailed 2>&1 | tee "${log}"
+          .github/scripts/assert-tests-ran.sh "${log}" "REST reassignment rejection tests" 2 0
+
       - name: Party allocation without a synchronizerId parity fact, gRPC and REST
         env:
           CANTON_LOCALNET_PROFILE: a-validator-1
