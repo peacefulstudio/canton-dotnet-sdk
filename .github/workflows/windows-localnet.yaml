@@ -3,7 +3,6 @@ name: Windows LocalNet
 on:
   push:
     branches: [main]
-    tags: ['v*']
   schedule:
     - cron: '43 5 * * 1'
   workflow_dispatch:
