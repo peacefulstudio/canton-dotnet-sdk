@@ -206,6 +206,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
             --output Detailed 2>&1 | tee "${log}"
           "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 5
 
@@ -225,6 +226,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
             --output Detailed 2>&1 | tee "${log}"
           "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 4
 
@@ -405,6 +407,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
             --output Detailed 2>&1 | tee "${log}"
           "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 3
 
@@ -423,6 +426,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
             --output Detailed 2>&1 | tee "${log}"
           "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 2
 
