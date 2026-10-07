@@ -126,6 +126,11 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.set-matrix.outputs.include) }}
     steps:
+      - name: Enable git long paths on Windows
+        if: runner.os == 'Windows'
+        # Git for Windows defaults core.longpaths to false, so checkout fails on snapshot paths beyond MAX_PATH
+        run: git config --system core.longpaths true
+
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
