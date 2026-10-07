@@ -18,15 +18,6 @@ public class TemplateEmitterTests
     private const string LocalPackageId = "test-package-id";
     private const string ModuleName = "Test.Module";
 
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
-
     private static DamlPackage Package(DamlModule module, Version? version = null, string? upgradedPackageId = null) =>
         new()
         {
@@ -59,18 +50,19 @@ public class TemplateEmitterTests
         {
             Name = ModuleName,
             Templates = [fixture.Template],
-            DataTypes = dataTypes ?? [],
+            DataTypes = [.. dataTypes ?? [], .. (interfaces ?? []).Select(iface => RecordDataType(iface.Name))],
             Interfaces = interfaces ?? [],
         };
         options ??= Options();
         var package = Package(module, version, upgradedPackageId);
-        var context = PackageEmitContext.ForPackage(package, options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var party = new PartyAnalysis();
         var recordSerialization = new RecordSerializationEmitter(context, resolver, options, mapper);
         var choiceEmitter = new ChoiceEmitter(context, resolver, options, mapper, party);
-        var submissionExtensions = new SubmissionExtensionsEmitter(context, options, party);
+        var submissionExtensions = new SubmissionExtensionsEmitter(options, party);
         var emitter = new TemplateEmitter(context, resolver, recordSerialization, choiceEmitter, submissionExtensions, options, logger);
         var sb = new StringBuilder();
         emitter.WriteTemplateType(new IndentWriter(sb), package, module, fixture.Template, fixture.Fields);
@@ -115,7 +107,7 @@ public class TemplateEmitterTests
         var output = EmitTemplate(Template("SimpleTemplate", [Field("owner", DamlPrimitive.Party)]));
 
         output.Should().Contain("public sealed partial record SimpleTemplate");
-        output.Should().Contain(": ITemplate");
+        output.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate");
     }
 
     [Fact]
@@ -130,7 +122,7 @@ public class TemplateEmitterTests
             },
             interfaces: [new DamlInterface { Name = "Asset", Choices = [] }]);
 
-        output.Should().Contain("IImplements<Asset>");
+        output.Should().Contain("IImplements<global::Test.Package.Test.Module.IAsset>");
     }
 
     [Fact]
@@ -146,7 +138,7 @@ public class TemplateEmitterTests
             },
             interfaces: [new DamlInterface { Name = "Asset", Choices = [] }]);
 
-        output.Should().Contain(": ITemplate, IImplements<Asset>, IHasKey<KeyedVault, Party>");
+        output.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IImplements<global::Test.Package.Test.Module.IAsset>, global::Daml.Runtime.Contracts.IHasKey<KeyedVault, global::Daml.Runtime.Data.Party>");
     }
 
     [Fact]
@@ -169,13 +161,13 @@ public class TemplateEmitterTests
             dataTypes: [RecordDataType("AccountKey", Field("custodian", DamlPrimitive.Party))]);
 
         output.Should().Contain(
-            ": ITemplate, IHasKey<Account, global::Test.Package.Test.Module.AccountKey>");
+            ": global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasKey<Account, global::Test.Package.Test.Module.AccountKey>");
         output.Should().Contain(
-            "public static KeyDescriptor<Account, global::Test.Package.Test.Module.AccountKey> Key { get; } =");
+            "public static global::Daml.Runtime.Contracts.KeyDescriptor<Account, global::Test.Package.Test.Module.AccountKey> Key { get; } =");
         output.Should().Contain(
             "KeyEncoder = key => key.ToRecord(),");
         output.Should().Contain(
-            "KeyDecoder = value => global::Test.Package.Test.Module.AccountKey.FromRecord(value.As<DamlRecord>()),");
+            "KeyDecoder = value => global::Test.Package.Test.Module.AccountKey.FromRecord(value.As<global::Daml.Runtime.Data.DamlRecord>()),");
         output.Should().Contain(
             "KeyJsonReader = (json, context) => global::Test.Package.Test.Module.AccountKey.__ReadDamlLfJson(json, context),");
     }
@@ -189,12 +181,12 @@ public class TemplateEmitterTests
                 [Field("steward", DamlPrimitive.Party)],
                 key: new DamlPrimitiveType(DamlPrimitive.Party)));
 
-        output.Should().Contain(": ITemplate, IHasKey<Steward, Party>");
-        output.Should().Contain("public static KeyDescriptor<Steward, Party> Key { get; } =");
+        output.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasKey<Steward, global::Daml.Runtime.Data.Party>");
+        output.Should().Contain("public static global::Daml.Runtime.Contracts.KeyDescriptor<Steward, global::Daml.Runtime.Data.Party> Key { get; } =");
         output.Should().Contain(
             "KeyEncoder = key => key.ToDamlValue(),");
         output.Should().Contain(
-            "KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
+            "KeyDecoder = value => global::Daml.Runtime.Data.Party.FromDamlValue(value.As<global::Daml.Runtime.Data.DamlParty>()),");
         output.Should().Contain(
             "KeyJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(json, context),");
     }
@@ -212,10 +204,10 @@ public class TemplateEmitterTests
             logger: logger);
 
         output.Should().Contain(
-            "static KeyDescriptor<Locker, Party> IHasKey<Locker, Party>.Key { get; } =");
+            "static global::Daml.Runtime.Contracts.KeyDescriptor<Locker, global::Daml.Runtime.Data.Party> global::Daml.Runtime.Contracts.IHasKey<Locker, global::Daml.Runtime.Data.Party>.Key { get; } =");
         output.Should().Contain("KeyEncoder = key => key.ToDamlValue(),");
-        output.Should().Contain("KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
-        output.Should().NotContain("public static KeyDescriptor<Locker, Party> Key");
+        output.Should().Contain("KeyDecoder = value => global::Daml.Runtime.Data.Party.FromDamlValue(value.As<global::Daml.Runtime.Data.DamlParty>()),");
+        output.Should().NotContain("public static global::Daml.Runtime.Contracts.KeyDescriptor<Locker, global::Daml.Runtime.Data.Party> Key");
         output.Should().Contain("string Key");
     }
 
@@ -229,10 +221,10 @@ public class TemplateEmitterTests
                 key: new DamlPrimitiveType(DamlPrimitive.Party)));
 
         output.Should().Contain(
-            "static KeyDescriptor<Key, Party> IHasKey<Key, Party>.Key { get; } =");
+            "static global::Daml.Runtime.Contracts.KeyDescriptor<Key, global::Daml.Runtime.Data.Party> global::Daml.Runtime.Contracts.IHasKey<Key, global::Daml.Runtime.Data.Party>.Key { get; } =");
         output.Should().Contain("KeyEncoder = key => key.ToDamlValue(),");
-        output.Should().Contain("KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
-        output.Should().NotContain("public static KeyDescriptor<Key, Party> Key");
+        output.Should().Contain("KeyDecoder = value => global::Daml.Runtime.Data.Party.FromDamlValue(value.As<global::Daml.Runtime.Data.DamlParty>()),");
+        output.Should().NotContain("public static global::Daml.Runtime.Contracts.KeyDescriptor<Key, global::Daml.Runtime.Data.Party> Key");
     }
 
     [Fact]
@@ -290,8 +282,8 @@ public class TemplateEmitterTests
             logger: logger);
 
         output.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<Vault>.Choices { get; } = [ChoiceGrant];");
-        output.Should().NotContain("public static IReadOnlyList<IChoice> Choices");
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Vault>.Choices { get; } = [ChoiceGrant];");
+        output.Should().NotContain("public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices");
         output.Should().Contain("string Choices");
     }
 
@@ -330,8 +322,8 @@ public class TemplateEmitterTests
                 ]));
 
         output.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<Choices>.Choices { get; } = [ChoiceGrant];");
-        output.Should().NotContain("public static IReadOnlyList<IChoice> Choices");
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Choices>.Choices { get; } = [ChoiceGrant];");
+        output.Should().NotContain("public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices");
     }
 
     [Fact]
@@ -369,8 +361,8 @@ public class TemplateEmitterTests
             dataTypes: [RecordDataType("ChoicesArgument", Field("amount", DamlPrimitive.Int64))]);
 
         output.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<Vault>.Choices { get; } = [ChoiceChoices];");
-        output.Should().NotContain("public static IReadOnlyList<IChoice> Choices");
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Vault>.Choices { get; } = [ChoiceChoices];");
+        output.Should().NotContain("public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices");
     }
 
     [Fact]
@@ -415,7 +407,7 @@ public class TemplateEmitterTests
             upgradedPackageId: "old-package-id");
 
         output.Should().Contain(
-            ": ITemplate, IUpgradeable, IImplements<Asset>, IHasKey<KeyedUpgradedVault, Party>, IHasChoices<KeyedUpgradedVault>, IDamlRecord<KeyedUpgradedVault>");
+            ": global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IUpgradeable, global::Daml.Runtime.Contracts.IImplements<global::Test.Package.Test.Module.IAsset>, global::Daml.Runtime.Contracts.IHasKey<KeyedUpgradedVault, global::Daml.Runtime.Data.Party>, global::Daml.Runtime.Contracts.IHasChoices<KeyedUpgradedVault>, global::Daml.Runtime.Data.IDamlRecord<KeyedUpgradedVault>");
     }
 
     [Fact]
@@ -423,7 +415,7 @@ public class TemplateEmitterTests
     {
         var output = EmitTemplate(Template("SimpleTemplate", [Field("owner", DamlPrimitive.Party)]));
 
-        output.Should().Contain(": ITemplate, IHasChoices<SimpleTemplate>, IDamlRecord<SimpleTemplate>");
+        output.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<SimpleTemplate>, global::Daml.Runtime.Data.IDamlRecord<SimpleTemplate>");
     }
 
     [Fact]
@@ -431,13 +423,13 @@ public class TemplateEmitterTests
     {
         var output = EmitTemplate(Template("Asset", [Field("owner", DamlPrimitive.Party)]));
 
-        output.Should().Contain("public static Identifier TemplateId { get; }");
+        output.Should().Contain("public static global::Daml.Runtime.Data.Identifier TemplateId { get; }");
         output.Should().Contain("\"test-package-id\"");
         output.Should().Contain("\"Test.Module\"");
         output.Should().Contain("\"Asset\"");
         output.Should().Contain("public static string PackageId => \"test-package-id\";");
         output.Should().Contain("public static string PackageName => \"test-package\";");
-        output.Should().Contain("public static Version PackageVersion { get; }");
+        output.Should().Contain("public static global::System.Version PackageVersion { get; }");
     }
 
     [Fact]
@@ -446,7 +438,7 @@ public class TemplateEmitterTests
         var output = EmitTemplate(Template("Asset", [Field("owner", DamlPrimitive.Party)]));
 
         output.Should().Contain(
-            "public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);");
+            "public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);");
     }
 
     [Fact]
@@ -512,9 +504,9 @@ public class TemplateEmitterTests
             Field("count", DamlPrimitive.Int64),
         ]));
 
-        output.Should().Contain("public DamlRecord ToRecord()");
-        output.Should().Contain("DamlField.Create(\"name\", new DamlText(Name))");
-        output.Should().Contain("DamlField.Create(\"count\", new DamlInt64(Count))");
+        output.Should().Contain("public global::Daml.Runtime.Data.DamlRecord ToRecord()");
+        output.Should().Contain("global::Daml.Runtime.Data.DamlField.Create(\"name\", new global::Daml.Runtime.Data.DamlText(Name))");
+        output.Should().Contain("global::Daml.Runtime.Data.DamlField.Create(\"count\", new global::Daml.Runtime.Data.DamlInt64(Count))");
     }
 
     [Fact]
@@ -526,9 +518,9 @@ public class TemplateEmitterTests
             Field("amount", DamlPrimitive.Numeric),
         ]));
 
-        output.Should().Contain("public static Status FromRecord(DamlRecord record)");
-        output.Should().Contain("IsActive: record.GetRequiredField(\"isActive\").As<DamlBool>().Value");
-        output.Should().Contain("Amount: record.GetRequiredField(\"amount\").As<DamlNumeric>().Value");
+        output.Should().Contain("public static Status FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
+        output.Should().Contain("IsActive: record.GetRequiredField(\"isActive\").As<global::Daml.Runtime.Data.DamlBool>().Value");
+        output.Should().Contain("Amount: record.GetRequiredField(\"amount\").As<global::Daml.Runtime.Data.DamlNumeric>().Value");
     }
 
     [Fact]
@@ -541,7 +533,7 @@ public class TemplateEmitterTests
                 [new DamlPrimitiveType(DamlPrimitive.Text)])),
         ]));
 
-        output.Should().Contain("new DamlList(Tags.Select(x => (DamlValue)new DamlText(x)).ToList())");
+        output.Should().Contain("new global::Daml.Runtime.Data.DamlList(Tags.Select(x => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(x)).ToList())");
     }
 
     [Fact]
@@ -554,7 +546,7 @@ public class TemplateEmitterTests
                 [new DamlPrimitiveType(DamlPrimitive.Text)])),
         ]));
 
-        output.Should().Contain("MaybeText is { } __MaybeText ? new DamlOptional(new DamlText(__MaybeText)) : DamlOptional.None");
+        output.Should().Contain("MaybeText is { } __MaybeText ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlText(__MaybeText)) : global::Daml.Runtime.Data.DamlOptional.None");
     }
 
     [Fact]
@@ -562,8 +554,8 @@ public class TemplateEmitterTests
     {
         var output = EmitTemplate(Template("EmptyTemplate"));
 
-        output.Should().Contain("public sealed partial record EmptyTemplate : ITemplate");
-        output.Should().Contain("public DamlRecord ToRecord()");
+        output.Should().Contain("public sealed partial record EmptyTemplate : global::Daml.Runtime.Contracts.ITemplate");
+        output.Should().Contain("public global::Daml.Runtime.Data.DamlRecord ToRecord()");
         output.Should().Contain("DamlRecord.Create(");
     }
 
@@ -583,8 +575,8 @@ public class TemplateEmitterTests
         var output = EmitTemplate(
             Template("Keyed", [Field("owner", DamlPrimitive.Party)], key: new DamlPrimitiveType(DamlPrimitive.Party)));
 
-        output.Should().Contain("IHasKey<Keyed, Party>");
-        output.Should().Contain("KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
+        output.Should().Contain("global::Daml.Runtime.Contracts.IHasKey<Keyed, global::Daml.Runtime.Data.Party>");
+        output.Should().Contain("KeyDecoder = value => global::Daml.Runtime.Data.Party.FromDamlValue(value.As<global::Daml.Runtime.Data.DamlParty>()),");
     }
 
     [Fact]
@@ -633,7 +625,7 @@ public class TemplateEmitterTests
         var output = EmitTemplate(Template("Submittable", [Field("owner", DamlPrimitive.Party)]));
 
         output.Should().Contain("public static class SubmittableSubmissionExtensions");
-        output.Should().Contain("public static Task<ExerciseOutcome<ContractId<Submittable>>> TryCreateAsync(");
+        output.Should().Contain("public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Submittable>>> TryCreateAsync(");
     }
 
     [Fact]
@@ -663,8 +655,8 @@ public class TemplateEmitterTests
         output.Should().NotContain("Gets the package version");
 
         output.Should().Contain("public sealed partial record Documented");
-        output.Should().Contain("public static Identifier TemplateId { get; }");
-        output.Should().Contain("IHasKey<Documented, Party>");
+        output.Should().Contain("public static global::Daml.Runtime.Data.Identifier TemplateId { get; }");
+        output.Should().Contain("global::Daml.Runtime.Contracts.IHasKey<Documented, global::Daml.Runtime.Data.Party>");
     }
 
     [Fact]
@@ -679,13 +671,14 @@ public class TemplateEmitterTests
         };
         var options = Options();
         var package = Package(module);
-        var context = PackageEmitContext.ForPackage(package, options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var party = new PartyAnalysis();
         var recordSerialization = new RecordSerializationEmitter(context, resolver, options, mapper);
         var choiceEmitter = new ChoiceEmitter(context, resolver, options, mapper, party);
-        var submissionExtensions = new SubmissionExtensionsEmitter(context, options, party);
+        var submissionExtensions = new SubmissionExtensionsEmitter(options, party);
         var emitter = new TemplateEmitter(context, resolver, recordSerialization, choiceEmitter, submissionExtensions, options);
 
         var template = Template("Account", [Field("owner", DamlPrimitive.Party)]).Template;
@@ -696,20 +689,16 @@ public class TemplateEmitterTests
             ArgumentType = new DamlTypeRef("", ModuleName, "TransferArgs"),
             ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
         };
-        var argDataType = new DamlDataType
-        {
-            Name = "TransferArgs",
-            Definition = new DamlRecordDefinition([Field("newOwner", DamlPrimitive.Party)]),
-        };
+        var argumentRecord = new DamlRecordDefinition([Field("newOwner", DamlPrimitive.Party)]);
 
         var sb = new StringBuilder();
-        emitter.WriteNestedChoiceArgumentType(new IndentWriter(sb), template, choice, argDataType);
+        emitter.WriteNestedChoiceArgumentType(new IndentWriter(sb), template, choice, argumentRecord);
         var output = sb.ToString();
 
         output.Should().Contain("public sealed partial record Account");
         output.Should().Contain("public sealed record Transfer(");
-        output.Should().Contain("public DamlRecord ToRecord()");
-        output.Should().Contain("public static Transfer FromRecord(DamlRecord record)");
+        output.Should().Contain("public global::Daml.Runtime.Data.DamlRecord ToRecord()");
+        output.Should().Contain("public static Transfer FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
     }
 
     [Fact]
@@ -749,8 +738,8 @@ public class TemplateEmitterTests
         var files = CreateGenerator(options).Generate(CreateTestDar(module));
 
         var templateFiles = files
-            .Where(f => f.RelativePath.EndsWith("IncludeMe.cs", StringComparison.Ordinal)
-                     || f.RelativePath.EndsWith("ExcludeMe.cs", StringComparison.Ordinal))
+            .Where(f => f.RelativePath.EndsWith("IncludeMe.cs", global::System.StringComparison.Ordinal)
+                     || f.RelativePath.EndsWith("ExcludeMe.cs", global::System.StringComparison.Ordinal))
             .ToList();
         templateFiles.Should().HaveCount(1);
         templateFiles[0].RelativePath.Should().EndWith("IncludeMe.cs");

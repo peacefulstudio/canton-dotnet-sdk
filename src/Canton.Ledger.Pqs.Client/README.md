@@ -8,10 +8,12 @@ PQS exposes the ledger state as a PostgreSQL database. This package provides a s
 
 The query surface itself — `IPqsClient`, the `Filter`/`PqsFilter` DSL, `PqsPage` and `InterfaceContract<TInterface, TView>` — is declared in `Canton.Ledger.Abstractions`, so code written against `IPqsClient` (and the `FakePqsClient` in `Canton.Ledger.Testing`) needs no PostgreSQL dependency. This package supplies `PqsClient`, the Npgsql-backed implementation, plus its options, health check and DI wiring.
 
+`Filter` builds a transport-neutral predicate tree in `Canton.Ledger.Abstractions`; this package renders it to parameterized SQL. `FakePqsClient` evaluates the same tree in memory. Upgrade `Canton.Ledger.Pqs.Client` and `Canton.Ledger.Abstractions` together: an older `Canton.Ledger.Pqs.Client` next to a newer `Canton.Ledger.Abstractions` raises `MissingMethodException` on its first filtered query.
+
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Pqs.Client --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.Pqs.Client --version 0.6.0-preview.4
 ```
 
 ## Usage
@@ -81,6 +83,9 @@ var large = await pqsClient.QueryAsync<Agreement>(
         && a.Limits["daily"] > 10
         && a.State is AgreementState.Accepted));
 ```
+
+`==` and `!=` also work on an `Optional` enum field (`o => o.MaybeSide == Side.Buy`), where `!=` still matches a row whose field is `None`.
+A predicate that reaches a member of a type the code generator did not emit, such as `string.Length`, a collection's `Count` or `Party.Value`, throws `ArgumentException` ("Unsupported expression in a PQS filter"), like every other unsupported construct.
 
 ### Fetching a Single Contract
 

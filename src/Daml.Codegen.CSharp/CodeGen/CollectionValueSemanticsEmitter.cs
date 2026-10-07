@@ -65,7 +65,7 @@ internal sealed record ValueMember(
 /// members would reorder the fields it decodes into. Every member is therefore redeclared, in
 /// Daml field order, and the parameter list carries no <c>DamlFieldAttribute</c>.
 /// </remarks>
-internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context, CodeGenOptions options)
+internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
 {
     /// <summary>
     /// Whether <paramref name="members"/> carries a collection, and so whether
@@ -88,22 +88,11 @@ internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context
     /// Whether the record has a record base whose equality and hash code the emitted overrides
     /// must fold in — true for a variant constructor, false for a standalone record.
     /// </param>
-    /// <param name="nestedArgTypeNames">
-    /// The names <see cref="ChoiceEmitter.GetNestedChoiceArgumentTypeNames"/> resolved for the
-    /// enclosing template's choices, so a same-package choice-argument record nested inside the
-    /// template partial that happens to be named <c>DamlFieldAttribute</c> gets root-qualified in
-    /// a redeclared member's attribute instead of shadowing the runtime
-    /// <see cref="Daml.Runtime.Data.DamlFieldAttribute"/>; <c>null</c> qualifies through the
-    /// ordinary <see cref="TypeReferenceQualifier"/>. A variant constructor's single <c>Value</c>
-    /// member never carries a <see cref="ValueMember.DamlFieldName"/>, so this is unused for that
-    /// caller.
-    /// </param>
     internal void Write(
         IndentWriter indent,
         string selfType,
         IReadOnlyList<ValueMember> members,
-        bool derivesFromRecord,
-        IReadOnlySet<string>? nestedArgTypeNames = null)
+        bool derivesFromRecord)
     {
         if (!NeedsValueSemantics(members))
         {
@@ -116,19 +105,19 @@ internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context
 
         foreach (var member in members)
         {
-            WriteRedeclaredProperty(indent, member, nestedArgTypeNames);
+            WriteRedeclaredProperty(indent, member);
         }
 
         WriteEquals(indent, selfType, members, derivesFromRecord);
         WriteGetHashCode(indent, members, derivesFromRecord);
     }
 
-    private void WriteRedeclaredProperty(IndentWriter indent, ValueMember member, IReadOnlySet<string>? nestedArgTypeNames)
+    private void WriteRedeclaredProperty(IndentWriter indent, ValueMember member)
     {
         if (member.Shape == CollectionShape.None)
         {
             WriteSummary(indent, member.Summary);
-            WriteDamlFieldAttribute(indent, member, nestedArgTypeNames);
+            WriteDamlFieldAttribute(indent, member);
             indent.AppendLine($"public {member.CSharpType} {member.Name} {{ get; init; }} = {member.Name};");
             indent.AppendLine();
             return;
@@ -142,7 +131,7 @@ internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context
             indent,
             $"{member.Summary} Copied when this value is constructed and on <c>init</c>, so a later "
             + "change to the caller's collection cannot alter this value's equality or hash code.");
-        WriteDamlFieldAttribute(indent, member, nestedArgTypeNames);
+        WriteDamlFieldAttribute(indent, member);
         indent.AppendLine($"public {member.CSharpType} {member.Name}");
         indent.AppendLine("{");
         indent.Indent();
@@ -161,11 +150,11 @@ internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context
         }
     }
 
-    private void WriteDamlFieldAttribute(IndentWriter indent, ValueMember member, IReadOnlySet<string>? nestedArgTypeNames)
+    private static void WriteDamlFieldAttribute(IndentWriter indent, ValueMember member)
     {
         if (member.DamlFieldName is { } damlFieldName)
         {
-            indent.AppendLine($"[{DamlFieldAttributeSyntax(damlFieldName, nestedArgTypeNames)}]");
+            indent.AppendLine($"[{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlFieldAttribute)}(\"{damlFieldName}\")]");
         }
     }
 
@@ -216,7 +205,7 @@ internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context
         indent.AppendLine("public override int GetHashCode()");
         indent.AppendLine("{");
         indent.Indent();
-        indent.AppendLine($"var hash = new {context.Qualifier.Qualify("HashCode")}();");
+        indent.AppendLine($"var hash = new {TypeReferenceQualifier.Qualify("HashCode")}();");
         if (derivesFromRecord)
         {
             indent.AppendLine("hash.Add(base.GetHashCode());");
@@ -234,24 +223,19 @@ internal sealed class CollectionValueSemanticsEmitter(PackageEmitContext context
     private string MemberEqualityClause(ValueMember member) => member.Shape switch
     {
         CollectionShape.None =>
-            $"{context.Qualifier.Qualify("EqualityComparer")}<{member.CSharpType}>.Default.Equals({member.Name}, other.{member.Name})",
+            $"{TypeReferenceQualifier.Qualify("EqualityComparer")}<{member.CSharpType}>.Default.Equals({member.Name}, other.{member.Name})",
         _ => $"{Collections}.Equal({member.Name}, other.{member.Name})",
     };
 
-    private string MemberHashOperand(ValueMember member) => member.Shape switch
+    private static string MemberHashOperand(ValueMember member) => member.Shape switch
     {
         CollectionShape.None => member.Name,
         _ => $"{Collections}.Hash({member.Name})",
     };
 
-    private string Copy(string expression) => $"{Collections}.Copy({expression})";
+    private static string Copy(string expression) => $"{Collections}.Copy({expression})";
 
-    private string Collections => context.Qualifier.Qualify(RuntimeTypeNames.DamlFieldCollections);
-
-    private string DamlFieldAttributeSyntax(string damlFieldName, IReadOnlySet<string>? nestedArgTypeNames) =>
-        nestedArgTypeNames?.Contains(RuntimeTypeNames.DamlFieldAttribute) == true
-            ? $"{Identifiers.GlobalQualified(RuntimeNamespaces.Data, RuntimeTypeNames.DamlFieldAttribute)}(\"{damlFieldName}\")"
-            : $"{context.Qualifier.Qualify(RuntimeTypeNames.DamlFieldAttribute)}(\"{damlFieldName}\")";
+    private static string Collections => TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlFieldCollections);
 
     private static string BackingFieldName(string memberName)
     {

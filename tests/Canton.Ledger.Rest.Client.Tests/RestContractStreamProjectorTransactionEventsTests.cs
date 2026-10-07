@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using Canton.Ledger.Abstractions;
 using System.Text.Json;
@@ -19,7 +20,17 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestContractStreamProjectorTransactionEventsTests
 {
-    private sealed record TemplateMarker : ITemplate, IDamlRecord<TemplateMarker>, IHasKey<TemplateMarker, Party>
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TemplateMarker>();
+        GeneratedTypeReaders.ForKey<TemplateMarker, Party>();
+        GeneratedTypeReaders.ForChoices<TemplateMarker>();
+        GeneratedTypeReaders.ForRecord<ScalarKeyedMarker>();
+        GeneratedTypeReaders.ForKey<ScalarKeyedMarker, Party>();
+    }
+
+    private sealed record TemplateMarker : ITemplate, IDamlRecord<TemplateMarker>, IHasChoices<TemplateMarker>, IHasKey<TemplateMarker, Party>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("tmpl-pkg", "Sample.Token", "EventsHolding");
         public static string PackageId => "tmpl-pkg";
@@ -50,6 +61,8 @@ public class RestContractStreamProjectorTransactionEventsTests
             ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
             ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive];
     }
 
     private sealed record ScalarKeyedMarker : ITemplate, IDamlRecord<ScalarKeyedMarker>, IHasKey<ScalarKeyedMarker, Party>
@@ -312,7 +325,7 @@ public class RestContractStreamProjectorTransactionEventsTests
     }
 
     [Fact]
-    public void ProjectTransactionEvents_surfaces_a_template_mismatch_as_Unclassified()
+    public void ProjectTransactionEvents_carries_the_payloads_of_an_exercised_choice_no_loaded_type_declares_as_raw_json()
     {
         var transaction = TransactionFrom(
             """
@@ -320,47 +333,20 @@ public class RestContractStreamProjectorTransactionEventsTests
               "update": {
                 "Transaction": {
                   "value": {
-                    "offset": "7",
+                    "offset": "9",
                     "synchronizerId": "sync-1",
                     "events": [
                       {
-                        "CreatedEvent": {
-                          "offset": "7",
-                          "contractId": "00other",
-                          "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
-                          "createArgument": {}
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-            """);
-
-        var projected = RestContractStreamProjector.ProjectTransactionEvents<TemplateMarker>(transaction).Should().ContainSingle().Subject;
-
-        var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        unclassified.Kind.Should().Be(UnclassifiedKind.CreatedEvent);
-    }
-
-    [Fact]
-    public void ProjectTransactionEvents_surfaces_a_missing_synchronizer_id_as_Unclassified()
-    {
-        var transaction = TransactionFrom(
-            """
-            {
-              "update": {
-                "Transaction": {
-                  "value": {
-                    "offset": "7",
-                    "events": [
-                      {
-                        "CreatedEvent": {
-                          "offset": "7",
+                        "ExercisedEvent": {
+                          "offset": "9",
                           "contractId": "00holding",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
-                          "createArgument": {}
+                          "choice": "Mystery",
+                          "choiceArgument": {"reason": "expired"},
+                          "actingParties": ["alice::ns1"],
+                          "consuming": false,
+                          "witnessParties": ["alice::ns1"],
+                          "exerciseResult": {"burned": true}
                         }
                       }
                     ]
@@ -372,8 +358,9 @@ public class RestContractStreamProjectorTransactionEventsTests
 
         var projected = RestContractStreamProjector.ProjectTransactionEvents<TemplateMarker>(transaction).Should().ContainSingle().Subject;
 
-        var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        unclassified.Kind.Should().Be(UnclassifiedKind.MissingSynchronizerId);
+        var exercised = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Exercised>().Subject;
+        exercised.ChoiceArgument.Should().Be(new DamlUndecodedJson("""{"reason": "expired"}"""));
+        exercised.ExerciseResult.Should().Be(new DamlUndecodedJson("""{"burned": true}"""));
     }
 
     [Fact]
@@ -536,128 +523,6 @@ public class RestContractStreamProjectorTransactionEventsTests
                 && record.Message.Contains("resume point"));
     }
 
-    [Fact]
-    public void ProjectReassignmentEvents_projects_a_matching_assigned_event()
-    {
-        var reassignment = ReassignmentFrom(
-            """
-            {
-              "update": {
-                "Reassignment": {
-                  "value": {
-                    "offset": "20",
-                    "events": [
-                      {
-                        "JsAssignmentEvent": {
-                          "source": "sync-1",
-                          "target": "sync-2",
-                          "reassignmentId": "reassign-1",
-                          "reassignmentCounter": "3",
-                          "createdEvent": {
-                            "offset": "20",
-                            "contractId": "00holding",
-                            "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
-                            "createArgument": {},
-                            "witnessParties": ["alice::ns1"]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-            """);
-
-        var projected = RestContractStreamProjector.ProjectReassignmentEvents<TemplateMarker>(reassignment).Should().ContainSingle().Subject;
-
-        var assigned = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Assigned>().Subject;
-        assigned.ContractId.Value.Should().Be("00holding");
-        assigned.Source.Should().Be(new SynchronizerId("sync-1"));
-        assigned.Target.Should().Be(new SynchronizerId("sync-2"));
-        assigned.ReassignmentId.Should().Be("reassign-1");
-        assigned.ReassignmentCounter.Should().Be(3L);
-    }
-
-    [Fact]
-    public void ProjectReassignmentEvents_projects_a_matching_unassigned_event()
-    {
-        var reassignment = ReassignmentFrom(
-            """
-            {
-              "update": {
-                "Reassignment": {
-                  "value": {
-                    "offset": "21",
-                    "events": [
-                      {
-                        "JsUnassignedEvent": {
-                          "value": {
-                            "source": "sync-1",
-                            "target": "sync-2",
-                            "contractId": "00holding",
-                            "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
-                            "reassignmentId": "reassign-2",
-                            "reassignmentCounter": "4",
-                            "offset": "21",
-                            "witnessParties": ["alice::ns1"]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-            """);
-
-        var projected = RestContractStreamProjector.ProjectReassignmentEvents<TemplateMarker>(reassignment).Should().ContainSingle().Subject;
-
-        var unassigned = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unassigned>().Subject;
-        unassigned.ContractId.Value.Should().Be("00holding");
-        unassigned.Source.Should().Be(new SynchronizerId("sync-1"));
-        unassigned.Target.Should().Be(new SynchronizerId("sync-2"));
-        unassigned.ReassignmentId.Should().Be("reassign-2");
-        unassigned.ReassignmentCounter.Should().Be(4L);
-    }
-
-    [Fact]
-    public void ProjectReassignmentEvents_surfaces_a_template_mismatch_on_unassigned_as_Unclassified()
-    {
-        var reassignment = ReassignmentFrom(
-            """
-            {
-              "update": {
-                "Reassignment": {
-                  "value": {
-                    "offset": "21",
-                    "events": [
-                      {
-                        "JsUnassignedEvent": {
-                          "value": {
-                            "source": "sync-1",
-                            "target": "sync-2",
-                            "contractId": "00holding",
-                            "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
-                            "reassignmentId": "reassign-2",
-                            "reassignmentCounter": "4",
-                            "offset": "21"
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-            """);
-
-        var projected = RestContractStreamProjector.ProjectReassignmentEvents<TemplateMarker>(reassignment).Should().ContainSingle().Subject;
-
-        var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        unclassified.Kind.Should().Be(UnclassifiedKind.UnassignedEvent);
-    }
-
     [Theory]
     [InlineData("not-a-number", "3")]
     [InlineData("20", "not-a-number")]
@@ -814,6 +679,53 @@ public class RestContractStreamProjectorTransactionEventsTests
             .Which.Kind.Should().Be(UnclassifiedKind.ArchivedEvent);
         projected[1].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>()
             .Which.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        loggerFactory.Records.Should().ContainSingle(record => record.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public void ProjectTransactionEvents_surfaces_an_archived_event_without_a_contractId_as_Unclassified_DecodeFailure_and_keeps_projecting()
+    {
+        var transaction = TransactionFrom(
+            """
+            {
+              "update": {
+                "Transaction": {
+                  "value": {
+                    "offset": "8",
+                    "synchronizerId": "sync-1",
+                    "events": [
+                      {
+                        "ArchivedEvent": {
+                          "offset": "9",
+                          "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
+                          "witnessParties": ["alice::ns1"]
+                        }
+                      },
+                      {
+                        "ArchivedEvent": {
+                          "offset": "10",
+                          "contractId": "00holding",
+                          "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
+                          "witnessParties": ["alice::ns1"]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            """);
+        var loggerFactory = new CapturingLoggerFactory();
+
+        var projected = RestContractStreamProjector
+            .ProjectTransactionEvents<TemplateMarker>(transaction, loggerFactory.CreateLogger("test"))
+            .ToList();
+
+        projected.Should().HaveCount(2);
+        var unclassified = projected[0].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        unclassified.Offset.Should().Be(LedgerOffset.At(8));
+        projected[1].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Archived>();
         loggerFactory.Records.Should().ContainSingle(record => record.Level == LogLevel.Warning);
     }
 

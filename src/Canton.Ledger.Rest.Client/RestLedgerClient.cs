@@ -44,9 +44,10 @@ namespace Canton.Ledger.Rest.Client;
 /// tell where one window ended and the next began, so an open-ended tail
 /// (<c>toOffset = null</c>) and a bounded range are the same read with and without a termination
 /// condition. A fault reaches the caller in band, as a terminal <c>StreamError</c>, never as a
-/// throw — the contract every stream on the gRPC transport already honours. A caller cancelling
-/// still gets an <see cref="OperationCanceledException"/>, and a transport failure that never
-/// reached the participant still throws.
+/// throw — the contract every stream on the gRPC transport already honours. A window whose request
+/// gets no answer, a connection failure or a timeout the caller did not cause, ends the stream with
+/// <c>StreamError</c> carrying <see cref="TransportStatus.NoResponse"/>, the first window included.
+/// A caller cancelling still gets an <see cref="OperationCanceledException"/>.
 /// <see cref="Canton.Ledger.Abstractions.ICantonLedgerClient.CompletionStreamAsync"/> runs over that
 /// same loop and is a live tail for the same reason.
 /// <see cref="SubscribeActiveAsync{T}"/> pages too, over <c>POST /v2/state/active-contracts-page</c>
@@ -64,8 +65,6 @@ internal sealed partial class RestLedgerClient
 
     private const long EmptyLedgerEndOffset = 0L;
 
-    private const string MissingLedgerEndBodyMessage =
-        "Server returned a successful response but no body was present for the ledger end.";
     private const string MissingSubmitAndWaitBodyMessage =
         "Server returned a successful response but no body was present for submit-and-wait.";
     private const string MalformedSubmitAndWaitBodyPrefix =
@@ -84,6 +83,8 @@ internal sealed partial class RestLedgerClient
     private const string UnresumableWindowMessage =
         "The stream window carried entries but no offset the next window could resume from, so " +
         "following it would re-read what was just delivered.";
+
+    private const string WindowTimedOutMessage = "The stream window request timed out before the participant answered.";
 
     private const string WindowLimitHint =
         " The participant's entry cap is below the configured window limit; lower " +
@@ -183,43 +184,31 @@ internal sealed partial class RestLedgerClient
     /// An offset that is present as a value yet unusable — empty, negative or non-numeric — is the
     /// opposite case: nothing documents what it means, so inventing an offset there would hand the
     /// caller a silently wrong resumption point. It throws <see cref="LedgerOperationException"/>,
-    /// as does a response with no body at all.
+    /// as does a response with no body at all. Either way the failure carries
+    /// <see cref="TransportStatus.UndecodableBody"/> and <see cref="CommitState.NotCommitted"/>.
     /// </para>
     /// </remarks>
-    public async Task<LedgerOffset> GetLedgerEndAsync(
+    public Task<LedgerOffset> GetLedgerEndAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        _calls.SendAsync<Raw.GetLedgerEndResponse, LedgerOffset>(
+            new RestCall(
+                HttpMethod.Get, LedgerEndPath, Body: null, MissingBody("ledger end"), MalformedBody("ledger end"),
+                LedgerCallKind.Read),
+            ProjectLedgerEnd,
+            timeout,
+            cancellationToken);
+
+    private static LedgerOffset ProjectLedgerEnd(Raw.GetLedgerEndResponse body)
     {
-        var client = _calls.CreateClient();
-
-        using var timeoutSource = RestCallEnvelope.CreateTimeoutSource(timeout, cancellationToken);
-        var requestToken = timeoutSource?.Token ?? cancellationToken;
-
-        using var response = await client.GetAsync(LedgerEndPath, requestToken).ConfigureAwait(false);
-        await RestCallEnvelope.EnsureSuccessAsync(response, requestToken).ConfigureAwait(false);
-
-        var body = await response.Content
-            .ReadFromJsonAsync<Raw.GetLedgerEndResponse>(RestRefitSettings.SerializerOptions, requestToken)
-            .ConfigureAwait(false);
-
-        if (body is null)
-        {
-            throw new LedgerOperationException(MissingLedgerEndBodyMessage);
-        }
-
         if (body.Offset is null)
         {
             return LedgerOffset.At(EmptyLedgerEndOffset);
         }
 
-        if (!RestWireConversions.TryParseOffset(body.Offset, out var offset))
-        {
-            throw new LedgerOperationException(
-                "Server returned a successful response but the ledger end offset was not " +
-                "a non-negative integer.");
-        }
-
-        return LedgerOffset.At(offset);
+        return RestWireConversions.TryParseOffset(body.Offset, out var offset)
+            ? LedgerOffset.At(offset)
+            : throw new JsonException("the ledger end offset was not a non-negative integer.");
     }
 
     /// <inheritdoc />
@@ -235,9 +224,10 @@ internal sealed partial class RestLedgerClient
     /// <see cref="SubscribeAsync{T}"/> from it. A failed page ends the snapshot with a terminal
     /// <see cref="AcsSnapshotEntry{T}.StreamError"/> instead, after the entries of the pages before
     /// it, and mutually exclusive with that checkpoint, so a caller is never handed a resume offset
-    /// for a snapshot it did not receive in full. Resolving the ledger end for a null
-    /// <paramref name="activeAtOffset"/> happens before the snapshot begins, so a failure there
-    /// still throws.
+    /// for a snapshot it did not receive in full. A page whose request gets no answer ends the
+    /// snapshot the same way, with <see cref="TransportStatus.NoResponse"/>. Resolving the ledger
+    /// end for a null <paramref name="activeAtOffset"/> happens before the snapshot begins, so a
+    /// failure there still throws.
     /// </remarks>
     public IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
         RuntimeCommands.SubmitterInfo submitter,
@@ -273,7 +263,7 @@ internal sealed partial class RestLedgerClient
             var disclosure = RestContractStreamProjector.DisclosureOf(entry, _logger);
             foreach (var projected in RestContractStreamProjector.ProjectActiveContractEntry<T>(entry, _logger, effectiveOffset))
             {
-                yield return ToAcsSnapshotEntry(projected, disclosure);
+                yield return ContractSnapshotEntryArms<T>.From(projected, disclosure);
             }
         }
 
@@ -342,7 +332,7 @@ internal sealed partial class RestLedgerClient
                 continue;
             }
 
-            foreach (var projected in ProjectUpdate<T>(update))
+            foreach (var projected in RestContractStreamProjector.ProjectUpdate<T>(update, _logger))
             {
                 yield return projected;
             }
@@ -374,51 +364,6 @@ internal sealed partial class RestLedgerClient
 
         return RestWireConversions.TryParseOffset(wireOffset, out var offset) ? offset : null;
     }
-
-    private IEnumerable<ContractStreamEvent<T>> ProjectUpdate<T>(WireGetUpdatesResponse update)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        if (update.Update?.Transaction is { } transaction)
-        {
-            foreach (var projected in RestContractStreamProjector.ProjectTransactionEvents<T>(transaction, _logger))
-            {
-                yield return projected;
-            }
-        }
-        else if (update.Update?.Reassignment is { } reassignment)
-        {
-            foreach (var projected in RestContractStreamProjector.ProjectReassignmentEvents<T>(reassignment, _logger))
-            {
-                yield return projected;
-            }
-        }
-        else if (update.Update?.OffsetCheckpoint is { } checkpoint)
-        {
-            yield return new ContractStreamEvent<T>.Checkpoint(LedgerOffset.At(RestWireConversions.ParseOffset(checkpoint.Offset)));
-        }
-        else
-        {
-            var variant = update.Update?.TopologyTransaction is not null ? nameof(update.Update.TopologyTransaction) : "Unknown";
-            LogStreamVariantSkipped(_logger, typeof(T).Name, variant);
-        }
-    }
-
-    private static AcsSnapshotEntry<T> ToAcsSnapshotEntry<T>(
-        ContractStreamEvent<T> entry, RuntimeCommands.DisclosedContract? disclosure)
-        where T : ITemplate, IDamlRecord<T> => entry switch
-    {
-        ContractStreamEvent<T>.Created created => new AcsSnapshotEntry<T>.Created(
-            created.ContractId, created.Payload, created.Key, created.Offset, created.SynchronizerId, created.WitnessParties)
-        {
-            Disclosure = disclosure,
-        },
-        ContractStreamEvent<T>.Unassigned unassigned => new AcsSnapshotEntry<T>.Unclassified(
-            unassigned.Offset, UnclassifiedKind.UnassignedEvent),
-        ContractStreamEvent<T>.Unclassified unclassified => new AcsSnapshotEntry<T>.Unclassified(
-            unclassified.Offset, unclassified.Kind, unclassified.RawKind),
-        _ => throw new InvalidOperationException(
-            $"Active-contract snapshot produced an unexpected entry variant: {entry.GetType().Name}"),
-    };
 
     private readonly record struct StreamWindow<TEntry>(IReadOnlyList<TEntry> Entries, StreamFault? Fault)
         where TEntry : class
@@ -599,20 +544,36 @@ internal sealed partial class RestLedgerClient
     private async Task<WindowBody> PostWindowAsync(
         string requestUri, object request, CancellationToken cancellationToken)
     {
-        var client = _calls.CreateClient();
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+        try
         {
-            Content = JsonContent.Create(request, options: RestRefitSettings.SerializerOptions),
-        };
-        using var response = await client.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+            var client = _calls.CreateClient();
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = JsonContent.Create(request, options: RestRefitSettings.SerializerOptions),
+            };
+            using var response = await client.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            return new WindowBody(null, await WindowFaultAsync(response, cancellationToken).ConfigureAwait(false));
+            if (!response.IsSuccessStatusCode)
+            {
+                return new WindowBody(null, await WindowFaultAsync(response, cancellationToken).ConfigureAwait(false));
+            }
+
+            return new WindowBody(
+                await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false), null);
         }
+        catch (Exception failure) when (RestCallEnvelope.IsNoAnswerFailure(failure, cancellationToken))
+        {
+            return new WindowBody(null, WindowNoResponseFault(failure));
+        }
+    }
 
-        return new WindowBody(
-            await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false), null);
+    private StreamFault WindowNoResponseFault(Exception failure)
+    {
+        var message = failure is HttpRequestException ? failure.Message : WindowTimedOutMessage;
+
+        LogStreamWindowFailed(_logger, new TransportStatus.NoResponse(), message);
+        return StreamFault.FromTransport(
+            new TransportStatus.NoResponse(), message, category: null, errorId: null, sourceException: failure);
     }
 
     private async Task<StreamFault> WindowFaultAsync(HttpResponseMessage response, CancellationToken cancellationToken)
@@ -644,9 +605,12 @@ internal sealed partial class RestLedgerClient
     /// failure: do not resubmit, and read the transaction by its
     /// <see cref="ExerciseOutcome{T}.CommittedUndecodable.UpdateId"/> when it carries one. The same
     /// holds when the committed transaction's choice result cannot be read as
-    /// <typeparamref name="TResult"/>: <typeparamref name="TResult"/> has no Daml mapping, or the
-    /// transaction has zero or more than one exercised event for <paramref name="command"/>'s choice
-    /// (e.g. a nonconsuming choice that only forks other choices).
+    /// <typeparamref name="TResult"/>, for example because <typeparamref name="TResult"/> has no Daml
+    /// mapping. The exercised event is the one for <paramref name="command"/>'s contract id, choice
+    /// and template or interface, so the same choice exercised on another contract in the
+    /// transaction is not a match. A transaction with no such exercised event throws
+    /// <see cref="InvalidOperationException"/>: a custom writer dropped the exercised events or the
+    /// transaction was requested without them, never a ledger answer.
     /// </remarks>
     public Task<ExerciseOutcome<TResult>> TryExerciseAsync<TResult>(
         RuntimeCommands.ExerciseCommand command,
@@ -678,7 +642,7 @@ internal sealed partial class RestLedgerClient
                 timeout,
                 cancellationToken)
             .ConfigureAwait(false);
-        return RestTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command.Choice);
+        return RestTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command);
     }
 
     /// <inheritdoc />
@@ -748,7 +712,7 @@ internal sealed partial class RestLedgerClient
         return _calls.SendAsync<Raw.SubmitAndWaitResponse, SubmitAndWaitResult>(
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitPath, commands,
-                MissingSubmitAndWaitBodyMessage, MalformedSubmitAndWaitBodyPrefix),
+                MissingSubmitAndWaitBodyMessage, MalformedSubmitAndWaitBodyPrefix, LedgerCallKind.EffectAppliedWrite),
             body => ProjectSubmitAndWaitResult(commands, body),
             timeout,
             cancellationToken);
@@ -835,15 +799,24 @@ internal sealed partial class RestLedgerClient
         return _calls.TrySendAsync<Raw.SubmitAndWaitForTransactionResponse, TProjection>(
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitForTransactionPath, requestBody,
-                MissingTransactionMessage, MalformedTransactionPrefix),
+                MissingTransactionMessage, MalformedTransactionPrefix, LedgerCallKind.EffectAppliedWrite),
             body => body.Transaction is { } transaction
                 ? new ExerciseOutcome<TProjection>.One(project(transaction))
                 : new ExerciseOutcome<TProjection>.CommittedUndecodable(
                     UpdateId: null, MissingTransactionMessage, new InvalidOperationException(MissingTransactionMessage)),
             body => NonEmptyOrNull(body.Transaction?.UpdateId),
             timeout,
-            cancellationToken);
+            cancellationToken,
+            (duplicate, token) => ResolveRetriedDuplicateAsync(
+                requestBody.Commands.CommandId,
+                transactionFormat ?? PointReadFormatOf(submission),
+                duplicate,
+                project,
+                token));
     }
+
+    private static Raw.TransactionFormat? PointReadFormatOf(RuntimeCommands.CommandsSubmission submission) =>
+        SubmitterFrom(submission) is { } submitter ? RestSubscribeRequestBuilder.BuildTransactionFormat(submitter) : null;
 
     private static string? NonEmptyOrNull(string? value) =>
         string.IsNullOrEmpty(value) ? null : value;
@@ -867,9 +840,6 @@ internal sealed partial class RestLedgerClient
     public void Dispose()
     {
     }
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Subscribe stream for {TemplateType} skipped variant {Variant}")]
-    private static partial void LogStreamVariantSkipped(ILogger logger, string templateType, string variant);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Stream window request failed with status {Status} — surfaced in-band as a terminal StreamError: {Detail}")]
     private static partial void LogStreamWindowFailed(ILogger logger, TransportStatus status, string detail);

@@ -26,8 +26,8 @@ internal sealed class ConnectionCountingListener : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _stop.CancelAsync();
-        _listener.Stop();
         await _acceptLoop;
+        _listener.Stop();
         _stop.Dispose();
     }
 

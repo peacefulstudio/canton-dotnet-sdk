@@ -15,26 +15,26 @@ public sealed partial record Membership
     /// Choice argument type for Renew.
     /// </summary>
     public sealed record Renew(
-        [property: DamlFieldAttribute("newTier")] long NewTier
-    ) : IDamlRecord<Renew>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("newTier")] long NewTier
+    ) : global::Daml.Runtime.Data.IDamlRecord<Renew>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("newTier", new DamlInt64(NewTier))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("newTier", new global::Daml.Runtime.Data.DamlInt64(NewTier))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Renew FromRecord(DamlRecord record) => new Renew(
-            NewTier: record.GetRequiredField("newTier").As<DamlInt64>().Value
+        public static Renew FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Renew(
+            NewTier: record.GetRequiredField("newTier").As<global::Daml.Runtime.Data.DamlInt64>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("newTier", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newTier"), context.Field("newTier")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("newTier", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newTier"), context.Field("newTier")))
             );
         }
 

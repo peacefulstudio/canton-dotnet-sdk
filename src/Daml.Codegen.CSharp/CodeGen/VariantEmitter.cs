@@ -7,16 +7,16 @@ namespace Daml.Codegen.CSharp.CodeGen;
 
 internal sealed class VariantEmitter(
     PackageEmitContext context,
-    ICrossPackageResolver resolver,
+    DarCrossPackageResolver resolver,
     CodeGenOptions options,
     DamlTypeMapper mapper)
 {
-    private readonly CollectionValueSemanticsEmitter _valueSemantics = new(context, options);
+    private readonly CollectionValueSemanticsEmitter _valueSemantics = new(options);
 
     internal void WriteVariantType(IndentWriter indent, DamlDataType dataType, DamlVariantDefinition variant)
     {
         indent.Require("System");
-        var className = EmitterHelpers.SanitizeIdentifier(dataType.Name);
+        var className = context.EmittedTypeName(context.Module.Name, dataType.Name);
         var typeParams = EmitterHelpers.GetTypeParametersDeclaration(dataType.TypeParams);
         var typeParamConstraints = EmitterHelpers.GetTypeParameterConstraints(dataType.TypeParams);
         var fullClassName = $"{className}{typeParams}";
@@ -33,11 +33,12 @@ internal sealed class VariantEmitter(
             EmitterHelpers.WriteTypeParamDocs(indent, dataType.TypeParams);
         }
 
-        var qualifiedDamlValue = context.Qualifier.Qualify(RuntimeTypeNames.DamlValue);
+        var qualifiedDamlValue = TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue);
         var toVariantParameters = EmitterHelpers.SerializeConverterParameters(dataType.TypeParams, qualifiedDamlValue);
-        var fromVariantConverters = EmitterHelpers.DeserializeConverterParameters(dataType.TypeParams, qualifiedDamlValue);
-        var fromVariantParameters = $"{context.Qualifier.Qualify(RuntimeTypeNames.DamlVariant)} variant{Prefixed(fromVariantConverters)}";
+        var fromVariantConverters = EmitterHelpers.DeserializeConverterParametersWithAbsences(dataType.TypeParams, qualifiedDamlValue);
+        var fromVariantParameters = $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlVariant)} variant{Prefixed(fromVariantConverters)}";
         var delegates = EmitterHelpers.ConverterNameMap(dataType.TypeParams);
+        var fromVariantDelegates = EmitterHelpers.ConverterNameMapWithAbsences(dataType.TypeParams);
 
         var variantInterface = InterfaceDeclaration(dataType.TypeParams, className);
         indent.AppendLine("[global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]");
@@ -56,12 +57,12 @@ internal sealed class VariantEmitter(
         {
             indent.AppendLine("/// <summary>Converts to a DamlVariant.</summary>");
         }
-        indent.AppendLine($"public abstract {context.Qualifier.Qualify(RuntimeTypeNames.DamlVariant)} ToVariant({toVariantParameters});");
+        indent.AppendLine($"public abstract {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlVariant)} ToVariant({toVariantParameters});");
         indent.AppendLine();
 
         if (options.GenerateXmlDocs)
         {
-            indent.AppendLine($"/// <summary>Reconstructs {IndefiniteArticleFor(className)} {className} by dispatching on the DamlVariant constructor tag.</summary>");
+            indent.AppendLine($"/// <summary>Reconstructs {IndefiniteArticleFor(className)} {className} by dispatching on the DamlVariant constructor tag.{AbsenceDocSentence(dataType.TypeParams)}</summary>");
         }
         indent.AppendLine($"public static {fullClassName} FromVariant({fromVariantParameters}) =>");
         indent.Indent();
@@ -73,14 +74,14 @@ internal sealed class VariantEmitter(
             var ctorName = VariantConstructorName(ctor.Name, className);
             if (HasVariantPayload(ctor))
             {
-                indent.AppendLine($"\"{ctor.Name}\" => new {ctorName}({mapper.FromValue(ctor.ArgumentType!, "variant.Value", delegates)}),");
+                indent.AppendLine($"\"{ctor.Name}\" => new {ctorName}({mapper.FromValue(ctor.ArgumentType!, "variant.Value", fromVariantDelegates)}),");
             }
             else
             {
                 indent.AppendLine($"\"{ctor.Name}\" => new {ctorName}(),");
             }
         }
-        indent.AppendLine($"_ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, \"Unknown {className} constructor\")");
+        indent.AppendLine($"_ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, \"Unknown {className} constructor\")");
         indent.Dedent();
         indent.AppendLine("};");
         indent.Dedent();
@@ -137,12 +138,12 @@ internal sealed class VariantEmitter(
             indent.AppendLine();
             var payload = hasArg
                 ? mapper.ToValue(ctor.ArgumentType!, "Value", delegates)
-                : $"{context.Qualifier.Qualify(RuntimeTypeNames.DamlUnit)}.Instance";
+                : $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlUnit)}.Instance";
             if (options.GenerateXmlDocs)
             {
                 indent.AppendLine("/// <inheritdoc />");
             }
-            indent.AppendLine($"public override {context.Qualifier.Qualify(RuntimeTypeNames.DamlVariant)} ToVariant({toVariantParameters}) => {context.Qualifier.Qualify(RuntimeTypeNames.DamlVariant)}.Create(\"{ctor.Name}\", {payload});");
+            indent.AppendLine($"public override {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlVariant)} ToVariant({toVariantParameters}) => {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlVariant)}.Create(\"{ctor.Name}\", {payload});");
 
             indent.Dedent();
             indent.AppendLine("}");
@@ -153,33 +154,35 @@ internal sealed class VariantEmitter(
         indent.AppendLine("}");
     }
 
-    private string InterfaceDeclaration(IReadOnlyList<string> typeParams, string className) =>
+    private static string InterfaceDeclaration(IReadOnlyList<string> typeParams, string className) =>
         typeParams.Count == 0
-            ? $" : {context.Qualifier.Qualify(RuntimeTypeNames.IDamlVariant)}<{className}>"
+            ? $" : {TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlVariant)}<{className}>"
             : string.Empty;
 
     private void WriteReadDamlLfJsonMethod(IndentWriter indent, DamlDataType dataType, DamlVariantDefinition variant)
     {
         if (options.GenerateXmlDocs)
         {
-            indent.AppendLine("/// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>");
+            indent.AppendLine($"/// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.{AbsenceDocSentence(dataType.TypeParams)}</summary>");
         }
 
-        var className = EmitterHelpers.SanitizeIdentifier(dataType.Name);
+        var className = context.EmittedTypeName(context.Module.Name, dataType.Name);
         var reservedNames = variant.Constructors
             .Select(ctor => VariantConstructorName(ctor.Name, className))
             .ToHashSet(StringComparer.Ordinal);
         reservedNames.Add(className);
-        reservedNames.UnionWith(context.Qualifier.DeclaredTypeNames);
         var constructorsFieldName = "ExpectedConstructors";
         while (reservedNames.Contains(constructorsFieldName))
             constructorsFieldName += "_";
 
         var readerParameters = dataType.TypeParams.Count == 0
             ? string.Empty
-            : EmitterHelpers.JsonReaderParameters(dataType.TypeParams, DamlTypeMapper.DamlLfElementReaderQualifiedName);
-        var typeVarReaders = EmitterHelpers.ReaderNameMap(dataType.TypeParams);
-        var damlVariantRef = context.Qualifier.Qualify(RuntimeTypeNames.DamlVariant);
+            : EmitterHelpers.JsonReaderParametersWithAbsences(
+                dataType.TypeParams,
+                DamlTypeMapper.DamlLfElementReaderQualifiedName,
+                TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue));
+        var typeVarReaders = EmitterHelpers.ReaderNameMapWithAbsences(dataType.TypeParams);
+        var damlVariantRef = TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlVariant);
         var parameters = "global::System.Text.Json.JsonElement json, "
             + $"{DamlTypeMapper.DamlLfJsonDecodeContextQualifiedName} context{Prefixed(readerParameters)}";
 
@@ -219,16 +222,19 @@ internal sealed class VariantEmitter(
         indent.AppendLine();
     }
 
+    private static string AbsenceDocSentence(IReadOnlyList<string> typeParams) =>
+        typeParams.Count == 0 ? string.Empty : $" {EmitterHelpers.AbsenceParametersDoc}";
+
     private static string Prefixed(string parameters) =>
         string.IsNullOrEmpty(parameters) ? string.Empty : $", {parameters}";
 
-    private static bool HasVariantPayload(DamlVariantConstructor ctor) =>
+    internal static bool HasVariantPayload(DamlVariantConstructor ctor) =>
         ctor.ArgumentType is not null
         && ctor.ArgumentType is not DamlPrimitiveType { Primitive: DamlPrimitive.Unit };
 
     private static string IndefiniteArticleFor(string name) =>
         name.Length > 0 && "aeiou".Contains(char.ToLowerInvariant(name[0])) ? "an" : "a";
 
-    private static string VariantConstructorName(string ctorName, string enclosingTypeName) =>
+    internal static string VariantConstructorName(string ctorName, string enclosingTypeName) =>
         Identifiers.Disambiguate(EmitterHelpers.SanitizeIdentifier(ctorName), enclosingTypeName);
 }

@@ -25,5 +25,5 @@ internal static class EmittedSubmissionShape
     /// its cancellation token.
     /// </summary>
     internal const string ConfigureParameter =
-        "Func<CommandsSubmission, CommandsSubmission>? configure = null,";
+        "global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,";
 }

@@ -4,7 +4,7 @@
     <OutputType>Library</OutputType>
     <UseMicrosoftTestingPlatformRunner>false</UseMicrosoftTestingPlatformRunner>
     <IsPackable>false</IsPackable>
-    <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;CA2255</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
     <ProjectReference Include="..\..\src\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
   </ItemGroup>
 
 </Project>

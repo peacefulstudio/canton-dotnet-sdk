@@ -23,6 +23,44 @@ namespace Canton.Ledger.Abstractions;
 /// and with the transport status code otherwise. A caller cancellation surfaces as an
 /// <see cref="OperationCanceledException"/>.
 /// </para>
+/// <para>
+/// <b>Failure contract.</b> It is the one the ledger client follows, on the gRPC and the JSON Ledger
+/// API transport alike. Every call that does not succeed raises
+/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/> — no connection, no answer within the
+/// deadline, a participant rejection, or a response body that cannot be decoded — carrying the
+/// transport-native <see cref="Daml.Ledger.Abstractions.LedgerOperationException.Status"/>
+/// (<c>Grpc</c> with <c>Unavailable</c> or <c>DeadlineExceeded</c> on gRPC, <c>NoResponse</c> on the JSON
+/// Ledger API, <c>Http</c> for a JSON answer, <c>UndecodableBody</c> for an unreadable one), the
+/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException.Category"/>,
+/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException.ErrorId"/> and
+/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException.Metadata"/> when the participant sent them,
+/// the <see cref="Daml.Ledger.Abstractions.LedgerOperationException.CommitState"/> the kind of call decides,
+/// and the transport's own exception as <see cref="Exception.InnerException"/>. A call that reads — every
+/// <c>Get*</c> and <c>List*</c>, <see cref="ValidateDarAsync(byte[], CancellationToken)"/> and a dry-run
+/// <see cref="UpdateVettedPackagesAsync"/> — commits nothing, so its failure is always
+/// <see cref="Daml.Ledger.Abstractions.CommitState.NotCommitted"/>. A call that changes participant state
+/// reports <see cref="Daml.Ledger.Abstractions.CommitState.Unknown"/> when no answer arrived, takes the
+/// state from the error when the participant answered with one
+/// (<see cref="Daml.Ledger.Abstractions.CommitState.NotCommitted"/> for a structured rejection,
+/// <see cref="Daml.Ledger.Abstractions.CommitState.Unknown"/> for a category of
+/// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, an error with no structured detail, or the
+/// error id <c>SUBMISSION_ALREADY_IN_FLIGHT</c>, and <see cref="Daml.Ledger.Abstractions.CommitState.Committed"/>
+/// for the error id <c>DUPLICATE_COMMAND</c> unless its <c>accepted</c> metadata is <c>"false"</c>), and
+/// reports <see cref="Daml.Ledger.Abstractions.CommitState.Committed"/> when the participant answered 2xx
+/// with a body the client could not decode. A lookup documented to return <see langword="null"/> for an
+/// unknown entity returns it rather than throwing.
+/// </para>
+/// <para>
+/// A caller error — a null or blank argument — throws its usual <see cref="ArgumentException"/> type
+/// synchronously, outside this contract. A failure of the configured token provider propagates unchanged
+/// on gRPC. On the JSON Ledger API the provider runs inside the HTTP pipeline, so an
+/// <see cref="System.Net.Http.HttpRequestException"/> (including a token endpoint that is unreachable or answers
+/// with a non-success status), a <see cref="TimeoutException"/>, or an <see cref="OperationCanceledException"/>
+/// the caller did not cause is reported as <c>NoResponse</c> on a
+/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>; any other provider exception propagates
+/// unchanged. A member the JSON Ledger API serves no route for throws
+/// <see cref="NotSupportedException"/> from the returned task on that transport.
+/// </para>
 /// </remarks>
 public interface IAdminClient
 {
@@ -170,6 +208,11 @@ public interface IAdminClient
     /// <summary>
     /// Lists all Daml-LF packages known to the participant.
     /// </summary>
+    /// <remarks>
+    /// The JSON Ledger API serves no route for this, so the REST implementation throws
+    /// <see cref="NotSupportedException"/> from the returned task; use <see cref="ListVettedPackagesAsync"/>
+    /// or <see cref="ListPackagesAsync"/>, or the gRPC <see cref="IAdminClient"/>.
+    /// </remarks>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<PackageDetails>> ListKnownPackagesAsync(
         CancellationToken cancellationToken = default);

@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.DamlModelBuilder;
@@ -16,15 +17,6 @@ public class InterfaceEmitterTests
     private const string LocalPackageId = "test-package-id";
     private const string ModuleName = "Test.Module";
 
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
-
     private static DamlPackage Package(DamlModule module) =>
         new()
         {
@@ -36,6 +28,17 @@ public class InterfaceEmitterTests
             DependencyReferences = [],
         };
 
+    private static DamlPackage DependencyDeclaring(string packageId, string moduleName, DamlDataType dataType) =>
+        new()
+        {
+            PackageId = packageId,
+            Name = packageId,
+            Version = new Version(1, 0, 0),
+            LfVersion = "2.1",
+            Modules = [new DamlModule { Name = moduleName, Templates = [], DataTypes = [dataType], Interfaces = [] }],
+            DependencyReferences = [],
+        };
+
     private static CodeGenOptions Options(bool generateXmlDocs) =>
         new() { NamespacePrefix = "Test.Package", GenerateXmlDocs = generateXmlDocs };
 
@@ -43,7 +46,8 @@ public class InterfaceEmitterTests
         DamlInterface iface,
         DamlDataType[]? dataTypes = null,
         bool generateXmlDocs = true,
-        DamlInterface[]? siblingInterfaces = null)
+        DamlInterface[]? siblingInterfaces = null,
+        DamlPackage[]? dependencies = null)
     {
         var module = new DamlModule
         {
@@ -53,8 +57,9 @@ public class InterfaceEmitterTests
             Interfaces = [iface, .. siblingInterfaces ?? []],
         };
         var options = Options(generateXmlDocs);
-        var context = PackageEmitContext.ForPackage(Package(module), options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(Package(module), options, dependencies ?? []);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var choiceEmitter = new ChoiceEmitter(context, resolver, options, mapper, new PartyAnalysis());
         var emitter = new InterfaceEmitter(context, mapper, resolver, choiceEmitter, options);
@@ -79,7 +84,7 @@ public class InterfaceEmitterTests
     {
         var output = EmitInterface(Interface("Lockable"));
 
-        output.Should().Contain(": IDamlInterface");
+        output.Should().Contain(": global::Daml.Runtime.Contracts.IDamlInterface");
     }
 
     [Fact]
@@ -87,13 +92,13 @@ public class InterfaceEmitterTests
     {
         var output = EmitInterface(Interface("Holdable"));
 
-        output.Should().Contain("static Identifier IDamlInterface.InterfaceId =>");
+        output.Should().Contain("static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId =>");
         output.Should().Contain("\"test-package-id\"");
         output.Should().Contain("\"Test.Module\"");
         output.Should().Contain("\"Holdable\"");
-        output.Should().Contain("static string IDamlInterface.PackageId =>");
-        output.Should().Contain("static string IDamlInterface.PackageName =>");
-        output.Should().Contain("static Version IDamlInterface.PackageVersion =>");
+        output.Should().Contain("static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId =>");
+        output.Should().Contain("static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName =>");
+        output.Should().Contain("static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion =>");
     }
 
     [Fact]
@@ -102,7 +107,7 @@ public class InterfaceEmitterTests
         var output = EmitInterface(Interface("Holdable"));
 
         output.Should().Contain(
-            "static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier(\"test-package-id\", \"Test.Module\", \"Holdable\"), DamlTypeKind.Interface, \"test-package\");");
+            "static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier(\"test-package-id\", \"Test.Module\", \"Holdable\"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, \"test-package\");");
     }
 
     private static DamlDataType AssetViewRecord() =>
@@ -127,7 +132,7 @@ public class InterfaceEmitterTests
     {
         var output = EmitAssetWithLocalView();
 
-        output.Should().Contain("IHasView<AssetView>");
+        output.Should().Contain("IHasView<global::Test.Package.Test.Module.AssetView>");
     }
 
     [Fact]
@@ -143,7 +148,7 @@ public class InterfaceEmitterTests
     {
         var output = EmitAssetWithLocalView();
 
-        output.Should().Contain("public static ViewDescriptor<IAsset, AssetView> View { get; } = new();");
+        output.Should().Contain("public static global::Daml.Runtime.Contracts.ViewDescriptor<IAsset, global::Test.Package.Test.Module.AssetView> View { get; } = new();");
     }
 
     [Fact]
@@ -177,9 +182,10 @@ public class InterfaceEmitterTests
     public void InterfaceEmitter_emits_the_witness_without_view_properties_for_a_foreign_view_record()
     {
         var output = EmitInterface(
-            Interface("Asset", viewType: new DamlTypeRef("foreign-package-id", "Foreign.Module", "AssetView")));
+            Interface("Asset", viewType: new DamlTypeRef("foreign-package-id", "Foreign.Module", "AssetView")),
+            dependencies: [DependencyDeclaring("foreign-package-id", "Foreign.Module", AssetViewRecord())]);
 
-        output.Should().Contain("public static ViewDescriptor<IAsset, AssetView> View { get; } = new();");
+        output.Should().Contain("public static global::Daml.Runtime.Contracts.ViewDescriptor<IAsset, global::Foreign.Module.AssetView> View { get; } = new();");
         output.Should().NotContain("Owner { get; }");
         output.Should().NotContain("reference equality");
     }
@@ -190,9 +196,10 @@ public class InterfaceEmitterTests
         var output = EmitInterface(
             Interface("Foreign", viewType: new DamlTypeRef("other-package-id", ModuleName, "AssetView")),
             dataTypes: [AssetViewRecord()],
-            siblingInterfaces: [Interface("Asset", viewType: new DamlTypeRef("", ModuleName, "AssetView"))]);
+            siblingInterfaces: [Interface("Asset", viewType: new DamlTypeRef("", ModuleName, "AssetView"))],
+            dependencies: [DependencyDeclaring("other-package-id", ModuleName, AssetViewRecord())]);
 
-        output.Should().Contain("public static ViewDescriptor<IForeign, AssetView> View { get; } = new();");
+        output.Should().Contain("public static global::Daml.Runtime.Contracts.ViewDescriptor<IForeign, global::Test.Module.AssetView> View { get; } = new();");
         output.Should().NotContain("Owner { get; }");
         output.Should().NotContain("reference equality");
     }
@@ -204,7 +211,7 @@ public class InterfaceEmitterTests
             Interface("Coloured", viewType: new DamlTypeRef("", ModuleName, "Colour")),
             dataTypes: [new DamlDataType { Name = "Colour", Definition = new DamlEnumDefinition(["Red"]) }]);
 
-        output.Should().Contain("IHasView<Colour>");
+        output.Should().Contain("IHasView<global::Test.Package.Test.Module.Colour>");
         output.Should().NotContain("ViewDescriptor");
     }
 
@@ -223,7 +230,7 @@ public class InterfaceEmitterTests
                 },
             ]);
 
-        output.Should().Contain("public static ViewDescriptor<IAsset, AssetView> View { get; } = new();");
+        output.Should().Contain("public static global::Daml.Runtime.Contracts.ViewDescriptor<IAsset, global::Test.Package.Test.Module.AssetView> View { get; } = new();");
         output.Should().NotContain("Party View { get; }");
         output.Should().NotContain("reference equality");
     }
@@ -263,7 +270,7 @@ public class InterfaceEmitterTests
             }));
 
         output.Should().Contain("public static class ITransferableExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryTransferAsync(");
     }
 
     [Fact]
@@ -290,7 +297,7 @@ public class InterfaceEmitterTests
                 Observers = DamlPartyAnalysis.Dynamic,
             }));
 
-        output.Should().Contain(": IDamlInterface, IHasChoices<ITransferable>");
+        output.Should().Contain(": global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasChoices<ITransferable>");
     }
 
     [Fact]
@@ -318,8 +325,8 @@ public class InterfaceEmitterTests
             }));
 
         output.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<ITransferable>.Choices { get; } = [ChoiceTransfer];");
-        output.Should().NotContain("public static IReadOnlyList<IChoice> Choices");
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<ITransferable>.Choices { get; } = [ChoiceTransfer];");
+        output.Should().NotContain("public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices");
     }
 
     [Fact]
@@ -347,8 +354,8 @@ public class InterfaceEmitterTests
         output.Should().NotContain("Gets the package version");
 
         output.Should().Contain("public interface IDocumented");
-        output.Should().Contain("static Identifier IDamlInterface.InterfaceId =>");
-        output.Should().Contain("static string IDamlInterface.PackageId =>");
+        output.Should().Contain("static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId =>");
+        output.Should().Contain("static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId =>");
     }
 
     [Fact]

@@ -15,26 +15,26 @@ public sealed partial record GenericResults
     /// Choice argument type for ReturnEither.
     /// </summary>
     public sealed record ReturnEither(
-        [property: DamlFieldAttribute("wantRight")] bool WantRight
-    ) : IDamlRecord<ReturnEither>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("wantRight")] bool WantRight
+    ) : global::Daml.Runtime.Data.IDamlRecord<ReturnEither>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("wantRight", new DamlBool(WantRight))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("wantRight", new global::Daml.Runtime.Data.DamlBool(WantRight))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static ReturnEither FromRecord(DamlRecord record) => new ReturnEither(
-            WantRight: record.GetRequiredField("wantRight").As<DamlBool>().Value
+        public static ReturnEither FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ReturnEither(
+            WantRight: record.GetRequiredField("wantRight").As<global::Daml.Runtime.Data.DamlBool>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("wantRight", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "wantRight"), context.Field("wantRight")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("wantRight", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "wantRight"), context.Field("wantRight")))
             );
         }
 

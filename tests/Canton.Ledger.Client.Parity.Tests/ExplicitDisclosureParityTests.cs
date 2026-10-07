@@ -3,6 +3,7 @@
 
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
+using Daml.Codegen.Testing.Conformance.ContractKeys;
 using Daml.Codegen.Testing.Conformance.Disclosure;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
@@ -90,6 +91,112 @@ public abstract class ExplicitDisclosureParityTests
 
         inspected.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
             "the disclosure lets a party outside the Offer's stakeholders use it");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_hands_an_issuer_the_same_contract_id_template_and_blob_as_its_typed_active_contract_read_without_a_synchronizer()
+    {
+        await using var lane = await OpenDisclosureLaneAsync(TestContext.Current.CancellationToken);
+        var (client, issuer, _) = lane.Capability;
+        var offerCid = await CreateOfferAsync(client, issuer);
+        var fromAcs = (await ActiveOfferAsync(lane, client, issuer, offerCid))
+            .Disclosure.Should().NotBeNull().And.Subject.As<DisclosedContract>();
+
+        var byId = await client.GetDisclosureAsync(
+            offerCid, issuer, cancellationToken: TestContext.Current.CancellationToken);
+
+        byId.Should().NotBeNull();
+        byId!.ContractId.Should().Be(fromAcs.ContractId);
+        byId.TemplateId.Should().Be(Offer.TemplateId);
+        byId.CreatedEventBlob.ToArray().Should().Equal(fromAcs.CreatedEventBlob.ToArray());
+        byId.SynchronizerId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task A_non_stakeholder_exercises_Inspect_on_an_Offer_disclosed_from_the_issuers_by_id_disclosure_read()
+    {
+        await using var lane = await OpenDisclosureLaneAsync(TestContext.Current.CancellationToken);
+        var (client, issuer, reader) = lane.Capability;
+        var offerCid = await CreateOfferAsync(client, issuer);
+        var disclosure = await client.GetDisclosureAsync(
+            offerCid, issuer, cancellationToken: TestContext.Current.CancellationToken);
+
+        var inspected = await client.TrySubmitAndWaitForTransactionAsync(
+            InspectBy(reader, offerCid).WithDisclosedContracts(disclosure!),
+            reader,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        inspected.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the by-id disclosure carries everything the participant needs to resolve the Offer for a non-stakeholder");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_returns_null_for_a_party_that_cannot_see_the_contract()
+    {
+        await using var lane = await OpenDisclosureLaneAsync(TestContext.Current.CancellationToken);
+        var (client, issuer, reader) = lane.Capability;
+        var offerCid = await CreateOfferAsync(client, issuer);
+
+        var disclosure = await client.GetDisclosureAsync(
+            offerCid, reader, cancellationToken: TestContext.Current.CancellationToken);
+
+        disclosure.Should().BeNull("the reader is no stakeholder of the Offer, so the participant does not show it to them");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_returns_null_for_an_archived_contract()
+    {
+        await using var lane = await OpenDisclosureLaneAsync(TestContext.Current.CancellationToken);
+        var (client, issuer, _) = lane.Capability;
+        var stewardCid = await CreateStewardAsync(client, issuer);
+        var revised = await client.TrySubmitAndWaitForTransactionAsync(
+            CommandsSubmission.Single(stewardCid.ReviseCommand(new Steward.Revise("revised charter"))),
+            issuer,
+            cancellationToken: TestContext.Current.CancellationToken);
+        revised.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>("Revise archives the Steward it is exercised on");
+
+        var disclosure = await client.GetDisclosureAsync(
+            stewardCid, issuer, cancellationToken: TestContext.Current.CancellationToken);
+
+        disclosure.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_serves_a_contract_reached_through_an_interface_type_parameter()
+    {
+        await using var lane = await OpenDisclosureLaneAsync(TestContext.Current.CancellationToken);
+        var (client, issuer, _) = lane.Capability;
+        var stewardCid = await CreateStewardAsync(client, issuer);
+
+        var disclosure = await client.GetDisclosureAsync(
+            new ContractId<IStewardship>(stewardCid.Value), issuer, cancellationToken: TestContext.Current.CancellationToken);
+
+        disclosure.Should().NotBeNull();
+        disclosure!.ContractId.Should().Be(stewardCid.Value);
+        disclosure.TemplateId.Should().Be(Steward.TemplateId);
+        disclosure.CreatedEventBlob.Length.Should().BePositive();
+        disclosure.SynchronizerId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_returns_null_for_a_contract_id_the_participant_has_never_seen()
+    {
+        await using var lane = await OpenDisclosureLaneAsync(TestContext.Current.CancellationToken);
+        var (client, issuer, _) = lane.Capability;
+        var offerCid = await CreateOfferAsync(client, issuer);
+        var unseen = new ContractId<Offer>(offerCid.Value[..^2] + (offerCid.Value.EndsWith("00", StringComparison.Ordinal) ? "01" : "00"));
+
+        var disclosure = await client.GetDisclosureAsync(
+            unseen, issuer, cancellationToken: TestContext.Current.CancellationToken);
+
+        disclosure.Should().BeNull();
+    }
+
+    private static async Task<ContractId<Steward>> CreateStewardAsync(ICantonLedgerClient client, Party issuer)
+    {
+        var created = await client.TryCreateAsync(
+            new Steward(issuer, "charter"), cancellationToken: TestContext.Current.CancellationToken);
+        return created.Should().BeOfType<ExerciseOutcome<ContractId<Steward>>.One>().Which.Result;
     }
 
     private static async Task<ContractId<Offer>> CreateOfferAsync(ICantonLedgerClient client, Party issuer)

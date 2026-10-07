@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Kernel --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.Kernel --version 0.6.0-preview.4
 ```
 
 ## Key Types
@@ -120,6 +120,8 @@ services.AddLedgerClient(options =>
 ## Internals
 
 - `Streams.StreamEventClassifier` — the single implementation of the no-silent-drop stream-classification policy that both the gRPC and HTTP projectors delegate to: which decoded shape becomes which `UnclassifiedKind`, the missing-synchronizer rule, and the decode-failure fallback with its warning. Wire decoding stays per-transport; the classifier consumes a `DecodedStreamEvent<TSynchronizerScope>` and hands back the synchronizer scope it validated, so no projector can reach a `SynchronizerId` without passing the rule. Internal — visible to the transports via `InternalsVisibleTo`, not part of the package's public surface
+- `Streams.IStreamArms<TEvent, TMarker, TPayload>` with `ContractArms<T>` and `InterfaceArms<TInterface, TView>` — the union constructors for the two stream families, one static builder per arm over transport-neutral values, so each transport's projection core builds `ContractStreamEvent<T>` or `InterfaceStreamEvent<TInterface, TView>` directly. Internal, like the classifier
+- `Streams.ContractSnapshotEntryArms<T>` and `InterfaceSnapshotEntryArms<TInterface, TView>` — convert a projected stream event into the family's active-contract snapshot entry (Created with its disclosure, Unclassified, and an Unassigned downgraded to an Unclassified `UnassignedEvent`), shared by both transports. Internal
 - `IHttpClientFactory` named client `"CantonAuth"` — no `using` on the `HttpClient` (factory manages handler lifetime)
 - `TimeProvider` for testable time (pass `FakeTimeProvider` in tests)
 - `Volatile.Read`/`Volatile.Write` for cache fields — write order: token before expiry (matches read order)

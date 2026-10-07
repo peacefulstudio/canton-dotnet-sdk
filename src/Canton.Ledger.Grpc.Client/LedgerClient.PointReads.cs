@@ -43,6 +43,7 @@ internal sealed partial class LedgerClient
         };
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetUpdateResponse, TransactionResult>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             UpdateService.Descriptor,
             "GetUpdateByOffset",
@@ -73,6 +74,7 @@ internal sealed partial class LedgerClient
         };
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetUpdateResponse, TransactionResult>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             UpdateService.Descriptor,
             "GetUpdateById",
@@ -103,6 +105,7 @@ internal sealed partial class LedgerClient
         };
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetUpdateResponse, TransactionTree>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             UpdateService.Descriptor,
             "GetUpdateByOffset",

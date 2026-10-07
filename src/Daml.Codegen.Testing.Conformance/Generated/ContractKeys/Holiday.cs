@@ -23,12 +23,12 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// Generated from Daml template ContractKeys:Holiday
 /// </summary>
 public sealed partial record Holiday(
-    [property: DamlFieldAttribute("provider")] Party Provider,
-    [property: DamlFieldAttribute("calendar")] Calendar Calendar
-) : ITemplate, IHasKey<Holiday, global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey>, IHasChoices<Holiday>, IDamlRecord<Holiday>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("provider")] global::Daml.Runtime.Data.Party Provider,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("calendar")] global::Daml.Codegen.Testing.Conformance.ContractKeys.Calendar Calendar
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasKey<Holiday, global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey>, global::Daml.Runtime.Contracts.IHasChoices<Holiday>, global::Daml.Runtime.Data.IDamlRecord<Holiday>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Holiday");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Holiday");
 
     /// <summary>Gets the package ID.</summary>
     public static string PackageId => "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
@@ -37,40 +37,40 @@ public sealed partial record Holiday(
     public static string PackageName => "contractkeys-h4fd930e5658f";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Gets the witness pairing this template with its contract key type and carrying the key codec; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static KeyDescriptor<Holiday, global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey> Key { get; } =
+    public static global::Daml.Runtime.Contracts.KeyDescriptor<Holiday, global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey> Key { get; } =
         new()
         {
             KeyEncoder = key => key.ToRecord(),
-            KeyDecoder = value => global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey.FromRecord(value.As<DamlRecord>()),
+            KeyDecoder = value => global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey.FromRecord(value.As<global::Daml.Runtime.Data.DamlRecord>()),
             KeyJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey.__ReadDamlLfJson(json, context),
         };
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("provider", Provider.ToDamlValue()),
-        DamlField.Create("calendar", Calendar.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("provider", Provider.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("calendar", Calendar.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Holiday FromRecord(DamlRecord record) => new Holiday(
-        Provider: Party.FromDamlValue(record.GetRequiredField("provider").As<DamlParty>()),
-        Calendar: Calendar.FromRecord(record.GetRequiredField("calendar").As<DamlRecord>())
+    public static Holiday FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Holiday(
+        Provider: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("provider").As<global::Daml.Runtime.Data.DamlParty>()),
+        Calendar: global::Daml.Codegen.Testing.Conformance.ContractKeys.Calendar.FromRecord(record.GetRequiredField("calendar").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("provider", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "provider"), context.Field("provider"))),
-            DamlField.Create("calendar", Calendar.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "calendar"), context.Field("calendar")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("provider", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "provider"), context.Field("provider"))),
+            global::Daml.Runtime.Data.DamlField.Create("calendar", global::Daml.Codegen.Testing.Conformance.ContractKeys.Calendar.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "calendar"), context.Field("calendar")))
         );
     }
 
@@ -78,17 +78,17 @@ public sealed partial record Holiday(
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Holiday, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Holiday, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -97,19 +97,19 @@ public sealed partial record Holiday(
     /// Exercise the Extend choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Holiday, Extend, ContractId<Holiday>> ChoiceExtend { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Holiday, Extend, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>> ChoiceExtend { get; } = new()
     {
-        Name = new ChoiceName("Extend"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Extend"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Extend.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<Holiday>(val.As<DamlContractId>().Value),
-        ArgumentJsonReader = (json, context) => Holiday.Extend.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Extend.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceExtend];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceExtend];
 
     /// <summary>
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseByKeyCommand"/> for the Archive choice on the contract carrying this key.
@@ -120,15 +120,15 @@ public sealed partial record Holiday(
     /// the ledger resolves this command against a first match by an order it only partly
     /// guarantees. Keeping a key unique is the application's responsibility.
     /// </remarks>
-    public static ExerciseByKeyCommand ArchiveByKeyCommand(
+    public static global::Daml.Runtime.Commands.ExerciseByKeyCommand ArchiveByKeyCommand(
         global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey key)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        return new ExerciseByKeyCommand(
-            Holiday.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(key);
+        return new global::Daml.Runtime.Commands.ExerciseByKeyCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.TemplateId,
             key.ToRecord(),
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -141,84 +141,24 @@ public sealed partial record Holiday(
     /// the ledger resolves this command against a first match by an order it only partly
     /// guarantees. Keeping a key unique is the application's responsibility.
     /// </remarks>
-    public static ExerciseByKeyCommand ExtendByKeyCommand(
+    public static global::Daml.Runtime.Commands.ExerciseByKeyCommand ExtendByKeyCommand(
         global::Daml.Codegen.Testing.Conformance.ContractKeys.HolidayKey key,
-        Holiday.Extend argument)
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend argument)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseByKeyCommand(
-            Holiday.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(key);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseByKeyCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.TemplateId,
             key.ToRecord(),
-            new ChoiceName("Extend"),
+            new global::Daml.Runtime.Commands.ChoiceName("Extend"),
             argument.ToRecord());
     }
 
 }
 
-/// <summary>
-/// Typed projection of the contracts created by the Extend choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record ExtendResult(
-    ContractId<Holiday> Holiday
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="ExtendResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<ExtendResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ExtendResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ExtendResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ExtendResult>.One(new ExtendResult(
-            Holiday: new ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>(matches0[0])
-        ));
-    }
-
-}
-
 
 /// <summary>
-/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="Holiday"/>.
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
 /// and projects success from the choice's own exercise result.
@@ -230,21 +170,21 @@ public static class HolidayExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ExtendCommand(
-        this ContractId<Holiday> contractId,
-        Holiday.Extend argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ExtendCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contractId,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            Holiday.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.TemplateId,
             contractId,
-            new ChoiceName("Extend"),
+            new global::Daml.Runtime.Commands.ChoiceName("Extend"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Extend choice and projects the choice's exercise result to a typed <see cref="ExtendResult"/>.
+    /// Exercises the Extend choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -258,20 +198,20 @@ public static class HolidayExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ExtendResult>> TryExtendAsync(
-        this ContractId<Holiday> contractId,
-        ILedgerWriter client,
-        Holiday.Extend argument,
-        Party provider,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>>> TryExtendAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend argument,
+        global::Daml.Runtime.Data.Party provider,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = provider;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = provider;
 
         return contractId.TryExtendAsync(
             client,
@@ -285,7 +225,7 @@ public static class HolidayExtensions
     }
 
     /// <summary>
-    /// Exercises the Extend choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ExtendResult"/>.
+    /// Exercises the Extend choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -299,18 +239,18 @@ public static class HolidayExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<ExtendResult>> TryExtendAsync(
-        this ContractId<Holiday> contractId,
-        ILedgerWriter client,
-        Holiday.Extend argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>>> TryExtendAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ExtendCommand(argument);
 
@@ -320,10 +260,10 @@ public static class HolidayExtensions
     }
 
     /// <summary>
-    /// Exercises the Extend choice on a fetched <see cref="Holiday"/> contract,
+    /// Exercises the Extend choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;Holiday&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -333,19 +273,19 @@ public static class HolidayExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ExtendResult>> TryExtendAsync(
-        this IContract<ContractId<Holiday>, Holiday> contract,
-        ILedgerWriter client,
-        Holiday.Extend argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>>> TryExtendAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>, global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryExtendAsync(
             client,
@@ -359,11 +299,11 @@ public static class HolidayExtensions
     }
 
     /// <summary>
-    /// Exercises the Extend choice on a fetched <see cref="Holiday"/> contract with an
+    /// Exercises the Extend choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;Holiday&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -374,20 +314,20 @@ public static class HolidayExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ExtendResult>> TryExtendAsync(
-        this IContract<ContractId<Holiday>, Holiday> contract,
-        ILedgerWriter client,
-        Holiday.Extend argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>>> TryExtendAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>, global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.Extend argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryExtendAsync(
             client,
@@ -400,53 +340,8 @@ public static class HolidayExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<ExtendResult> ProjectExtendResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = ExtendResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<ExtendResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Holiday.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Holiday.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Extend", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeExtendResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<ExtendResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<ExtendResult> DecodeExtendResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlContractId>().Value);
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ExtendResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ExtendResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ExtendResult>.One(new ExtendResult(
-            Holiday: new ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>(matches0[0])
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday>> ProjectExtendResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.ChoiceExtend, contractId);
 }
 
 /// <summary>
@@ -470,23 +365,23 @@ public static class HolidaySubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<Holiday>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Holiday>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         Holiday payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Provider;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Provider;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Holiday>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="Holiday"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -498,20 +393,20 @@ public static class HolidayNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<Holiday> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            Holiday.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -522,17 +417,17 @@ public static class HolidayNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<Holiday> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -541,32 +436,6 @@ public static class HolidayNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Holiday.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Holiday.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = Holiday.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.ContractKeys.Holiday.ChoiceArchive, contractId);
 }

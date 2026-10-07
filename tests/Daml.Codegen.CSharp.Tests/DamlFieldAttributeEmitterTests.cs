@@ -37,7 +37,7 @@ public class DamlFieldAttributeEmitterTests
         var files = CreateGenerator().Generate(CreateTestDar(module));
         var code = files.First(f => f.RelativePath.EndsWith("Holding.cs", StringComparison.Ordinal)).Content;
 
-        code.Should().Contain("[property: DamlFieldAttribute(\"owner\")] Party Owner");
-        code.Should().Contain("[property: DamlFieldAttribute(\"count\")] long Count");
+        code.Should().Contain("[property: global::Daml.Runtime.Data.DamlFieldAttribute(\"owner\")] global::Daml.Runtime.Data.Party Owner");
+        code.Should().Contain("[property: global::Daml.Runtime.Data.DamlFieldAttribute(\"count\")] long Count");
     }
 }

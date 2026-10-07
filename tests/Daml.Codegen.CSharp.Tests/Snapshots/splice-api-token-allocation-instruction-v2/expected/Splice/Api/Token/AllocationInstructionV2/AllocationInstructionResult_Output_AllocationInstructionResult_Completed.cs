@@ -14,26 +14,26 @@ namespace Splice.Api.Token.AllocationInstructionV2;
 /// Generated from Daml record AllocationInstructionResult_Output.AllocationInstructionResult_Completed
 /// </summary>
 public sealed record AllocationInstructionResult_Output_AllocationInstructionResult_Completed(
-    [property: DamlFieldAttribute("allocationCid")] ContractId<global::Splice.Api.Token.AllocationV2.IAllocation> AllocationCid
-) : IDamlRecord<AllocationInstructionResult_Output_AllocationInstructionResult_Completed>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("allocationCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation> AllocationCid
+) : global::Daml.Runtime.Data.IDamlRecord<AllocationInstructionResult_Output_AllocationInstructionResult_Completed>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("allocationCid", AllocationCid.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("allocationCid", AllocationCid.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AllocationInstructionResult_Output_AllocationInstructionResult_Completed FromRecord(DamlRecord record) => new AllocationInstructionResult_Output_AllocationInstructionResult_Completed(
-        AllocationCid: new ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetRequiredField("allocationCid").As<DamlContractId>().Value)
+    public static AllocationInstructionResult_Output_AllocationInstructionResult_Completed FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationInstructionResult_Output_AllocationInstructionResult_Completed(
+        AllocationCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetRequiredField("allocationCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("allocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocationCid"), context.Field("allocationCid")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("allocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocationCid"), context.Field("allocationCid")))
         );
     }
 

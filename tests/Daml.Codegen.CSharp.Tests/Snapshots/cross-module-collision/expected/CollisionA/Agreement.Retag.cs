@@ -15,26 +15,26 @@ public sealed partial record Agreement
     /// Choice argument type for Retag.
     /// </summary>
     public sealed record Retag(
-        [property: DamlFieldAttribute("newOperator")] Party NewOperator
-    ) : IDamlRecord<Retag>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("newOperator")] global::Daml.Runtime.Data.Party NewOperator
+    ) : global::Daml.Runtime.Data.IDamlRecord<Retag>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("newOperator", NewOperator.ToDamlValue())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("newOperator", NewOperator.ToDamlValue())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Retag FromRecord(DamlRecord record) => new Retag(
-            NewOperator: Party.FromDamlValue(record.GetRequiredField("newOperator").As<DamlParty>())
+        public static Retag FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Retag(
+            NewOperator: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("newOperator").As<global::Daml.Runtime.Data.DamlParty>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("newOperator", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newOperator"), context.Field("newOperator")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("newOperator", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newOperator"), context.Field("newOperator")))
             );
         }
 

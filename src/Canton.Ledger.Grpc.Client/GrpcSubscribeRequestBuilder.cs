@@ -94,6 +94,23 @@ internal static class GrpcSubscribeRequestBuilder
         return eventFormat;
     }
 
+    public static EventFormat BuildDisclosureEventFormat(RuntimeCommands.SubmitterInfo submitter)
+    {
+        var eventFormat = new EventFormat { Verbose = true };
+        AddFilterForEachParty(eventFormat, submitter, BuildWildcardBlobFilters);
+        return eventFormat;
+    }
+
+    private static Filters BuildWildcardBlobFilters()
+    {
+        var filters = new Filters();
+        filters.Cumulative.Add(new CumulativeFilter
+        {
+            WildcardFilter = new WildcardFilter { IncludeCreatedEventBlob = true },
+        });
+        return filters;
+    }
+
     private static void AddFilterForEachParty(
         EventFormat eventFormat,
         RuntimeCommands.SubmitterInfo submitter,

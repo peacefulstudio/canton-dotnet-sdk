@@ -8,6 +8,7 @@ using Canton.Ledger.Kernel.Authentication;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -165,6 +166,25 @@ public sealed class LedgerClientRetryTests : IDisposable
             Arg.Any<SubmitAndWaitForTransactionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
         _ = _updateService.DidNotReceive().GetUpdateByOffsetAsync(
             Arg.Any<GetUpdateByOffsetRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_first_attempt_DUPLICATE_COMMAND_as_a_committed_failure_when_thrown()
+    {
+        EnableRetry();
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
+        var client = CreateClient();
+
+        var act = () => client
+            .TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken)
+            .OneOrThrowAsync("Submit");
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("DUPLICATE_COMMAND");
+        thrown.CommitState.Should().Be(CommitState.Committed);
+        thrown.UpdateId.Should().BeNull();
+        thrown.Metadata.Should().ContainKey("completion_offset").WhoseValue.Should().Be("42");
     }
 
     [Fact]
@@ -331,7 +351,7 @@ public sealed class LedgerClientRetryTests : IDisposable
 
     [Theory]
     [MemberData(nameof(RetryDecisionByStatusCode))]
-    public async Task GetLedgerEndAsync_retries_only_transient_transport_status_codes(
+    public async Task GetLedgerEndAsync_retries_only_transient_transport_status_codes_then_translates_the_final_failure(
         StatusCode statusCode, int expectedAttempts)
     {
         EnableRetry(maxAttempts: RetriesWhenTransient);
@@ -340,7 +360,10 @@ public sealed class LedgerClientRetryTests : IDisposable
         var client = CreateClient();
         var act = () => client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<RpcException>().Where(e => e.StatusCode == statusCode);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc((GrpcStatusCode)statusCode));
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<RpcException>().Which.StatusCode.Should().Be(statusCode);
         _ = _stateService.Received(expectedAttempts).GetLedgerEndAsync(
             Arg.Any<GetLedgerEndRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
     }

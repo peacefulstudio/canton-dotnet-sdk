@@ -123,7 +123,7 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
         // branch, so non-top-level () shapes — Optional (), [()], tuples
         // containing () — fell through to `default!` in the emitted decoder,
         // breaking typed projection at runtime. The Unit arm now decodes via
-        // .As<DamlUnit>(), so the optional-of-unit return must compile and
+        // .As<global::Daml.Runtime.Data.DamlUnit>(), so the optional-of-unit return must compile and
         // produce a working DamlUnit?-typed decoder.
         var module = new DamlModule
         {
@@ -179,8 +179,8 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
 
         var probe = files.First(f => f.RelativePath.EndsWith("Probe.cs", StringComparison.Ordinal));
         // The decoder reuses GetFromValueConversion; the new Unit arm must
-        // produce a .As<DamlUnit>() cast inside the optional decoder.
-        probe.Content.Should().Contain(".As<DamlUnit>()");
+        // produce a .As<global::Daml.Runtime.Data.DamlUnit>() cast inside the optional decoder.
+        probe.Content.Should().Contain(".As<global::Daml.Runtime.Data.DamlUnit>()");
         probe.Content.Should().NotContain("default! /* TODO: Implement deserialization for unit");
     }
 

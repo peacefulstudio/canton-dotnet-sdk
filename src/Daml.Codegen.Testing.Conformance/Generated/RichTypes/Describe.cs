@@ -13,26 +13,26 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml record Describe
 /// </summary>
 public sealed record Describe(
-    [property: DamlFieldAttribute("prefix")] string Prefix
-) : IDamlRecord<Describe>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("prefix")] string Prefix
+) : global::Daml.Runtime.Data.IDamlRecord<Describe>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("prefix", new DamlText(Prefix))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("prefix", new global::Daml.Runtime.Data.DamlText(Prefix))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Describe FromRecord(DamlRecord record) => new Describe(
-        Prefix: record.GetRequiredField("prefix").As<DamlText>().Value
+    public static Describe FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Describe(
+        Prefix: record.GetRequiredField("prefix").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("prefix", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "prefix"), context.Field("prefix")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("prefix", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "prefix"), context.Field("prefix")))
         );
     }
 

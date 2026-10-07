@@ -20,6 +20,7 @@ using ProtoExercisedEvent = Com.Daml.Ledger.Api.V2.ExercisedEvent;
 using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
 using ProtoRecord = Com.Daml.Ledger.Api.V2.Record;
 using ProtoValue = Com.Daml.Ledger.Api.V2.Value;
+using RpcStatus = Google.Rpc.Status;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
@@ -174,8 +175,8 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
     [
         .. new[]
         {
-            ActiveContract("00probe", ProbeTemplate, CreatedOffset),
-            ActiveContract("00foreign", ForeignTemplate, UnclassifiableOffset),
+            ActiveContract("00probe", ProbeTemplate, CreatedOffset, withProbeView: true),
+            ActiveContract("00foreign", ForeignTemplate, UnclassifiableOffset, withProbeView: false),
         }.Where(entry => entry.ActiveContract.CreatedEvent.Offset <= activeAtOffset),
     ];
 
@@ -194,30 +195,36 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         ];
     }
 
-    private static Event Creation() => new()
+    private static Event Creation()
     {
-        Created = new ProtoCreatedEvent
+        var created = new ProtoCreatedEvent
         {
             ContractId = "00probe",
             TemplateId = ProbeTemplate,
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = CreatedOffset,
-        },
-    };
+        };
+        created.InterfaceViews.Add(ProbeInterfaceView());
 
-    private static Event Archival() => new()
+        return new Event { Created = created };
+    }
+
+    private static Event Archival()
     {
-        Archived = new ProtoArchivedEvent
+        var archived = new ProtoArchivedEvent
         {
             ContractId = "00probe",
             TemplateId = ProbeTemplate,
             Offset = ConsumedOffset,
-        },
-    };
+        };
+        archived.ImplementedInterfaces.Add(ProbeInterfaceId());
 
-    private static Event ConsumingExercise() => new()
+        return new Event { Archived = archived };
+    }
+
+    private static Event ConsumingExercise()
     {
-        Exercised = new ProtoExercisedEvent
+        var exercised = new ProtoExercisedEvent
         {
             ContractId = "00probe",
             TemplateId = ProbeTemplate,
@@ -226,8 +233,11 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
             ExerciseResult = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
             Consuming = true,
             Offset = ConsumedOffset,
-        },
-    };
+        };
+        exercised.ImplementedInterfaces.Add(ProbeInterfaceId());
+
+        return new Event { Exercised = exercised };
+    }
 
     private static Transaction Transaction(long offset, Event seeded)
     {
@@ -241,18 +251,45 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         return transaction;
     }
 
-    private static GetActiveContractsResponse ActiveContract(string contractId, ProtoIdentifier templateId, long offset) => new()
+    private static GetActiveContractsResponse ActiveContract(
+        string contractId, ProtoIdentifier templateId, long offset, bool withProbeView)
     {
-        ActiveContract = new ActiveContract
+        var created = new ProtoCreatedEvent
         {
-            CreatedEvent = new ProtoCreatedEvent
+            ContractId = contractId,
+            TemplateId = templateId,
+            CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
+            Offset = offset,
+        };
+
+        if (withProbeView)
+        {
+            created.InterfaceViews.Add(ProbeInterfaceView());
+        }
+
+        return new GetActiveContractsResponse
+        {
+            ActiveContract = new ActiveContract { CreatedEvent = created, SynchronizerId = Synchronizer },
+        };
+    }
+
+    private static ProtoIdentifier ProbeInterfaceId() => new()
+    {
+        PackageId = IConformanceProbe.InterfaceId.PackageId,
+        ModuleName = IConformanceProbe.InterfaceId.ModuleName,
+        EntityName = IConformanceProbe.InterfaceId.EntityName,
+    };
+
+    private static InterfaceView ProbeInterfaceView() => new()
+    {
+        InterfaceId = ProbeInterfaceId(),
+        ViewStatus = new RpcStatus { Code = 0 },
+        ViewValue = new ProtoRecord
+        {
+            Fields =
             {
-                ContractId = contractId,
-                TemplateId = templateId,
-                CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
-                Offset = offset,
+                new RecordField { Label = "amount", Value = new ProtoValue { Numeric = "42.5" } },
             },
-            SynchronizerId = Synchronizer,
         },
     };
 
@@ -277,7 +314,8 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
 
 /// <summary>The Daml marker the conformance scenario's snapshot and streams are filtered to.</summary>
 /// <param name="Owner">The party the probe contract is issued to.</param>
-public sealed record GrpcConformanceProbe(string Owner) : ITemplate, IDamlRecord<GrpcConformanceProbe>
+public sealed record GrpcConformanceProbe(string Owner)
+    : ITemplate, IDamlRecord<GrpcConformanceProbe>, IImplements<IConformanceProbe>
 {
     /// <inheritdoc cref="ITemplate" />
     public static RuntimeIdentifier TemplateId { get; } = new("conformance-pkg", "Conformance.Probe", "Probe");

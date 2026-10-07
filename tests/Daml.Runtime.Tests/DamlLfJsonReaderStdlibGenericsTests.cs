@@ -25,7 +25,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
             Tuple2<long, string>.FromRecord(
                 record.GetRequiredField("pair").As<DamlRecord>(),
                 value => value.As<DamlInt64>().Value,
-                value => value.As<DamlText>().Value));
+                null,
+                value => value.As<DamlText>().Value,
+                null));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
@@ -35,7 +37,7 @@ public class DamlLfJsonReaderStdlibGenericsTests
             return DamlRecord.Create(DamlField.Create(
                 "pair",
                 DamlLfJsonDecoders.ReadTuple2(
-                    pairJson, pairContext, DamlLfJsonDecoders.ReadInt64, DamlLfJsonDecoders.ReadText)));
+                    pairJson, pairContext, DamlLfJsonDecoders.ReadInt64, null, DamlLfJsonDecoders.ReadText, null)));
         }
     }
 
@@ -98,8 +100,11 @@ public class DamlLfJsonReaderStdlibGenericsTests
             Tuple3<long, string, bool>.FromRecord(
                 record.GetRequiredField("triple").As<DamlRecord>(),
                 value => value.As<DamlInt64>().Value,
+                null,
                 value => value.As<DamlText>().Value,
-                value => value.As<DamlBool>().Value));
+                null,
+                value => value.As<DamlBool>().Value,
+                null));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
@@ -112,8 +117,11 @@ public class DamlLfJsonReaderStdlibGenericsTests
                     tripleJson,
                     tripleContext,
                     DamlLfJsonDecoders.ReadInt64,
+                    null,
                     DamlLfJsonDecoders.ReadText,
-                    DamlLfJsonDecoders.ReadBool)));
+                    null,
+                    DamlLfJsonDecoders.ReadBool,
+                    null)));
         }
     }
 
@@ -150,7 +158,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
             Tuple2<long, Optional<string>>.FromRecord(
                 record.GetRequiredField("pair").As<DamlRecord>(),
                 value => value.As<DamlInt64>().Value,
-                value => Optional<string>.FromValue(value, note => note.As<DamlText>().Value)));
+                null,
+                value => Optional<string>.FromValue(value, note => note.As<DamlText>().Value),
+                DamlOptional.None));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
@@ -163,8 +173,10 @@ public class DamlLfJsonReaderStdlibGenericsTests
                     pairJson,
                     pairContext,
                     DamlLfJsonDecoders.ReadInt64,
+                    null,
                     (element, elementContext) => DamlLfJsonDecoders.ReadOptional(
-                        element, elementContext, DamlLfJsonDecoders.ReadText))));
+                        element, elementContext, DamlLfJsonDecoders.ReadText),
+                    DamlOptional.None)));
         }
     }
 
@@ -222,7 +234,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
             Tuple2<Profile, string>.FromRecord(
                 record.GetRequiredField("pair").As<DamlRecord>(),
                 value => Profile.FromRecord(value.As<DamlRecord>()),
-                value => value.As<DamlText>().Value));
+                null,
+                value => value.As<DamlText>().Value,
+                null));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
@@ -235,7 +249,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
                     pairJson,
                     pairContext,
                     (element, elementContext) => Profile.__ReadDamlLfJson(element, elementContext),
-                    DamlLfJsonDecoders.ReadText)));
+                    null,
+                    DamlLfJsonDecoders.ReadText,
+                    null)));
         }
     }
 
@@ -265,7 +281,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
                 .Select(value => Tuple2<long, string>.FromRecord(
                     value.As<DamlRecord>(),
                     component => component.As<DamlInt64>().Value,
-                    component => component.As<DamlText>().Value))
+                    null,
+                    component => component.As<DamlText>().Value,
+                    null))
                 .ToList());
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
@@ -279,7 +297,7 @@ public class DamlLfJsonReaderStdlibGenericsTests
                     pairsJson,
                     pairsContext,
                     (element, elementContext) => DamlLfJsonDecoders.ReadTuple2(
-                        element, elementContext, DamlLfJsonDecoders.ReadInt64, DamlLfJsonDecoders.ReadText))));
+                        element, elementContext, DamlLfJsonDecoders.ReadInt64, null, DamlLfJsonDecoders.ReadText, null))));
         }
     }
 
@@ -390,7 +408,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
                 value => Tuple2<long, string>.FromRecord(
                     value.As<DamlRecord>(),
                     component => component.As<DamlInt64>().Value,
-                    component => component.As<DamlText>().Value),
+                    null,
+                    component => component.As<DamlText>().Value,
+                    null),
                 value => value.As<DamlText>().Value));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
@@ -404,7 +424,7 @@ public class DamlLfJsonReaderStdlibGenericsTests
                     choiceJson,
                     choiceContext,
                     (element, elementContext) => DamlLfJsonDecoders.ReadTuple2(
-                        element, elementContext, DamlLfJsonDecoders.ReadInt64, DamlLfJsonDecoders.ReadText),
+                        element, elementContext, DamlLfJsonDecoders.ReadInt64, null, DamlLfJsonDecoders.ReadText, null),
                     DamlLfJsonDecoders.ReadText)));
         }
     }
@@ -879,7 +899,9 @@ public class DamlLfJsonReaderStdlibGenericsTests
                 value => Tuple2<long, string>.FromRecord(
                     value.As<DamlRecord>(),
                     component => component.As<DamlInt64>().Value,
-                    component => component.As<DamlText>().Value)));
+                    null,
+                    component => component.As<DamlText>().Value,
+                    null)));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
@@ -892,7 +914,7 @@ public class DamlLfJsonReaderStdlibGenericsTests
                     historyJson,
                     historyContext,
                     (element, elementContext) => DamlLfJsonDecoders.ReadTuple2(
-                        element, elementContext, DamlLfJsonDecoders.ReadInt64, DamlLfJsonDecoders.ReadText))));
+                        element, elementContext, DamlLfJsonDecoders.ReadInt64, null, DamlLfJsonDecoders.ReadText, null))));
         }
     }
 

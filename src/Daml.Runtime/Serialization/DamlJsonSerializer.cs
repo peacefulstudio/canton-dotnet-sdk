@@ -73,6 +73,10 @@ public static class DamlJsonSerializer
     /// re-apply <c>AllowDuplicateProperties = false</c> and a bounded <c>MaxDepth</c>
     /// on the caller-supplied options or those protections are bypassed.
     /// </remarks>
+    /// <exception cref="JsonException">
+    /// A record has an empty or duplicate field label, a variant or enum has an empty constructor,
+    /// or the value nests deeper than the supported depth. An empty <see cref="DamlTextMap"/> key is accepted.
+    /// </exception>
     public static string Serialize(DamlValue value, JsonSerializerOptions? options = null) =>
         JsonSerializer.Serialize(value, options ?? DefaultOptions);
 
@@ -84,6 +88,10 @@ public static class DamlJsonSerializer
     /// re-apply <c>AllowDuplicateProperties = false</c> and a bounded <c>MaxDepth</c>
     /// on the caller-supplied options or those protections are bypassed.
     /// </remarks>
+    /// <exception cref="JsonException">
+    /// A record has an empty or duplicate field label, a variant or enum has an empty constructor,
+    /// or the value nests deeper than the supported depth. An empty <see cref="DamlTextMap"/> key is accepted.
+    /// </exception>
     public static string Serialize(DamlRecord record, JsonSerializerOptions? options = null) =>
         JsonSerializer.Serialize(RecordToJsonObject(record), options ?? DefaultOptions);
 
@@ -137,8 +145,9 @@ public static class DamlJsonSerializer
     /// <see cref="DamlOptional.None"/>; a Some value is flattened to its inner value on
     /// write, so schema-aware readers recover the wrapper via
     /// <see cref="DamlValueExtensions.AsOptional"/>. That flattening is specific to
-    /// <see cref="DamlOptional"/>: a <see cref="DamlOptionalChain"/> level writes the array
-    /// form instead, <c>[]</c> or <c>[v]</c>, and comes back as a <see cref="DamlList"/> on
+    /// <see cref="DamlOptional"/> whose payload is not an Optional: a <see cref="DamlOptionalChain"/>
+    /// level, and a <see cref="DamlOptional"/> that carries another Optional, write the array
+    /// form instead, <c>[]</c> or <c>[v]</c> per level, and come back as a <see cref="DamlList"/> on
     /// an untyped round-trip.</description></item>
     /// <item><description>A two-property JSON object whose properties are exactly
     /// <c>tag</c> (a string) and <c>value</c> is reconstructed as a
@@ -256,6 +265,10 @@ public static class DamlJsonSerializer
         var obj = new JsonObject();
         foreach (var field in record.Fields)
         {
+            if (string.IsNullOrEmpty(field.Label))
+            {
+                throw new JsonException("A Daml record field label must not be empty");
+            }
             if (obj.ContainsKey(field.Label))
             {
                 throw new JsonException(
@@ -281,18 +294,30 @@ public static class DamlJsonSerializer
         DamlTimestamp ts => JsonValue.Create(ts.Value.UtcDateTime.ToString(CanonicalTimestampEmitFormat, CultureInfo.InvariantCulture)),
         DamlParty p => JsonValue.Create(p.Value),
         DamlContractId c => JsonValue.Create(c.Value),
+        DamlOptional { Value: DamlOptional or DamlOptionalChain } nested =>
+            ValueToJsonNode(AsChainLevel(nested), depth),
         DamlOptional opt => opt.Value is null ? null : ValueToJsonNode(opt.Value, depth + 1),
-        DamlOptionalChain chain => chain.Value is null
-            ? new JsonArray()
-            : new JsonArray(ValueToJsonNode(chain.Value, depth + 1)),
+        DamlOptionalChain chain => chain.Value switch
+        {
+            null => new JsonArray(),
+            DamlOptional inner => new JsonArray(ValueToJsonNode(AsChainLevel(inner), depth + 1)),
+            var carried => new JsonArray(ValueToJsonNode(carried, depth + 1))
+        },
         DamlList list => new JsonArray(list.Values.Select(v => ValueToJsonNode(v, depth + 1)).ToArray()),
         DamlTextMap map => MapToJsonObject(map, depth),
         DamlGenMap map => GenMapToJsonArray(map, depth),
         DamlVariant variant => VariantToJsonObject(variant, depth),
-        DamlEnum e => JsonValue.Create(e.Constructor),
+        DamlEnum e => JsonValue.Create(RequireConstructor(e.Constructor, "enum")),
         DamlRecord rec => RecordToJsonObject(rec, depth),
         _ => throw new JsonException($"Cannot serialize {value.GetType().Name} to JSON")
     };
+
+    private static string RequireConstructor(string constructor, string kind) =>
+        string.IsNullOrEmpty(constructor)
+            ? throw new JsonException($"A Daml {kind} constructor must not be empty")
+            : constructor;
+
+    private static DamlOptionalChain AsChainLevel(DamlOptional level) => new(level.Value);
 
     internal static JsonException DepthBoundExceeded() =>
         new($"Value nesting exceeds the maximum supported depth of {MaximumNestingDepth}");
@@ -321,7 +346,7 @@ public static class DamlJsonSerializer
     {
         var obj = new JsonObject
         {
-            [VariantTagKey] = variant.Constructor,
+            [VariantTagKey] = RequireConstructor(variant.Constructor, "variant"),
             [VariantValueKey] = ValueToJsonNode(variant.Value, depth + 1)
         };
         return obj;

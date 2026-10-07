@@ -28,11 +28,11 @@ public class SerializeThenReadRecordRoundTripTests
     private static readonly IReadOnlyDictionary<string, CorpusEntry> Corpus =
         new Dictionary<string, CorpusEntry>(StringComparer.Ordinal)
         {
-            [nameof(RichRecord)] = Entry<RichRecord>(RichRecordSample(new Outcome.Win(
+            [nameof(RichRecord)] = Entry<RichRecord>(GeneratedStjSampleTable.RichRecordSample(new Outcome.Win(
                 new Outcome_Win(Prize: 12.34m, Tier: "gold"))).ToRecord()),
             ["RichRecord_nullary_variant_arm"] = Entry<RichRecord>(
-                RichRecordSample(new Outcome.Pending()).ToRecord()),
-            [nameof(TypeCorners)] = Entry<TypeCorners>(TypeCornersSample().ToRecord()),
+                GeneratedStjSampleTable.RichRecordSample(new Outcome.Pending()).ToRecord()),
+            [nameof(TypeCorners)] = Entry<TypeCorners>(GeneratedStjSampleTable.TypeCornersSample().ToRecord()),
             [nameof(Profile)] = Entry<Profile>(new Profile("ace", 7).ToRecord()),
             [nameof(Outcome_Win)] = Entry<Outcome_Win>(new Outcome_Win(Prize: 12.34m, Tier: "gold").ToRecord()),
             [nameof(Account)] = Entry<Account>(
@@ -70,6 +70,7 @@ public class SerializeThenReadRecordRoundTripTests
     private static IEnumerable<string> WriterSwitchArms() =>
         typeof(DamlValue).Assembly.GetTypes()
             .Where(type => type.IsSubclassOf(typeof(DamlValue)) && !type.IsAbstract)
+            .Where(type => type != typeof(DamlUndecodedJson))
             .Select(type => type.Name);
 
     private static IEnumerable<DamlValue> ValuesReachableFrom(DamlValue value) =>
@@ -109,44 +110,4 @@ public class SerializeThenReadRecordRoundTripTests
         DamlOptionalChain { Value: { } inner } => new DamlOptionalChain(WithoutTypeIdentifiers(inner)),
         _ => value,
     };
-
-    private static RichRecord RichRecordSample(Outcome outcome) => new(
-        Owner: new Party("alice"),
-        Count: 42,
-        Amount: 19.95m,
-        Label: "first",
-        Active: true,
-        AsOf: new DateOnly(2026, 6, 4),
-        ObservedAt: new DateTimeOffset(2026, 6, 4, 12, 30, 0, TimeSpan.Zero),
-        Note: "hello",
-        Tags: ["a", "b"],
-        Attributes: new Dictionary<string, string> { ["k1"] = "v1", ["k2"] = "v2" },
-        Marker: new ContractId<Marker>("marker-cid"),
-        HoldingCid: new ContractId<IHolding>("00aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"),
-        HoldingCids:
-        [
-            new ContractId<IHolding>("0011112222333344445555666677778888999900001111222233334444555566aa"),
-        ],
-        Profile: new Profile("ace", 7),
-        Outcome: outcome,
-        Suit: Suit.Hearts,
-        Fee: 1.5m);
-
-    private static TypeCorners TypeCornersSample() => new(
-        Owner: new Party("alice"),
-        BoxedText: new Box<string>("boxed"),
-        BoxedProfile: new Box<Profile>(new Profile("ace", 7)),
-        Slot: new Slot<long>.Filled(11),
-        NestedNote: new Box<Optional<string>>(new Optional<string>.Some("inner")),
-        MaybeMaybeNote: new Optional<Optional<string>>.Some(new Optional<string>.Some("nested")),
-        Crate: new Crate<string>(new Optional<string>.Some("crated")),
-        QuotaByParty: new Dictionary<Party, long> { [new Party("alice")] = 1 },
-        LabelByRank: new Dictionary<long, string> { [1] = "gold" },
-        RankOrLabel: new Either<long, string>.Right("runner-up"),
-        NoteOrRank: new Either<Optional<string>, long>.Left(new Optional<string>.Some("noted")),
-        Pair: new Tuple2<string, long>("pair", 3),
-        Triple: new Tuple3<string, long, bool>("triple", 4, true),
-        Branch: new Branch("root", [new Branch("leaf", [])]),
-        Whole: 42m,
-        Finest: 0.5m);
 }

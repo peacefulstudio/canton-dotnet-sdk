@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -22,6 +23,12 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TestTemplate>();
+    }
+
     private static readonly Party Alice = new("party::alice");
 
     private readonly List<StubHttpClientFactory> _factories = [];

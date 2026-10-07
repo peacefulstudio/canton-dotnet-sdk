@@ -13,26 +13,26 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml record HoldingView
 /// </summary>
 public sealed record HoldingView(
-    [property: DamlFieldAttribute("amount")] decimal Amount
-) : IHolding, IDamlRecord<HoldingView>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount
+) : global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding, global::Daml.Runtime.Data.IDamlRecord<HoldingView>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("amount", new DamlNumeric(Amount))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("amount", new global::Daml.Runtime.Data.DamlNumeric(Amount))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static HoldingView FromRecord(DamlRecord record) => new HoldingView(
-        Amount: record.GetRequiredField("amount").As<DamlNumeric>().Value
+    public static HoldingView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new HoldingView(
+        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount")))
         );
     }
 

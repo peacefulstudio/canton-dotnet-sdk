@@ -17,63 +17,63 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record AllocationView
 /// </summary>
 public sealed record AllocationView(
-    ContractId<IAllocation>? OriginalAllocationCid,
-    SettlementInfo Settlement,
-    AllocationSpecification Allocation,
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> HoldingCids,
-    DateTimeOffset CreatedAt,
+    global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>? OriginalAllocationCid,
+    global::Splice.Api.Token.AllocationV2.SettlementInfo Settlement,
+    global::Splice.Api.Token.AllocationV2.AllocationSpecification Allocation,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> HoldingCids,
+    global::System.DateTimeOffset CreatedAt,
     long NumIterations,
-    DateTimeOffset? ExpiresAt,
-    IReadOnlyDictionary<AllocationAction, IReadOnlyList<IReadOnlyList<Party>>> AvailableActions,
+    global::System.DateTimeOffset? ExpiresAt,
+    global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.AllocationV2.AllocationAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> AvailableActions,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IAllocation, IDamlRecord<AllocationView>
+) : global::Splice.Api.Token.AllocationV2.IAllocation, global::Daml.Runtime.Data.IDamlRecord<AllocationView>
 {
     /// <summary>The Daml field <c>originalAllocationCid</c>.</summary>
-    [DamlFieldAttribute("originalAllocationCid")]
-    public ContractId<IAllocation>? OriginalAllocationCid { get; init; } = OriginalAllocationCid;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("originalAllocationCid")]
+    public global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>? OriginalAllocationCid { get; init; } = OriginalAllocationCid;
 
     /// <summary>The Daml field <c>settlement</c>.</summary>
-    [DamlFieldAttribute("settlement")]
-    public SettlementInfo Settlement { get; init; } = Settlement;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("settlement")]
+    public global::Splice.Api.Token.AllocationV2.SettlementInfo Settlement { get; init; } = Settlement;
 
     /// <summary>The Daml field <c>allocation</c>.</summary>
-    [DamlFieldAttribute("allocation")]
-    public AllocationSpecification Allocation { get; init; } = Allocation;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("allocation")]
+    public global::Splice.Api.Token.AllocationV2.AllocationSpecification Allocation { get; init; } = Allocation;
 
-    private readonly IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _holdingCids = DamlFieldCollections.Copy(HoldingCids);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _holdingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(HoldingCids);
 
     /// <summary>The Daml field <c>holdingCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("holdingCids")]
-    public IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> HoldingCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("holdingCids")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> HoldingCids
     {
         get => _holdingCids;
-        init => _holdingCids = DamlFieldCollections.Copy(value);
+        init => _holdingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>createdAt</c>.</summary>
-    [DamlFieldAttribute("createdAt")]
-    public DateTimeOffset CreatedAt { get; init; } = CreatedAt;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("createdAt")]
+    public global::System.DateTimeOffset CreatedAt { get; init; } = CreatedAt;
 
     /// <summary>The Daml field <c>numIterations</c>.</summary>
-    [DamlFieldAttribute("numIterations")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("numIterations")]
     public long NumIterations { get; init; } = NumIterations;
 
     /// <summary>The Daml field <c>expiresAt</c>.</summary>
-    [DamlFieldAttribute("expiresAt")]
-    public DateTimeOffset? ExpiresAt { get; init; } = ExpiresAt;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("expiresAt")]
+    public global::System.DateTimeOffset? ExpiresAt { get; init; } = ExpiresAt;
 
-    private readonly IReadOnlyDictionary<AllocationAction, IReadOnlyList<IReadOnlyList<Party>>> _availableActions = DamlFieldCollections.Copy(AvailableActions);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.AllocationV2.AllocationAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> _availableActions = global::Daml.Runtime.Data.DamlFieldCollections.Copy(AvailableActions);
 
     /// <summary>The Daml field <c>availableActions</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("availableActions")]
-    public IReadOnlyDictionary<AllocationAction, IReadOnlyList<IReadOnlyList<Party>>> AvailableActions
+    [global::Daml.Runtime.Data.DamlFieldAttribute("availableActions")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.AllocationV2.AllocationAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> AvailableActions
     {
         get => _availableActions;
-        init => _availableActions = DamlFieldCollections.Copy(value);
+        init => _availableActions = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -81,74 +81,74 @@ public sealed record AllocationView(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(AllocationView? other) =>
         other is not null
-        && EqualityComparer<ContractId<IAllocation>?>.Default.Equals(OriginalAllocationCid, other.OriginalAllocationCid)
-        && EqualityComparer<SettlementInfo>.Default.Equals(Settlement, other.Settlement)
-        && EqualityComparer<AllocationSpecification>.Default.Equals(Allocation, other.Allocation)
-        && DamlFieldCollections.Equal(HoldingCids, other.HoldingCids)
-        && EqualityComparer<DateTimeOffset>.Default.Equals(CreatedAt, other.CreatedAt)
-        && EqualityComparer<long>.Default.Equals(NumIterations, other.NumIterations)
-        && EqualityComparer<DateTimeOffset?>.Default.Equals(ExpiresAt, other.ExpiresAt)
-        && DamlFieldCollections.Equal(AvailableActions, other.AvailableActions)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>?>.Default.Equals(OriginalAllocationCid, other.OriginalAllocationCid)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.AllocationV2.SettlementInfo>.Default.Equals(Settlement, other.Settlement)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.AllocationV2.AllocationSpecification>.Default.Equals(Allocation, other.Allocation)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(HoldingCids, other.HoldingCids)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset>.Default.Equals(CreatedAt, other.CreatedAt)
+        && global::System.Collections.Generic.EqualityComparer<long>.Default.Equals(NumIterations, other.NumIterations)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset?>.Default.Equals(ExpiresAt, other.ExpiresAt)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(AvailableActions, other.AvailableActions)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(OriginalAllocationCid);
         hash.Add(Settlement);
         hash.Add(Allocation);
-        hash.Add(DamlFieldCollections.Hash(HoldingCids));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(HoldingCids));
         hash.Add(CreatedAt);
         hash.Add(NumIterations);
         hash.Add(ExpiresAt);
-        hash.Add(DamlFieldCollections.Hash(AvailableActions));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(AvailableActions));
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("originalAllocationCid", OriginalAllocationCid is { } __OriginalAllocationCid ? new DamlOptional(__OriginalAllocationCid.ToDamlValue()) : DamlOptional.None),
-        DamlField.Create("settlement", Settlement.ToRecord()),
-        DamlField.Create("allocation", Allocation.ToRecord()),
-        DamlField.Create("holdingCids", new DamlList(HoldingCids.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("createdAt", new DamlTimestamp(CreatedAt)),
-        DamlField.Create("numIterations", new DamlInt64(NumIterations)),
-        DamlField.Create("expiresAt", ExpiresAt is { } __ExpiresAt ? new DamlOptional(new DamlTimestamp(__ExpiresAt)) : DamlOptional.None),
-        DamlField.Create("availableActions", new DamlGenMap(AvailableActions.Select(kv => ((DamlValue)kv.Key.ToVariant(), (DamlValue)new DamlList(kv.Value.Select(x => (DamlValue)new DamlList(x.Select(x => (DamlValue)x.ToDamlValue()).ToList())).ToList()))).ToList())),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("originalAllocationCid", OriginalAllocationCid is { } __OriginalAllocationCid ? new global::Daml.Runtime.Data.DamlOptional(__OriginalAllocationCid.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("settlement", Settlement.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("allocation", Allocation.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("holdingCids", new global::Daml.Runtime.Data.DamlList(HoldingCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("createdAt", new global::Daml.Runtime.Data.DamlTimestamp(CreatedAt)),
+        global::Daml.Runtime.Data.DamlField.Create("numIterations", new global::Daml.Runtime.Data.DamlInt64(NumIterations)),
+        global::Daml.Runtime.Data.DamlField.Create("expiresAt", ExpiresAt is { } __ExpiresAt ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTimestamp(__ExpiresAt)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("availableActions", new global::Daml.Runtime.Data.DamlGenMap(AvailableActions.Select(kv => ((global::Daml.Runtime.Data.DamlValue)kv.Key.ToVariant(), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlList(kv.Value.Select(x => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlList(x.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())).ToList()))).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AllocationView FromRecord(DamlRecord record) => new AllocationView(
-        OriginalAllocationCid: record.GetOptionalField("originalAllocationCid").AsOptional().HasValue ? new ContractId<IAllocation>(record.GetOptionalField("originalAllocationCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
-        Settlement: SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<DamlRecord>()),
-        Allocation: AllocationSpecification.FromRecord(record.GetRequiredField("allocation").As<DamlRecord>()),
-        HoldingCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("holdingCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList(),
-        CreatedAt: record.GetRequiredField("createdAt").As<DamlTimestamp>().Value,
-        NumIterations: record.GetRequiredField("numIterations").As<DamlInt64>().Value,
-        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
-        AvailableActions: (IReadOnlyDictionary<AllocationAction, IReadOnlyList<IReadOnlyList<Party>>>)record.GetRequiredField("availableActions").As<DamlGenMap>().Entries.ToDictionary(kv => AllocationAction.FromVariant(kv.Key.As<DamlVariant>()), kv => (IReadOnlyList<IReadOnlyList<Party>>)kv.Value.As<DamlList>().Values.Select(x => (IReadOnlyList<Party>)x.As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList()).ToList()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static AllocationView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationView(
+        OriginalAllocationCid: record.GetOptionalField("originalAllocationCid").AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetOptionalField("originalAllocationCid").AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null,
+        Settlement: global::Splice.Api.Token.AllocationV2.SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Allocation: global::Splice.Api.Token.AllocationV2.AllocationSpecification.FromRecord(record.GetRequiredField("allocation").As<global::Daml.Runtime.Data.DamlRecord>()),
+        HoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("holdingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        CreatedAt: record.GetRequiredField("createdAt").As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
+        NumIterations: record.GetRequiredField("numIterations").As<global::Daml.Runtime.Data.DamlInt64>().Value,
+        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        AvailableActions: (global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.AllocationV2.AllocationAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>>)record.GetRequiredField("availableActions").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Splice.Api.Token.AllocationV2.AllocationAction.FromVariant(kv.Key.As<global::Daml.Runtime.Data.DamlVariant>()), kv => (global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>)kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)x.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList()).ToList()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("originalAllocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "originalAllocationCid"), context.Field("originalAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("settlement", SettlementInfo.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settlement"), context.Field("settlement"))),
-            DamlField.Create("allocation", AllocationSpecification.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocation"), context.Field("allocation"))),
-            DamlField.Create("holdingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holdingCids"), context.Field("holdingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("createdAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "createdAt"), context.Field("createdAt"))),
-            DamlField.Create("numIterations", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "numIterations"), context.Field("numIterations"))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
-            DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => AllocationAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(9);
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "originalAllocationCid", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("originalAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("settlement", global::Splice.Api.Token.AllocationV2.SettlementInfo.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settlement"), context.Field("settlement"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("allocation", global::Splice.Api.Token.AllocationV2.AllocationSpecification.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocation"), context.Field("allocation"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("holdingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holdingCids"), context.Field("holdingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("createdAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "createdAt"), context.Field("createdAt"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("numIterations", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "numIterations"), context.Field("numIterations"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "expiresAt", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.AllocationAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

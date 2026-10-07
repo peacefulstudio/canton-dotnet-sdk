@@ -14,18 +14,17 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// usings; this emitter writes the enum body into the provided
 /// <see cref="IndentWriter"/>.
 /// </summary>
-internal sealed class EnumEmitter(
-    PackageEmitContext context,
-    CodeGenOptions options)
+internal sealed class EnumEmitter(CodeGenOptions options)
 {
     /// <summary>
     /// Writes the enum declaration and its serialization extension class for
     /// <paramref name="dataType"/> into <paramref name="indent"/>.
     /// </summary>
-    internal void WriteEnumType(IndentWriter indent, DamlDataType dataType, DamlEnumDefinition enumDef)
+    internal void WriteEnumType(IndentWriter indent, PackageEmitContext context, DamlDataType dataType, DamlEnumDefinition enumDef)
     {
         indent.Require("System");
         var enumName = EmitterHelpers.SanitizeIdentifier(dataType.Name);
+        var enumReference = context.QualifyInModule(enumName);
 
         if (options.GenerateXmlDocs)
         {
@@ -65,7 +64,7 @@ internal sealed class EnumEmitter(
         {
             indent.AppendLine("/// <summary>Converts to a DamlEnum value.</summary>");
         }
-        indent.AppendLine($"public static {context.Qualifier.Qualify(RuntimeTypeNames.DamlEnum)} ToDamlEnum(this {enumName} value)");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlEnum)} ToDamlEnum(this {enumReference} value)");
         indent.AppendLine("{");
         indent.Indent();
         indent.AppendLine("return value switch");
@@ -73,9 +72,9 @@ internal sealed class EnumEmitter(
         indent.Indent();
         foreach (var ctor in enumDef.Constructors)
         {
-            indent.AppendLine($"{enumName}.{EmitterHelpers.SanitizeIdentifier(ctor)} => {context.Qualifier.Qualify(RuntimeTypeNames.DamlEnum)}.Create(\"{ctor}\"),");
+            indent.AppendLine($"{enumReference}.{EmitterHelpers.SanitizeIdentifier(ctor)} => {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlEnum)}.Create(\"{ctor}\"),");
         }
-        indent.AppendLine("_ => throw new ArgumentOutOfRangeException(nameof(value), value, null)");
+        indent.AppendLine("_ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value, null)");
         indent.Dedent();
         indent.AppendLine("};");
         indent.Dedent();
@@ -86,7 +85,7 @@ internal sealed class EnumEmitter(
         {
             indent.AppendLine("/// <summary>Creates an instance from a DamlEnum value.</summary>");
         }
-        indent.AppendLine($"public static {enumName} FromDamlEnum({context.Qualifier.Qualify(RuntimeTypeNames.DamlEnum)} value)");
+        indent.AppendLine($"public static {enumReference} FromDamlEnum({TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlEnum)} value)");
         indent.AppendLine("{");
         indent.Indent();
         indent.AppendLine("return value.Constructor switch");
@@ -94,9 +93,9 @@ internal sealed class EnumEmitter(
         indent.Indent();
         foreach (var ctor in enumDef.Constructors)
         {
-            indent.AppendLine($"\"{ctor}\" => {enumName}.{EmitterHelpers.SanitizeIdentifier(ctor)},");
+            indent.AppendLine($"\"{ctor}\" => {enumReference}.{EmitterHelpers.SanitizeIdentifier(ctor)},");
         }
-        indent.AppendLine("_ => throw new ArgumentOutOfRangeException(nameof(value), value.Constructor, null)");
+        indent.AppendLine("_ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value.Constructor, null)");
         indent.Dedent();
         indent.AppendLine("};");
         indent.Dedent();
@@ -130,7 +129,7 @@ internal sealed class EnumEmitter(
         }
 
         indent.AppendLine("[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
-        indent.AppendLine($"public static {context.Qualifier.Qualify(RuntimeTypeNames.DamlEnum)} __ReadDamlLfJson(global::System.Text.Json.JsonElement json, {DamlTypeMapper.DamlLfJsonDecodeContextQualifiedName} context) =>");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlEnum)} __ReadDamlLfJson(global::System.Text.Json.JsonElement json, {DamlTypeMapper.DamlLfJsonDecodeContextQualifiedName} context) =>");
         indent.Indent();
         indent.AppendLine($"{DamlTypeMapper.DamlLfJsonDecodersQualifiedName}.ReadEnumConstructor(json, context, ExpectedConstructors);");
         indent.Dedent();

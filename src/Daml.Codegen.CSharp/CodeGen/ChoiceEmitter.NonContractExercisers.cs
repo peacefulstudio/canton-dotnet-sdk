@@ -18,13 +18,13 @@ internal sealed partial class ChoiceEmitter
     /// </summary>
     internal bool TryWriteNonContractChoiceExtensions(
         IndentWriter indent,
-        DamlTemplate template,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes)
+        DamlTemplate template)
     {
-        var className = SanitizeIdentifier(template.Name);
+        var emittedTemplateName = context.EmittedTypeName(context.Module.Name, template.Name);
+        var className = context.QualifyInModule(emittedTemplateName);
 
         var emittable = template.Choices
-            .Where(c => ChoiceCreatedSlots.Extract(context, resolver, mapper, c.ReturnType).Count == 0)
+            .Where(c => !ReturnsContractIds(c.ReturnType))
             .ToList();
 
         if (emittable.Count == 0)
@@ -45,7 +45,7 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine("/// into <c>ExerciseOutcome&lt;TReturn&gt;</c>.");
             indent.AppendLine("/// </summary>");
         }
-        indent.AppendLine($"public static class {className}NonContractExtensions");
+        indent.AppendLine($"public static class {emittedTemplateName}NonContractExtensions");
         indent.AppendLine("{");
         indent.Indent();
 
@@ -55,10 +55,10 @@ internal sealed partial class ChoiceEmitter
             {
                 indent.AppendLine();
             }
-            WriteChoiceCommandBuilder(indent, emittable[i], className, dataTypes);
+            WriteChoiceCommandBuilder(indent, emittable[i], className);
             indent.AppendLine();
             WriteSingleNonContractChoiceAsyncExerciser(
-                indent, emittable[i], className, dataTypes, SubmitterInfoParameter());
+                indent, emittable[i], className, SubmitterInfoParameter());
         }
 
         foreach (var choice in emittable)
@@ -77,15 +77,12 @@ internal sealed partial class ChoiceEmitter
         IndentWriter indent,
         DamlChoice choice,
         string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes,
         ChoiceSubmitterParameter submitter)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var returnTypeName = mapper.MapType(choice.ReturnType);
-        var argument = GetChoiceArgumentInfo(choice, dataTypes);
+        var returnTypeName = RequireAndMapReturnType(indent, choice);
+        var argument = GetChoiceArgumentInfo(choice);
         var hasArg = argument.HasArgument;
-
-        StdlibPackages.RequireForFieldType(resolver, context.Package, indent, choice.ReturnType);
 
         if (options.GenerateXmlDocs)
         {
@@ -104,10 +101,10 @@ internal sealed partial class ChoiceEmitter
             WriteSubmissionParameterDocs(indent);
         }
 
-        indent.AppendLine($"public static async Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> Try{choiceName}Async(");
+        indent.AppendLine($"public static async global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> Try{choiceName}Async(");
         indent.Indent();
-        indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
+        indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         if (hasArg)
         {
             indent.AppendLine($"{argument.ParameterType(templateClassName)} argument,");
@@ -118,7 +115,7 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine("{");
         indent.Indent();
 
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(client);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(client);");
         indent.AppendLine();
 
         indent.AppendLine(hasArg
@@ -129,77 +126,6 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine($"var outcome = await client.TrySubmitSingleAsync(command, {submitter.Name}, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);");
         indent.AppendLine();
         indent.AppendLine($"return outcome.ProjectCommitted(tx => Project{choiceName}Result(tx, contractId.Value));");
-
-        indent.Dedent();
-        indent.AppendLine("}");
-    }
-
-    /// <summary>
-    /// Emits a private static helper that locates the matching
-    /// <see cref="Daml.Runtime.Data.DamlValue"/> in <c>tx.ExercisedEvents</c>,
-    /// runs the choice's <c>ResultDecoder</c> over it, and returns
-    /// <c>ExerciseOutcome&lt;TReturn&gt;.One(...)</c>. Throws
-    /// <see cref="InvalidOperationException"/> when no matching exercise is
-    /// present (mirrors the cardinality semantics of upstream's
-    /// <c>tx.ExerciseResult&lt;T&gt;(choiceName)</c>).
-    /// </summary>
-    /// <remarks>
-    /// The emitted filter keys on contract id, template id and choice name together, so a nested
-    /// exercise of the same choice on another contract in the same transaction is not returned by
-    /// mistake. The template id is compared on its module and entity names only, never the full
-    /// identifier, so package-id drift from an upgrade does not break projection — the same
-    /// drift-tolerant comparison the created-contract projector uses.
-    /// </remarks>
-    private void WriteExerciseProjector(
-        IndentWriter indent,
-        DamlChoice choice,
-        string templateClassName)
-    {
-        var choiceName = SanitizeIdentifier(choice.Name);
-        var returnTypeName = mapper.MapType(choice.ReturnType);
-
-        indent.AppendLine($"private static {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}> Project{choiceName}Result({context.Qualifier.Qualify(RuntimeTypeNames.TransactionResult)} tx, string contractId)");
-        indent.AppendLine("{");
-        indent.Indent();
-
-        indent.AppendLine("foreach (var exercised in tx.ExercisedEvents)");
-        indent.AppendLine("{");
-        indent.Indent();
-        indent.AppendLine($"if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)");
-        indent.AppendLine($"    && string.Equals(exercised.TemplateId.ModuleName, {templateClassName}.TemplateId.ModuleName, StringComparison.Ordinal)");
-        indent.AppendLine($"    && string.Equals(exercised.TemplateId.EntityName, {templateClassName}.TemplateId.EntityName, StringComparison.Ordinal)");
-        indent.AppendLine($"    && string.Equals(exercised.ChoiceName.Value, \"{choice.Name}\", StringComparison.Ordinal))");
-        indent.AppendLine("{");
-        indent.Indent();
-
-        indent.AppendLine("try");
-        indent.AppendLine("{");
-        indent.Indent();
-        indent.AppendLine($"var decoded = {templateClassName}.Choice{choiceName}.ResultDecoder!(exercised.ExerciseResult);");
-        indent.AppendLine($"return new {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>.One(decoded);");
-        indent.Dedent();
-        indent.AppendLine("}");
-        indent.AppendLine("catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)");
-        indent.AppendLine("{");
-        indent.Indent();
-        indent.AppendLine($"return new {context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);");
-        indent.Dedent();
-        indent.AppendLine("}");
-
-        indent.Dedent();
-        indent.AppendLine("}");
-        indent.Dedent();
-        indent.AppendLine("}");
-
-        indent.AppendLine();
-        indent.AppendLine("throw new InvalidOperationException(");
-        indent.Indent();
-        indent.AppendLine($"$\"Submission succeeded but no '{choice.Name}' exercise on contract '{{contractId}}' was recorded on transaction {{tx.UpdateId}}. \" +");
-        indent.AppendLine("\"The transaction returned for this submission carries no exercised event for it. \" +");
-        indent.AppendLine("\"Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, \" +");
-        indent.AppendLine("\"or the transaction was requested in a shape without exercised events (ACS_DELTA); \" +");
-        indent.AppendLine("\"request the LEDGER_EFFECTS shape with verbose events.\");");
-        indent.Dedent();
 
         indent.Dedent();
         indent.AppendLine("}");

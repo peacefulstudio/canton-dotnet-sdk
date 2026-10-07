@@ -15,26 +15,26 @@ public sealed partial record Account
     /// Choice argument type for Credit.
     /// </summary>
     public sealed record Credit(
-        [property: DamlFieldAttribute("delta")] long Delta
-    ) : IDamlRecord<Credit>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("delta")] long Delta
+    ) : global::Daml.Runtime.Data.IDamlRecord<Credit>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("delta", new DamlInt64(Delta))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("delta", new global::Daml.Runtime.Data.DamlInt64(Delta))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Credit FromRecord(DamlRecord record) => new Credit(
-            Delta: record.GetRequiredField("delta").As<DamlInt64>().Value
+        public static Credit FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Credit(
+            Delta: record.GetRequiredField("delta").As<global::Daml.Runtime.Data.DamlInt64>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("delta", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "delta"), context.Field("delta")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("delta", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "delta"), context.Field("delta")))
             );
         }
 

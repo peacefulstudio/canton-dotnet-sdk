@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.EmittedSubmissionShape;
@@ -14,16 +15,7 @@ public class ChoiceEmitterValueReturnExerciserTests
 {
     private const string LocalPackageId = "pkg-id";
 
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
-
-    private static DamlPackage Package(DamlTemplate template, params DamlDataType[] dataTypes) =>
+    private static DamlPackage Package(DamlTemplate template, params DamlModule[] otherModules) =>
         new()
         {
             PackageId = LocalPackageId,
@@ -36,9 +28,10 @@ public class ChoiceEmitterValueReturnExerciserTests
                 {
                     Name = "Main",
                     Templates = [template],
-                    DataTypes = dataTypes,
+                    DataTypes = [],
                     Interfaces = [],
                 },
+                .. otherModules,
             ],
             DependencyReferences = [],
         };
@@ -59,15 +52,16 @@ public class ChoiceEmitterValueReturnExerciserTests
             Choices = choices,
         };
 
-    private static string EmitNonContract(DamlTemplate template)
+    private static string EmitNonContract(DamlTemplate template, params DamlModule[] otherModules)
     {
-        var package = Package(template);
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var package = Package(template, otherModules);
+        var resolution = RealResolution.Of(package, new CodeGenOptions { NamespacePrefix = "Test.Package" });
+        var context = resolution.Contexts.Single(c => c.Module.Name == "Main");
+        var resolver = resolution.Resolver;
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        emitter.TryWriteNonContractChoiceExtensions(indent, template, context.DataTypes);
+        emitter.TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }
 
@@ -81,33 +75,16 @@ public class ChoiceEmitterValueReturnExerciserTests
         var output = EmitNonContract(template);
 
         output.Should().Contain("public static class OracleNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<decimal>> TryGetTrailingTwapAsync(");
-        output.Should().Contain("this ContractId<Oracle> contractId,");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<decimal>> TryGetTrailingTwapAsync(");
+        output.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Oracle> contractId,");
         output.Should().Contain("ILedgerWriter client,");
         output.Should().Contain("SubmitterInfo submitter,");
         output.Should().Contain("client." + TrySubmitSingleArgumentOrder);
         output.Should().Contain("return outcome.ProjectCommitted(tx => ProjectGetTrailingTwapResult(tx, contractId.Value));");
         output.Should().NotContain("Unhandled outcome");
-        output.Should().NotContain("ExerciseOutcome<TransactionResult>.DamlError");
-        output.Should().Contain("string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)");
-        output.Should().Contain("string.Equals(exercised.TemplateId.ModuleName, Oracle.TemplateId.ModuleName, StringComparison.Ordinal)");
-        output.Should().Contain("string.Equals(exercised.TemplateId.EntityName, Oracle.TemplateId.EntityName, StringComparison.Ordinal)");
-        output.Should().NotContain("exercised.TemplateId.Equals(");
-    }
-
-    [Fact]
-    public void ChoiceEmitterValueReturnExerciser_non_contract_exerciser_wraps_ResultDecoder_in_a_CommittedUndecodable_guard()
-    {
-        var template = Template(
-            "Oracle",
-            Choice("GetTrailingTwap", new DamlPrimitiveType(DamlPrimitive.Unit), new DamlPrimitiveType(DamlPrimitive.Numeric)));
-
-        var output = EmitNonContract(template);
-
-        output.Should().Contain("var decoded = Oracle.ChoiceGetTrailingTwap.ResultDecoder!(exercised.ExerciseResult);");
-        output.Should().Contain("return new ExerciseOutcome<decimal>.One(decoded);");
-        output.Should().Contain("catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)");
-        output.Should().Contain("return new ExerciseOutcome<decimal>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);");
+        output.Should().NotContain("global::Daml.Runtime.Outcomes.ExerciseOutcome<TransactionResult>.DamlError");
+        output.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Oracle.ChoiceGetTrailingTwap, contractId);");
+        output.Should().NotContain("tx.ExercisedEvents");
     }
 
     [Fact]
@@ -117,10 +94,10 @@ public class ChoiceEmitterValueReturnExerciserTests
             "Reporter",
             Choice("ComputeReport", new DamlPrimitiveType(DamlPrimitive.Unit), new DamlTypeRef("", "Test.Reports", "Report")));
 
-        var output = EmitNonContract(template);
+        var output = EmitNonContract(template, TestPackages.ModuleOf("Test.Reports", TestPackages.Record("Report")));
 
         output.Should().Contain("public static class ReporterNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<Report>> TryComputeReportAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Test.Package.Test.Reports.Report>> TryComputeReportAsync(");
     }
 
     [Fact]
@@ -135,7 +112,7 @@ public class ChoiceEmitterValueReturnExerciserTests
 
         var output = EmitNonContract(template);
 
-        output.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyList<decimal>>> TryRecentTwapsAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<decimal>>> TryRecentTwapsAsync(");
     }
 
     [Fact]
@@ -164,7 +141,7 @@ public class ChoiceEmitterValueReturnExerciserTests
 
         var emitted = EmitNonContract(template);
 
-        emitted.Should().Contain("Optional<Optional<string>>");
+        emitted.Should().Contain("global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>");
         emitted.Should().NotContain("string??");
     }
 
@@ -182,8 +159,8 @@ public class ChoiceEmitterValueReturnExerciserTests
 
         var emitted = EmitNonContract(template);
 
-        emitted.Should().Contain("ExerciseOutcome<Optional<Optional<DamlUnit>>> ProjectMaybeMaybeUnitResult(");
-        emitted.Should().Contain("var decoded = Sink.ChoiceMaybeMaybeUnit.ResultDecoder!(exercised.ExerciseResult);");
+        emitted.Should().Contain("global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Data.DamlUnit>>> ProjectMaybeMaybeUnitResult(");
+        emitted.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceMaybeMaybeUnit, contractId);");
     }
 
     [Fact]

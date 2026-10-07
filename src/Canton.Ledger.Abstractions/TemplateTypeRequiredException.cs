@@ -12,12 +12,22 @@ namespace Canton.Ledger.Abstractions;
 /// depending on the field it fills. The JSON Ledger API transport therefore decodes every payload against
 /// the type generated for its template, choice or interface, and refuses rather than guessing when that
 /// type is not loaded, or when more than one loaded type claims it. Load exactly one assembly generated for
-/// the payload's package before reading it.
+/// the payload's package before reading it. The SDK loads the libraries the host's <c>deps.json</c> lists
+/// that depend on <c>Daml.Runtime</c> and runs their module initializers when it first finds no type registered for the payload's exact identifier, so a
+/// referenced binding needs no touching first. A host with no <c>deps.json</c>, such as a custom
+/// <see cref="System.Runtime.Loader.AssemblyLoadContext"/> or a plugin host, runs
+/// <c>RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle)</c> once for each
+/// generated assembly it uses.
 /// </remarks>
 public sealed class TemplateTypeRequiredException : InvalidOperationException
 {
     private const string LoadAdvice =
         "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.";
+
+    private const string MissingTypeAdvice =
+        LoadAdvice
+        + " A host without a deps.json registers each generated assembly itself, once, with "
+        + "RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).";
 
     /// <summary>Creates an exception naming the Daml type identifier that has no loaded generated type.</summary>
     /// <param name="typeId">The template or interface identifier, as <c>package:module:entity</c>.</param>
@@ -30,7 +40,7 @@ public sealed class TemplateTypeRequiredException : InvalidOperationException
             (choiceName is null
                 ? $"No generated type is loaded for '{typeId}'; "
                 : $"No generated type is loaded for choice '{choiceName}' of '{typeId}'; ")
-            + LoadAdvice)
+            + MissingTypeAdvice)
     {
         TypeId = typeId;
         ChoiceName = choiceName;

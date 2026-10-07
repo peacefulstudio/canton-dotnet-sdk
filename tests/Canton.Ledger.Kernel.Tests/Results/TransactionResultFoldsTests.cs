@@ -114,17 +114,29 @@ public class TransactionResultFoldsTests
     }
 
     [Fact]
-    public void ToChoiceResult_reports_no_update_id_when_the_committed_transaction_declares_none()
+    public void ToChoiceResult_throws_when_the_committed_transaction_declares_no_update_id_and_no_exercise()
     {
         var result = Result() with { UpdateId = "" };
+        var command = new ExerciseCommand(TemplateId, new ContractId<TemplateMarker>("00a"), new ChoiceName("Archive"), DamlUnit.Instance);
 
-        var outcome = TransactionResultFolds.ToChoiceResult<DamlUnit>(result, new ChoiceName("Archive"));
+        var act = () => TransactionResultFolds.ToChoiceResult<DamlUnit>(result, command);
 
-        var undecodable = outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.CommittedUndecodable>().Subject;
-        undecodable.UpdateId.Should().BeNull();
-        undecodable.Message.Should().Be(
-            "The command committed, but its choice result could not be read: Transaction contains no exercised event for choice 'Archive'.");
-        undecodable.SourceException.Should().BeOfType<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>().Which.Message.Should().StartWith(
+            "Submission succeeded but no 'Archive' exercise on contract '00a' was recorded on a transaction that declares no update id.");
+    }
+
+    [Fact]
+    public void ToChoiceResult_reports_a_null_update_id_when_the_committed_transaction_declares_none_and_the_result_does_not_decode()
+    {
+        var exercised = new ExercisedEvent(
+            "00a", TemplateId, null, new ChoiceName("GetCount"), DamlUnit.Instance, new DamlText("not a number"),
+            false, [], []);
+        var result = Result() with { UpdateId = "", ExercisedEvents = [exercised] };
+        var command = new ExerciseCommand(TemplateId, new ContractId<TemplateMarker>("00a"), new ChoiceName("GetCount"), DamlUnit.Instance);
+
+        var outcome = TransactionResultFolds.ToChoiceResult<long>(result, command);
+
+        outcome.Should().BeOfType<ExerciseOutcome<long>.CommittedUndecodable>().Which.UpdateId.Should().BeNull();
     }
 
     private static CreatedContract Created(string contractId) =>

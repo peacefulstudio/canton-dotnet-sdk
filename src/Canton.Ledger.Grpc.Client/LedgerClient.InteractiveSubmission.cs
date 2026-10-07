@@ -27,6 +27,7 @@ internal sealed partial class LedgerClient
         var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: false);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.PrepareSubmissionResponse, PreparedSubmission>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "PrepareSubmission",
@@ -46,6 +47,7 @@ internal sealed partial class LedgerClient
         var request = BuildExecuteSubmissionRequest(submission);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.ExecuteSubmissionResponse>(
+            LedgerCallKind.AcceptedOnlyWrite,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "ExecuteSubmission",
@@ -66,12 +68,13 @@ internal sealed partial class LedgerClient
         var request = BuildExecuteSubmissionAndWaitRequest(submission);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.ExecuteSubmissionAndWaitResponse, ExecutedSubmission>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "ExecuteSubmissionAndWait",
             (headers, deadline, token) => _interactiveSubmissionService.ExecuteSubmissionAndWaitAsync(
                 request, headers, deadline, token),
-            response => new ExecutedSubmission(response.UpdateId, LedgerOffset.At(response.CompletionOffset)),
+            response => new ExecutedSubmission(response.UpdateId, LedgerWireConversions.ToLedgerOffset(response.CompletionOffset)),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonSubmissionId, submission.SubmissionId),
             timeout: timeout,
@@ -88,6 +91,7 @@ internal sealed partial class LedgerClient
         var request = BuildExecuteSubmissionAndWaitForTransactionRequest(submission, submitter);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.ExecuteSubmissionAndWaitForTransactionResponse, TransactionResult>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "ExecuteSubmissionAndWaitForTransaction",
@@ -122,6 +126,7 @@ internal sealed partial class LedgerClient
         request.PackageVettingRequirements.AddRange(requirements.Select(ToWireRequirement));
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.GetPreferredPackagesResponse, PreferredPackages>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "GetPreferredPackages",
@@ -155,6 +160,7 @@ internal sealed partial class LedgerClient
         request.Parties.AddRange(parties.Select(party => party.Value));
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.GetPreferredPackageVersionResponse, PackagePreference?>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "GetPreferredPackageVersion",
@@ -162,7 +168,9 @@ internal sealed partial class LedgerClient
                 request, headers, deadline, token),
             response => response.PackagePreference is { } preference
                 ? new PackagePreference(
-                    GrpcExternalSigningMapper.FromWire(preference.PackageReference),
+                    GrpcExternalSigningMapper.FromWire(
+                        preference.PackageReference
+                        ?? throw MalformedResponse.MissingRequiredField("the package preference has no package_reference")),
                     RequireSynchronizer(preference.SynchronizerId))
                 : null,
             cancellationToken,
@@ -172,7 +180,7 @@ internal sealed partial class LedgerClient
     private static PreparedSubmission ProjectPreparedSubmission(Interactive.PrepareSubmissionResponse response) =>
         new(
             (response.PreparedTransaction
-                ?? throw new InvalidOperationException("The participant prepared a submission without a prepared transaction."))
+                ?? throw MalformedResponse.MissingRequiredField("the participant prepared a submission without a prepared transaction"))
             .ToByteArray(),
             response.PreparedTransactionHash.Memory,
             (HashingSchemeVersion)(int)response.HashingSchemeVersion,
@@ -181,7 +189,7 @@ internal sealed partial class LedgerClient
 
     private static SynchronizerId RequireSynchronizer(string wireValue) =>
         SynchronizerId.FromWire(wireValue)
-        ?? throw new InvalidOperationException("The participant returned a package preference without a synchronizer id.");
+        ?? throw MalformedResponse.MissingRequiredField("the participant returned a package preference without a synchronizer id");
 
     private static Interactive.PackageVettingRequirement ToWireRequirement(PackageVettingRequirement requirement)
     {
@@ -303,9 +311,13 @@ internal sealed partial class LedgerClient
         Interactive.ExecuteSubmissionAndWaitForTransactionResponse response,
         string submissionId)
     {
+        var transaction = response.Transaction
+            ?? throw MalformedResponse.MissingRequiredField(
+                "the ExecuteSubmissionAndWaitForTransaction response has no transaction");
+
         try
         {
-            return GrpcTransactionResultProjector.Project(response.Transaction);
+            return GrpcTransactionResultProjector.Project(transaction);
         }
         catch (Exception decodeFailure) when (MalformedResponse.IsWireDecodeFailure(decodeFailure))
         {

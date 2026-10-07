@@ -6,7 +6,7 @@ Consumers (typically ledger-client integration test suites) round-trip these typ
 participant to prove codegen output works end-to-end. Not for production use.
 
 ```bash
-dotnet add package Daml.Codegen.Testing.Conformance --version 0.6.0-preview.3
+dotnet add package Daml.Codegen.Testing.Conformance --version 0.6.0-preview.4
 ```
 
 `ConformanceCorpus.OpenDar()` returns the embedded rich-types DAR to upload to a
@@ -15,7 +15,7 @@ the contract-key one, and `ConformanceCorpus.OpenDar(ConformancePackage.DefaultT
 the one built with no Daml-LF target requested.
 
 Generated types are emitted one namespace per Daml module, all under
-`Daml.Codegen.Testing.Conformance`: `RichTypes` for the first corpus, `ContractKeys`,
+`Daml.Codegen.Testing.Conformance`: `RichTypes` and `SubmitShapes` for the first corpus, `ContractKeys`,
 `KeyBuilders` and `Disclosure` for the second, `DefaultTarget` for the third. `RichTypes` was spelled
 `Richtypes` before 0.5.0-preview.2, and the rename is case-only, which Roslyn does not
 forgive — a consumer holding `using Daml.Codegen.Testing.Conformance.Richtypes;` stops
@@ -35,7 +35,10 @@ arm (`noteOrRank`, held as `Either<Optional<string>, long>` for the same reason)
 and the `Numeric` scale extremes 0
 and 37 — the last of which the generated code exposes as `decimal`, so values
 needing more than 28 fractional digits are not representable. The `Holding`
-interface carries choices as well as a view. Keyed templates live in the second
+interface carries choices as well as a view. `GenericResults` carries choices that return a contract
+id, a list of contract ids, an enum, a variant, a generic record, a tuple, an `Either`, a `NonEmpty`,
+a set, a map and an `Optional`, so a test can read each result through the generated choice
+descriptor. Keyed templates live in the second
 corpus, `ContractKeys`, which is built at Daml-LF 2.3 because no earlier version
 can express a contract key: `Account` keys on a record of two payload fields,
 `Holiday` on a record whose field comes from a nested projection, `Schedule` on a

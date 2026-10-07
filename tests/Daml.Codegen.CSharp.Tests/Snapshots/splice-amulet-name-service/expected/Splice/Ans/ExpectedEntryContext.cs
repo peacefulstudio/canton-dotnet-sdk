@@ -14,34 +14,34 @@ namespace Splice.Ans;
 /// Generated from Daml record ExpectedEntryContext
 /// </summary>
 public sealed record ExpectedEntryContext(
-    [property: DamlFieldAttribute("dso")] Party Dso,
-    [property: DamlFieldAttribute("user")] Party User,
-    [property: DamlFieldAttribute("reference")] ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest> Reference
-) : IDamlRecord<ExpectedEntryContext>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("dso")] global::Daml.Runtime.Data.Party Dso,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("user")] global::Daml.Runtime.Data.Party User,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("reference")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest> Reference
+) : global::Daml.Runtime.Data.IDamlRecord<ExpectedEntryContext>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("dso", Dso.ToDamlValue()),
-        DamlField.Create("user", User.ToDamlValue()),
-        DamlField.Create("reference", Reference.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("dso", Dso.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("user", User.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("reference", Reference.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static ExpectedEntryContext FromRecord(DamlRecord record) => new ExpectedEntryContext(
-        Dso: Party.FromDamlValue(record.GetRequiredField("dso").As<DamlParty>()),
-        User: Party.FromDamlValue(record.GetRequiredField("user").As<DamlParty>()),
-        Reference: new ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest>(record.GetRequiredField("reference").As<DamlContractId>().Value)
+    public static ExpectedEntryContext FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ExpectedEntryContext(
+        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso").As<global::Daml.Runtime.Data.DamlParty>()),
+        User: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("user").As<global::Daml.Runtime.Data.DamlParty>()),
+        Reference: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest>(record.GetRequiredField("reference").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
-            DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user"))),
-            DamlField.Create("reference", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reference"), context.Field("reference")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
+            global::Daml.Runtime.Data.DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user"))),
+            global::Daml.Runtime.Data.DamlField.Create("reference", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reference"), context.Field("reference")))
         );
     }
 

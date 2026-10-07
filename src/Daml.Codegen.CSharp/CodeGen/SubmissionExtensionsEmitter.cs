@@ -43,7 +43,6 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// </para>
 /// </summary>
 internal sealed class SubmissionExtensionsEmitter(
-    PackageEmitContext context,
     CodeGenOptions options,
     PartyAnalysis party)
 {
@@ -57,9 +56,10 @@ internal sealed class SubmissionExtensionsEmitter(
     internal bool TryWriteSubmissionExtensions(
         IndentWriter indent,
         DamlTemplate template,
+        string className,
+        IReadOnlySet<string> reservedFieldNames,
         IReadOnlyList<DamlFieldDefinition> fields)
     {
-        var className = Identifiers.Sanitize(template.Name);
 
         var partyFields = fields
             .Where(f => f.Type is DamlPrimitiveType { Primitive: DamlPrimitive.Party })
@@ -87,8 +87,8 @@ internal sealed class SubmissionExtensionsEmitter(
         indent.AppendLine("{");
         indent.Indent();
 
-        WriteTryCreateAsync(indent, template.Name, className, signatories);
-        TryWriteObserversHelper(indent, template.Name, className, observers);
+        WriteTryCreateAsync(indent, template.Name, className, reservedFieldNames, signatories);
+        TryWriteObserversHelper(indent, template.Name, className, reservedFieldNames, observers);
 
         indent.Dedent();
         indent.AppendLine("}");
@@ -105,7 +105,7 @@ internal sealed class SubmissionExtensionsEmitter(
     /// <c>SubmitterInfo</c> directly (with implicit conversion from
     /// a single <c>Party</c> for the single-party ergonomic).
     /// </summary>
-    private void WriteTryCreateAsync(IndentWriter indent, string templateName, string className, DamlPartyAnalysis signatories)
+    private void WriteTryCreateAsync(IndentWriter indent, string templateName, string className, IReadOnlySet<string> reservedFieldNames, DamlPartyAnalysis signatories)
     {
         var staticParties = signatories.Source == DamlPartySource.Static
                             && signatories.Parties.Count > 0;
@@ -152,31 +152,31 @@ internal sealed class SubmissionExtensionsEmitter(
             indent.AppendLine("/// <param name=\"cancellationToken\">Cancellation token.</param>");
         }
 
-        indent.AppendLine($"public static Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}>>> TryCreateAsync(");
+        indent.AppendLine($"public static global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}>>> TryCreateAsync(");
         indent.Indent();
-        indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
+        indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         indent.AppendLine($"{className} payload,");
         if (!staticParties)
         {
-            indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
+            indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
         }
-        var submission = context.Qualifier.Qualify(RuntimeTypeNames.CommandsSubmission);
-        indent.AppendLine($"{context.Qualifier.Qualify("Func")}<{submission}, {submission}>? configure = null,");
-        indent.AppendLine("CancellationToken cancellationToken = default)");
+        var submission = TypeReferenceQualifier.Qualify(RuntimeTypeNames.CommandsSubmission);
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify("Func")}<{submission}, {submission}>? configure = null,");
+        indent.AppendLine("global::System.Threading.CancellationToken cancellationToken = default)");
         indent.Dedent();
 
         indent.AppendLine("{");
         indent.Indent();
 
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(client);");
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(payload);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(client);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(payload);");
         indent.AppendLine();
 
         if (staticParties)
         {
             if (multipleStatic)
             {
-                indent.AppendLine($"var submitter = new {context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)}(new {context.Qualifier.Qualify("HashSet")}<{context.Qualifier.Qualify(RuntimeTypeNames.Party)}>");
+                indent.AppendLine($"var submitter = new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)}(new {TypeReferenceQualifier.Qualify("HashSet")}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)}>");
                 indent.AppendLine("{");
                 indent.Indent();
                 for (var i = 0; i < signatories.Parties.Count; i++)
@@ -186,7 +186,7 @@ internal sealed class SubmissionExtensionsEmitter(
                         throw NotAPayloadField(templateName, "signatory", i, signatories.Parties[i]);
                     }
 
-                    var prop = Identifiers.MemberName(pf.FieldName, className);
+                    var prop = Identifiers.MemberName(pf.FieldName, className, reservedFieldNames);
                     var comma = i < signatories.Parties.Count - 1 ? "," : "";
                     indent.AppendLine($"payload.{prop}{comma}");
                 }
@@ -200,8 +200,8 @@ internal sealed class SubmissionExtensionsEmitter(
                     throw NotAPayloadField(templateName, "signatory", 0, signatories.Parties[0]);
                 }
 
-                var prop = Identifiers.MemberName(pf.FieldName, className);
-                indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter = payload.{prop};");
+                var prop = Identifiers.MemberName(pf.FieldName, className, reservedFieldNames);
+                indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter = payload.{prop};");
             }
             indent.AppendLine();
         }
@@ -226,10 +226,10 @@ internal sealed class SubmissionExtensionsEmitter(
     /// list (the helper would always return <c>[]</c> — emitting it would be
     /// noise). Static-empty observers still register as a known-empty
     /// contribution to <c>readAs</c> on the emitted <c>Try&lt;Choice&gt;Async</c>
-    /// wrappers, which is handled in <c>ChoiceResults.cs</c>.
+    /// wrappers, which is handled in <c>ChoiceEmitter.ContractIdExercisers.cs</c>.
     /// </para>
     /// </summary>
-    private void TryWriteObserversHelper(IndentWriter indent, string templateName, string className, DamlPartyAnalysis observers)
+    private void TryWriteObserversHelper(IndentWriter indent, string templateName, string className, IReadOnlySet<string> reservedFieldNames, DamlPartyAnalysis observers)
     {
         if (observers.Source != DamlPartySource.Static || observers.Parties.Count == 0)
         {
@@ -250,11 +250,11 @@ internal sealed class SubmissionExtensionsEmitter(
             indent.AppendLine("/// <param name=\"payload\">The contract payload.</param>");
         }
 
-        indent.AppendLine($"public static {context.Qualifier.Qualify("IReadOnlyList")}<{context.Qualifier.Qualify(RuntimeTypeNames.Party)}> Observers({className} payload)");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify("IReadOnlyList")}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)}> Observers({className} payload)");
         indent.AppendLine("{");
         indent.Indent();
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(payload);");
-        indent.AppendLine($"return new {context.Qualifier.Qualify(RuntimeTypeNames.Party)}[]");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(payload);");
+        indent.AppendLine($"return new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)}[]");
         indent.AppendLine("{");
         indent.Indent();
         for (var i = 0; i < observers.Parties.Count; i++)
@@ -264,7 +264,7 @@ internal sealed class SubmissionExtensionsEmitter(
                 throw NotAPayloadField(templateName, "observer", i, observers.Parties[i]);
             }
 
-            var prop = Identifiers.MemberName(pf.FieldName, className);
+            var prop = Identifiers.MemberName(pf.FieldName, className, reservedFieldNames);
             var comma = i < observers.Parties.Count - 1 ? "," : "";
             indent.AppendLine($"payload.{prop}{comma}");
         }

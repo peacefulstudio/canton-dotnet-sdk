@@ -23,37 +23,37 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml interface Splice.Api.Token.TransferInstructionV2:TransferFactory
 /// </summary>
 /// <remarks>
-/// Instance properties mirror the fields of the interface view <see cref="TransferFactoryView"/>,
+/// Instance properties mirror the fields of the interface view <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView"/>,
 /// which implements this marker, so a view can be read through a marker-typed variable.
 /// <c>==</c> between marker-typed variables compares by reference equality; view payloads
-/// materialize as concrete <see cref="TransferFactoryView"/> values, whose record value equality
+/// materialize as concrete <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface ITransferFactory : IDamlInterface, IHasView<TransferFactoryView>, IHasChoices<ITransferFactory>
+public interface ITransferFactory : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView>, global::Daml.Runtime.Contracts.IHasChoices<ITransferFactory>
 {
     /// <summary>Gets the interface identifier.</summary>
-    static Identifier IDamlInterface.InterfaceId => InterfaceId;
+    static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferFactory");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferFactory");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "splice-api-token-transfer-instruction-v2";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "splice-api-token-transfer-instruction-v2";
 
     /// <summary>Gets the package version.</summary>
-    static Version IDamlInterface.PackageVersion => new(1, 0, 0);
+    static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(1, 0, 0);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferFactory"), DamlTypeKind.Interface, "splice-api-token-transfer-instruction-v2");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferFactory"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "splice-api-token-transfer-instruction-v2");
 
-    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="TransferFactoryView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static ViewDescriptor<ITransferFactory, TransferFactoryView> View { get; } = new();
+    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
+    public static global::Daml.Runtime.Contracts.ViewDescriptor<ITransferFactory, global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView> View { get; } = new();
 
     /// <summary>Gets the admin field of the interface view.</summary>
-    Party Admin { get; }
+    global::Daml.Runtime.Data.Party Admin { get; }
 
     /// <summary>Gets the meta field of the interface view.</summary>
     global::Splice.Api.Token.MetadataV1.Metadata Meta { get; }
@@ -62,17 +62,17 @@ public interface ITransferFactory : IDamlInterface, IHasView<TransferFactoryView
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<ITransferFactory, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferFactory, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -80,13 +80,13 @@ public interface ITransferFactory : IDamlInterface, IHasView<TransferFactoryView
     /// <summary>
     /// Exercise the TransferFactory_PublicFetch choice.
     /// </summary>
-    public static Choice<ITransferFactory, TransferFactory_PublicFetch, TransferFactoryView> ChoiceTransferFactory_PublicFetch { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferFactory, global::Splice.Api.Token.TransferInstructionV2.TransferFactory_PublicFetch, global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView> ChoiceTransferFactory_PublicFetch { get; } = new()
     {
-        Name = new ChoiceName("TransferFactory_PublicFetch"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("TransferFactory_PublicFetch"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferFactory_PublicFetch.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferFactory_PublicFetch.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferFactory_PublicFetch.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView.__ReadDamlLfJson(json, context),
     };
@@ -94,19 +94,19 @@ public interface ITransferFactory : IDamlInterface, IHasView<TransferFactoryView
     /// <summary>
     /// Exercise the TransferFactory_Transfer choice.
     /// </summary>
-    public static Choice<ITransferFactory, TransferFactory_Transfer, TransferInstructionResult> ChoiceTransferFactory_Transfer { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferFactory, global::Splice.Api.Token.TransferInstructionV2.TransferFactory_Transfer, global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ChoiceTransferFactory_Transfer { get; } = new()
     {
-        Name = new ChoiceName("TransferFactory_Transfer"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("TransferFactory_Transfer"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferFactory_Transfer.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferFactory_Transfer.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferFactory_Transfer.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    static IReadOnlyList<IChoice> IHasChoices<ITransferFactory>.Choices { get; } = [ChoiceArchive, ChoiceTransferFactory_PublicFetch, ChoiceTransferFactory_Transfer];
+    static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<ITransferFactory>.Choices { get; } = [ChoiceArchive, ChoiceTransferFactory_PublicFetch, ChoiceTransferFactory_Transfer];
 
 }
 
@@ -131,11 +131,11 @@ public static class ITransferFactoryExtensions
     /// ledger API resolves the concrete implementing template at the participant.
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<ITransferFactory> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return ExerciseCommand.For<ITransferFactory>(contractId, new ChoiceName("Archive"), DamlRecord.Create());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferFactory>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -152,17 +152,17 @@ public static class ITransferFactoryExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<ITransferFactory> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -178,13 +178,13 @@ public static class ITransferFactoryExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand TransferFactory_PublicFetchCommand(
-        this ContractId<ITransferFactory> contractId,
-        TransferFactory_PublicFetch argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand TransferFactory_PublicFetchCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId,
+        global::Splice.Api.Token.TransferInstructionV2.TransferFactory_PublicFetch argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<ITransferFactory>(contractId, new ChoiceName("TransferFactory_PublicFetch"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferFactory>(contractId, new global::Daml.Runtime.Commands.ChoiceName("TransferFactory_PublicFetch"), argument.ToRecord());
     }
 
     /// <summary>
@@ -202,18 +202,18 @@ public static class ITransferFactoryExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<TransferFactoryView>> TryTransferFactory_PublicFetchAsync(
-        this ContractId<ITransferFactory> contractId,
-        ILedgerWriter client,
-        TransferFactory_PublicFetch argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView>> TryTransferFactory_PublicFetchAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.TransferInstructionV2.TransferFactory_PublicFetch argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.TransferFactory_PublicFetchCommand(argument);
 
@@ -229,13 +229,13 @@ public static class ITransferFactoryExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand TransferFactory_TransferCommand(
-        this ContractId<ITransferFactory> contractId,
-        TransferFactory_Transfer argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand TransferFactory_TransferCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId,
+        global::Splice.Api.Token.TransferInstructionV2.TransferFactory_Transfer argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<ITransferFactory>(contractId, new ChoiceName("TransferFactory_Transfer"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferFactory>(contractId, new global::Daml.Runtime.Commands.ChoiceName("TransferFactory_Transfer"), argument.ToRecord());
     }
 
     /// <summary>
@@ -253,18 +253,18 @@ public static class ITransferFactoryExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<TransferInstructionResult>> TryTransferFactory_TransferAsync(
-        this ContractId<ITransferFactory> contractId,
-        ILedgerWriter client,
-        TransferFactory_Transfer argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult>> TryTransferFactory_TransferAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.TransferInstructionV2.TransferFactory_Transfer argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.TransferFactory_TransferCommand(argument);
 
@@ -273,93 +273,12 @@ public static class ITransferFactoryExtensions
         return outcome.ProjectCommitted(tx => ProjectTransferFactory_TransferResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferFactory.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferFactory.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferFactory.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferFactory.ChoiceArchive, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView> ProjectTransferFactory_PublicFetchResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferFactory.ChoiceTransferFactory_PublicFetch, contractId);
 
-    private static ExerciseOutcome<TransferFactoryView> ProjectTransferFactory_PublicFetchResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferFactory.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferFactory.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "TransferFactory_PublicFetch", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferFactory.ChoiceTransferFactory_PublicFetch.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<TransferFactoryView>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<TransferFactoryView>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'TransferFactory_PublicFetch' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<TransferInstructionResult> ProjectTransferFactory_TransferResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferFactory.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferFactory.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "TransferFactory_Transfer", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferFactory.ChoiceTransferFactory_Transfer.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<TransferInstructionResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<TransferInstructionResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'TransferFactory_Transfer' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ProjectTransferFactory_TransferResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferFactory.ChoiceTransferFactory_Transfer, contractId);
 }

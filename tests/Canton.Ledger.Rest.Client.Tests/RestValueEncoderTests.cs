@@ -16,109 +16,33 @@ namespace Canton.Ledger.Rest.Client.Tests;
 public class RestValueEncoderTests
 {
     [Fact]
-    public void ToWireValue_encodes_DamlBool_as_bool()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlBool(true));
-
-        wire.Bool.Should().BeTrue();
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_DamlInt64_as_a_decimal_string()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlInt64(42));
-
-        wire.Int64.Should().Be("42");
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_DamlNumeric_as_a_decimal_string()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlNumeric(1.5m, 10));
-
-        wire.Numeric.Should().Be("1.5");
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_DamlText_as_text()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlText("hello"));
-
-        wire.Text.Should().Be("hello");
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_DamlParty_as_party()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlParty("alice::ns1"));
-
-        wire.Party.Should().Be("alice::ns1");
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_DamlUnit_as_the_unit_marker()
-    {
-        var wire = RestValueEncoder.ToWireValue(DamlUnit.Instance);
-
-        wire.AdditionalProperties.Should().ContainKey("unit");
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_a_present_DamlOptionalChain_level_as_a_nested_Optional()
-    {
-        var wire = RestValueEncoder.ToWireValue(DamlOptionalChain.Some(DamlOptionalChain.None));
-
-        wire.Optional.Should().NotBeNull();
-        wire.Optional!.Value!.Optional.Should().NotBeNull();
-        wire.Optional.Value.Optional!.Value.Should().BeNull();
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_an_absent_DamlOptionalChain_level_with_no_value_set()
-    {
-        var wire = RestValueEncoder.ToWireValue(DamlOptionalChain.None);
-
-        wire.Optional.Should().NotBeNull();
-        wire.Optional!.Value.Should().BeNull();
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_an_empty_DamlOptional_with_no_value_set()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlOptional(null));
-
-        wire.Optional.Should().NotBeNull();
-        wire.Optional!.Value.Should().BeNull();
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_a_populated_DamlOptional_with_the_inner_value()
-    {
-        var wire = RestValueEncoder.ToWireValue(new DamlOptional(new DamlText("some")));
-
-        wire.Optional!.Value!.Text.Should().Be("some");
-    }
-
-    [Fact]
-    public void ToWireValue_encodes_DamlList_elements_in_order()
+    public void ToWireValue_carries_the_runtime_writers_text_as_the_only_idiomatic_entry()
     {
         var wire = RestValueEncoder.ToWireValue(new DamlList([new DamlInt64(1), new DamlInt64(2)]));
 
-        wire.List!.Elements.Should().SatisfyRespectively(
-            e => e.Int64.Should().Be("1"),
-            e => e.Int64.Should().Be("2"));
+        wire.AdditionalProperties.Should().Equal(new Dictionary<string, object> { ["idiomatic"] = """["1","2"]""" });
+        wire.List.Should().BeNull();
     }
 
     [Fact]
-    public void ToWireValue_encodes_DamlContractId_as_contract_id()
+    public void ToWireValue_sends_a_carried_undecoded_json_value_verbatim_as_the_idiomatic_entry()
     {
-        var wire = RestValueEncoder.ToWireValue(new Daml.Runtime.Contracts.DamlContractId("00cid", null));
+        var wire = RestValueEncoder.ToWireValue(new DamlUndecodedJson("{\"owner\": \"alice::ns1\",\"amount\":\"10\"}"));
 
-        wire.ContractId.Should().Be("00cid");
+        wire.AdditionalProperties.Should().Equal(
+            new Dictionary<string, object> { ["idiomatic"] = "{\"owner\": \"alice::ns1\",\"amount\":\"10\"}" });
     }
 
     [Fact]
-    public void ToWireRecord_encodes_fields_with_labels_and_values_in_order()
+    public void ToWireValue_refuses_a_carried_undecoded_json_value_nested_in_a_list()
+    {
+        var action = () => RestValueEncoder.ToWireValue(new DamlList([new DamlUndecodedJson("{}")]));
+
+        action.Should().Throw<JsonException>().WithMessage("Cannot serialize DamlUndecodedJson to JSON");
+    }
+
+    [Fact]
+    public void ToWireRecord_carries_the_runtime_writers_text_as_the_only_idiomatic_entry()
     {
         var record = new DamlRecord(
             new RuntimeIdentifier("pkg", "Mod", "Ent"),
@@ -126,9 +50,9 @@ public class RestValueEncoderTests
 
         var wire = RestValueEncoder.ToWireRecord(record);
 
-        wire.Fields.Should().SatisfyRespectively(
-            f => { f.Label.Should().Be("owner"); f.Value.Party.Should().Be("alice::ns1"); },
-            f => { f.Label.Should().Be("amount"); f.Value.Int64.Should().Be("10"); });
+        wire.AdditionalProperties.Should().Equal(
+            new Dictionary<string, object> { ["idiomatic"] = """{"owner":"alice::ns1","amount":"10"}""" });
+        wire.Fields.Should().BeNull();
     }
 
     [Fact]

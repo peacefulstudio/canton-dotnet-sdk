@@ -14,26 +14,26 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml record TransferInstructionResult_Output.TransferInstructionResult_Pending
 /// </summary>
 public sealed record TransferInstructionResult_Output_TransferInstructionResult_Pending(
-    [property: DamlFieldAttribute("transferInstructionCid")] ContractId<ITransferInstruction> TransferInstructionCid
-) : IDamlRecord<TransferInstructionResult_Output_TransferInstructionResult_Pending>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("transferInstructionCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction> TransferInstructionCid
+) : global::Daml.Runtime.Data.IDamlRecord<TransferInstructionResult_Output_TransferInstructionResult_Pending>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("transferInstructionCid", TransferInstructionCid.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("transferInstructionCid", TransferInstructionCid.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TransferInstructionResult_Output_TransferInstructionResult_Pending FromRecord(DamlRecord record) => new TransferInstructionResult_Output_TransferInstructionResult_Pending(
-        TransferInstructionCid: new ContractId<ITransferInstruction>(record.GetRequiredField("transferInstructionCid").As<DamlContractId>().Value)
+    public static TransferInstructionResult_Output_TransferInstructionResult_Pending FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferInstructionResult_Output_TransferInstructionResult_Pending(
+        TransferInstructionCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>(record.GetRequiredField("transferInstructionCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("transferInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferInstructionCid"), context.Field("transferInstructionCid")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("transferInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferInstructionCid"), context.Field("transferInstructionCid")))
         );
     }
 

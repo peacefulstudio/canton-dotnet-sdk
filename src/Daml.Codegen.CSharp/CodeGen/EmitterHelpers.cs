@@ -109,13 +109,72 @@ internal static class EmitterHelpers
     internal static string JsonReaderParameters(IReadOnlyList<string> typeParams, string qualifiedDamlLfElementReader) =>
         string.Join(", ", typeParams.Select(param => $"{qualifiedDamlLfElementReader} {ReaderParameterName(param)}"));
 
+    /// <summary>
+    /// Derives the <c>DamlValue?</c> parameter name that carries what an omitted field of a
+    /// type-parameter type reads as, next to <see cref="ConverterParameterName"/> and
+    /// <see cref="ReaderParameterName"/>: the call site passes <c>DamlOptional.None</c> when the
+    /// instantiation is an <c>Optional</c>, and <c>null</c> when the field is required.
+    /// </summary>
+    internal static string AbsenceParameterName(string damlTypeParam) =>
+        $"absent{TypeParameterName(damlTypeParam)}";
+
+    /// <summary>
+    /// The key under which <see cref="ConverterNameMapWithAbsences"/> and <see cref="ReaderNameMapWithAbsences"/>
+    /// hold a type variable's <see cref="AbsenceParameterName"/>. A Daml type variable name never
+    /// contains a colon, so the key cannot collide with a type variable's own entry.
+    /// </summary>
+    internal static string AbsenceKey(string damlTypeParam) =>
+        $"absent:{damlTypeParam}";
+
+    /// <summary>
+    /// <see cref="ConverterNameMap"/> for a generic record or variant's own <c>FromRecord</c> or <c>FromVariant</c>, which also takes
+    /// one absence parameter per type parameter, found under <see cref="AbsenceKey"/>.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, string> ConverterNameMapWithAbsences(IReadOnlyList<string> typeParams) =>
+        WithAbsenceParameters(ConverterNameMap(typeParams), typeParams);
+
+    /// <summary>
+    /// <see cref="ReaderNameMap"/> for a generic record or variant's own <c>__ReadDamlLfJson</c>, which also
+    /// takes one absence parameter per type parameter, found under <see cref="AbsenceKey"/>.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, string> ReaderNameMapWithAbsences(IReadOnlyList<string> typeParams) =>
+        WithAbsenceParameters(ReaderNameMap(typeParams), typeParams);
+
+    private static IReadOnlyDictionary<string, string> WithAbsenceParameters(
+        IReadOnlyDictionary<string, string> names, IReadOnlyList<string> typeParams) =>
+        names
+            .Concat(typeParams.Select(param => KeyValuePair.Create(AbsenceKey(param), AbsenceParameterName(param))))
+            .ToDictionary();
+
+    /// <summary>
+    /// Builds a generic record or variant's <c>FromRecord</c> or <c>FromVariant</c> converter parameter list: for each type parameter,
+    /// the converter delegate followed by its <see cref="AbsenceParameterName"/>.
+    /// </summary>
+    internal static string DeserializeConverterParametersWithAbsences(IReadOnlyList<string> typeParams, string qualifiedDamlValue) =>
+        string.Join(", ", typeParams.Select(param =>
+            $"{TypeReferenceQualifier.Qualify("Func")}<{qualifiedDamlValue}, {TypeParameterName(param)}> {ConverterParameterName(param)}, "
+            + $"{qualifiedDamlValue}? {AbsenceParameterName(param)}"));
+
+    /// <summary>
+    /// Builds a generic record or variant's <c>__ReadDamlLfJson</c> reader parameter list: for each type
+    /// parameter, the <c>DamlLfElementReader</c> followed by its <see cref="AbsenceParameterName"/>.
+    /// </summary>
+    internal static string JsonReaderParametersWithAbsences(
+        IReadOnlyList<string> typeParams, string qualifiedDamlLfElementReader, string qualifiedDamlValue) =>
+        string.Join(", ", typeParams.Select(param =>
+            $"{qualifiedDamlLfElementReader} {ReaderParameterName(param)}, {qualifiedDamlValue}? {AbsenceParameterName(param)}"));
+
+    internal const string AbsenceParametersDoc =
+        "Each <c>absent</c> argument is what an omitted field of that type parameter reads as: "
+        + "<c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.";
+
     internal static string SerializeConverterParameters(IReadOnlyList<string> typeParams, string qualifiedDamlValue) =>
         string.Join(", ", typeParams.Select(param =>
-            $"Func<{TypeParameterName(param)}, {qualifiedDamlValue}> {ConverterParameterName(param)}"));
+            $"{TypeReferenceQualifier.Qualify("Func")}<{TypeParameterName(param)}, {qualifiedDamlValue}> {ConverterParameterName(param)}"));
 
     internal static string DeserializeConverterParameters(IReadOnlyList<string> typeParams, string qualifiedDamlValue) =>
         string.Join(", ", typeParams.Select(param =>
-            $"Func<{qualifiedDamlValue}, {TypeParameterName(param)}> {ConverterParameterName(param)}"));
+            $"{TypeReferenceQualifier.Qualify("Func")}<{qualifiedDamlValue}, {TypeParameterName(param)}> {ConverterParameterName(param)}"));
 
     internal static void WriteTypeParamDocs(IndentWriter indent, IReadOnlyList<string> typeParams)
     {

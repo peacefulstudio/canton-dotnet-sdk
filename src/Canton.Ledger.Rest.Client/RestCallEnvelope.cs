@@ -22,7 +22,7 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
         where TResponse : class
     {
         var attempt = await AttemptJsonAsync(call, project, updateIdOf: null, timeout, cancellationToken).ConfigureAwait(false);
-        return Unwrap(attempt);
+        return Unwrap(attempt, call.Kind);
     }
 
     public async Task<TResult> SendAsync<TResult>(
@@ -37,13 +37,13 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
             updateIdAfterFailure: static () => null,
             timeout,
             cancellationToken).ConfigureAwait(false);
-        return Unwrap(attempt);
+        return Unwrap(attempt, call.Kind);
     }
 
-    private static TResult Unwrap<TResult>(Attempt<TResult> attempt) => attempt switch
+    private static TResult Unwrap<TResult>(Attempt<TResult> attempt, LedgerCallKind kind) => attempt switch
     {
         Attempt<TResult>.Ok ok => ok.Result,
-        Attempt<TResult>.Failed failed => throw ToException(failed.Failure),
+        Attempt<TResult>.Failed failed => throw ToException(failed.Failure, kind),
         _ => throw new InvalidOperationException($"Unhandled REST call attempt: {attempt.GetType().Name}"),
     };
 
@@ -52,27 +52,30 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
         Func<TResponse, ExerciseOutcome<TProjection>> project,
         Func<TResponse, string?> updateIdOf,
         TimeSpan? timeout,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<ExerciseOutcome<TProjection>.DamlError, CancellationToken, Task<ExerciseOutcome<TProjection>>>? resolveRetriedDuplicate = null)
         where TResponse : class
     {
         var attempt = await AttemptJsonAsync(call, project, updateIdOf, timeout, cancellationToken).ConfigureAwait(false);
         return attempt switch
         {
             Attempt<ExerciseOutcome<TProjection>>.Ok ok => ok.Result,
-            Attempt<ExerciseOutcome<TProjection>>.Failed failed => ToOutcome<TProjection>(failed.Failure),
+            Attempt<ExerciseOutcome<TProjection>>.Failed failed => await ResolveRejectionAsync(failed.Failure, resolveRetriedDuplicate, cancellationToken).ConfigureAwait(false),
             _ => throw new InvalidOperationException($"Unhandled REST call attempt: {attempt.GetType().Name}"),
         };
     }
 
-    internal static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private static async Task<ExerciseOutcome<TProjection>> ResolveRejectionAsync<TProjection>(
+        RestCallFailure failure,
+        Func<ExerciseOutcome<TProjection>.DamlError, CancellationToken, Task<ExerciseOutcome<TProjection>>>? resolveRetriedDuplicate,
+        CancellationToken cancellationToken)
     {
-        if (response.IsSuccessStatusCode)
-        {
-            return;
-        }
-
-        var rejection = await RestErrorParser.ParseAsync(response, cancellationToken).ConfigureAwait(false);
-        throw rejection.ToException();
+        var outcome = ToOutcome<TProjection>(failure);
+        return failure is RestCallFailure.Rejected { AfterRetry: true }
+            && outcome is ExerciseOutcome<TProjection>.DamlError { ErrorId: RetriedDuplicateCommand.ErrorId } duplicate
+            && resolveRetriedDuplicate is not null
+                ? await resolveRetriedDuplicate(duplicate, cancellationToken).ConfigureAwait(false)
+                : outcome;
     }
 
     internal HttpClient CreateClient() =>
@@ -99,7 +102,7 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
                     ? Failed<TResult>(new RestCallFailure.Undecodable(call.MissingBodyMessage, null, null))
                     : new Attempt<TResult>.Ok(project(decoded));
             },
-            () => decoded is null ? null : updateIdOf?.Invoke(decoded),
+            () => decoded is null || updateIdOf is null ? null : updateIdOf(decoded),
             timeout,
             cancellationToken);
     }
@@ -116,33 +119,62 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
         var requestToken = timeoutSource?.Token ?? cancellationToken;
 
         HttpResponseMessage response;
+        var afterRetry = false;
         try
         {
             using var request = CreateRequest(call);
-            response = await client.SendAsync(request, requestToken).ConfigureAwait(false);
+            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestToken)
+                .ConfigureAwait(false);
+            afterRetry = RestRetryHandler.WasRetried(request);
         }
-        catch (Exception failure) when (IsTransportFailure(failure, cancellationToken))
+        catch (Exception failure) when (IsNoAnswerFailure(failure, cancellationToken))
         {
             return Failed<TResult>(ClassifyTransport(failure, DeadlineExceeded(timeout)));
         }
 
         using (response)
         {
+            using var bodyTimeoutSource = CreateBodyTimeoutSource(client, timeout, cancellationToken);
+            var bodyToken = bodyTimeoutSource?.Token ?? requestToken;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return await RejectionAsync<TResult>(response, afterRetry, timeout, bodyToken, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             try
             {
-                if (!response.IsSuccessStatusCode)
-                {
-                    return Failed<TResult>(new RestCallFailure.Rejected(
-                        await RestErrorParser.ParseAsync(response, requestToken).ConfigureAwait(false)));
-                }
-
-                return await readSuccess(response, requestToken).ConfigureAwait(false);
+                return await readSuccess(response, bodyToken).ConfigureAwait(false);
             }
-            catch (Exception failure) when (IsResponseFailure(failure, cancellationToken))
+            catch (Exception failure) when (IsResponseFailure(call.Kind, failure, cancellationToken))
             {
                 return Failed<TResult>(ClassifyResponse(
-                    failure, DeadlineExceededWhileReading(timeout), call.MalformedBodyMessagePrefix, updateIdAfterFailure()));
+                    call.Kind,
+                    failure,
+                    DeadlineExceededWhileReading(timeout),
+                    call.MalformedBodyMessagePrefix,
+                    updateIdAfterFailure(),
+                    cancellationToken));
             }
+        }
+    }
+
+    private static async Task<Attempt<TResult>> RejectionAsync<TResult>(
+        HttpResponseMessage response,
+        bool afterRetry,
+        TimeSpan? timeout,
+        CancellationToken requestToken,
+        CancellationToken callerToken)
+    {
+        try
+        {
+            return Failed<TResult>(new RestCallFailure.Rejected(
+                await RestErrorParser.ParseAsync(response, requestToken).ConfigureAwait(false), afterRetry));
+        }
+        catch (Exception failure) when (IsTransportFailure(failure, callerToken))
+        {
+            return Failed<TResult>(ClassifyTransport(failure, DeadlineExceededWhileReading(timeout)));
         }
     }
 
@@ -172,8 +204,18 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
         failure is HttpRequestException
         || (failure is OperationCanceledException && !callerToken.IsCancellationRequested);
 
-    private static bool IsResponseFailure(Exception failure, CancellationToken callerToken) =>
-        IsTransportFailure(failure, callerToken) || IsUndecodableBody(failure);
+    internal static bool IsNoAnswerFailure(Exception failure, CancellationToken callerToken) =>
+        IsTransportFailure(failure, callerToken) || failure is TimeoutException;
+
+    private static bool IsBodyTransportFailure(Exception failure, CancellationToken callerToken) =>
+        IsTransportFailure(failure, callerToken) || failure is IOException;
+
+    private static bool IsResponseFailure(LedgerCallKind kind, Exception failure, CancellationToken callerToken) =>
+        IsBodyTransportFailure(failure, callerToken)
+        || (kind is LedgerCallKind.Read ? IsUndecodableBody(failure) : !IsCallerCancellation(failure, callerToken));
+
+    private static bool IsCallerCancellation(Exception failure, CancellationToken callerToken) =>
+        failure is OperationCanceledException && callerToken.IsCancellationRequested;
 
     private static bool IsUndecodableBody(Exception failure) =>
         failure is JsonException
@@ -187,32 +229,37 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
         failure is TemplateTypeRequiredException;
 
     private static RestCallFailure ClassifyTransport(Exception failure, string deadlineExceeded) =>
-        new RestCallFailure.NoResponse(failure is HttpRequestException ? failure.Message : deadlineExceeded, failure);
+        new RestCallFailure.NoResponse(TransportMessage(failure, deadlineExceeded), failure);
+
+    private static string TransportMessage(Exception failure, string deadlineExceeded) =>
+        failure is HttpRequestException or IOException or TimeoutException ? failure.Message : deadlineExceeded;
 
     private RestCallFailure ClassifyResponse(
-        Exception failure, string deadlineExceeded, string malformedBodyMessagePrefix, string? updateId)
+        LedgerCallKind kind,
+        Exception failure,
+        string deadlineExceeded,
+        string malformedBodyMessagePrefix,
+        string? updateId,
+        CancellationToken callerToken)
     {
-        if (IsUndecodableBody(failure))
+        if (IsBodyTransportFailure(failure, callerToken))
         {
-            LogUndecodableResponseBody(logger, failure);
-            var messagePrefix = IsPayloadRefusal(failure) ? CommittedButUndecodablePrefix : malformedBodyMessagePrefix;
-            return new RestCallFailure.Undecodable($"{messagePrefix}{failure.Message}", failure, updateId);
+            return kind is LedgerCallKind.Read
+                ? ClassifyTransport(failure, deadlineExceeded)
+                : new RestCallFailure.Undecodable(TransportMessage(failure, deadlineExceeded), failure, updateId);
         }
 
-        return ClassifyTransport(failure, deadlineExceeded);
+        LogUndecodableResponseBody(logger, failure);
+        var messagePrefix = IsPayloadRefusal(failure) ? CommittedButUndecodablePrefix : malformedBodyMessagePrefix;
+        return new RestCallFailure.Undecodable($"{messagePrefix}{failure.Message}", failure, updateId);
     }
 
-    private static LedgerOperationException ToException(RestCallFailure failure) => failure switch
+    private static LedgerOperationException ToException(RestCallFailure failure, LedgerCallKind kind) => failure switch
     {
-        RestCallFailure.Rejected rejected => rejected.Parsed.ToException(),
+        RestCallFailure.Rejected rejected => rejected.Parsed.ToException(kind),
         RestCallFailure.NoResponse noResponse =>
-            new LedgerOperationException(
-                noResponse.Message, new TransportStatus.NoResponse(), innerException: noResponse.Cause),
-        RestCallFailure.Undecodable { Cause: { } cause } undecodable =>
-            new LedgerOperationException(
-                undecodable.Message, new TransportStatus.UndecodableBody(), innerException: cause),
-        RestCallFailure.Undecodable undecodable =>
-            new LedgerOperationException(undecodable.Message, new TransportStatus.UndecodableBody()),
+            kind.NoAnswer(noResponse.Message, new TransportStatus.NoResponse(), noResponse.Cause),
+        RestCallFailure.Undecodable undecodable => kind.UnreadableResponse(undecodable.Message, undecodable.Cause),
         _ => throw new InvalidOperationException($"Unhandled REST call failure: {failure.GetType().Name}"),
     };
 
@@ -246,6 +293,12 @@ internal sealed partial class RestCallEnvelope(IHttpClientFactory httpClientFact
 
     private static string DescribeDeadline(TimeSpan? timeout) =>
         timeout is { } window ? window.ToString() : "HttpClient default";
+
+    private static CancellationTokenSource? CreateBodyTimeoutSource(
+        HttpClient client, TimeSpan? timeout, CancellationToken cancellationToken) =>
+        timeout is null && client.Timeout != Timeout.InfiniteTimeSpan
+            ? CreateTimeoutSource(client.Timeout, cancellationToken)
+            : null;
 
     internal static CancellationTokenSource? CreateTimeoutSource(TimeSpan? timeout, CancellationToken cancellationToken)
     {

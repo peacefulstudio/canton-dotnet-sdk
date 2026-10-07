@@ -50,8 +50,8 @@ public class TryReturnContractIdsAsyncTests
         var outcome = await Target.TryReturnContractIdsAsync(client, new GenericResults.ReturnContractIds(), Owner,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReturnContractIdsResult>.One>()
-            .Which.Result.GenericResults.Select(c => c.Value).Should().Equal("returned-b", "returned-a");
+        outcome.Should().BeOfType<ExerciseOutcome<IReadOnlyList<ContractId<GenericResults>>>.One>()
+            .Which.Result.Select(c => c.Value).Should().Equal("returned-b", "returned-a");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class TryReturnContractIdsAsyncTests
         var outcome = await Target.TryReturnContractIdsAsync(client, new GenericResults.ReturnContractIds(), Owner,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReturnContractIdsResult>.One>()
-            .Which.Result.GenericResults.Should().BeEmpty();
+        outcome.Should().BeOfType<ExerciseOutcome<IReadOnlyList<ContractId<GenericResults>>>.One>()
+            .Which.Result.Should().BeEmpty();
     }
 }

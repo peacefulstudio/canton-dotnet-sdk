@@ -3,6 +3,7 @@
 
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
+using Canton.Ledger.Kernel.Streams;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -122,7 +123,7 @@ internal sealed partial class RestLedgerClient
             foreach (var projected in RestInterfaceStreamProjector.ProjectActiveContractEntry<TInterface, TView>(
                 entry, _logger, effectiveOffset))
             {
-                yield return ToInterfaceAcsSnapshotEntry(projected, disclosure);
+                yield return InterfaceSnapshotEntryArms<TInterface, TView>.From(projected, disclosure);
             }
         }
 
@@ -153,70 +154,10 @@ internal sealed partial class RestLedgerClient
                 continue;
             }
 
-            foreach (var projected in ProjectInterfaceUpdate<TInterface, TView>(update))
+            foreach (var projected in RestInterfaceStreamProjector.ProjectUpdate<TInterface, TView>(update, _logger))
             {
                 yield return projected;
             }
         }
     }
-
-    private IEnumerable<InterfaceStreamEvent<TInterface, TView>> ProjectInterfaceUpdate<TInterface, TView>(
-        WireGetUpdatesResponse update)
-        where TInterface : IDamlInterface, IHasView<TView>
-        where TView : IDamlRecord<TView>
-    {
-        if (update.Update?.Transaction is { } transaction)
-        {
-            foreach (var projected in RestInterfaceStreamProjector.ProjectTransactionEvents<TInterface, TView>(
-                transaction, _logger))
-            {
-                yield return projected;
-            }
-        }
-        else if (update.Update?.Reassignment is { } reassignment)
-        {
-            foreach (var projected in RestInterfaceStreamProjector.ProjectReassignmentEvents<TInterface, TView>(
-                reassignment, _logger))
-            {
-                yield return projected;
-            }
-        }
-        else if (update.Update?.OffsetCheckpoint is { } checkpoint)
-        {
-            yield return new InterfaceStreamEvent<TInterface, TView>.Checkpoint(
-                LedgerOffset.At(RestWireConversions.ParseOffset(checkpoint.Offset)));
-        }
-        else
-        {
-            var variant = update.Update?.TopologyTransaction is not null ? nameof(update.Update.TopologyTransaction) : "Unknown";
-            LogStreamVariantSkipped(_logger, typeof(TInterface).Name, variant);
-        }
-    }
-
-    private static InterfaceAcsSnapshotEntry<TInterface, TView> ToInterfaceAcsSnapshotEntry<TInterface, TView>(
-        InterfaceStreamEvent<TInterface, TView> entry,
-        RuntimeCommands.DisclosedContract? disclosure)
-        where TInterface : IDamlInterface, IHasView<TView>
-        where TView : IDamlRecord<TView> => entry switch
-    {
-        InterfaceStreamEvent<TInterface, TView>.Created created =>
-            new InterfaceAcsSnapshotEntry<TInterface, TView>.Created(
-                created.ContractId,
-                created.Payload,
-                created.Key,
-                created.Offset,
-                created.SynchronizerId,
-                created.WitnessParties)
-            {
-                Disclosure = disclosure,
-            },
-        InterfaceStreamEvent<TInterface, TView>.Unassigned unassigned =>
-            new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
-                unassigned.Offset, UnclassifiedKind.UnassignedEvent),
-        InterfaceStreamEvent<TInterface, TView>.Unclassified unclassified =>
-            new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
-                unclassified.Offset, unclassified.Kind, unclassified.RawKind),
-        _ => throw new InvalidOperationException(
-            $"Active-contract snapshot produced an unexpected entry variant: {entry.GetType().Name}"),
-    };
 }

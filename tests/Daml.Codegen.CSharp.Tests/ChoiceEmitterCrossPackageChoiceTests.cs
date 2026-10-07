@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.GeneratorFactory;
@@ -14,15 +15,6 @@ public class ChoiceEmitterCrossPackageChoiceTests
 {
     private const string LocalPackageId = "pkg-id";
     private const string ForeignPackageId = "other-pkg-id";
-
-    private sealed class StubResolver(string? resolvedName = null) : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => resolvedName ?? Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(DamlModule module) =>
         new()
@@ -35,26 +27,34 @@ public class ChoiceEmitterCrossPackageChoiceTests
             DependencyReferences = [],
         };
 
-    private static ChoiceEmitter Emitter(PackageEmitContext context, StubResolver resolver) =>
-        new(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
+    private static CodeGenOptions Options => new() { NamespacePrefix = "Test.Package" };
 
-    private static string EmitNonContract(DamlTemplate template, StubResolver resolver, params DamlDataType[] dataTypes)
+    private static DamlPackage ForeignPackage(params string[] recordNames) =>
+        TestPackages.Named(
+            ForeignPackageId,
+            "other-package",
+            TestPackages.ModuleOf("Other.Module", recordNames.Select(name => TestPackages.Record(name)).ToArray()));
+
+    private static ChoiceEmitter Emitter(RealResolution resolution) =>
+        new(resolution.Context, resolution.Resolver, Options, new DamlTypeMapper(resolution.Context, resolution.Resolver), new PartyAnalysis());
+
+    private static string EmitNonContract(DamlTemplate template, DamlPackage[] dependencies, params DamlDataType[] dataTypes)
     {
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = dataTypes, Interfaces = [] });
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+        var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        Emitter(context, resolver).TryWriteNonContractChoiceExtensions(indent, template, context.DataTypes);
+        Emitter(resolution).TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }
 
-    private static string EmitInterfaceExtensions(DamlInterface iface, string interfaceName, StubResolver resolver)
+    private static string EmitInterfaceExtensions(DamlInterface iface, string interfaceName, params DamlPackage[] dependencies)
     {
         var package = Package(new DamlModule { Name = "Main", Templates = [], DataTypes = [], Interfaces = [iface] });
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+        var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb);
-        Emitter(context, resolver).WriteInterfaceChoiceExtensions(indent, iface, interfaceName);
+        Emitter(resolution).WriteInterfaceChoiceExtensions(indent, iface, interfaceName);
         return sb.ToString();
     }
 
@@ -79,11 +79,11 @@ public class ChoiceEmitterCrossPackageChoiceTests
             ],
         };
 
-        var output = EmitNonContract(template, new StubResolver("Other.Pkg.OrderRequest"));
+        var output = EmitNonContract(template, [ForeignPackage("OrderRequest")]);
 
         output.Should().Contain("TraderNonContractExtensions");
         output.Should().Contain("SubmitAsync(");
-        output.Should().Contain("Other.Pkg.OrderRequest argument,");
+        output.Should().Contain("global::Other.Module.OrderRequest argument,");
         output.Should().Contain("argument.ToRecord()");
     }
 
@@ -106,10 +106,59 @@ public class ChoiceEmitterCrossPackageChoiceTests
         };
         var localQuote = new DamlDataType { Name = "Quote", Definition = SingleTextField("local") };
 
-        var output = EmitNonContract(template, new StubResolver("Other.Pkg.Quote"), localQuote);
+        var output = EmitNonContract(template, [ForeignPackage("Quote")], localQuote);
 
-        output.Should().Contain("Other.Pkg.Quote argument,");
+        output.Should().Contain("global::Other.Module.Quote argument,");
         output.Should().NotContain("Trader.Submit argument,");
+        output.Should().NotContain("global::Test.Package.Main.Quote argument,");
+    }
+
+    [Fact]
+    public void ChoiceEmitterCrossPackageChoice_non_contract_exerciser_resolves_a_foreign_choice_argument_through_the_template_that_nests_it()
+    {
+        var foreignVault = new DamlTemplate
+        {
+            Name = "Vault",
+            Choices =
+            [
+                new DamlChoice
+                {
+                    Name = "Withdraw",
+                    Consuming = false,
+                    ArgumentType = new DamlTypeRef(ForeignPackageId, "Other.Module", "WithdrawArgs"),
+                    ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                },
+            ],
+        };
+        var foreignPackage = TestPackages.Named(
+            ForeignPackageId,
+            "other-package",
+            new DamlModule
+            {
+                Name = "Other.Module",
+                Templates = [foreignVault],
+                DataTypes = [TestPackages.Record("Vault"), TestPackages.Record("WithdrawArgs")],
+                Interfaces = [],
+            });
+        var template = new DamlTemplate
+        {
+            Name = "Trader",
+            Choices =
+            [
+                new DamlChoice
+                {
+                    Name = "Submit",
+                    Consuming = false,
+                    ArgumentType = new DamlTypeRef(ForeignPackageId, "Other.Module", "WithdrawArgs"),
+                    ReturnType = new DamlPrimitiveType(DamlPrimitive.Numeric),
+                },
+            ],
+        };
+
+        var output = EmitNonContract(template, [foreignPackage]);
+
+        output.Should().Contain("global::Other.Module.Vault.Withdraw argument,");
+        output.Should().NotContain("global::Other.Module.WithdrawArgs argument,");
     }
 
     [Fact]
@@ -131,11 +180,11 @@ public class ChoiceEmitterCrossPackageChoiceTests
             ViewType = null,
         };
 
-        var output = EmitInterfaceExtensions(iface, "ITransferable", new StubResolver("Other.Pkg.TransferRequest"));
+        var output = EmitInterfaceExtensions(iface, "ITransferable", ForeignPackage("TransferRequest"));
 
         output.Should().Contain("public static class ITransferableExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(");
-        output.Should().Contain("Other.Pkg.TransferRequest argument,");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryTransferAsync(");
+        output.Should().Contain("global::Other.Module.TransferRequest argument,");
         output.Should().Contain("argument.ToRecord()");
     }
 
@@ -158,10 +207,10 @@ public class ChoiceEmitterCrossPackageChoiceTests
             ViewType = null,
         };
 
-        var output = EmitInterfaceExtensions(iface, "IQuotable", new StubResolver());
+        var output = EmitInterfaceExtensions(iface, "IQuotable", ForeignPackage());
 
         output.Should().Contain("public static class IQuotableExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryQuoteAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryQuoteAsync(");
         output.Should().Contain("string argument,");
         output.Should().NotContain("QuoteArg argument,");
     }

@@ -13,30 +13,30 @@ namespace Splice.Ans;
 /// Generated from Daml record ExpectedPayment
 /// </summary>
 public sealed record ExpectedPayment(
-    [property: DamlFieldAttribute("dso")] Party Dso,
-    [property: DamlFieldAttribute("sender")] Party Sender
-) : IDamlRecord<ExpectedPayment>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("dso")] global::Daml.Runtime.Data.Party Dso,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("sender")] global::Daml.Runtime.Data.Party Sender
+) : global::Daml.Runtime.Data.IDamlRecord<ExpectedPayment>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("dso", Dso.ToDamlValue()),
-        DamlField.Create("sender", Sender.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("dso", Dso.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("sender", Sender.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static ExpectedPayment FromRecord(DamlRecord record) => new ExpectedPayment(
-        Dso: Party.FromDamlValue(record.GetRequiredField("dso").As<DamlParty>()),
-        Sender: Party.FromDamlValue(record.GetRequiredField("sender").As<DamlParty>())
+    public static ExpectedPayment FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ExpectedPayment(
+        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso").As<global::Daml.Runtime.Data.DamlParty>()),
+        Sender: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("sender").As<global::Daml.Runtime.Data.DamlParty>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
-            DamlField.Create("sender", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
+            global::Daml.Runtime.Data.DamlField.Create("sender", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender")))
         );
     }
 

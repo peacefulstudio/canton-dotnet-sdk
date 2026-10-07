@@ -11,44 +11,41 @@ namespace Canton.Ledger.Abstractions;
 
 internal sealed partial class PqsLeafType
 {
-    private readonly Func<SqlFragment, SqlFragment> typedText;
     private readonly Func<object, object> toParameter;
-    private readonly Func<string, SqlFragment> parse;
+    private readonly Func<string, object> parse;
 
     private PqsLeafType(
-        string damlTypeName,
+        PqsLeafKind kind,
         bool isOrdered,
-        Func<SqlFragment, SqlFragment> typedText,
         Func<object, object> toParameter,
-        Func<string, SqlFragment> parse,
+        Func<string, object> parse,
         bool hasDefault = true)
     {
-        DamlTypeName = damlTypeName;
+        Kind = kind;
         IsOrdered = isOrdered;
-        this.typedText = typedText;
         this.toParameter = toParameter;
         this.parse = parse;
         HasDefault = hasDefault;
     }
 
-    public string DamlTypeName { get; }
+    public PqsLeafKind Kind { get; }
+
+    public string DamlTypeName => Kind.ToString();
 
     public bool IsOrdered { get; }
 
     public bool HasDefault { get; }
 
-    public SqlFragment Typed(SqlFragment text) => typedText(text);
+    public PqsOperand Operand(object value) => new(Kind, toParameter(value));
 
-    public SqlFragment Parameter(object value) => SqlFragment.Parameter(toParameter(value));
+    public PqsOperand DefaultOperand(Type clrType) =>
+        Operand(Activator.CreateInstance(Nullable.GetUnderlyingType(clrType) ?? clrType)!);
 
-    public SqlFragment DefaultParameter(Type clrType) =>
-        Parameter(Activator.CreateInstance(Nullable.GetUnderlyingType(clrType) ?? clrType)!);
-
-    public SqlFragment ParseParameter(string value, string paramName)
+    public PqsOperand ParseOperand(string value, string paramName)
     {
         try
         {
-            return parse(value);
+            return new(Kind, parse(value));
         }
         catch (FormatException ex)
         {
@@ -75,50 +72,35 @@ internal sealed partial class PqsLeafType
         return null;
     }
 
-    private static readonly PqsLeafType Text = new(
-        "Text", false, text => text, value => value, value => SqlFragment.Parameter(value));
+    private static readonly PqsLeafType Text = new(PqsLeafKind.Text, false, value => value, value => value);
 
     private static readonly PqsLeafType Int64 = new(
-        "Int64",
+        PqsLeafKind.Int64,
         true,
-        text => SqlFragment.Of($"({text})::bigint"),
         value => value,
-        value => SqlFragment.Parameter(long.Parse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture)));
+        value => long.Parse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture));
 
-    private static readonly PqsLeafType Numeric = new(
-        "Numeric",
-        true,
-        text => SqlFragment.Of($"({text})::numeric"),
-        value => value,
-        NumericLiteral);
+    private static readonly PqsLeafType Numeric = new(PqsLeafKind.Numeric, true, value => value, NumericLiteral);
 
-    private static readonly PqsLeafType Bool = new(
-        "Bool",
-        false,
-        text => SqlFragment.Of($"({text})::boolean"),
-        value => value,
-        value => SqlFragment.Parameter(bool.Parse(value)));
+    private static readonly PqsLeafType Bool = new(PqsLeafKind.Bool, false, value => value, value => bool.Parse(value));
 
     private static readonly PqsLeafType Date = new(
-        "Date",
+        PqsLeafKind.Date,
         true,
-        text => SqlFragment.Of($"({text})::date"),
         value => value,
-        value => SqlFragment.Parameter(DateOnly.ParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        value => DateOnly.ParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture));
 
     private static readonly PqsLeafType Time = new(
-        "Time",
+        PqsLeafKind.Time,
         true,
-        text => SqlFragment.Of($"({text})::timestamptz"),
         value => ((DateTimeOffset)value).ToUniversalTime(),
-        value => SqlFragment.Parameter(
-            DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).ToUniversalTime()));
+        value => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).ToUniversalTime());
 
     private static readonly PqsLeafType PartyLeaf = new(
-        "Party", false, text => text, value => ((Party)value).Value, value => SqlFragment.Parameter(value), hasDefault: false);
+        PqsLeafKind.Party, false, value => ((Party)value).Value, value => value, hasDefault: false);
 
     private static readonly PqsLeafType ContractIdLeaf = new(
-        "ContractId", false, text => text, value => ((ContractId)value).Value, value => SqlFragment.Parameter(value));
+        PqsLeafKind.ContractId, false, value => ((ContractId)value).Value, value => value);
 
     private static PqsLeafType EnumLeaf(Type enumType)
     {
@@ -132,19 +114,16 @@ internal sealed partial class PqsLeafType
                 $"never guesses a Daml constructor name from a C# enum member name.");
 
         return new(
-            "Enum",
+            PqsLeafKind.Enum,
             false,
-            text => text,
             value => ((DamlEnum)toDamlEnum.Invoke(null, [Enum.ToObject(enumType, value)])!).Constructor,
-            value => SqlFragment.Parameter(value));
+            value => value);
     }
 
-    private static SqlFragment NumericLiteral(string value)
-    {
-        if (!NumericLiteralPattern().IsMatch(value))
-            throw new FormatException($"'{value}' is not a numeric literal.");
-        return SqlFragment.Of($"{SqlFragment.Parameter(value)}::numeric");
-    }
+    private static string NumericLiteral(string value) =>
+        NumericLiteralPattern().IsMatch(value)
+            ? value
+            : throw new FormatException($"'{value}' is not a numeric literal.");
 
     [GeneratedRegex(@"^[+-]?(\d+\.?\d*|\.\d+)$")]
     private static partial Regex NumericLiteralPattern();

@@ -147,7 +147,7 @@ public class GenericTypeSerializationRoundTripTests
 
         var record = boxOfParty.GetMethod("ToRecord")!.Invoke(box, [PartyToValue])!;
         var roundTripped = boxOfParty.GetMethod("FromRecord", BindingFlags.Public | BindingFlags.Static)!
-            .Invoke(null, [record, PartyFromValue]);
+            .Invoke(null, [record, PartyFromValue, null]);
 
         roundTripped.Should().Be(box);
     }
@@ -159,10 +159,10 @@ public class GenericTypeSerializationRoundTripTests
         var fromVariant = wrapperOfParty.GetMethod("FromVariant", BindingFlags.Public | BindingFlags.Static)!;
 
         var initial = DamlVariant.Create("Wrapped", new Party("bob").ToDamlValue());
-        var wrapper = fromVariant.Invoke(null, [initial, PartyFromValue])!;
+        var wrapper = fromVariant.Invoke(null, [initial, PartyFromValue, null])!;
 
         var serialized = wrapperOfParty.GetMethod("ToVariant")!.Invoke(wrapper, [PartyToValue]);
-        var roundTripped = fromVariant.Invoke(null, [serialized, PartyFromValue]);
+        var roundTripped = fromVariant.Invoke(null, [serialized, PartyFromValue, null]);
 
         roundTripped.Should().Be(wrapper);
     }
@@ -176,7 +176,7 @@ public class GenericTypeSerializationRoundTripTests
 
         var box = Activator.CreateInstance(boxOfParty, new Party("carol"))!;
         var wrapper = wrapperOfParty.GetMethod("FromVariant", BindingFlags.Public | BindingFlags.Static)!
-            .Invoke(null, [DamlVariant.Create("Wrapped", new Party("dave").ToDamlValue()), PartyFromValue])!;
+            .Invoke(null, [DamlVariant.Create("Wrapped", new Party("dave").ToDamlValue()), PartyFromValue, null])!;
         var holder = Activator.CreateInstance(holderType, box, wrapper)!;
 
         var record = holderType.GetMethod("ToRecord")!.Invoke(holder, []);
@@ -192,10 +192,10 @@ public class GenericTypeSerializationRoundTripTests
         var wrapperOfParty = EmittedType("Wrapper`1").MakeGenericType(typeof(Party));
         var fromVariant = wrapperOfParty.GetMethod("FromVariant", BindingFlags.Public | BindingFlags.Static)!;
 
-        var blank = fromVariant.Invoke(null, [DamlVariant.Create("Blank", DamlUnit.Instance), PartyFromValue])!;
+        var blank = fromVariant.Invoke(null, [DamlVariant.Create("Blank", DamlUnit.Instance), PartyFromValue, null])!;
 
         var serialized = wrapperOfParty.GetMethod("ToVariant")!.Invoke(blank, [PartyToValue]);
-        var roundTripped = fromVariant.Invoke(null, [serialized, PartyFromValue]);
+        var roundTripped = fromVariant.Invoke(null, [serialized, PartyFromValue, null]);
 
         roundTripped.Should().Be(blank);
     }

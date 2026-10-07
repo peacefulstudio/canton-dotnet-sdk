@@ -16,49 +16,49 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record SettlementFactory_SettleBatch
 /// </summary>
 public sealed record SettlementFactory_SettleBatch(
-    SettlementInfo Settlement,
-    IReadOnlyList<TransferLeg> TransferLegs,
-    IReadOnlyList<FinalizedAllocation> Allocations,
-    IReadOnlyList<Party> Actors,
+    global::Splice.Api.Token.AllocationV2.SettlementInfo Settlement,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLeg> TransferLegs,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.FinalizedAllocation> Allocations,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Actors,
     global::Splice.Api.Token.MetadataV1.ExtraArgs ExtraArgs
-) : IDamlRecord<SettlementFactory_SettleBatch>
+) : global::Daml.Runtime.Data.IDamlRecord<SettlementFactory_SettleBatch>
 {
     /// <summary>The Daml field <c>settlement</c>.</summary>
-    [DamlFieldAttribute("settlement")]
-    public SettlementInfo Settlement { get; init; } = Settlement;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("settlement")]
+    public global::Splice.Api.Token.AllocationV2.SettlementInfo Settlement { get; init; } = Settlement;
 
-    private readonly IReadOnlyList<TransferLeg> _transferLegs = DamlFieldCollections.Copy(TransferLegs);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLeg> _transferLegs = global::Daml.Runtime.Data.DamlFieldCollections.Copy(TransferLegs);
 
     /// <summary>The Daml field <c>transferLegs</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("transferLegs")]
-    public IReadOnlyList<TransferLeg> TransferLegs
+    [global::Daml.Runtime.Data.DamlFieldAttribute("transferLegs")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLeg> TransferLegs
     {
         get => _transferLegs;
-        init => _transferLegs = DamlFieldCollections.Copy(value);
+        init => _transferLegs = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyList<FinalizedAllocation> _allocations = DamlFieldCollections.Copy(Allocations);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.FinalizedAllocation> _allocations = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Allocations);
 
     /// <summary>The Daml field <c>allocations</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("allocations")]
-    public IReadOnlyList<FinalizedAllocation> Allocations
+    [global::Daml.Runtime.Data.DamlFieldAttribute("allocations")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.FinalizedAllocation> Allocations
     {
         get => _allocations;
-        init => _allocations = DamlFieldCollections.Copy(value);
+        init => _allocations = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyList<Party> _actors = DamlFieldCollections.Copy(Actors);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> _actors = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Actors);
 
     /// <summary>The Daml field <c>actors</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("actors")]
-    public IReadOnlyList<Party> Actors
+    [global::Daml.Runtime.Data.DamlFieldAttribute("actors")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Actors
     {
         get => _actors;
-        init => _actors = DamlFieldCollections.Copy(value);
+        init => _actors = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>extraArgs</c>.</summary>
-    [DamlFieldAttribute("extraArgs")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("extraArgs")]
     public global::Splice.Api.Token.MetadataV1.ExtraArgs ExtraArgs { get; init; } = ExtraArgs;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -66,53 +66,53 @@ public sealed record SettlementFactory_SettleBatch(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(SettlementFactory_SettleBatch? other) =>
         other is not null
-        && EqualityComparer<SettlementInfo>.Default.Equals(Settlement, other.Settlement)
-        && DamlFieldCollections.Equal(TransferLegs, other.TransferLegs)
-        && DamlFieldCollections.Equal(Allocations, other.Allocations)
-        && DamlFieldCollections.Equal(Actors, other.Actors)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default.Equals(ExtraArgs, other.ExtraArgs);
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.AllocationV2.SettlementInfo>.Default.Equals(Settlement, other.Settlement)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(TransferLegs, other.TransferLegs)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Allocations, other.Allocations)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Actors, other.Actors)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default.Equals(ExtraArgs, other.ExtraArgs);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Settlement);
-        hash.Add(DamlFieldCollections.Hash(TransferLegs));
-        hash.Add(DamlFieldCollections.Hash(Allocations));
-        hash.Add(DamlFieldCollections.Hash(Actors));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(TransferLegs));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Allocations));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Actors));
         hash.Add(ExtraArgs);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("settlement", Settlement.ToRecord()),
-        DamlField.Create("transferLegs", new DamlList(TransferLegs.Select(x => (DamlValue)x.ToRecord()).ToList())),
-        DamlField.Create("allocations", new DamlList(Allocations.Select(x => (DamlValue)x.ToRecord()).ToList())),
-        DamlField.Create("actors", new DamlList(Actors.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("extraArgs", ExtraArgs.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("settlement", Settlement.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("transferLegs", new global::Daml.Runtime.Data.DamlList(TransferLegs.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("allocations", new global::Daml.Runtime.Data.DamlList(Allocations.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("actors", new global::Daml.Runtime.Data.DamlList(Actors.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("extraArgs", ExtraArgs.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static SettlementFactory_SettleBatch FromRecord(DamlRecord record) => new SettlementFactory_SettleBatch(
-        Settlement: SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<DamlRecord>()),
-        TransferLegs: (IReadOnlyList<TransferLeg>)record.GetRequiredField("transferLegs").As<DamlList>().Values.Select(x => TransferLeg.FromRecord(x.As<DamlRecord>())).ToList(),
-        Allocations: (IReadOnlyList<FinalizedAllocation>)record.GetRequiredField("allocations").As<DamlList>().Values.Select(x => FinalizedAllocation.FromRecord(x.As<DamlRecord>())).ToList(),
-        Actors: (IReadOnlyList<Party>)record.GetRequiredField("actors").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
-        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<DamlRecord>())
+    public static SettlementFactory_SettleBatch FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SettlementFactory_SettleBatch(
+        Settlement: global::Splice.Api.Token.AllocationV2.SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<global::Daml.Runtime.Data.DamlRecord>()),
+        TransferLegs: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLeg>)record.GetRequiredField("transferLegs").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLeg.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        Allocations: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.FinalizedAllocation>)record.GetRequiredField("allocations").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.FinalizedAllocation.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("settlement", SettlementInfo.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settlement"), context.Field("settlement"))),
-            DamlField.Create("transferLegs", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegs"), context.Field("transferLegs"), (__json0, __ctx0) => TransferLeg.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("allocations", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocations"), context.Field("allocations"), (__json0, __ctx0) => FinalizedAllocation.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("actors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actors"), context.Field("actors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("settlement", global::Splice.Api.Token.AllocationV2.SettlementInfo.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "settlement"), context.Field("settlement"))),
+            global::Daml.Runtime.Data.DamlField.Create("transferLegs", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegs"), context.Field("transferLegs"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.TransferLeg.__ReadDamlLfJson(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("allocations", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocations"), context.Field("allocations"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.FinalizedAllocation.__ReadDamlLfJson(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("actors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actors"), context.Field("actors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
         );
     }
 

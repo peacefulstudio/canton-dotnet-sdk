@@ -1,11 +1,13 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Net;
 using System.Text.Json;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -19,6 +21,13 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public sealed class RestLedgerClientTransactionTreeTests : IDisposable
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TestTemplate>();
+        GeneratedTypeReaders.ForChoices<TestTemplate>();
+    }
+
     private static readonly Party Alice = new("party::alice");
     private static readonly SubmitterInfo AliceSubmitter = new(new HashSet<Party> { Alice }, new HashSet<Party>());
 
@@ -39,7 +48,7 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
         return factory;
     }
 
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
+    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>, IHasChoices<TestTemplate>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "TransactionTreeTemplate");
         public static string PackageId => "pkg";
@@ -66,6 +75,8 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
             ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
             ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceExecuteSwap];
     }
 
     private RestLedgerClient ClientWith(RecordingHttpHandler transport) =>
@@ -172,7 +183,7 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
                 {
                   "@type": "type.googleapis.com/google.rpc.ErrorInfo",
                   "reason": "DUPLICATE_COMMAND",
-                  "metadata": {"category": "ContentionOnSharedResources"}
+                  "metadata": {"category": "InvalidGivenCurrentSystemStateResourceExists"}
                 }
               ]
             }
@@ -230,9 +241,12 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
 
         var act = () => client.GetUpdateTreeByOffsetAsync(LedgerOffset.At(7), AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
 
-        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
-        thrown.Which.Message.Should().Contain("node ids must strictly ascend");
-        thrown.Which.InnerException.Should().BeOfType<MalformedTransactionTreeException>();
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Message.Should().Contain("node ids must strictly ascend");
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>()
+            .Which.InnerException.Should().BeOfType<MalformedTransactionTreeException>();
     }
 
     [Fact]

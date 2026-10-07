@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Canton.Ledger.Kernel.Wire;
+using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
@@ -27,6 +28,10 @@ internal static class RestWireConversions
         }
         return EquatableArray.Create(result);
     }
+
+    public static ContractId<T> ToContractId<T>(string wireContractId)
+        where T : IDamlType =>
+        MalformedResponse.Decoding(wireContractId, id => new ContractId<T>(id));
 
     public static RuntimeIdentifier ToRuntimeIdentifier(WireIdentifier identifier) =>
         new(identifier.PackageId, identifier.ModuleName, identifier.EntityName);

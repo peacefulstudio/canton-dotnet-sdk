@@ -17,27 +17,27 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// </summary>
 /// <typeparam name="TA">Type parameter a</typeparam>
 public sealed record Crate<TA>(
-    [property: DamlFieldAttribute("item")] Optional<TA> Item
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("item")] global::Daml.Runtime.Stdlib.Optional<TA> Item
 ) where TA : notnull
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord(Func<TA, DamlValue> convertTA) => DamlRecord.Create(
-        DamlField.Create("item", Item.ToValue(__optional0 => convertTA(__optional0)))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("item", Item.ToValue(__optional0 => convertTA(__optional0)))
     );
 
-    /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Crate<TA> FromRecord(DamlRecord record, Func<DamlValue, TA> convertTA) => new Crate<TA>(
-        Item: Optional<TA>.FromValue(record.GetOptionalField("item"), __optional0 => convertTA(__optional0))
+    /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
+    public static Crate<TA> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TA> convertTA, global::Daml.Runtime.Data.DamlValue? absentTA) => new Crate<TA>(
+        Item: global::Daml.Runtime.Stdlib.Optional<TA>.FromValue(record.GetOptionalField("item"), __optional0 => convertTA(__optional0))
     );
 
-    /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
+    /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context, global::Daml.Runtime.Serialization.DamlLfElementReader readTA)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context, global::Daml.Runtime.Serialization.DamlLfElementReader readTA, global::Daml.Runtime.Data.DamlValue? absentTA)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("item", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "item"), context.Field("item"), (__json0, __ctx0) => readTA(__json0, __ctx0)))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(1);
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "item", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("item"), (__json0, __ctx0) => readTA(__json0, __ctx0)));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

@@ -74,7 +74,8 @@ public sealed record TransactionResult(
 /// projecting a created event the participant sent without create arguments — the
 /// interface-only case, where the contract is known only as an interface — passes an
 /// empty record, which a consumer cannot distinguish from a template whose payload
-/// genuinely has no fields.</param>
+/// genuinely has no fields. The same empty record stands in when the JSON Ledger API client held no
+/// generated type to decode the arguments with; <see cref="UndecodedPayload"/> then holds them.</param>
 /// <param name="WitnessParties">Parties notified of this event. Required rather than
 /// defaulted: an empty list must mean the event named no witnesses, not that a producer
 /// never populated the slot. That is what separates these three from the two defaulted
@@ -118,4 +119,14 @@ public sealed record CreatedContract(
     /// known only as an interface and must be dispatched at runtime.
     /// </summary>
     public EquatableArray<Identifier> InterfaceIds { get; init; }
+
+    /// <summary>
+    /// The create arguments as the Daml-LF JSON the participant sent, when the transport could not decode them
+    /// because the process holds no generated type for <see cref="TemplateId"/> (or holds more than one) —
+    /// <see langword="null"/> when <see cref="Payload"/> was decoded. In that case <see cref="Payload"/> is an
+    /// empty record, so check this property to tell it from a template whose payload genuinely has no fields.
+    /// Only the JSON Ledger API client produces it: gRPC values describe themselves, so a gRPC create
+    /// always decodes.
+    /// </summary>
+    public DamlUndecodedJson? UndecodedPayload { get; init; }
 }

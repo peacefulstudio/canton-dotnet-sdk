@@ -23,67 +23,67 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml template RichTypes:NestedOptionalTails
 /// </summary>
 public sealed partial record NestedOptionalTails(
-    [property: DamlFieldAttribute("owner")] Party Owner,
-    [property: DamlFieldAttribute("midMaybe")] Optional<Optional<string>> MidMaybe,
-    [property: DamlFieldAttribute("tailMaybe")] Optional<Optional<string>> TailMaybe
-) : ITemplate, IHasChoices<NestedOptionalTails>, IDamlRecord<NestedOptionalTails>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("midMaybe")] global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> MidMaybe,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("tailMaybe")] global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> TailMaybe
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<NestedOptionalTails>, global::Daml.Runtime.Data.IDamlRecord<NestedOptionalTails>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "NestedOptionalTails");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "RichTypes", "NestedOptionalTails");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    public static string PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hecd531570c32";
+    public static string PackageName => "richtypes-hf9ffaa5ee2ff";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("owner", Owner.ToDamlValue()),
-        DamlField.Create("midMaybe", MidMaybe.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new DamlText(__optional1)))),
-        DamlField.Create("tailMaybe", TailMaybe.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new DamlText(__optional1))))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("midMaybe", MidMaybe.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1)))),
+        global::Daml.Runtime.Data.DamlField.Create("tailMaybe", TailMaybe.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1))))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static NestedOptionalTails FromRecord(DamlRecord record) => new NestedOptionalTails(
-        Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()),
-        MidMaybe: Optional<Optional<string>>.FromChainValue(record.GetOptionalChainField("midMaybe"), __optional0 => Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<DamlText>().Value)),
-        TailMaybe: Optional<Optional<string>>.FromChainValue(record.GetOptionalChainField("tailMaybe"), __optional0 => Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<DamlText>().Value))
+    public static NestedOptionalTails FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new NestedOptionalTails(
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
+        MidMaybe: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("midMaybe"), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value)),
+        TailMaybe: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("tailMaybe"), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value))
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
-            DamlField.Create("midMaybe", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalChainField(json, "midMaybe"), context.Field("midMaybe"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)))),
-            DamlField.Create("tailMaybe", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalChainField(json, "tailMaybe"), context.Field("tailMaybe"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(3);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "midMaybe", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(present, context.Field("midMaybe"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "tailMaybe", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(present, context.Field("tailMaybe"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
     /// <summary>
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<NestedOptionalTails, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<NestedOptionalTails, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -91,19 +91,19 @@ public sealed partial record NestedOptionalTails(
     /// <summary>
     /// Exercise the EchoNestedOptionalTails choice.
     /// </summary>
-    public static Choice<NestedOptionalTails, EchoNestedOptionalTails, NestedOptionalTails> ChoiceEchoNestedOptionalTails { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<NestedOptionalTails, EchoNestedOptionalTails, global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails> ChoiceEchoNestedOptionalTails { get; } = new()
     {
-        Name = new ChoiceName("EchoNestedOptionalTails"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("EchoNestedOptionalTails"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => EchoNestedOptionalTails.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => NestedOptionalTails.FromRecord(val.As<DamlRecord>()),
-        ArgumentJsonReader = (json, context) => NestedOptionalTails.EchoNestedOptionalTails.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => NestedOptionalTails.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => EchoNestedOptionalTails.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.EchoNestedOptionalTails.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceEchoNestedOptionalTails];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceEchoNestedOptionalTails];
 
 }
 
@@ -129,23 +129,23 @@ public static class NestedOptionalTailsSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<NestedOptionalTails>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<NestedOptionalTails>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         NestedOptionalTails payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Owner;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<NestedOptionalTails>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="NestedOptionalTails"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -157,20 +157,20 @@ public static class NestedOptionalTailsNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<NestedOptionalTails> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            NestedOptionalTails.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -181,17 +181,17 @@ public static class NestedOptionalTailsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<NestedOptionalTails> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -205,22 +205,22 @@ public static class NestedOptionalTailsNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand EchoNestedOptionalTailsCommand(
-        this ContractId<NestedOptionalTails> contractId,
-        NestedOptionalTails.EchoNestedOptionalTails argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand EchoNestedOptionalTailsCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.EchoNestedOptionalTails argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            NestedOptionalTails.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.TemplateId,
             contractId,
-            new ChoiceName("EchoNestedOptionalTails"),
+            new global::Daml.Runtime.Commands.ChoiceName("EchoNestedOptionalTails"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the EchoNestedOptionalTails choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>NestedOptionalTails</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -232,18 +232,18 @@ public static class NestedOptionalTailsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<NestedOptionalTails>> TryEchoNestedOptionalTailsAsync(
-        this ContractId<NestedOptionalTails> contractId,
-        ILedgerWriter client,
-        NestedOptionalTails.EchoNestedOptionalTails argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails>> TryEchoNestedOptionalTailsAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.EchoNestedOptionalTails argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.EchoNestedOptionalTailsCommand(argument);
 
@@ -252,61 +252,9 @@ public static class NestedOptionalTailsNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectEchoNestedOptionalTailsResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, NestedOptionalTails.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, NestedOptionalTails.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = NestedOptionalTails.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.ChoiceArchive, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<NestedOptionalTails> ProjectEchoNestedOptionalTailsResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, NestedOptionalTails.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, NestedOptionalTails.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "EchoNestedOptionalTails", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = NestedOptionalTails.ChoiceEchoNestedOptionalTails.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<NestedOptionalTails>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<NestedOptionalTails>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'EchoNestedOptionalTails' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails> ProjectEchoNestedOptionalTailsResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.NestedOptionalTails.ChoiceEchoNestedOptionalTails, contractId);
 }

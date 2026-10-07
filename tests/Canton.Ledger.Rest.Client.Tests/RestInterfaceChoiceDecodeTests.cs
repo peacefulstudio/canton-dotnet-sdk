@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
@@ -22,13 +21,8 @@ namespace Canton.Ledger.Rest.Client.Tests;
 /// </summary>
 public sealed class RestInterfaceChoiceDecodeTests : IDisposable
 {
-    private const string RichTypesPackageId = "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    private const string RichTypesPackageId = "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
     private static readonly Party Alice = new("party::alice");
-
-    // DamlTypeResolver indexes only already-loaded assemblies, so the generated
-    // conformance assembly must be loaded before the first resolve in this process.
-    static RestInterfaceChoiceDecodeTests() =>
-        RuntimeHelpers.RunClassConstructor(typeof(IHolding).TypeHandle);
 
     private readonly List<StubHttpClientFactory> _factories = [];
 
@@ -137,13 +131,13 @@ public sealed class RestInterfaceChoiceDecodeTests : IDisposable
     }
 
     [Fact]
-    public void Project_refuses_a_choice_the_loaded_interface_does_not_declare()
+    public void Project_carries_a_choice_the_loaded_interface_does_not_declare_as_raw_json()
     {
-        var act = () => ProjectedExercise(RichTypesPackageId, "Burn", "{}", "{}");
+        var exercised = ProjectedExercise(RichTypesPackageId, "Burn", """{"reason": "expired"}""", """{"burned": true}""");
 
-        var refusal = act.Should().Throw<TemplateTypeRequiredException>().Which;
-        refusal.TypeId.Should().Be($"{RichTypesPackageId}:RichTypes:Holding");
-        refusal.ChoiceName.Should().Be("Burn");
+        exercised.ChoiceName.Should().Be(new ChoiceName("Burn"));
+        exercised.ChoiceArgument.Should().Be(new DamlUndecodedJson("""{"reason": "expired"}"""));
+        exercised.ExerciseResult.Should().Be(new DamlUndecodedJson("""{"burned": true}"""));
     }
 
     [Fact]

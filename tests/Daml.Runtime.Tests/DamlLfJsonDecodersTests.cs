@@ -870,13 +870,20 @@ public class DamlLfJsonDecodersTests
         act.Should().Throw<JsonException>().WithMessage("Value nesting exceeds the maximum supported depth of 128");
     }
 
+    private static readonly DamlLfElementReader ReaderThatMustNotBeCalled =
+        (_, _) => throw new Xunit.Sdk.XunitException("the component reader must not be called");
+
+    private static readonly DamlLfElementReader ReadOptionalText =
+        (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText);
+
     [Fact]
     public void ReadTuple2_should_decode_both_components()
     {
         using var document = JsonDocument.Parse("""{"_1":"gold","_2":"42"}""");
         var context = DamlLfJsonDecodeContext.Root("Pair");
 
-        var decoded = DamlLfJsonDecoders.ReadTuple2(document.RootElement, context, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64);
+        var decoded = DamlLfJsonDecoders.ReadTuple2(
+            document.RootElement, context, DamlLfJsonDecoders.ReadText, null, DamlLfJsonDecoders.ReadInt64, null);
 
         decoded.Should().Be(new DamlRecord(null, [
             new DamlField("_1", new DamlText("gold")),
@@ -885,27 +892,37 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void ReadTuple2_should_reject_a_missing_component()
+    public void ReadTuple2_should_reject_a_missing_required_component()
     {
         using var document = JsonDocument.Parse("""{"_1":"gold"}""");
         var context = DamlLfJsonDecodeContext.Root("Pair");
 
-        var act = () => DamlLfJsonDecoders.ReadTuple2(document.RootElement, context, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64);
+        var act = () => DamlLfJsonDecoders.ReadTuple2(
+            document.RootElement, context, DamlLfJsonDecoders.ReadText, null, DamlLfJsonDecoders.ReadInt64, null);
 
         act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Pair._2' is missing from the JSON object");
     }
 
     [Fact]
-    public void ReadTuple2_should_decode_an_omitted_Optional_component_as_None()
+    public void ReadTuple2_should_keep_no_field_for_an_omitted_Optional_component()
     {
         using var document = JsonDocument.Parse("""{"_1":"alice"}""");
         var context = DamlLfJsonDecodeContext.Root("Key");
 
         var decoded = DamlLfJsonDecoders.ReadTuple2(
-            document.RootElement,
-            context,
-            DamlLfJsonDecoders.ReadParty,
-            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText));
+            document.RootElement, context, DamlLfJsonDecoders.ReadParty, null, ReadOptionalText, DamlOptional.None);
+
+        decoded.Should().Be(new DamlRecord(null, [new DamlField("_1", new DamlParty("alice"))]));
+    }
+
+    [Fact]
+    public void ReadTuple2_should_keep_a_present_null_Optional_component_as_a_None_field()
+    {
+        using var document = JsonDocument.Parse("""{"_1":"alice","_2":null}""");
+        var context = DamlLfJsonDecodeContext.Root("Key");
+
+        var decoded = DamlLfJsonDecoders.ReadTuple2(
+            document.RootElement, context, DamlLfJsonDecoders.ReadParty, null, ReadOptionalText, DamlOptional.None);
 
         decoded.Should().Be(new DamlRecord(null, [
             new DamlField("_1", new DamlParty("alice")),
@@ -914,12 +931,25 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
+    public void ReadTuple2_should_reject_an_omitted_required_first_component_without_calling_its_reader()
+    {
+        using var document = JsonDocument.Parse("""{"_2":"note"}""");
+        var context = DamlLfJsonDecodeContext.Root("key");
+
+        var act = () => DamlLfJsonDecoders.ReadTuple2(
+            document.RootElement, context, ReaderThatMustNotBeCalled, null, ReadOptionalText, DamlOptional.None);
+
+        act.Should().Throw<JsonException>().WithMessage("Required Daml field 'key._1' is missing from the JSON object");
+    }
+
+    [Fact]
     public void ReadTuple2_should_reject_a_non_object_shape()
     {
         using var document = JsonDocument.Parse("""["gold","42"]""");
         var context = DamlLfJsonDecodeContext.Root("Pair");
 
-        var act = () => DamlLfJsonDecoders.ReadTuple2(document.RootElement, context, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64);
+        var act = () => DamlLfJsonDecoders.ReadTuple2(
+            document.RootElement, context, DamlLfJsonDecoders.ReadText, null, DamlLfJsonDecoders.ReadInt64, null);
 
         act.Should().Throw<JsonException>().WithMessage("Expected JSON Object at 'Pair' but found Array");
     }
@@ -931,7 +961,14 @@ public class DamlLfJsonDecodersTests
         var context = DamlLfJsonDecodeContext.Root("Triple");
 
         var decoded = DamlLfJsonDecoders.ReadTuple3(
-            document.RootElement, context, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64, DamlLfJsonDecoders.ReadBool);
+            document.RootElement,
+            context,
+            DamlLfJsonDecoders.ReadText,
+            null,
+            DamlLfJsonDecoders.ReadInt64,
+            null,
+            DamlLfJsonDecoders.ReadBool,
+            null);
 
         decoded.Should().Be(new DamlRecord(null, [
             new DamlField("_1", new DamlText("gold")),
@@ -941,15 +978,63 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void ReadTuple3_should_reject_a_missing_third_component()
+    public void ReadTuple3_should_reject_a_missing_required_third_component()
     {
         using var document = JsonDocument.Parse("""{"_1":"gold","_2":"42"}""");
         var context = DamlLfJsonDecodeContext.Root("Triple");
 
         var act = () => DamlLfJsonDecoders.ReadTuple3(
-            document.RootElement, context, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64, DamlLfJsonDecoders.ReadBool);
+            document.RootElement,
+            context,
+            DamlLfJsonDecoders.ReadText,
+            null,
+            DamlLfJsonDecoders.ReadInt64,
+            null,
+            DamlLfJsonDecoders.ReadBool,
+            null);
 
         act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Triple._3' is missing from the JSON object");
+    }
+
+    [Fact]
+    public void ReadTuple3_should_keep_no_field_for_an_omitted_Optional_component()
+    {
+        using var document = JsonDocument.Parse("""{"_1":"gold","_2":"42"}""");
+        var context = DamlLfJsonDecodeContext.Root("Triple");
+
+        var decoded = DamlLfJsonDecoders.ReadTuple3(
+            document.RootElement,
+            context,
+            DamlLfJsonDecoders.ReadText,
+            null,
+            DamlLfJsonDecoders.ReadInt64,
+            null,
+            ReadOptionalText,
+            DamlOptional.None);
+
+        decoded.Should().Be(new DamlRecord(null, [
+            new DamlField("_1", new DamlText("gold")),
+            new DamlField("_2", new DamlInt64(42)),
+        ]));
+    }
+
+    [Fact]
+    public void ReadTuple3_should_reject_an_omitted_required_first_component_without_calling_its_reader()
+    {
+        using var document = JsonDocument.Parse("""{"_2":"42","_3":"note"}""");
+        var context = DamlLfJsonDecodeContext.Root("key");
+
+        var act = () => DamlLfJsonDecoders.ReadTuple3(
+            document.RootElement,
+            context,
+            ReaderThatMustNotBeCalled,
+            null,
+            DamlLfJsonDecoders.ReadInt64,
+            null,
+            ReadOptionalText,
+            DamlOptional.None);
+
+        act.Should().Throw<JsonException>().WithMessage("Required Daml field 'key._1' is missing from the JSON object");
     }
 
     [Fact]
@@ -1017,7 +1102,8 @@ public class DamlLfJsonDecodersTests
         var act = () => DamlLfJsonDecoders.ReadList(
             document.RootElement,
             context,
-            (element, elementContext) => DamlLfJsonDecoders.ReadTuple2(element, elementContext, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64));
+            (element, elementContext) => DamlLfJsonDecoders.ReadTuple2(
+                element, elementContext, DamlLfJsonDecoders.ReadText, null, DamlLfJsonDecoders.ReadInt64, null));
 
         act.Should().Throw<JsonException>().WithMessage("Value 'seven' at 'Pairs[1]._2' is not a valid Daml Int64");
     }
@@ -1087,158 +1173,115 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void OptionalField_should_return_the_named_property_value()
+    public void AddFieldIfPresent_should_add_the_decoded_field_when_the_property_is_present()
     {
         using var document = JsonDocument.Parse("""{"note":"ren"}""");
+        var context = DamlLfJsonDecodeContext.Root("Widget");
+        var fields = new List<DamlField>();
 
-        var result = DamlLfJsonDecoders.OptionalField(document.RootElement, "note");
+        DamlLfJsonDecoders.AddFieldIfPresent(
+            fields, document.RootElement, "note",
+            present => DamlLfJsonDecoders.ReadOptional(present, context.Field("note"), DamlLfJsonDecoders.ReadText));
 
-        result.GetString().Should().Be("ren");
+        fields.Should().Equal(DamlField.Create("note", DamlOptional.Some(new DamlText("ren"))));
     }
 
     [Fact]
-    public void OptionalField_should_return_an_explicit_null_unchanged()
+    public void AddFieldIfPresent_should_add_nothing_when_the_property_is_absent()
+    {
+        using var document = JsonDocument.Parse("""{"other":"x"}""");
+        var fields = new List<DamlField>();
+
+        DamlLfJsonDecoders.AddFieldIfPresent(
+            fields, document.RootElement, "note", _ => throw new InvalidOperationException("must not decode an absent property"));
+
+        fields.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddFieldIfPresent_should_add_a_flat_None_field_for_a_present_null()
     {
         using var document = JsonDocument.Parse("""{"note":null}""");
+        var context = DamlLfJsonDecodeContext.Root("Widget");
+        var fields = new List<DamlField>();
 
-        var result = DamlLfJsonDecoders.OptionalField(document.RootElement, "note");
+        DamlLfJsonDecoders.AddFieldIfPresent(
+            fields, document.RootElement, "note",
+            present => DamlLfJsonDecoders.ReadOptional(present, context.Field("note"), DamlLfJsonDecoders.ReadText));
 
-        result.ValueKind.Should().Be(JsonValueKind.Null);
+        fields.Should().Equal(DamlField.Create("note", DamlOptional.None));
     }
 
     [Fact]
-    public void OptionalField_should_read_an_omitted_field_as_json_null()
+    public void AddFieldIfPresent_should_append_after_the_fields_already_collected()
     {
-        using var document = JsonDocument.Parse("{}");
+        using var document = JsonDocument.Parse("""{"note":"ren"}""");
+        var fields = new List<DamlField> { DamlField.Create("owner", new DamlParty("alice")) };
 
-        var result = DamlLfJsonDecoders.OptionalField(document.RootElement, "note");
+        DamlLfJsonDecoders.AddFieldIfPresent(fields, document.RootElement, "note", present => new DamlText(present.GetString()!));
 
-        result.ValueKind.Should().Be(JsonValueKind.Null);
+        fields.Select(field => field.Label).Should().Equal("owner", "note");
     }
 
     [Fact]
-    public void OptionalField_should_compose_with_ReadOptional_to_decode_an_omitted_field_as_None()
-    {
-        using var document = JsonDocument.Parse("""{"text":"inner"}""");
-        var context = DamlLfJsonDecodeContext.Root("TrailingNote");
-
-        var decoded = DamlLfJsonDecoders.ReadOptional(
-            DamlLfJsonDecoders.OptionalField(document.RootElement, "remark"), context.Field("remark"), DamlLfJsonDecoders.ReadText);
-
-        decoded.Should().Be(DamlOptional.None);
-    }
-
-    [Fact]
-    public void OptionalChainField_should_return_the_named_property_value()
-    {
-        using var document = JsonDocument.Parse("""{"note":[["ink"]]}""");
-
-        var result = DamlLfJsonDecoders.OptionalChainField(document.RootElement, "note");
-
-        result.GetRawText().Should().Be("""[["ink"]]""");
-    }
-
-    [Fact]
-    public void OptionalChainField_should_read_an_omitted_field_as_an_empty_array()
-    {
-        using var document = JsonDocument.Parse("{}");
-
-        var result = DamlLfJsonDecoders.OptionalChainField(document.RootElement, "note");
-
-        result.GetRawText().Should().Be("[]");
-    }
-
-    [Fact]
-    public void OptionalChainField_should_compose_with_ReadOptionalChain_to_decode_an_omitted_field_as_None()
-    {
-        using var document = JsonDocument.Parse("""{"midMaybe":[["deep"]]}""");
-        var context = DamlLfJsonDecodeContext.Root("NestedOptionalTails");
-
-        var decoded = DamlLfJsonDecoders.ReadOptionalChain(
-            DamlLfJsonDecoders.OptionalChainField(document.RootElement, "tailMaybe"),
-            context.Field("tailMaybe"),
-            (element, elementContext) => DamlLfJsonDecoders.ReadOptionalChain(element, elementContext, DamlLfJsonDecoders.ReadText));
-
-        decoded.Should().Be(DamlOptionalChain.None);
-    }
-
-    [Fact]
-    public void ReadTypeParameterField_should_decode_a_present_field_with_the_instantiation_reader()
+    public void AddTypeParameterField_should_decode_a_present_field_with_the_instantiation_reader()
     {
         using var document = JsonDocument.Parse("""{"item":"gold"}""");
         var context = DamlLfJsonDecodeContext.Root("Box");
+        var fields = new List<DamlField>();
 
-        var decoded = DamlLfJsonDecoders.ReadTypeParameterField(document.RootElement, context, "item", DamlLfJsonDecoders.ReadText);
+        DamlLfJsonDecoders.AddTypeParameterField(
+            fields, document.RootElement, context, "item", DamlLfJsonDecoders.ReadText, null);
 
-        decoded.Should().Be(new DamlText("gold"));
+        fields.Should().Equal(DamlField.Create("item", new DamlText("gold")));
     }
 
     [Fact]
-    public void ReadTypeParameterField_should_decode_an_omitted_field_as_None_at_an_Optional_instantiation()
+    public void AddTypeParameterField_should_add_no_field_for_an_omitted_field_at_an_Optional_instantiation()
+    {
+        using var document = JsonDocument.Parse("{}");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+        var fields = new List<DamlField>();
+
+        DamlLfJsonDecoders.AddTypeParameterField(
+            fields, document.RootElement, context, "item", ReaderThatMustNotBeCalled, DamlOptional.None);
+
+        fields.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddTypeParameterField_should_keep_a_present_null_as_a_None_field_at_an_Optional_instantiation()
+    {
+        using var document = JsonDocument.Parse("""{"item":null}""");
+        var context = DamlLfJsonDecodeContext.Root("Box");
+        var fields = new List<DamlField>();
+
+        DamlLfJsonDecoders.AddTypeParameterField(
+            fields, document.RootElement, context, "item", ReadOptionalText, DamlOptional.None);
+
+        fields.Should().Equal(DamlField.Create("item", DamlOptional.None));
+    }
+
+    [Fact]
+    public void AddTypeParameterField_should_report_an_omitted_field_missing_at_a_required_instantiation_without_calling_the_reader()
     {
         using var document = JsonDocument.Parse("{}");
         var context = DamlLfJsonDecodeContext.Root("Box");
 
-        var decoded = DamlLfJsonDecoders.ReadTypeParameterField(
-            document.RootElement,
-            context,
-            "item",
-            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText));
-
-        decoded.Should().Be(DamlOptional.None);
-    }
-
-    [Fact]
-    public void ReadTypeParameterField_should_decode_an_omitted_field_as_None_at_a_nested_Optional_instantiation()
-    {
-        using var document = JsonDocument.Parse("{}");
-        var context = DamlLfJsonDecodeContext.Root("Box");
-
-        var decoded = DamlLfJsonDecoders.ReadTypeParameterField(
-            document.RootElement,
-            context,
-            "item",
-            (element, elementContext) => DamlLfJsonDecoders.ReadOptionalChain(
-                element,
-                elementContext,
-                (inner, innerContext) => DamlLfJsonDecoders.ReadOptionalChain(inner, innerContext, DamlLfJsonDecoders.ReadText)));
-
-        decoded.Should().Be(new DamlOptionalChain(null));
-    }
-
-    [Fact]
-    public void ReadTypeParameterField_should_report_an_omitted_field_missing_at_a_List_instantiation()
-    {
-        using var document = JsonDocument.Parse("{}");
-        var context = DamlLfJsonDecodeContext.Root("Box");
-
-        var act = () => DamlLfJsonDecoders.ReadTypeParameterField(
-            document.RootElement,
-            context,
-            "item",
-            (element, elementContext) => DamlLfJsonDecoders.ReadList(element, elementContext, DamlLfJsonDecoders.ReadText));
+        var act = () => DamlLfJsonDecoders.AddTypeParameterField(
+            [], document.RootElement, context, "item", ReaderThatMustNotBeCalled, null);
 
         act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Box.item' is missing from the JSON object");
     }
 
     [Fact]
-    public void ReadTypeParameterField_should_report_an_omitted_field_missing_at_a_non_Optional_instantiation()
-    {
-        using var document = JsonDocument.Parse("{}");
-        var context = DamlLfJsonDecodeContext.Root("Box");
-
-        var act = () => DamlLfJsonDecoders.ReadTypeParameterField(document.RootElement, context, "item", DamlLfJsonDecoders.ReadText);
-
-        act.Should().Throw<JsonException>().WithMessage("Required Daml field 'Box.item' is missing from the JSON object");
-    }
-
-    [Fact]
-    public void ReadTypeParameterField_should_report_the_field_path_of_a_malformed_present_value()
+    public void AddTypeParameterField_should_surface_the_JsonException_a_reader_throws_on_a_present_value()
     {
         using var document = JsonDocument.Parse("""{"item":5}""");
         var context = DamlLfJsonDecodeContext.Root("Box");
 
-        var act = () => DamlLfJsonDecoders.ReadTypeParameterField(document.RootElement, context, "item", DamlLfJsonDecoders.ReadText);
+        var act = () => DamlLfJsonDecoders.AddTypeParameterField(
+            [], document.RootElement, context, "item", DamlLfJsonDecoders.ReadText, null);
 
         act.Should().Throw<JsonException>().WithMessage("Expected JSON String at 'Box.item' but found Number");
     }
@@ -1761,20 +1804,20 @@ public class DamlLfJsonDecodersTests
     {
         GeneratedTypeReaders.ForRecord<RegistryExactRecord>();
 
-        var found = GeneratedTypeReaders.TryGetRecordReader(RegistryExactRecord.DamlTypeId.Identifier, out var reader);
+        var lookup = GeneratedTypeReaders.FindRecordReader(RegistryExactRecord.DamlTypeId.Identifier);
 
-        found.Should().BeTrue();
-        reader.Should().Be((DamlLfElementReader)RegistryExactRecord.__ReadDamlLfJson);
+        var resolved = lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>().Subject;
+        resolved.Value.Should().Be((DamlLfElementReader)RegistryExactRecord.__ReadDamlLfJson);
     }
 
     [Fact]
-    public void GeneratedTypeReaders_ForRecord_lookup_should_return_false_for_an_unregistered_identifier()
+    public void GeneratedTypeReaders_ForRecord_lookup_should_be_missing_for_an_unregistered_identifier()
     {
         var unregistered = new Identifier("pkg-never-registered", "Registry.Module", "NeverRegistered");
 
-        var found = GeneratedTypeReaders.TryGetRecordReader(unregistered, out _);
+        var lookup = GeneratedTypeReaders.FindRecordReader(unregistered);
 
-        found.Should().BeFalse();
+        lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
     }
 
     private sealed record RegistryFallbackRecord : IDamlType, IDamlRecord<RegistryFallbackRecord>
@@ -1798,10 +1841,10 @@ public class DamlLfJsonDecodersTests
         var lookupUnderADifferentPackage = new Identifier(
             "pkg-registry-fallback-lookup", "Registry.Module", "FallbackRecord");
 
-        var found = GeneratedTypeReaders.TryGetRecordReader(lookupUnderADifferentPackage, out var reader);
+        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderADifferentPackage);
 
-        found.Should().BeTrue();
-        reader.Should().Be((DamlLfElementReader)RegistryFallbackRecord.__ReadDamlLfJson);
+        var resolved = lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>().Subject;
+        resolved.Value.Should().Be((DamlLfElementReader)RegistryFallbackRecord.__ReadDamlLfJson);
     }
 
     private sealed record RegistryAmbiguousRecordA : IDamlType, IDamlRecord<RegistryAmbiguousRecordA>
@@ -1833,18 +1876,19 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void GeneratedTypeReaders_ForRecord_lookup_should_throw_naming_both_declaring_types_when_the_module_and_entity_are_ambiguous()
+    public void GeneratedTypeReaders_ForRecord_lookup_should_be_ambiguous_naming_both_declaring_types_when_the_module_and_entity_are_ambiguous()
     {
         GeneratedTypeReaders.ForRecord<RegistryAmbiguousRecordA>();
         GeneratedTypeReaders.ForRecord<RegistryAmbiguousRecordB>();
         var lookupUnderAThirdPackage = new Identifier(
             "pkg-registry-ambiguous-lookup", "Registry.Module", "AmbiguousRecord");
 
-        var act = () => GeneratedTypeReaders.TryGetRecordReader(lookupUnderAThirdPackage, out _);
+        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderAThirdPackage);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*RegistryAmbiguousRecordA*")
-            .WithMessage("*RegistryAmbiguousRecordB*");
+        var ambiguous = lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Ambiguous>().Subject;
+        ambiguous.Candidates.Should().Equal(
+            "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordA",
+            "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordB");
     }
 
     [Fact]
@@ -1853,13 +1897,13 @@ public class DamlLfJsonDecodersTests
         GeneratedTypeReaders.ForRecord<RegistryAmbiguousRecordA>();
         GeneratedTypeReaders.ForRecord<RegistryAmbiguousRecordB>();
 
-        var foundA = GeneratedTypeReaders.TryGetRecordReader(RegistryAmbiguousRecordA.DamlTypeId.Identifier, out var readerA);
-        var foundB = GeneratedTypeReaders.TryGetRecordReader(RegistryAmbiguousRecordB.DamlTypeId.Identifier, out var readerB);
+        var lookupA = GeneratedTypeReaders.FindRecordReader(RegistryAmbiguousRecordA.DamlTypeId.Identifier);
+        var lookupB = GeneratedTypeReaders.FindRecordReader(RegistryAmbiguousRecordB.DamlTypeId.Identifier);
 
-        foundA.Should().BeTrue();
-        readerA.Should().Be((DamlLfElementReader)RegistryAmbiguousRecordA.__ReadDamlLfJson);
-        foundB.Should().BeTrue();
-        readerB.Should().Be((DamlLfElementReader)RegistryAmbiguousRecordB.__ReadDamlLfJson);
+        lookupA.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>().Subject
+            .Value.Should().Be((DamlLfElementReader)RegistryAmbiguousRecordA.__ReadDamlLfJson);
+        lookupB.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>().Subject
+            .Value.Should().Be((DamlLfElementReader)RegistryAmbiguousRecordB.__ReadDamlLfJson);
     }
 
     [Fact]
@@ -1870,10 +1914,10 @@ public class DamlLfJsonDecodersTests
         var structurallyEqualIdentifier = new Identifier("pkg-registry-ambiguous-a", "Registry.Module", "AmbiguousRecord");
         structurallyEqualIdentifier.Should().NotBeSameAs(RegistryAmbiguousRecordA.DamlTypeId.Identifier);
 
-        var found = GeneratedTypeReaders.TryGetRecordReader(structurallyEqualIdentifier, out var reader);
+        var lookup = GeneratedTypeReaders.FindRecordReader(structurallyEqualIdentifier);
 
-        found.Should().BeTrue();
-        reader.Should().Be((DamlLfElementReader)RegistryAmbiguousRecordA.__ReadDamlLfJson);
+        lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>().Subject
+            .Value.Should().Be((DamlLfElementReader)RegistryAmbiguousRecordA.__ReadDamlLfJson);
     }
 
     [Fact]
@@ -1885,14 +1929,11 @@ public class DamlLfJsonDecodersTests
         var lookupUnderAThirdPackage = new Identifier(
             "pkg-registry-ambiguous-lookup", "Registry.Module", "AmbiguousRecord");
 
-        var act = () => GeneratedTypeReaders.TryGetRecordReader(lookupUnderAThirdPackage, out _);
+        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderAThirdPackage);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage(
-            "Ambiguous Daml-LF JSON reader lookup for module 'Registry.Module', "
-            + "entity 'AmbiguousRecord': multiple declaring types are registered "
-            + "(Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordA, "
-            + "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordB); "
-            + "pass the full identifier to disambiguate.");
+        lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Ambiguous>().Subject.Candidates.Should().Equal(
+            "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordA",
+            "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordB");
     }
 
     private sealed record RegistryConcurrentRecord : IDamlType, IDamlRecord<RegistryConcurrentRecord>
@@ -1914,13 +1955,13 @@ public class DamlLfJsonDecodersTests
     {
         await Task.WhenAll(Enumerable.Range(0, 32).Select(_ => Task.Run(GeneratedTypeReaders.ForRecord<RegistryConcurrentRecord>)));
 
-        var foundExact = GeneratedTypeReaders.TryGetRecordReader(RegistryConcurrentRecord.DamlTypeId.Identifier, out _);
+        var exact = GeneratedTypeReaders.FindRecordReader(RegistryConcurrentRecord.DamlTypeId.Identifier);
         var lookupUnderADifferentPackage = new Identifier(
             "pkg-registry-concurrent-lookup", "Registry.Module", "ConcurrentRecord");
-        var foundByFallback = GeneratedTypeReaders.TryGetRecordReader(lookupUnderADifferentPackage, out _);
+        var byFallback = GeneratedTypeReaders.FindRecordReader(lookupUnderADifferentPackage);
 
-        foundExact.Should().BeTrue();
-        foundByFallback.Should().BeTrue();
+        exact.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>();
+        byFallback.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>();
     }
 
     private sealed record RegistryChoiceOwnerV1 : IDamlType, IHasChoices<RegistryChoiceOwnerV1>
@@ -1978,18 +2019,18 @@ public class DamlLfJsonDecodersTests
     }
 
     [Fact]
-    public void GeneratedTypeReaders_ForChoices_lookup_should_throw_naming_both_declaring_types_when_the_module_and_entity_are_ambiguous_even_for_a_choice_only_one_of_them_declares()
+    public void GeneratedTypeReaders_ForChoices_lookup_should_be_ambiguous_naming_both_declaring_types_when_the_module_and_entity_are_ambiguous_even_for_a_choice_only_one_of_them_declares()
     {
         GeneratedTypeReaders.ForChoices<RegistryChoiceOwnerV1>();
         GeneratedTypeReaders.ForChoices<RegistryChoiceOwnerV2>();
         var lookupUnderAThirdPackage = new Identifier(
             "pkg-registry-choice-lookup", "Registry.ChoiceModule", "ChoiceRecord");
 
-        var act = () => GeneratedTypeReaders.TryGetChoice(lookupUnderAThirdPackage, new ChoiceName("Added"), out _);
+        var lookup = GeneratedTypeReaders.FindChoice(lookupUnderAThirdPackage, new ChoiceName("Added"));
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*RegistryChoiceOwnerV1*")
-            .WithMessage("*RegistryChoiceOwnerV2*");
+        lookup.Should().BeOfType<RegistryLookup<IChoice>.Ambiguous>().Subject.Candidates.Should().Equal(
+            "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryChoiceOwnerV1",
+            "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryChoiceOwnerV2");
     }
 
     [Fact]

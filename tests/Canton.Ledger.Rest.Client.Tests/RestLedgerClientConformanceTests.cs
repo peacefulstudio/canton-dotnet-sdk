@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Globalization;
 using System.Net;
@@ -124,8 +125,16 @@ internal sealed class RecordingSubmissionHandler : HttpMessageHandler
 
 /// <summary>The Daml marker the conformance scenario's snapshot and streams are filtered to.</summary>
 /// <param name="Owner">The party the probe contract is issued to.</param>
-public sealed record RestConformanceProbe([property: DamlFieldAttribute("owner")] Party Owner) : ITemplate, IDamlRecord<RestConformanceProbe>
+public sealed record RestConformanceProbe([property: DamlFieldAttribute("owner")] Party Owner)
+    : ITemplate, IDamlRecord<RestConformanceProbe>, IHasChoices<RestConformanceProbe>, IImplements<IConformanceProbe>
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWritten()
+    {
+        GeneratedTypeReaders.ForRecord<RestConformanceProbe>();
+        GeneratedTypeReaders.ForChoices<RestConformanceProbe>();
+    }
+
     /// <inheritdoc cref="ITemplate" />
     public static RuntimeIdentifier TemplateId { get; } = new("conformance-pkg", "Conformance.Probe", "Probe");
 
@@ -165,6 +174,8 @@ public sealed record RestConformanceProbe([property: DamlFieldAttribute("owner")
         ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
         ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
     };
+
+    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive];
 }
 
 /// <summary>
@@ -223,8 +234,8 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
         [
             .. new[]
             {
-                (Offset: CreatedOffset, Row: ActiveContract("00probe", ProbeTemplateId, CreatedOffset)),
-                (Offset: UnclassifiableOffset, Row: ActiveContract("00foreign", ForeignTemplateId, UnclassifiableOffset)),
+                (Offset: CreatedOffset, Row: ActiveContract("00probe", ProbeTemplateId, CreatedOffset, ProbeInterfaceViews())),
+                (Offset: UnclassifiableOffset, Row: ActiveContract("00foreign", ForeignTemplateId, UnclassifiableOffset, [])),
             }
             .Where(seeded => seeded.Offset <= activeAtOffset)
             .Select(seeded => seeded.Row),
@@ -269,17 +280,34 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
                 $"The request omits the offset field '{name}', so the scenario cannot bound it: {body}");
     }
 
-    private static object ActiveContract(string contractId, object templateId, long offset) => new
+    private static object ActiveContract(string contractId, object templateId, long offset, object[] interfaceViews) => new
     {
         contractEntry = new
         {
             JsActiveContract = new
             {
-                createdEvent = CreatedEvent(contractId, templateId, offset),
+                createdEvent = CreatedEvent(contractId, templateId, offset, interfaceViews),
                 synchronizerId = Synchronizer,
             },
         },
     };
+
+    private static object ProbeInterfaceId() => new
+    {
+        packageId = IConformanceProbe.InterfaceId.PackageId,
+        moduleName = IConformanceProbe.InterfaceId.ModuleName,
+        entityName = IConformanceProbe.InterfaceId.EntityName,
+    };
+
+    private static object[] ProbeInterfaceViews() =>
+    [
+        new
+        {
+            interfaceId = ProbeInterfaceId(),
+            viewStatus = new { code = 0, message = string.Empty },
+            viewValue = new { amount = "42.5" },
+        },
+    ];
 
     private static object Transaction(long offset, object seeded) => new
     {
@@ -297,16 +325,18 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
         },
     };
 
-    private static object CreatedEvent(string contractId, object templateId, long offset) => new
+    private static object CreatedEvent(string contractId, object templateId, long offset, object[] interfaceViews) => new
     {
         offset = offset.ToString(CultureInfo.InvariantCulture),
         contractId,
         templateId,
         createArgument = new { owner = "party::alice" },
+        interfaceViews,
         witnessParties = Witnesses,
     };
 
-    private static object Creation() => new { CreatedEvent = CreatedEvent("00probe", ProbeTemplateId, CreatedOffset) };
+    private static object Creation() =>
+        new { CreatedEvent = CreatedEvent("00probe", ProbeTemplateId, CreatedOffset, ProbeInterfaceViews()) };
 
     private static object Archival() => new
     {
@@ -315,6 +345,7 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
             offset = ConsumedOffset.ToString(CultureInfo.InvariantCulture),
             contractId = "00probe",
             templateId = ProbeTemplateId,
+            implementedInterfaces = new[] { ProbeInterfaceId() },
             witnessParties = Witnesses,
         },
     };
@@ -330,6 +361,7 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
             choiceArgument = new { },
             actingParties = Witnesses,
             consuming = true,
+            implementedInterfaces = new[] { ProbeInterfaceId() },
             witnessParties = Witnesses,
             exerciseResult = new { },
         },

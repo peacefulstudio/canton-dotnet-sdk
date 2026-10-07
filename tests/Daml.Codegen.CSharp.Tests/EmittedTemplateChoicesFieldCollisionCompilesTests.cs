@@ -133,7 +133,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var choicesTemplate = SourceOf(files, "Choices.cs");
         choicesTemplate.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<Choices>.Choices { get; } = [ChoiceGrant];",
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Choices>.Choices { get; } = [ChoiceGrant];",
             "the template itself is named Choices, so a plain public static Choices member would be CS0542");
         choicesTemplate.Should().NotContain(
             "public static IReadOnlyList<IChoice> Choices",
@@ -152,7 +152,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<Vault>.Choices { get; } = [ChoiceGrant];",
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Vault>.Choices { get; } = [ChoiceGrant];",
             "the payload field already owns the instance member Choices, so the witness must degrade to an explicit interface implementation");
         vault.Should().NotContain(
             "public static IReadOnlyList<IChoice> Choices",
@@ -172,7 +172,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceGrant];",
+            "public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceGrant];",
             "the baseline every degraded case above falls back from must still emit the plain static witness");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -244,7 +244,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "static IReadOnlyList<IChoice> IHasChoices<Vault>.Choices { get; } = [ChoiceChoices];",
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Vault>.Choices { get; } = [ChoiceChoices];",
             "the nested choice-arg type 'Choices' inside the partial record collides with the static witness, so it must degrade to an explicit interface implementation");
         vault.Should().NotContain(
             "public static IReadOnlyList<IChoice> Choices",
@@ -321,7 +321,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "public static IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceIChoice];",
+            "public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceIChoice];",
             "the nested choice-arg record 'IChoice' shadows the runtime Daml.Runtime.Commands.IChoice, so the aggregate witness's element type must be root-qualified");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -337,7 +337,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "public static global::System.Collections.Generic.IReadOnlyList<IChoice> Choices { get; } = [ChoiceIReadOnlyList];",
+            "public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceIReadOnlyList];",
             "the nested choice-arg record 'IReadOnlyList' shadows the runtime System.Collections.Generic.IReadOnlyList<T>, so the aggregate witness's head type must be root-qualified");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -414,7 +414,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "static IReadOnlyList<IChoice> global::Daml.Runtime.Contracts.IHasChoices<Vault>.Choices { get; } = [ChoiceIHasChoices];",
+            "static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<Vault>.Choices { get; } = [ChoiceIHasChoices];",
             "the nested choice-arg record 'IHasChoices' shadows the runtime Daml.Runtime.Contracts.IHasChoices<T>, so the explicit witness's interface name must be root-qualified");
 
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -623,10 +623,10 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "Detail: Detail.FromRecord(record.GetRequiredField(\"detail\").As<global::Daml.Runtime.Data.DamlRecord>())",
+            "Detail: global::Test.Module.Detail.FromRecord(record.GetRequiredField(\"detail\").As<global::Daml.Runtime.Data.DamlRecord>())",
             "the template's own record-typed payload field deserialization must be root-qualified once the nested choice-arg record named 'DamlRecord' shadows the runtime type");
         vault.Should().Contain(
-            "ResultDecoder = val => Detail.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),",
+            "ResultDecoder = val => global::Test.Module.Detail.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),",
             "a record-typed choice return-value decoder must be root-qualified for the same reason");
         vault.Should().Contain(
             "KeyDecoder = value => global::Test.Module.Detail.FromRecord(value.As<global::Daml.Runtime.Data.DamlRecord>()),",

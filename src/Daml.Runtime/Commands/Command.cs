@@ -9,6 +9,10 @@ namespace Daml.Runtime.Commands;
 /// <summary>
 /// Base interface for all ledger commands.
 /// </summary>
+/// <remarks>
+/// Commands are written, never read back. A command rebuilt for a retry must be resubmitted with the
+/// original <see cref="CommandsSubmission.CommandId"/>, so the participant deduplicates it.
+/// </remarks>
 public interface ICommand
 {
     /// <summary>

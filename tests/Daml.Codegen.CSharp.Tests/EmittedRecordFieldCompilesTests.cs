@@ -140,6 +140,81 @@ public class EmittedRecordFieldCompilesTests
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Emitted_record_with_stdlib_Month_enum_field_compiles_with_and_without_dependencies(bool includeDependencies)
+    {
+        var stdlibModule = new DamlModule
+        {
+            Name = "DA.Date.Types",
+            Templates = [],
+            DataTypes =
+            [
+                new DamlDataType
+                {
+                    Name = "Month",
+                    Definition = new DamlEnumDefinition(
+                        ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]),
+                }
+            ],
+            Interfaces = [],
+        };
+        var stdlibPackage = new DamlPackage
+        {
+            PackageId = "daml-stdlib-id",
+            Name = "daml-stdlib",
+            Version = new Version(1, 0, 0),
+            LfVersion = "2.1",
+            Modules = [stdlibModule],
+            DependencyReferences = [],
+        };
+
+        var mainModule = new DamlModule
+        {
+            Name = "Test.Module",
+            Templates = [],
+            DataTypes =
+            [
+                new DamlDataType
+                {
+                    Name = "Statement",
+                    Definition = new DamlRecordDefinition(
+                    [
+                        new DamlFieldDefinition("month", new DamlTypeRef("daml-stdlib-id", "DA.Date.Types", "Month")),
+                    ]),
+                },
+            ],
+            Interfaces = [],
+        };
+        var mainPackage = new DamlPackage
+        {
+            PackageId = "test-pkg",
+            Name = "test-package",
+            Version = new Version(1, 0, 0),
+            LfVersion = "2.1",
+            Modules = [mainModule],
+            DependencyReferences = [],
+        };
+
+        var dar = new DarModel { MainPackage = mainPackage, Dependencies = [stdlibPackage] };
+
+        var options = new CodeGenOptions
+        {
+            EnableNullableReferenceTypes = true,
+            UseFileScopedNamespaces = true,
+            IncludeDependencies = includeDependencies,
+        };
+        var generator = new CSharpCodeGenerator(options);
+        var files = generator.Generate(dar);
+
+        var diagnostics = CompileEmittedFiles(files);
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        errors.Should().BeEmpty(
+            "a record field whose type is the stdlib Month enum must round-trip via the runtime-provided Daml.Runtime.Stdlib.MonthExtensions, but got: {0}",
+            string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
+    }
+
     [Fact]
     public void Emitted_record_with_genmap_of_list_field_compiles()
     {
@@ -431,7 +506,7 @@ public class EmittedRecordFieldCompilesTests
 
         var emitted = string.Join("\n", files.Select(f => f.Content));
         emitted.Should().Contain(
-            "Either<string, Optional<string>>",
+            "global::Daml.Runtime.Stdlib.Either<string, global::Daml.Runtime.Stdlib.Optional<string>>",
             "the Optional type argument must render as the wrapper rather than as string?");
         emitted.Should().NotContain(
             "Either<string, string?>",
@@ -492,7 +567,7 @@ public class EmittedRecordFieldCompilesTests
         var endoSource = files.Single(f => f.RelativePath.EndsWith("Endo.cs", StringComparison.Ordinal)).Content;
         endoSource.Should().NotContain("AppEndo.ToRecord()",
             "an object-typed (unmappable) field must not emit `.ToRecord()` — object has no such method");
-        endoSource.Should().Contain("NotImplemented<DamlValue>(\"AppEndo\")",
+        endoSource.Should().Contain("global::Daml.Runtime.Stdlib.GenericStub.NotImplemented<global::Daml.Runtime.Data.DamlValue>(\"AppEndo\")",
             "an object-typed (unmappable) field must serialize via the GenericStub.NotImplemented stub");
 
         var diagnostics = CompileEmittedFiles(files);

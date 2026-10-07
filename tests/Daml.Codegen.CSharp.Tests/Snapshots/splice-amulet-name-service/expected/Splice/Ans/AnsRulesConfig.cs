@@ -14,38 +14,38 @@ namespace Splice.Ans;
 /// Generated from Daml record AnsRulesConfig
 /// </summary>
 public sealed record AnsRulesConfig(
-    [property: DamlFieldAttribute("renewalDuration")] RelTime RenewalDuration,
-    [property: DamlFieldAttribute("entryLifetime")] RelTime EntryLifetime,
-    [property: DamlFieldAttribute("entryFee")] decimal EntryFee,
-    [property: DamlFieldAttribute("descriptionPrefix")] string DescriptionPrefix
-) : IDamlRecord<AnsRulesConfig>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("renewalDuration")] global::Daml.Runtime.Stdlib.RelTime RenewalDuration,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("entryLifetime")] global::Daml.Runtime.Stdlib.RelTime EntryLifetime,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("entryFee")] decimal EntryFee,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("descriptionPrefix")] string DescriptionPrefix
+) : global::Daml.Runtime.Data.IDamlRecord<AnsRulesConfig>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("renewalDuration", RenewalDuration.ToRecord()),
-        DamlField.Create("entryLifetime", EntryLifetime.ToRecord()),
-        DamlField.Create("entryFee", new DamlNumeric(EntryFee)),
-        DamlField.Create("descriptionPrefix", new DamlText(DescriptionPrefix))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("renewalDuration", RenewalDuration.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("entryLifetime", EntryLifetime.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("entryFee", new global::Daml.Runtime.Data.DamlNumeric(EntryFee)),
+        global::Daml.Runtime.Data.DamlField.Create("descriptionPrefix", new global::Daml.Runtime.Data.DamlText(DescriptionPrefix))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnsRulesConfig FromRecord(DamlRecord record) => new AnsRulesConfig(
-        RenewalDuration: RelTime.FromRecord(record.GetRequiredField("renewalDuration").As<DamlRecord>()),
-        EntryLifetime: RelTime.FromRecord(record.GetRequiredField("entryLifetime").As<DamlRecord>()),
-        EntryFee: record.GetRequiredField("entryFee").As<DamlNumeric>().Value,
-        DescriptionPrefix: record.GetRequiredField("descriptionPrefix").As<DamlText>().Value
+    public static AnsRulesConfig FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRulesConfig(
+        RenewalDuration: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("renewalDuration").As<global::Daml.Runtime.Data.DamlRecord>()),
+        EntryLifetime: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("entryLifetime").As<global::Daml.Runtime.Data.DamlRecord>()),
+        EntryFee: record.GetRequiredField("entryFee").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        DescriptionPrefix: record.GetRequiredField("descriptionPrefix").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("renewalDuration", RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "renewalDuration"), context.Field("renewalDuration"))),
-            DamlField.Create("entryLifetime", RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryLifetime"), context.Field("entryLifetime"))),
-            DamlField.Create("entryFee", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryFee"), context.Field("entryFee"))),
-            DamlField.Create("descriptionPrefix", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "descriptionPrefix"), context.Field("descriptionPrefix")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("renewalDuration", global::Daml.Runtime.Stdlib.RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "renewalDuration"), context.Field("renewalDuration"))),
+            global::Daml.Runtime.Data.DamlField.Create("entryLifetime", global::Daml.Runtime.Stdlib.RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryLifetime"), context.Field("entryLifetime"))),
+            global::Daml.Runtime.Data.DamlField.Create("entryFee", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryFee"), context.Field("entryFee"))),
+            global::Daml.Runtime.Data.DamlField.Create("descriptionPrefix", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "descriptionPrefix"), context.Field("descriptionPrefix")))
         );
     }
 

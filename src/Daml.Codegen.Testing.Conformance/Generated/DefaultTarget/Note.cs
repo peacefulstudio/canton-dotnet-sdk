@@ -23,13 +23,13 @@ namespace Daml.Codegen.Testing.Conformance.DefaultTarget;
 /// Generated from Daml template DefaultTarget:Note
 /// </summary>
 public sealed partial record Note(
-    [property: DamlFieldAttribute("owner")] Party Owner,
-    [property: DamlFieldAttribute("body")] string Body,
-    [property: DamlFieldAttribute("revision")] long Revision
-) : ITemplate, IHasChoices<Note>, IDamlRecord<Note>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("body")] string Body,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("revision")] long Revision
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Note>, global::Daml.Runtime.Data.IDamlRecord<Note>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("47653650113a3f03de4e970a2133a3e36e7443b8966fd5f4b5f509bef6b6ac25", "DefaultTarget", "Note");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("47653650113a3f03de4e970a2133a3e36e7443b8966fd5f4b5f509bef6b6ac25", "DefaultTarget", "Note");
 
     /// <summary>Gets the package ID.</summary>
     public static string PackageId => "47653650113a3f03de4e970a2133a3e36e7443b8966fd5f4b5f509bef6b6ac25";
@@ -38,34 +38,34 @@ public sealed partial record Note(
     public static string PackageName => "defaulttarget";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("owner", Owner.ToDamlValue()),
-        DamlField.Create("body", new DamlText(Body)),
-        DamlField.Create("revision", new DamlInt64(Revision))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("body", new global::Daml.Runtime.Data.DamlText(Body)),
+        global::Daml.Runtime.Data.DamlField.Create("revision", new global::Daml.Runtime.Data.DamlInt64(Revision))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Note FromRecord(DamlRecord record) => new Note(
-        Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()),
-        Body: record.GetRequiredField("body").As<DamlText>().Value,
-        Revision: record.GetRequiredField("revision").As<DamlInt64>().Value
+    public static Note FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Note(
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
+        Body: record.GetRequiredField("body").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Revision: record.GetRequiredField("revision").As<global::Daml.Runtime.Data.DamlInt64>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
-            DamlField.Create("body", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "body"), context.Field("body"))),
-            DamlField.Create("revision", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "revision"), context.Field("revision")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
+            global::Daml.Runtime.Data.DamlField.Create("body", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "body"), context.Field("body"))),
+            global::Daml.Runtime.Data.DamlField.Create("revision", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "revision"), context.Field("revision")))
         );
     }
 
@@ -73,23 +73,23 @@ public sealed partial record Note(
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Note, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Note, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive];
 
 }
 
@@ -115,23 +115,23 @@ public static class NoteSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<Note>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Note>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         Note payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Owner;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Note>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="Note"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.DefaultTarget.Note"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -143,20 +143,20 @@ public static class NoteNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<Note> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.DefaultTarget.Note> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            Note.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.DefaultTarget.Note.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -167,17 +167,17 @@ public static class NoteNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<Note> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.DefaultTarget.Note> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -186,32 +186,6 @@ public static class NoteNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Note.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Note.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = Note.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.DefaultTarget.Note.ChoiceArchive, contractId);
 }

@@ -533,15 +533,19 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
     }
 
     [Fact]
-    public async Task CompletionStreamAsync_throws_the_transport_failure_that_never_reached_the_participant()
+    public async Task CompletionStreamAsync_ends_with_a_terminal_StreamError_when_the_first_window_never_reaches_the_participant()
     {
-        var transport = new RecordingHttpHandler()
-            .WithTransportException(new HttpRequestException("connection refused"));
+        var refused = new HttpRequestException("connection refused");
+        var transport = new RecordingHttpHandler().WithTransportException(refused);
         var client = ClientWith(transport);
 
-        var act = () => DrainAsync(client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.Begin, TestContext.Current.CancellationToken));
+        var events = await DrainAsync(client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.Begin, TestContext.Current.CancellationToken));
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        var error = events.Should().ContainSingle()
+            .Which.Should().BeOfType<CompletionStreamEvent.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.NoResponse());
+        error.Message.Should().Be("connection refused");
+        error.SourceException.Should().BeSameAs(refused);
     }
 
     [Fact]

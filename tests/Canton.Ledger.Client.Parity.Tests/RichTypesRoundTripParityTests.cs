@@ -147,7 +147,7 @@ public abstract class RichTypesRoundTripParityTests
     }
 
     [Fact]
-    public async Task Issue_returns_the_patrons_ticket_through_the_generated_TryIssueAsync()
+    public async Task Issue_returns_the_ticket_contract_id_through_the_generated_TryIssueAsync()
     {
         await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
         var (client, patron) = lane.Capability;
@@ -158,8 +158,8 @@ public abstract class RichTypesRoundTripParityTests
             client, new TicketDesk.Issue(), patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<IssueResult>.One>(
-            "the issuer-only ticket is invisible to the patron, so exactly one created contract is theirs; got {0}", outcome);
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>(
+            "the choice committed and returned the ticket's contract id, which the patron sees on its own exercise; got {0}", outcome);
     }
 
     [Fact]
@@ -174,9 +174,9 @@ public abstract class RichTypesRoundTripParityTests
             client, new TicketDesk.Reserve(), patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var reserved = outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>(
+        var reserved = outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>(
             "the choice committed and returned the ticket's contract id, which the patron sees on its own exercise "
-            + "although it is no stakeholder of the ticket; got {0}", outcome).Subject.Result.Ticket;
+            + "although it is no stakeholder of the ticket; got {0}", outcome).Subject.Result;
         (await ReadBackAsync(lane, reserved, issuer)).Should().Be(new Ticket(issuer, issuer));
     }
 
@@ -192,9 +192,9 @@ public abstract class RichTypesRoundTripParityTests
             client, new TicketDesk.Reserve(), new RuntimeCommands.SubmitterInfo(patron),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var reserved = outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>(
+        var reserved = outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>(
             "the choice committed and returned the ticket's contract id, which the patron sees on its own exercise "
-            + "although it is no stakeholder of the ticket; got {0}", outcome).Subject.Result.Ticket;
+            + "although it is no stakeholder of the ticket; got {0}", outcome).Subject.Result;
         (await ReadBackAsync(lane, reserved, issuer)).Should().Be(new Ticket(issuer, issuer));
     }
 
@@ -210,11 +210,11 @@ public abstract class RichTypesRoundTripParityTests
             client, new TicketDesk.Pair(false), patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var pair = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>(
+        var pair = outcome.Should().BeOfType<ExerciseOutcome<Tuple2<ContractId<Ticket>, Optional<ContractId<Ephemeral>>>>.One>(
             "the choice committed and returned (ticket, None), whose trailing None the ledger may leave out; got {0}", outcome)
             .Subject.Result;
-        (await ReadBackAsync(lane, pair.Ticket, issuer)).Should().Be(new Ticket(issuer, issuer));
-        pair.Ephemeral.Should().BeNull();
+        (await ReadBackAsync(lane, pair._1, issuer)).Should().Be(new Ticket(issuer, issuer));
+        pair._2.HasValue.Should().BeFalse();
     }
 
     [Fact]
@@ -229,10 +229,10 @@ public abstract class RichTypesRoundTripParityTests
             client, new TicketDesk.Pair(true), patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var pair = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>(
+        var pair = outcome.Should().BeOfType<ExerciseOutcome<Tuple2<ContractId<Ticket>, Optional<ContractId<Ephemeral>>>>.One>(
             "the choice committed and returned (ticket, Some ephemeral); got {0}", outcome).Subject.Result;
-        (await ReadBackAsync(lane, pair.Ticket, issuer)).Should().Be(new Ticket(issuer, issuer));
-        pair.Ephemeral.Should().NotBeNull();
+        (await ReadBackAsync(lane, pair._1, issuer)).Should().Be(new Ticket(issuer, issuer));
+        pair._2.HasValue.Should().BeTrue();
     }
 
     [Fact]

@@ -77,17 +77,34 @@ public interface ILedgerWriter
     /// <param name="timeout">
     /// Optional per-call deadline, applied best-effort by the transport — see
     /// <see cref="TryExerciseAsync{TResult}(ExerciseCommand, SubmitterInfo, string?, CommandId?, TimeSpan?, CancellationToken)"/>
-    /// for the deadline contract. An overrun surfaces as a transport failure.
+    /// for the deadline contract. An overrun is a failure with no answer and raises a
+    /// <see cref="LedgerOperationException"/>.
     /// </param>
     /// <param name="cancellationToken">
     /// Cancellation token. When this token is cancelled, implementations must throw
     /// <see cref="OperationCanceledException"/> (or a subtype, e.g. <see cref="TaskCanceledException"/>)
     /// rather than wrapping the cancellation in a <see cref="LedgerOperationException"/> — this
     /// method signals failure by throwing, and <c>LedgerOperationException</c> is reserved for
-    /// genuine transport/infrastructure failures unrelated to the caller's own cancellation,
+    /// failures that come from the participant or the wire, never the caller's own cancellation,
     /// matching the contract the streaming
     /// <see cref="ILedgerStreamer.SubscribeAsync{T}(SubmitterInfo, LedgerOffset?, LedgerOffset?, CancellationToken)"/> methods already document.
     /// </param>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached, did not answer within the deadline, rejected the
+    /// submission, or committed it and answered with a body the client could not decode. The exception carries the
+    /// transport-native <see cref="LedgerOperationException.Status"/> and, when the participant sent them, the
+    /// <see cref="LedgerOperationException.Category"/>, <see cref="LedgerOperationException.ErrorId"/> and
+    /// <see cref="LedgerOperationException.Metadata"/>. Read <see cref="LedgerOperationException.CommitState"/> before
+    /// retrying: <see cref="CommitState.Unknown"/> when no answer arrived or the participant could not tell (resubmit
+    /// with the same command id), <see cref="CommitState.NotCommitted"/> for a structured rejection, except that
+    /// the error ids take precedence over the category: <c>DUPLICATE_COMMAND</c> is
+    /// <see cref="CommitState.Committed"/> because the ledger already accepted a command with that command id
+    /// (<see cref="CommitState.Unknown"/> when its <c>accepted</c> metadata is <c>"false"</c>), and
+    /// <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is <see cref="CommitState.Unknown"/>, and
+    /// <see cref="CommitState.Committed"/> for an undecodable answer (do not resubmit).
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     /// <returns>
     /// A <see cref="SubmitAndWaitResult"/> carrying the effective
     /// <see cref="SubmitAndWaitResult.CommandId"/> the participant recorded for the

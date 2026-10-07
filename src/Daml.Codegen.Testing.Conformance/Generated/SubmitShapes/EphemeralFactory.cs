@@ -23,41 +23,41 @@ namespace Daml.Codegen.Testing.Conformance.SubmitShapes;
 /// Generated from Daml template SubmitShapes:EphemeralFactory
 /// </summary>
 public sealed partial record EphemeralFactory(
-    [property: DamlFieldAttribute("owner")] Party Owner
-) : ITemplate, IHasChoices<EphemeralFactory>, IDamlRecord<EphemeralFactory>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<EphemeralFactory>, global::Daml.Runtime.Data.IDamlRecord<EphemeralFactory>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "SubmitShapes", "EphemeralFactory");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "SubmitShapes", "EphemeralFactory");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    public static string PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hecd531570c32";
+    public static string PackageName => "richtypes-hf9ffaa5ee2ff";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("owner", Owner.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static EphemeralFactory FromRecord(DamlRecord record) => new EphemeralFactory(
-        Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>())
+    public static EphemeralFactory FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new EphemeralFactory(
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner")))
         );
     }
 
@@ -65,17 +65,17 @@ public sealed partial record EphemeralFactory(
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<EphemeralFactory, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<EphemeralFactory, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -83,19 +83,19 @@ public sealed partial record EphemeralFactory(
     /// <summary>
     /// Exercise the Churn choice.
     /// </summary>
-    public static Choice<EphemeralFactory, Churn, decimal> ChoiceChurn { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<EphemeralFactory, Churn, decimal> ChoiceChurn { get; } = new()
     {
-        Name = new ChoiceName("Churn"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Churn"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Churn.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => val.As<DamlNumeric>().Value,
-        ArgumentJsonReader = (json, context) => EphemeralFactory.Churn.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Churn.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => val.As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.Churn.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceChurn];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceChurn];
 
 }
 
@@ -121,23 +121,23 @@ public static class EphemeralFactorySubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<EphemeralFactory>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<EphemeralFactory>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         EphemeralFactory payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Owner;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<EphemeralFactory>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="EphemeralFactory"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -149,20 +149,20 @@ public static class EphemeralFactoryNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<EphemeralFactory> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            EphemeralFactory.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -173,17 +173,17 @@ public static class EphemeralFactoryNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<EphemeralFactory> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -197,16 +197,16 @@ public static class EphemeralFactoryNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ChurnCommand(
-        this ContractId<EphemeralFactory> contractId,
-        EphemeralFactory.Churn argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ChurnCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory> contractId,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.Churn argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            EphemeralFactory.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.TemplateId,
             contractId,
-            new ChoiceName("Churn"),
+            new global::Daml.Runtime.Commands.ChoiceName("Churn"),
             argument.ToRecord());
     }
 
@@ -224,18 +224,18 @@ public static class EphemeralFactoryNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<decimal>> TryChurnAsync(
-        this ContractId<EphemeralFactory> contractId,
-        ILedgerWriter client,
-        EphemeralFactory.Churn argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<decimal>> TryChurnAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.Churn argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ChurnCommand(argument);
 
@@ -244,61 +244,9 @@ public static class EphemeralFactoryNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectChurnResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, EphemeralFactory.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, EphemeralFactory.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = EphemeralFactory.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.ChoiceArchive, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<decimal> ProjectChurnResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, EphemeralFactory.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, EphemeralFactory.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Churn", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = EphemeralFactory.ChoiceChurn.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<decimal>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<decimal>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Churn' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<decimal> ProjectChurnResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.EphemeralFactory.ChoiceChurn, contractId);
 }

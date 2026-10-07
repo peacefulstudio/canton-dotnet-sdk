@@ -66,11 +66,11 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar).ToList();
-        var wrapper = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", StringComparison.Ordinal));
+        var wrapper = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", global::System.StringComparison.Ordinal));
 
         wrapper.Should().NotBeNull();
         wrapper!.Content.Should().Contain("global::Foreign.Module.Meta Meta");
-        wrapper.Content.Should().Contain("global::Foreign.Module.Meta.FromRecord(record.GetRequiredField(\"meta\").As<DamlRecord>())");
+        wrapper.Content.Should().Contain("global::Foreign.Module.Meta.FromRecord(record.GetRequiredField(\"meta\").As<global::Daml.Runtime.Data.DamlRecord>())");
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar).ToList();
-        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
 
         // Assert
         csproj.Should().NotBeNull();
@@ -189,11 +189,11 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator(options);
 
         var files = generator.Generate(dar).ToList();
-        var wrapper = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", StringComparison.Ordinal));
-        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        var wrapper = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", global::System.StringComparison.Ordinal));
+        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
 
         wrapper.Should().NotBeNull();
-        wrapper!.Content.Should().Contain("[property: DamlFieldAttribute(\"meta\")] Meta Meta");
+        wrapper!.Content.Should().Contain("[property: global::Daml.Runtime.Data.DamlFieldAttribute(\"meta\")] Meta Meta");
         wrapper.Content.Should().NotContain("No.Package.Metadata");
 
         csproj.Should().NotBeNull();
@@ -261,13 +261,13 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator(options);
 
         var files = generator.Generate(dar).ToList();
-        var holding = files.FirstOrDefault(f => f.RelativePath.EndsWith("Holding.cs", StringComparison.Ordinal));
-        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        var holding = files.FirstOrDefault(f => f.RelativePath.EndsWith("Holding.cs", global::System.StringComparison.Ordinal));
+        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
 
         holding.Should().NotBeNull();
-        holding!.Content.Should().Contain("Choice<Holding, DamlUnit,");
-        holding.Content.Should().Contain("ArgumentEncoder = _ => DamlRecord.Create()");
-        holding.Content.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance");
+        holding!.Content.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, global::Daml.Runtime.Data.DamlUnit,");
+        holding.Content.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create()");
+        holding.Content.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
         holding.Content.Should().NotContain("No.Package.Metadata");
 
         csproj.Should().NotBeNull();
@@ -336,14 +336,14 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator(options);
 
         var files = generator.Generate(dar).ToList();
-        var iface = files.FirstOrDefault(f => f.RelativePath.EndsWith("IAsset.cs", StringComparison.Ordinal));
-        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        var iface = files.FirstOrDefault(f => f.RelativePath.EndsWith("IAsset.cs", global::System.StringComparison.Ordinal));
+        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
 
         iface.Should().NotBeNull();
         iface!.Content.Should().Contain("TryArchiveAsync(");
         iface.Content.Should().Contain("DamlRecord.Create()");
-        iface.Content.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance,");
-        iface.Content.Should().NotContain("ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Archive\"), DamlUnit.Instance)");
+        iface.Content.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,");
+        iface.Content.Should().NotContain("global::Daml.Runtime.Commands.ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Archive\"), global::Daml.Runtime.Data.DamlUnit.Instance)");
         iface.Content.Should().NotContain("No.Package.Metadata");
 
         csproj.Should().NotBeNull();

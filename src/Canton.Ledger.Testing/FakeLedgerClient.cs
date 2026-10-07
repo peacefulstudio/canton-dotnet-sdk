@@ -46,6 +46,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     private readonly ConcurrentQueue<CommandId> _submittedCommandIds = new();
     private long _committedWrites;
 
+    internal LedgerOperationException? ThrowingCallFailure { get; init; }
+
     internal FakeLedgerClient(
         IReadOnlyDictionary<Type, object> activeContracts,
         IReadOnlyDictionary<Type, object> contractEvents,
@@ -186,7 +188,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        throw Unsupported(nameof(SubmitAndWaitAsync));
+        return Answering<SubmitAndWaitResult>(() => throw Unsupported(nameof(SubmitAndWaitAsync)));
     }
 
     /// <inheritdoc />
@@ -236,7 +238,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     public Task<LedgerOffset> GetLedgerEndAsync(
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult(_ledgerEnd is { } seeded
+        Answering(() => _ledgerEnd is { } seeded
             ? LedgerOffset.At(seeded.Value + Interlocked.Read(ref _committedWrites))
             : throw new NotSupportedException(
                 $"FakeLedgerClient has no ledger end staged for '{nameof(GetLedgerEndAsync)}'. Stage one with " +
@@ -249,6 +251,9 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
 
     /// <inheritdoc />
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    private Task<T> Answering<T>(Func<T> answer) =>
+        ThrowingCallFailure is { } failure ? Task.FromException<T>(failure) : Task.FromResult(answer());
 
     private void RecordSubmittedCommandId(CommandId? commandId) =>
         _submittedCommandIds.Enqueue(commandId ?? new CommandId(Guid.NewGuid().ToString()));

@@ -1,8 +1,6 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -10,130 +8,57 @@ using Daml.Runtime.Data;
 namespace Daml.Runtime.Serialization;
 
 /// <summary>
-/// Registry mapping a Daml type's wire identifier to the emitted Daml-LF JSON reader for it.
-/// Registration is generic so the compiler binds each type's emitted reader; nothing here reflects
-/// over a CLR type's shape. Discovery — deciding which types to register — belongs to the caller and
-/// may reflect over an assembly's type list.
+/// Process-wide registry mapping a Daml type's wire identifier to the emitted Daml-LF JSON reader,
+/// key descriptor and choice descriptors of the generated type that declares it. Registration is
+/// generic so the compiler binds each type's emitted members; nothing here reflects over a CLR
+/// type's shape. Generated code registers its own types; the SDK's clients look them up.
 /// </summary>
 /// <remarks>
 /// Every registration is stored under its full identifier (package id, module and entity), never a
-/// <see cref="Type"/>. A lookup tries the full identifier first; only if that misses does it fall
+/// <see cref="Type"/>. A lookup tries the full identifier first. Two distinct declaring types
+/// registered for the same full identifier make that identifier ambiguous, and registering the same
+/// declaring type again changes nothing. Only if the full identifier is unknown does a lookup fall
 /// back to the <c>(ModuleName, EntityName)</c> pair, and that fallback resolves only when exactly one
-/// registered declaring type carries the pair — the same rule the ledger's type resolver applies.
-/// Keying on module and entity alone would collide whenever two versions of one package are in play,
-/// the normal state of a Splice deployment mid-upgrade.
+/// registered declaring type carries the pair. Keying on module and entity alone would collide
+/// whenever two versions of one package are in play, the normal state of a Splice deployment
+/// mid-upgrade. A choice name absent on the declaring type a lookup resolved is a miss, not a
+/// reason to try another type. A module initializer runs on first access to its module, not when its
+/// assembly loads, so the first lookup that finds no entry for its exact identifier loads every library the host's deps.json lists
+/// that depends on <c>Daml.Runtime</c>, runs each one's module initializer, and looks again. That runs at
+/// most once per process; a host with no deps.json runs a generated assembly's module constructor itself.
 /// </remarks>
 /// <threadsafety>
-/// All calls to <see cref="ForRecord{T}"/>, <see cref="ForKey{TTemplate, TKey}"/> and
-/// <see cref="ForChoices{T}"/> across every caller must complete before the first
-/// <c>TryGet*</c> lookup. Registration is explicit application-startup opt-in — there is no
-/// module initializer that runs it implicitly — so the ambiguity check a lookup performs over
-/// the module/entity fallback (how many distinct declaring types are registered for that pair)
-/// is evaluated against a snapshot taken at lookup time. A <c>Register</c> call that lands a
-/// second declaring type for the same module/entity pair concurrently with an in-flight lookup
-/// can race that snapshot: the lookup may see only the first declaring type and return its
-/// entry instead of throwing the ambiguous-lookup exception, even though the registry is (or is
-/// about to become) genuinely ambiguous. This type does not synchronize registration with
-/// lookups; register all generated types before lookups against this registry have started.
+/// All members are safe to call from any thread at any time. Registration may run lazily, from a
+/// module initializer on whichever thread first touches its module, while lookups are in flight. A
+/// lookup sees each registration call wholly or not at all: every choice of a
+/// <see cref="ForChoices{T}"/> call becomes visible together. A lookup counts every registration
+/// that completed before it started when deciding whether a pair is ambiguous, so once every
+/// registration has returned no lookup resolves a pair that is ambiguous. While one thread runs the
+/// one-time library load, any other lookup that finds nothing waits for it and then looks again.
 /// </threadsafety>
 public static class GeneratedTypeReaders
 {
-    private static readonly RegistryTable<NoDiscriminator, DamlLfElementReader> Records = new();
-    private static readonly RegistryTable<NoDiscriminator, IKeyDescriptor> Keys = new();
-    private static readonly RegistryTable<ChoiceName, IChoice> Choices = new();
+    internal static readonly GeneratedTypeRegistry Shared = new(BindingAssemblyLoader.LoadHostBindings);
 
     /// <summary>Registers the emitted record reader for <typeparamref name="T"/>.</summary>
-    public static void ForRecord<T>() where T : IDamlType, IDamlRecord<T>
-    {
-        var identifier = T.DamlTypeId.Identifier;
-        Records.Register(identifier, default, typeof(T), T.__ReadDamlLfJson);
-    }
+    public static void ForRecord<T>() where T : IDamlType, IDamlRecord<T> =>
+        Shared.ForRecord<T>();
 
     /// <summary>Registers the emitted key reader of <typeparamref name="TTemplate"/>.</summary>
     public static void ForKey<TTemplate, TKey>()
-        where TTemplate : ITemplate, IHasKey<TTemplate, TKey>
-    {
-        var identifier = TTemplate.TemplateId;
-        Keys.Register(identifier, default, typeof(TTemplate), TTemplate.Key);
-    }
+        where TTemplate : ITemplate, IHasKey<TTemplate, TKey> =>
+        Shared.ForKey<TTemplate, TKey>();
 
     /// <summary>Registers every choice descriptor of <typeparamref name="T"/>.</summary>
-    public static void ForChoices<T>() where T : IDamlType, IHasChoices<T>
-    {
-        var identifier = T.DamlTypeId.Identifier;
-        foreach (var choice in T.Choices)
-        {
-            Choices.Register(identifier, choice.Name, typeof(T), choice);
-        }
-    }
+    public static void ForChoices<T>() where T : IDamlType, IHasChoices<T> =>
+        Shared.ForChoices<T>();
 
-    /// <summary>Finds the emitted record reader registered for a wire identifier.</summary>
-    public static bool TryGetRecordReader(Identifier identifier, [MaybeNullWhen(false)] out DamlLfElementReader reader) =>
-        Records.TryGet(identifier, default, out reader);
+    internal static RegistryLookup<DamlLfElementReader> FindRecordReader(Identifier identifier) =>
+        Shared.FindRecordReader(identifier);
 
-    /// <summary>Finds the registered key descriptor for a wire identifier.</summary>
-    public static bool TryGetKeyDescriptor(Identifier identifier, [MaybeNullWhen(false)] out IKeyDescriptor descriptor) =>
-        Keys.TryGet(identifier, default, out descriptor);
+    internal static RegistryLookup<IKeyDescriptor> FindKeyDescriptor(Identifier identifier) =>
+        Shared.FindKeyDescriptor(identifier);
 
-    /// <summary>Finds the registered choice descriptor for a wire identifier and choice name.</summary>
-    public static bool TryGetChoice(Identifier identifier, ChoiceName choice, [MaybeNullWhen(false)] out IChoice descriptor) =>
-        Choices.TryGet(identifier, choice, out descriptor);
-
-    private readonly record struct NoDiscriminator;
-
-    private sealed class RegistryTable<TDiscriminator, TValue>
-        where TDiscriminator : IEquatable<TDiscriminator>
-        where TValue : notnull
-    {
-        private sealed record Entry(Type DeclaringType, TValue Value);
-
-        private readonly ConcurrentDictionary<(Identifier Identifier, TDiscriminator Discriminator), Entry> _byIdentifier = new();
-        private readonly ConcurrentDictionary<(string ModuleName, string EntityName), ConcurrentDictionary<Type, ConcurrentDictionary<TDiscriminator, Entry>>> _byModuleEntity = new();
-
-        public void Register(Identifier identifier, TDiscriminator discriminator, Type declaringType, TValue value)
-        {
-            var entry = new Entry(declaringType, value);
-            _byIdentifier.GetOrAdd((identifier, discriminator), entry);
-
-            var moduleEntityKey = (identifier.ModuleName, identifier.EntityName);
-            var byDeclaringType = _byModuleEntity.GetOrAdd(
-                moduleEntityKey, _ => new ConcurrentDictionary<Type, ConcurrentDictionary<TDiscriminator, Entry>>());
-            var byDiscriminator = byDeclaringType.GetOrAdd(declaringType, _ => new ConcurrentDictionary<TDiscriminator, Entry>());
-            byDiscriminator.TryAdd(discriminator, entry);
-        }
-
-        public bool TryGet(Identifier identifier, TDiscriminator discriminator, [MaybeNullWhen(false)] out TValue value)
-        {
-            if (_byIdentifier.TryGetValue((identifier, discriminator), out var exact))
-            {
-                value = exact.Value;
-                return true;
-            }
-
-            var moduleEntityKey = (identifier.ModuleName, identifier.EntityName);
-            if (_byModuleEntity.TryGetValue(moduleEntityKey, out var byDeclaringType))
-            {
-                var declaringTypes = byDeclaringType.Keys.ToArray();
-                if (declaringTypes.Length > 1)
-                {
-                    var declaringTypeNames = string.Join(
-                        ", ", declaringTypes.Select(candidate => candidate.FullName).OrderBy(name => name, StringComparer.Ordinal));
-                    throw new InvalidOperationException(
-                        $"Ambiguous Daml-LF JSON reader lookup for module '{identifier.ModuleName}', "
-                        + $"entity '{identifier.EntityName}': multiple declaring types are registered "
-                        + $"({declaringTypeNames}); pass the full identifier to disambiguate.");
-                }
-
-                if (declaringTypes.Length == 1
-                    && byDeclaringType[declaringTypes[0]].TryGetValue(discriminator, out var uniqueEntry))
-                {
-                    value = uniqueEntry.Value;
-                    return true;
-                }
-            }
-
-            value = default;
-            return false;
-        }
-    }
+    internal static RegistryLookup<IChoice> FindChoice(Identifier identifier, ChoiceName choice) =>
+        Shared.FindChoice(identifier, choice);
 }

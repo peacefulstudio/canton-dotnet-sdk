@@ -39,11 +39,11 @@ Shipped, the generated `Iou` record has no nested `IouContractId` type:
 <!-- shipped: A1_IouRecordShape -->
 ```csharp
 public sealed partial record Iou(
-    [property: DamlFieldAttribute("issuer")] Party Issuer,
-    [property: DamlFieldAttribute("owner")] Party Owner,
-    [property: DamlFieldAttribute("currency")] string Currency,
-    [property: DamlFieldAttribute("amount")] decimal Amount
-) : ITemplate, IHasChoices<Iou>, IDamlRecord<Iou>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("issuer")] global::Daml.Runtime.Data.Party Issuer,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("currency")] string Currency,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Iou>, global::Daml.Runtime.Data.IDamlRecord<Iou>
 ```
 
 and `Party`'s constructor and conversions are:
@@ -118,14 +118,14 @@ Shipped:
 
 <!-- shipped: A3_ExercisingAChoice -->
 ```csharp
-public static async Task<ExerciseOutcome<TransferResult>> A3_ExercisingAChoice(
+public static async Task<ExerciseOutcome<ContractId<IouContract>>> A3_ExercisingAChoice(
         ContractId<IouContract> contractId, ILedgerWriter ledgerClient, Party bob, Party charlie)
     {
         return await contractId.TryTransferAsync(ledgerClient, new IouContract.Transfer(charlie), bob);
     }
 ```
 
-**What changed and why.** Two drifts. First, the generated extension is `TryTransferAsync`, not `TransferAsync`: every generated method that returns an `ExerciseOutcome<T>` instead of throwing carries a `Try` prefix, so the name itself tells a caller not to expect an exception on a Daml-level failure. Second, the choice argument is a generated record (`new IouContract.Transfer(charlie)`), not named parameters on the extension method, and the result is `ExerciseOutcome<TransferResult>` — a codegen-emitted record wrapping the choice's actual return type (here, `TransferResult.Iou : ContractId<Iou>`) — not a bare `ExerciseOutcome<ContractId<Iou>>`.
+**What changed and why.** Two drifts. First, the generated extension is `TryTransferAsync`, not `TransferAsync`: every generated method that returns an `ExerciseOutcome<T>` instead of throwing carries a `Try` prefix, so the name itself tells a caller not to expect an exception on a Daml-level failure. Second, the choice argument is a generated record (`new IouContract.Transfer(charlie)`), not named parameters on the extension method. The result is the choice's own return type, `ExerciseOutcome<ContractId<Iou>>`, with no wrapper record around it.
 
 ## A.4 — Multi-party workflow
 
@@ -163,15 +163,15 @@ public static async Task<string> A4_MultiPartyWorkflowOutcomeHandling(
 
         return outcome switch
         {
-            ExerciseOutcome<TransferResult>.One(var result) => $"created {result.Iou.Value}",
+            ExerciseOutcome<ContractId<IouContract>>.One(var result) => $"created {result.Value}",
 
-            ExerciseOutcome<TransferResult>.DamlError { ErrorId: "OFFER_EXPIRED" } =>
+            ExerciseOutcome<ContractId<IouContract>>.DamlError { ErrorId: "OFFER_EXPIRED" } =>
                 "409: offer has expired",
 
-            ExerciseOutcome<TransferResult>.InfraError { Status: TransportStatus.Grpc { StatusCode: var code } } =>
+            ExerciseOutcome<ContractId<IouContract>>.InfraError { Status: TransportStatus.Grpc { StatusCode: var code } } =>
                 $"503: ledger unavailable ({code})",
 
-            ExerciseOutcome<TransferResult>.CommittedUndecodable u =>
+            ExerciseOutcome<ContractId<IouContract>>.CommittedUndecodable u =>
                 $"202: committed in update {u.UpdateId}, do not retry: reconcile against the ledger",
 
             _ => "unexpected outcome",
@@ -179,7 +179,7 @@ public static async Task<string> A4_MultiPartyWorkflowOutcomeHandling(
     }
 ```
 
-**What changed and why.** The success arm is `ExerciseOutcome<T>.One`, not `.Created` — the outcome type was named `One`/`None`/`Many` from the moment it shipped upstream in `Daml.Runtime` 0.1.4, precisely to describe "how many contracts of the requested shape resulted," which reads correctly for both a create and a choice exercise; `Created` never existed as an arm name. `InfraError.StatusCode` is a nested `TransportStatus` discriminated union (`Grpc`/`Http`/`NoResponse`/`UndecodableBody`), not a flat status code, because an infrastructure failure can come from either the gRPC or the REST transport and the two have different status vocabularies. The `CommittedUndecodable` arm is spelled out rather than left to the discard: the command committed but its result could not be decoded, so the handler surfaces the `UpdateId` for reconciliation and must not invite a retry of an exercise that already consumed the contract. A.11 shows the full treatment, including a stable command id that makes the `503` safe to retry.
+**What changed and why.** The success arm is `ExerciseOutcome<T>.One`, not `.Created` — the outcome type was named `One`/`None`/`Many` from the moment it shipped upstream in `Daml.Runtime` 0.1.4, precisely to describe "how many contracts of the requested shape resulted," which reads correctly for both a create and a choice exercise; `Created` never existed as an arm name. `InfraError.Status` (the proposal's `StatusCode`) is a nested `TransportStatus` discriminated union (`Grpc`/`Http`/`NoResponse`/`UndecodableBody`), not a flat status code, because an infrastructure failure can come from either the gRPC or the REST transport and the two have different status vocabularies. The `CommittedUndecodable` arm is spelled out rather than left to the discard: the command committed but its result could not be decoded, so the handler surfaces the `UpdateId` for reconciliation and must not invite a retry of an exercise that already consumed the contract. A.11 shows the full treatment, including a stable command id that makes the `503` safe to retry.
 
 ## A.5 — Multi-party submissions and `readAs`
 
@@ -591,19 +591,19 @@ public static async Task<string> A11_HandlerPuttingItAllTogether(
 
         return outcome switch
         {
-            ExerciseOutcome<TransferResult>.One(var result) => $"200: {result.Iou.Value}",
+            ExerciseOutcome<ContractId<IouContract>>.One(var result) => $"200: {result.Value}",
 
-            ExerciseOutcome<TransferResult>.DamlError { ErrorId: "DUPLICATE_COMMAND" } =>
+            ExerciseOutcome<ContractId<IouContract>>.DamlError { ErrorId: "DUPLICATE_COMMAND" } =>
                 $"409 (already submitted under idempotency key {commandId}, do not retry): reconcile against the ledger",
 
-            ExerciseOutcome<TransferResult>.DamlError e => $"400: {e.Message} ({e.ErrorId})",
+            ExerciseOutcome<ContractId<IouContract>>.DamlError e => $"400: {e.Message} ({e.ErrorId})",
 
-            ExerciseOutcome<TransferResult>.InfraError e => $"503: {e.Message}",
+            ExerciseOutcome<ContractId<IouContract>>.InfraError e => $"503: {e.Message}",
 
-            ExerciseOutcome<TransferResult>.CommittedUndecodable u =>
+            ExerciseOutcome<ContractId<IouContract>>.CommittedUndecodable u =>
                 $"202 (committed, do not retry — reconcile by update id {u.UpdateId ?? "(unknown)"}): {u.Message}",
 
-            ExerciseOutcome<TransferResult>.None or ExerciseOutcome<TransferResult>.Many =>
+            ExerciseOutcome<ContractId<IouContract>>.None or ExerciseOutcome<ContractId<IouContract>>.Many =>
                 "202 (committed, do not retry — reconcile against the ledger): unexpected result shape",
 
             _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name}."),

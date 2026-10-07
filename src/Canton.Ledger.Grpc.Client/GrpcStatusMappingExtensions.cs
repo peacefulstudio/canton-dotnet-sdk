@@ -20,8 +20,9 @@ public static class GrpcStatusMappingExtensions
     /// <summary>
     /// Maps the category to the gRPC status the participant returns it under.
     /// <see cref="DamlErrorCategory.Unknown"/> maps to <see cref="StatusCode.Unknown"/>;
-    /// <see cref="DamlErrorCategory.MaliciousOrFaultyBehaviour"/> also maps to
-    /// <see cref="StatusCode.Unknown"/> (Canton deliberately obscures the cause);
+    /// <see cref="DamlErrorCategory.MaliciousOrFaultyBehaviour"/> maps to
+    /// <see cref="StatusCode.InvalidArgument"/> (Canton reports a security alert under that code
+    /// and redacts only the details);
     /// <see cref="DamlErrorCategory.BackgroundProcessDegradationWarning"/> is a log-only
     /// category never expected on a request path and maps to
     /// <see cref="StatusCode.Internal"/>.
@@ -37,14 +38,14 @@ public static class GrpcStatusMappingExtensions
             DamlErrorCategory.ContentionOnSharedResources => StatusCode.Aborted,
             DamlErrorCategory.DeadlineExceededRequestStateUnknown => StatusCode.DeadlineExceeded,
             DamlErrorCategory.SystemInternalAssumptionViolated => StatusCode.Internal,
-            DamlErrorCategory.MaliciousOrFaultyBehaviour => StatusCode.Unknown,
+            DamlErrorCategory.MaliciousOrFaultyBehaviour => StatusCode.InvalidArgument,
             DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials => StatusCode.Unauthenticated,
             DamlErrorCategory.AuthorizationChecksFailed => StatusCode.PermissionDenied,
             DamlErrorCategory.InvalidIndependentOfSystemState => StatusCode.InvalidArgument,
             DamlErrorCategory.InvalidGivenCurrentSystemStateOther => StatusCode.FailedPrecondition,
             DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists => StatusCode.AlreadyExists,
             DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing => StatusCode.NotFound,
-            DamlErrorCategory.InvalidGivenCurrentSystemStateSeekDifferentResource => StatusCode.FailedPrecondition,
+            DamlErrorCategory.InvalidGivenCurrentSystemStateSeekAfterEnd => StatusCode.OutOfRange,
             DamlErrorCategory.BackgroundProcessDegradationWarning => StatusCode.Internal,
             DamlErrorCategory.InternalUnsupportedOperation => StatusCode.Unimplemented,
             _ => throw new ArgumentOutOfRangeException(nameof(category), category, null),

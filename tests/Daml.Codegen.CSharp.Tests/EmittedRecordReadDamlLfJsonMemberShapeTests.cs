@@ -96,10 +96,14 @@ public class EmittedRecordReadDamlLfJsonMemberShapeTests
         var method = EmittedType("Pair`2").GetMethod("__ReadDamlLfJson", BindingFlags.Public | BindingFlags.Static)!;
 
         var parameters = method.GetParameters();
-        parameters.Should().HaveCount(4);
+        parameters.Should().HaveCount(6);
         parameters[0].ParameterType.Should().Be<JsonElement>();
         parameters[1].ParameterType.Should().Be<DamlLfJsonDecodeContext>();
         parameters[2].Name.Should().Be("readTA");
-        parameters[3].Name.Should().Be("readTB");
+        parameters[3].Name.Should().Be("absentTA");
+        parameters[3].ParameterType.Should().Be<DamlValue>();
+        parameters[4].Name.Should().Be("readTB");
+        parameters[5].Name.Should().Be("absentTB");
+        parameters[5].ParameterType.Should().Be<DamlValue>();
     }
 }

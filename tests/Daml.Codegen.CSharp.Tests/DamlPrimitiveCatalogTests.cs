@@ -4,6 +4,7 @@
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using PbType = Daml.Codegen.Intermediate.Type;
@@ -489,16 +490,7 @@ public sealed class DamlPrimitiveCatalogTests
             DependencyReferences = [],
         };
         var options = new CodeGenOptions { NamespacePrefix = "Test.Package" };
-        var context = PackageEmitContext.ForPackage(package, options, isMainPackage: true).Single();
-        return new DamlTypeMapper(context, new StubResolver());
-    }
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => typeRef.Name;
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
+        var resolution = RealResolution.Of(package, options);
+        return new DamlTypeMapper(resolution.Context, resolution.Resolver);
     }
 }

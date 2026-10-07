@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -12,15 +13,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterByKeyCommandTests
 {
     private const string LocalPackageId = "pkg-id";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlChoice Choice(string name, DamlType returnType) =>
         new()
@@ -76,8 +68,9 @@ public class ChoiceEmitterByKeyCommandTests
             DependencyReferences = [],
         };
         var options = new CodeGenOptions { NamespacePrefix = "Test.Package" };
-        var context = PackageEmitContext.ForPackage(package, options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var party = new PartyAnalysis();
         var emitter = new TemplateEmitter(
@@ -85,7 +78,7 @@ public class ChoiceEmitterByKeyCommandTests
             resolver,
             new RecordSerializationEmitter(context, resolver, options, mapper),
             new ChoiceEmitter(context, resolver, options, mapper, party),
-            new SubmissionExtensionsEmitter(context, options, party),
+            new SubmissionExtensionsEmitter(options, party),
             options);
 
         var emitted = new StringBuilder();
@@ -107,8 +100,8 @@ public class ChoiceEmitterByKeyCommandTests
 
         var emitted = Emit(template);
 
-        emitted.SiblingTypes.Should().Contain("public static ExerciseCommand SpawnCommand(");
-        emitted.RecordBody.Should().Contain("public static ExerciseByKeyCommand SpawnByKeyCommand(");
+        emitted.SiblingTypes.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand SpawnCommand(");
+        emitted.RecordBody.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseByKeyCommand SpawnByKeyCommand(");
         emitted.RecordBody.Should().Contain("global::Test.Package.Main.VaultKey key)");
         emitted.RecordBody.Should().Contain("key.ToRecord(),");
     }
@@ -120,8 +113,8 @@ public class ChoiceEmitterByKeyCommandTests
 
         var emitted = Emit(template);
 
-        emitted.SiblingTypes.Should().Contain("public static ExerciseCommand PeekCommand(");
-        emitted.RecordBody.Should().Contain("public static ExerciseByKeyCommand PeekByKeyCommand(");
+        emitted.SiblingTypes.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand PeekCommand(");
+        emitted.RecordBody.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseByKeyCommand PeekByKeyCommand(");
     }
 
     [Fact]
@@ -134,8 +127,8 @@ public class ChoiceEmitterByKeyCommandTests
 
         var emitted = Emit(template);
 
-        emitted.RecordBody.Should().Contain("public static ExerciseByKeyCommand SpawnByKeyCommand(");
-        emitted.RecordBody.Should().Contain("public static ExerciseByKeyCommand PeekByKeyCommand(");
+        emitted.RecordBody.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseByKeyCommand SpawnByKeyCommand(");
+        emitted.RecordBody.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseByKeyCommand PeekByKeyCommand(");
         emitted.SiblingTypes.Should().Contain("public static class VaultExtensions");
         emitted.SiblingTypes.Should().Contain("public static class VaultNonContractExtensions");
         emitted.SiblingTypes.Should().NotContain("ByKeyCommand",
@@ -184,7 +177,7 @@ public class ChoiceEmitterByKeyCommandTests
 
         var emitted = Emit(template);
 
-        emitted.RecordBody.Should().Contain("Optional<Optional<string>> key)");
+        emitted.RecordBody.Should().Contain("global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> key)");
         emitted.RecordBody.Should().Contain("ArgumentNullException.ThrowIfNull(key);",
             "the wrapper is a non-nullable reference type, so without the guard an absent key "
             + "surfaces as a NullReferenceException inside ToValue rather than at the boundary");
@@ -212,8 +205,8 @@ public class ChoiceEmitterByKeyCommandTests
 
         var emitted = Emit(template);
 
-        emitted.SiblingTypes.Should().Contain("public static ExerciseCommand SpawnCommand(");
-        emitted.SiblingTypes.Should().Contain("public static ExerciseCommand PeekCommand(");
+        emitted.SiblingTypes.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand SpawnCommand(");
+        emitted.SiblingTypes.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand PeekCommand(");
         emitted.RecordBody.Should().NotContain("ByKeyCommand");
         emitted.SiblingTypes.Should().NotContain("ByKeyCommand");
     }

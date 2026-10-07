@@ -14,20 +14,20 @@ public sealed partial record NestedOptionalTails
     /// <summary>
     /// Choice argument type for EchoNestedOptionalTails.
     /// </summary>
-    public sealed record EchoNestedOptionalTails : IDamlRecord<EchoNestedOptionalTails>
+    public sealed record EchoNestedOptionalTails : global::Daml.Runtime.Data.IDamlRecord<EchoNestedOptionalTails>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create();
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create();
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static EchoNestedOptionalTails FromRecord(DamlRecord record) => new EchoNestedOptionalTails();
+        public static EchoNestedOptionalTails FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new EchoNestedOptionalTails();
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         }
 
     }

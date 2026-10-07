@@ -1,13 +1,9 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-using Daml.Runtime.Serialization;
-using System.Text.Json;
-using System.Globalization;
 using AwesomeAssertions;
 using Canton.Ledger.Kernel.Streams;
 using Daml.Runtime;
-using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
@@ -17,8 +13,6 @@ namespace Canton.Ledger.Kernel.Tests.Streams;
 
 public class StreamEventClassifierTests
 {
-    private const long EventOffset = 4711L;
-
     private static readonly SynchronizerId Synchronizer = new("sync::fingerprint::3");
 
     [Theory]
@@ -27,56 +21,53 @@ public class StreamEventClassifierTests
     [InlineData(UnclassifiedKind.ExercisedEvent)]
     [InlineData(UnclassifiedKind.AssignedEvent)]
     [InlineData(UnclassifiedKind.UnassignedEvent)]
-    public void TryAdmit_surfaces_the_wire_shapes_own_kind_when_the_marker_does_not_match(UnclassifiedKind unmatchedKind)
+    public void TryAdmit_refuses_with_the_wire_shapes_own_kind_when_the_marker_does_not_match(UnclassifiedKind unmatchedKind)
     {
         var decoded = new DecodedStreamEvent<SynchronizerId>(
-            EventOffset, MatchesMarker: false, Synchronizer, unmatchedKind);
+            4711L, MatchesMarker: false, Synchronizer, unmatchedKind);
 
-        var admitted = StreamEventClassifier.TryAdmit<SubscribedMarker, SynchronizerId>(
-            decoded, out _, out var unclassified);
+        var admitted = StreamEventClassifier.TryAdmit(decoded, out _, out var refusal);
 
         admitted.Should().BeFalse();
-        unclassified!.Kind.Should().Be(unmatchedKind);
-        unclassified.Offset.Should().Be(LedgerOffset.At(EventOffset));
+        refusal.Kind.Should().Be(unmatchedKind);
+        refusal.Offset.Should().Be(LedgerOffset.At(4711L));
     }
 
     [Fact]
-    public void TryAdmit_surfaces_MissingSynchronizerId_when_the_marker_matches_but_no_synchronizer_is_carried()
+    public void TryAdmit_refuses_with_MissingSynchronizerId_when_the_marker_matches_but_no_synchronizer_is_carried()
     {
         var decoded = new DecodedStreamEvent<SynchronizerId>(
-            EventOffset, MatchesMarker: true, SynchronizerScope: null, UnclassifiedKind.CreatedEvent);
+            4711L, MatchesMarker: true, SynchronizerScope: null, UnclassifiedKind.CreatedEvent);
 
-        var admitted = StreamEventClassifier.TryAdmit<SubscribedMarker, SynchronizerId>(
-            decoded, out _, out var unclassified);
+        var admitted = StreamEventClassifier.TryAdmit(decoded, out _, out var refusal);
 
         admitted.Should().BeFalse();
-        unclassified!.Kind.Should().Be(UnclassifiedKind.MissingSynchronizerId);
-        unclassified.Offset.Should().Be(LedgerOffset.At(EventOffset));
+        refusal.Kind.Should().Be(UnclassifiedKind.MissingSynchronizerId);
+        refusal.Offset.Should().Be(LedgerOffset.At(4711L));
     }
 
     [Fact]
     public void TryAdmit_reports_a_marker_mismatch_ahead_of_a_missing_synchronizer_id()
     {
         var decoded = new DecodedStreamEvent<SynchronizerId>(
-            EventOffset, MatchesMarker: false, SynchronizerScope: null, UnclassifiedKind.ArchivedEvent);
+            4711L, MatchesMarker: false, SynchronizerScope: null, UnclassifiedKind.ArchivedEvent);
 
-        StreamEventClassifier.TryAdmit<SubscribedMarker, SynchronizerId>(decoded, out _, out var unclassified);
+        StreamEventClassifier.TryAdmit(decoded, out _, out var refusal);
 
-        unclassified!.Kind.Should().Be(UnclassifiedKind.ArchivedEvent);
+        refusal.Kind.Should().Be(UnclassifiedKind.ArchivedEvent);
     }
 
     [Fact]
     public void TryAdmit_hands_back_the_synchronizer_it_validated_so_no_caller_can_skip_the_rule()
     {
         var decoded = new DecodedStreamEvent<SynchronizerId>(
-            EventOffset, MatchesMarker: true, Synchronizer, UnclassifiedKind.CreatedEvent);
+            4711L, MatchesMarker: true, Synchronizer, UnclassifiedKind.CreatedEvent);
 
-        var admitted = StreamEventClassifier.TryAdmit<SubscribedMarker, SynchronizerId>(
-            decoded, out var scope, out var unclassified);
+        var admitted = StreamEventClassifier.TryAdmit(decoded, out var scope, out var refusal);
 
         admitted.Should().BeTrue();
-        unclassified.Should().BeNull();
-        scope.Should().Be(Synchronizer);
+        refusal.Should().Be(default(StreamEntryRefusal));
+        scope.Should().Be(new SynchronizerId("sync::fingerprint::3"));
     }
 
     [Fact]
@@ -84,13 +75,12 @@ public class StreamEventClassifierTests
     {
         var scope = new ReassignmentScope(new SynchronizerId("source"), new SynchronizerId("target"));
         var decoded = new DecodedStreamEvent<ReassignmentScope>(
-            EventOffset, MatchesMarker: true, scope, UnclassifiedKind.AssignedEvent);
+            4711L, MatchesMarker: true, scope, UnclassifiedKind.AssignedEvent);
 
-        var admitted = StreamEventClassifier.TryAdmit<SubscribedMarker, ReassignmentScope>(
-            decoded, out var validated, out _);
+        var admitted = StreamEventClassifier.TryAdmit(decoded, out var validated, out _);
 
         admitted.Should().BeTrue();
-        validated.Should().Be(scope);
+        validated.Should().Be(new ReassignmentScope(new SynchronizerId("source"), new SynchronizerId("target")));
     }
 
     [Theory]
@@ -126,13 +116,13 @@ public class StreamEventClassifierTests
     }
 
     [Fact]
-    public void DecodeFailure_surfaces_DecodeFailure_at_the_offset_of_the_event_that_failed()
+    public void DecodeFailure_refuses_with_DecodeFailure_at_the_offset_it_is_given()
     {
-        var unclassified = StreamEventClassifier.DecodeFailure<SubscribedMarker>(
-            EventOffset, logger: null, new InvalidOperationException("poison payload"));
+        var refusal = StreamEventClassifier.DecodeFailure(
+            "StreamMarker", 4711L, logger: null, new InvalidOperationException("poison payload"));
 
-        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
-        unclassified.Offset.Should().Be(LedgerOffset.At(EventOffset));
+        refusal.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refusal.Offset.Should().Be(LedgerOffset.At(4711L));
     }
 
     [Fact]
@@ -141,14 +131,12 @@ public class StreamEventClassifierTests
         using var loggerFactory = new CapturingLoggerFactory();
         var cause = new InvalidOperationException("poison payload");
 
-        StreamEventClassifier.DecodeFailure<SubscribedMarker>(
-            EventOffset, loggerFactory.CreateLogger("stream"), cause);
+        StreamEventClassifier.DecodeFailure("StreamMarker", 4711L, loggerFactory.CreateLogger("stream"), cause);
 
         var record = loggerFactory.Records.Should().ContainSingle().Subject;
         record.Level.Should().Be(LogLevel.Warning);
-        record.Message.Should().Contain(EventOffset.ToString(CultureInfo.InvariantCulture))
-            .And.Contain(nameof(SubscribedMarker))
-            .And.Contain("decode-failure");
+        record.Message.Should().Be(
+            "Could not decode event at offset 4711 on the StreamMarker stream — surfaced as Unclassified (decode-failure)");
         record.Exception.Should().BeSameAs(cause);
     }
 
@@ -165,25 +153,5 @@ public class StreamEventClassifierTests
     public void IsNotCancellation_covers_any_other_exception_so_no_event_is_dropped()
     {
         StreamEventClassifier.IsNotCancellation(new FormatException()).Should().BeTrue();
-    }
-
-    private sealed record SubscribedMarker : ITemplate, IDamlRecord<SubscribedMarker>
-    {
-        public static DamlTypeDescriptor DamlTypeId =>
-            throw new NotSupportedException(
-                "SubscribedMarker is a degenerate test double: the classifier is told whether the marker matched, never asked.");
-
-        public static Identifier TemplateId => DamlTypeId.Identifier;
-
-        public static string PackageId => DamlTypeId.Identifier.PackageId;
-
-        public static string PackageName => DamlTypeId.PackageName;
-
-        public static Version PackageVersion { get; } = new(0, 1, 0);
-
-        public DamlRecord ToRecord() => DamlRecord.Create();
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) => throw new NotSupportedException();
-        public static SubscribedMarker FromRecord(DamlRecord record) => new();
     }
 }

@@ -19,7 +19,9 @@ public class FakeLedgerClientConformanceTests : LedgerClientConformanceTests<Con
     private static readonly Party Alice = new("alice");
     private static readonly SynchronizerId Synchronizer = (SynchronizerId)"sync-1";
     private static readonly ContractId<ConformanceProbe> Probe = new("00probe");
+    private static readonly ContractId<IConformanceProbe> InterfaceProbe = new("00probe");
     private static readonly ConformanceProbe Payload = new(Alice);
+    private static readonly ConformanceProbeView View = new(42.5m);
     private static readonly LedgerOffset Created = LedgerOffset.At(1);
     private static readonly LedgerOffset Unclassifiable = LedgerOffset.At(2);
     private static readonly LedgerOffset Consumed = LedgerOffset.At(3);
@@ -34,9 +36,21 @@ public class FakeLedgerClientConformanceTests : LedgerClientConformanceTests<Con
                 LedgerEvents.Created(Probe, Payload, null, Created, Synchronizer, [Alice]),
                 LedgerEvents.Unclassified<ConformanceProbe>(Unclassifiable, UnclassifiedKind.MissingSynchronizerId),
                 LedgerEvents.Checkpoint<ConformanceProbe>(LedgerEnd))
+            .WithActiveInterfaceContracts<IConformanceProbe, ConformanceProbeView>(
+                new InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.Created(
+                    InterfaceProbe, View, null, Created, Synchronizer, [Alice]),
+                new InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.Unclassified(
+                    Unclassifiable, UnclassifiedKind.MissingSynchronizerId),
+                new InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.Checkpoint(
+                    new StakeholderResume(LedgerEnd)))
             .WithContractEvents(
                 ContractEvents.Created(Probe, Payload, null, Created, Synchronizer, [Alice]),
                 ContractEvents.Archived(Probe, Consumed, Synchronizer, [Alice]))
+            .WithInterfaceEvents<IConformanceProbe, ConformanceProbeView>(
+                new InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Created(
+                    InterfaceProbe, View, null, Created, Synchronizer, [Alice]),
+                new InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Archived(
+                    InterfaceProbe, Consumed, Synchronizer, [Alice]))
             .WithLedgerEffects(
                 ContractEvents.Created(Probe, Payload, null, Created, Synchronizer, [Alice]),
                 ContractEvents.Exercised(
@@ -48,12 +62,27 @@ public class FakeLedgerClientConformanceTests : LedgerClientConformanceTests<Con
                     Consumed,
                     Synchronizer,
                     [Alice]))
+            .WithInterfaceLedgerEffects<IConformanceProbe, ConformanceProbeView>(
+                new InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Created(
+                    InterfaceProbe, View, null, Created, Synchronizer, [Alice]),
+                new InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Exercised(
+                    InterfaceProbe,
+                    new ChoiceName("Archive"),
+                    DamlRecord.Create(),
+                    DamlUnit.Instance,
+                    Consuming: true,
+                    Consumed,
+                    Synchronizer,
+                    [Alice]))
             .Build();
 
     protected override ILedgerClient CreateFaultingSnapshotClient() =>
         FakeLedgerClient.Create()
             .WithActiveContracts(LedgerEvents.StreamError<ConformanceProbe>(
                 new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "snapshot aborted mid-stream"))
+            .WithActiveInterfaceContracts<IConformanceProbe, ConformanceProbeView>(
+                new InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.StreamError(
+                    new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "snapshot aborted mid-stream"))
             .Build();
 
     protected override CommandIdConformanceFixture? CreateCommandIdFixture()
@@ -76,7 +105,8 @@ public class FakeLedgerClientConformanceTests : LedgerClientConformanceTests<Con
 
 /// <summary>The Daml marker the conformance scenario's snapshot and streams are filtered to.</summary>
 /// <param name="Owner">The party the probe contract is issued to.</param>
-public sealed record ConformanceProbe(Party Owner) : ITemplate, IDamlRecord<ConformanceProbe>
+public sealed record ConformanceProbe(Party Owner)
+    : ITemplate, IDamlRecord<ConformanceProbe>, IImplements<IConformanceProbe>
 {
     /// <inheritdoc cref="ITemplate" />
     public static Identifier TemplateId { get; } = new("conformance-pkg", "Conformance.Probe", "Probe");

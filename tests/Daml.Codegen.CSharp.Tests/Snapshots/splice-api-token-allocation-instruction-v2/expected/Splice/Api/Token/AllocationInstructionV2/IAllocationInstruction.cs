@@ -24,37 +24,37 @@ namespace Splice.Api.Token.AllocationInstructionV2;
 /// Generated from Daml interface Splice.Api.Token.AllocationInstructionV2:AllocationInstruction
 /// </summary>
 /// <remarks>
-/// Instance properties mirror the fields of the interface view <see cref="AllocationInstructionView"/>,
+/// Instance properties mirror the fields of the interface view <see cref="global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView"/>,
 /// which implements this marker, so a view can be read through a marker-typed variable.
 /// <c>==</c> between marker-typed variables compares by reference equality; view payloads
-/// materialize as concrete <see cref="AllocationInstructionView"/> values, whose record value equality
+/// materialize as concrete <see cref="global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IAllocationInstruction : IDamlInterface, IHasView<AllocationInstructionView>, IHasChoices<IAllocationInstruction>
+public interface IAllocationInstruction : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView>, global::Daml.Runtime.Contracts.IHasChoices<IAllocationInstruction>
 {
     /// <summary>Gets the interface identifier.</summary>
-    static Identifier IDamlInterface.InterfaceId => InterfaceId;
+    static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("9818a0b5b827109de03a04c8f6151cde9d1e7fe5123dbb2dfeb0e52d7271287c", "Splice.Api.Token.AllocationInstructionV2", "AllocationInstruction");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("9818a0b5b827109de03a04c8f6151cde9d1e7fe5123dbb2dfeb0e52d7271287c", "Splice.Api.Token.AllocationInstructionV2", "AllocationInstruction");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "9818a0b5b827109de03a04c8f6151cde9d1e7fe5123dbb2dfeb0e52d7271287c";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "9818a0b5b827109de03a04c8f6151cde9d1e7fe5123dbb2dfeb0e52d7271287c";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "splice-api-token-allocation-instruction-v2";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "splice-api-token-allocation-instruction-v2";
 
     /// <summary>Gets the package version.</summary>
-    static Version IDamlInterface.PackageVersion => new(1, 0, 0);
+    static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(1, 0, 0);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("9818a0b5b827109de03a04c8f6151cde9d1e7fe5123dbb2dfeb0e52d7271287c", "Splice.Api.Token.AllocationInstructionV2", "AllocationInstruction"), DamlTypeKind.Interface, "splice-api-token-allocation-instruction-v2");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("9818a0b5b827109de03a04c8f6151cde9d1e7fe5123dbb2dfeb0e52d7271287c", "Splice.Api.Token.AllocationInstructionV2", "AllocationInstruction"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "splice-api-token-allocation-instruction-v2");
 
-    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="AllocationInstructionView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static ViewDescriptor<IAllocationInstruction, AllocationInstructionView> View { get; } = new();
+    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
+    public static global::Daml.Runtime.Contracts.ViewDescriptor<IAllocationInstruction, global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView> View { get; } = new();
 
     /// <summary>Gets the originalInstructionCid field of the interface view.</summary>
-    ContractId<IAllocationInstruction>? OriginalInstructionCid { get; }
+    global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationInstructionV2.IAllocationInstruction>? OriginalInstructionCid { get; }
 
     /// <summary>Gets the settlement field of the interface view.</summary>
     global::Splice.Api.Token.AllocationV2.SettlementInfo Settlement { get; }
@@ -63,16 +63,16 @@ public interface IAllocationInstruction : IDamlInterface, IHasView<AllocationIns
     global::Splice.Api.Token.AllocationV2.AllocationSpecification Allocation { get; }
 
     /// <summary>Gets the requestedAt field of the interface view.</summary>
-    DateTimeOffset RequestedAt { get; }
+    global::System.DateTimeOffset RequestedAt { get; }
 
     /// <summary>Gets the inputHoldingCids field of the interface view.</summary>
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids { get; }
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids { get; }
 
     /// <summary>Gets the expiresAt field of the interface view.</summary>
-    DateTimeOffset? ExpiresAt { get; }
+    global::System.DateTimeOffset? ExpiresAt { get; }
 
     /// <summary>Gets the availableActions field of the interface view.</summary>
-    IReadOnlyDictionary<AllocationInstructionAction, IReadOnlyList<IReadOnlyList<Party>>> AvailableActions { get; }
+    global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> AvailableActions { get; }
 
     /// <summary>Gets the meta field of the interface view.</summary>
     global::Splice.Api.Token.MetadataV1.Metadata Meta { get; }
@@ -80,13 +80,13 @@ public interface IAllocationInstruction : IDamlInterface, IHasView<AllocationIns
     /// <summary>
     /// Exercise the AllocationInstruction_Accept choice.
     /// </summary>
-    public static Choice<IAllocationInstruction, AllocationInstruction_Accept, AllocationInstructionResult> ChoiceAllocationInstruction_Accept { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IAllocationInstruction, global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Accept, global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult> ChoiceAllocationInstruction_Accept { get; } = new()
     {
-        Name = new ChoiceName("AllocationInstruction_Accept"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("AllocationInstruction_Accept"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Accept.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Accept.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Accept.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult.__ReadDamlLfJson(json, context),
     };
@@ -94,13 +94,13 @@ public interface IAllocationInstruction : IDamlInterface, IHasView<AllocationIns
     /// <summary>
     /// Exercise the AllocationInstruction_Withdraw choice.
     /// </summary>
-    public static Choice<IAllocationInstruction, AllocationInstruction_Withdraw, AllocationInstructionResult> ChoiceAllocationInstruction_Withdraw { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IAllocationInstruction, global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Withdraw, global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult> ChoiceAllocationInstruction_Withdraw { get; } = new()
     {
-        Name = new ChoiceName("AllocationInstruction_Withdraw"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("AllocationInstruction_Withdraw"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Withdraw.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Withdraw.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Withdraw.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult.__ReadDamlLfJson(json, context),
     };
@@ -109,23 +109,23 @@ public interface IAllocationInstruction : IDamlInterface, IHasView<AllocationIns
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<IAllocationInstruction, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IAllocationInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    static IReadOnlyList<IChoice> IHasChoices<IAllocationInstruction>.Choices { get; } = [ChoiceAllocationInstruction_Accept, ChoiceAllocationInstruction_Withdraw, ChoiceArchive];
+    static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IAllocationInstruction>.Choices { get; } = [ChoiceAllocationInstruction_Accept, ChoiceAllocationInstruction_Withdraw, ChoiceArchive];
 
 }
 
@@ -151,13 +151,13 @@ public static class IAllocationInstructionExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand AllocationInstruction_AcceptCommand(
-        this ContractId<IAllocationInstruction> contractId,
-        AllocationInstruction_Accept argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand AllocationInstruction_AcceptCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId,
+        global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Accept argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<IAllocationInstruction>(contractId, new ChoiceName("AllocationInstruction_Accept"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAllocationInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("AllocationInstruction_Accept"), argument.ToRecord());
     }
 
     /// <summary>
@@ -175,18 +175,18 @@ public static class IAllocationInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<AllocationInstructionResult>> TryAllocationInstruction_AcceptAsync(
-        this ContractId<IAllocationInstruction> contractId,
-        ILedgerWriter client,
-        AllocationInstruction_Accept argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult>> TryAllocationInstruction_AcceptAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Accept argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AllocationInstruction_AcceptCommand(argument);
 
@@ -202,13 +202,13 @@ public static class IAllocationInstructionExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand AllocationInstruction_WithdrawCommand(
-        this ContractId<IAllocationInstruction> contractId,
-        AllocationInstruction_Withdraw argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand AllocationInstruction_WithdrawCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId,
+        global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Withdraw argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<IAllocationInstruction>(contractId, new ChoiceName("AllocationInstruction_Withdraw"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAllocationInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("AllocationInstruction_Withdraw"), argument.ToRecord());
     }
 
     /// <summary>
@@ -226,18 +226,18 @@ public static class IAllocationInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<AllocationInstructionResult>> TryAllocationInstruction_WithdrawAsync(
-        this ContractId<IAllocationInstruction> contractId,
-        ILedgerWriter client,
-        AllocationInstruction_Withdraw argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult>> TryAllocationInstruction_WithdrawAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.AllocationInstructionV2.AllocationInstruction_Withdraw argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AllocationInstruction_WithdrawCommand(argument);
 
@@ -252,11 +252,11 @@ public static class IAllocationInstructionExtensions
     /// ledger API resolves the concrete implementing template at the participant.
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<IAllocationInstruction> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return ExerciseCommand.For<IAllocationInstruction>(contractId, new ChoiceName("Archive"), DamlRecord.Create());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAllocationInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -273,17 +273,17 @@ public static class IAllocationInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<IAllocationInstruction> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -292,93 +292,12 @@ public static class IAllocationInstructionExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<AllocationInstructionResult> ProjectAllocationInstruction_AcceptResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IAllocationInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IAllocationInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "AllocationInstruction_Accept", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IAllocationInstruction.ChoiceAllocationInstruction_Accept.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<AllocationInstructionResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<AllocationInstructionResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult> ProjectAllocationInstruction_AcceptResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IAllocationInstruction.ChoiceAllocationInstruction_Accept, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'AllocationInstruction_Accept' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult> ProjectAllocationInstruction_WithdrawResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IAllocationInstruction.ChoiceAllocationInstruction_Withdraw, contractId);
 
-    private static ExerciseOutcome<AllocationInstructionResult> ProjectAllocationInstruction_WithdrawResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IAllocationInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IAllocationInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "AllocationInstruction_Withdraw", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IAllocationInstruction.ChoiceAllocationInstruction_Withdraw.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<AllocationInstructionResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<AllocationInstructionResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'AllocationInstruction_Withdraw' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IAllocationInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IAllocationInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IAllocationInstruction.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IAllocationInstruction.ChoiceArchive, contractId);
 }

@@ -48,6 +48,61 @@ public sealed class GracefullyCancellingSubscriptionConformanceTests
             + "not by the stream budget that already covers a transport ignoring the token");
     }
 
+    [Fact]
+    public async Task Interface_cancellation_test_fails_when_the_transport_ends_the_stream_gracefully_instead_of_throwing()
+    {
+        var kit = new InterfaceGracefullyCancellingSubscriptionKit();
+
+        var run = await Record.ExceptionAsync(
+            () => kit.Interface_cancelling_a_live_subscription_throws_OperationCanceledException());
+
+        run.Should().NotBeNull(
+            "an interface subscription that ends gracefully on cancel must fail the kit's test: "
+            + "a caller draining into a list would otherwise get a silently partial result");
+        run!.Message.Should().Contain(nameof(OperationCanceledException));
+        run.Message.Should().Contain("no exception was thrown");
+    }
+
+    [Fact]
+    public async Task Interface_cancellation_test_rejects_a_graceful_end_without_falling_back_on_the_timeout_path()
+    {
+        var kit = new InterfaceGracefullyCancellingSubscriptionKit();
+
+        var run = await Record.ExceptionAsync(
+            () => kit.Interface_cancelling_a_live_subscription_throws_OperationCanceledException());
+
+        run!.Message.Should().NotContain(
+            nameof(TimeoutException),
+            "the graceful end must be caught by the OperationCanceledException assertion itself, "
+            + "not by the stream budget that already covers a transport ignoring the token");
+    }
+
+    private sealed class InterfaceGracefullyCancellingSubscriptionKit : LedgerClientConformanceTests<ConformanceProbe>
+    {
+        protected override ILedgerClient CreateClient() => new InterfaceGracefullyCancellingFakeClient();
+
+        protected override SubmitterInfo Reader { get; } = new Party("alice");
+
+        protected override TimeSpan StreamTimeout => TimeSpan.FromMilliseconds(200);
+    }
+
+    private sealed class InterfaceGracefullyCancellingFakeClient : ConformingFakeClient
+    {
+        public override async IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
+            ViewDescriptor<TInterface, TView> view,
+            SubmitterInfo submitter,
+            LedgerOffset? fromOffset = null,
+            LedgerOffset? toOffset = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(20), CancellationToken.None);
+                yield return new InterfaceStreamEvent<TInterface, TView>.Checkpoint(LedgerOffset.Begin);
+            }
+        }
+    }
+
     private sealed class GracefullyCancellingSubscriptionKit : LedgerClientConformanceTests<ConformanceProbe>
     {
         protected override ILedgerClient CreateClient() => new GracefullyCancellingFakeClient();

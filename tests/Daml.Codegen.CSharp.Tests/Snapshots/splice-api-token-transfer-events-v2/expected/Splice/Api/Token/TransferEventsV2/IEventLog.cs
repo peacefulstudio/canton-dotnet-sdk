@@ -23,37 +23,37 @@ namespace Splice.Api.Token.TransferEventsV2;
 /// Generated from Daml interface Splice.Api.Token.TransferEventsV2:EventLog
 /// </summary>
 /// <remarks>
-/// Instance properties mirror the fields of the interface view <see cref="EventLogView"/>,
+/// Instance properties mirror the fields of the interface view <see cref="global::Splice.Api.Token.TransferEventsV2.EventLogView"/>,
 /// which implements this marker, so a view can be read through a marker-typed variable.
 /// <c>==</c> between marker-typed variables compares by reference equality; view payloads
-/// materialize as concrete <see cref="EventLogView"/> values, whose record value equality
+/// materialize as concrete <see cref="global::Splice.Api.Token.TransferEventsV2.EventLogView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IEventLog : IDamlInterface, IHasView<EventLogView>, IHasChoices<IEventLog>
+public interface IEventLog : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferEventsV2.EventLogView>, global::Daml.Runtime.Contracts.IHasChoices<IEventLog>
 {
     /// <summary>Gets the interface identifier.</summary>
-    static Identifier IDamlInterface.InterfaceId => InterfaceId;
+    static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("5c1097a9bad0af4bcfe6d3fb0fe55112d3d11f18eae57ddfb14c20836fee226c", "Splice.Api.Token.TransferEventsV2", "EventLog");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("5c1097a9bad0af4bcfe6d3fb0fe55112d3d11f18eae57ddfb14c20836fee226c", "Splice.Api.Token.TransferEventsV2", "EventLog");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "5c1097a9bad0af4bcfe6d3fb0fe55112d3d11f18eae57ddfb14c20836fee226c";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "5c1097a9bad0af4bcfe6d3fb0fe55112d3d11f18eae57ddfb14c20836fee226c";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "splice-api-token-transfer-events-v2";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "splice-api-token-transfer-events-v2";
 
     /// <summary>Gets the package version.</summary>
-    static Version IDamlInterface.PackageVersion => new(1, 0, 0);
+    static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(1, 0, 0);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("5c1097a9bad0af4bcfe6d3fb0fe55112d3d11f18eae57ddfb14c20836fee226c", "Splice.Api.Token.TransferEventsV2", "EventLog"), DamlTypeKind.Interface, "splice-api-token-transfer-events-v2");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("5c1097a9bad0af4bcfe6d3fb0fe55112d3d11f18eae57ddfb14c20836fee226c", "Splice.Api.Token.TransferEventsV2", "EventLog"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "splice-api-token-transfer-events-v2");
 
-    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="EventLogView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static ViewDescriptor<IEventLog, EventLogView> View { get; } = new();
+    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Splice.Api.Token.TransferEventsV2.EventLogView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
+    public static global::Daml.Runtime.Contracts.ViewDescriptor<IEventLog, global::Splice.Api.Token.TransferEventsV2.EventLogView> View { get; } = new();
 
     /// <summary>Gets the admin field of the interface view.</summary>
-    Party Admin { get; }
+    global::Daml.Runtime.Data.Party Admin { get; }
 
     /// <summary>Gets the meta field of the interface view.</summary>
     global::Splice.Api.Token.MetadataV1.Metadata Meta { get; }
@@ -62,17 +62,17 @@ public interface IEventLog : IDamlInterface, IHasView<EventLogView>, IHasChoices
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<IEventLog, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IEventLog, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -80,19 +80,19 @@ public interface IEventLog : IDamlInterface, IHasView<EventLogView>, IHasChoices
     /// <summary>
     /// Exercise the EventLog_HoldingsChange choice.
     /// </summary>
-    public static Choice<IEventLog, EventLog_HoldingsChange, EventLog_HoldingsChangeResult> ChoiceEventLog_HoldingsChange { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IEventLog, global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChange, global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChangeResult> ChoiceEventLog_HoldingsChange { get; } = new()
     {
-        Name = new ChoiceName("EventLog_HoldingsChange"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("EventLog_HoldingsChange"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChange.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChangeResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChange.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChangeResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChange.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChangeResult.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    static IReadOnlyList<IChoice> IHasChoices<IEventLog>.Choices { get; } = [ChoiceArchive, ChoiceEventLog_HoldingsChange];
+    static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IEventLog>.Choices { get; } = [ChoiceArchive, ChoiceEventLog_HoldingsChange];
 
 }
 
@@ -117,11 +117,11 @@ public static class IEventLogExtensions
     /// ledger API resolves the concrete implementing template at the participant.
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<IEventLog> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IEventLog> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return ExerciseCommand.For<IEventLog>(contractId, new ChoiceName("Archive"), DamlRecord.Create());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IEventLog>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -138,17 +138,17 @@ public static class IEventLogExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<IEventLog> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IEventLog> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -164,13 +164,13 @@ public static class IEventLogExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand EventLog_HoldingsChangeCommand(
-        this ContractId<IEventLog> contractId,
-        EventLog_HoldingsChange argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand EventLog_HoldingsChangeCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IEventLog> contractId,
+        global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChange argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<IEventLog>(contractId, new ChoiceName("EventLog_HoldingsChange"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IEventLog>(contractId, new global::Daml.Runtime.Commands.ChoiceName("EventLog_HoldingsChange"), argument.ToRecord());
     }
 
     /// <summary>
@@ -188,18 +188,18 @@ public static class IEventLogExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<EventLog_HoldingsChangeResult>> TryEventLog_HoldingsChangeAsync(
-        this ContractId<IEventLog> contractId,
-        ILedgerWriter client,
-        EventLog_HoldingsChange argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChangeResult>> TryEventLog_HoldingsChangeAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IEventLog> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChange argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.EventLog_HoldingsChangeCommand(argument);
 
@@ -208,63 +208,9 @@ public static class IEventLogExtensions
         return outcome.ProjectCommitted(tx => ProjectEventLog_HoldingsChangeResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IEventLog.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IEventLog.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IEventLog.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IEventLog.ChoiceArchive, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<EventLog_HoldingsChangeResult> ProjectEventLog_HoldingsChangeResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IEventLog.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IEventLog.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "EventLog_HoldingsChange", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IEventLog.ChoiceEventLog_HoldingsChange.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<EventLog_HoldingsChangeResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<EventLog_HoldingsChangeResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'EventLog_HoldingsChange' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferEventsV2.EventLog_HoldingsChangeResult> ProjectEventLog_HoldingsChangeResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IEventLog.ChoiceEventLog_HoldingsChange, contractId);
 }

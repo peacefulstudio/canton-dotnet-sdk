@@ -17,6 +17,10 @@ namespace Daml.Runtime.Contracts;
 /// runs in the protected constructor, so every <see cref="ContractId{T}"/> carries a
 /// non-empty value. The value still projects onto the Ledger API <c>contract_id</c>
 /// string via <see cref="Value"/>.
+/// <para>
+/// A <see cref="ContractId"/> is written, never read back: declare <see cref="ContractId{T}"/>
+/// to read one, and rebuild anything that held a bare id from ledger state.
+/// </para>
 /// </remarks>
 public abstract record ContractId
 {

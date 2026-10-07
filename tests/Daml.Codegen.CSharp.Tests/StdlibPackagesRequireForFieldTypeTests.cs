@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -13,16 +14,6 @@ public class StdlibPackagesRequireForFieldTypeTests
 {
     private const string StdlibPackageId = "stdlib-pkg";
     private const string UserPackageId = "user-pkg";
-
-    private sealed class StubResolver(IReadOnlyDictionary<string, DamlPackage> packages) : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => "Resolved";
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) =>
-            packages.TryGetValue(packageId, out var package) ? package : null;
-    }
 
     private static DamlPackage NamedPackage(string packageId, string name) =>
         new()
@@ -35,10 +26,10 @@ public class StdlibPackagesRequireForFieldTypeTests
             DependencyReferences = []
         };
 
-    private static StubResolver Resolver(params DamlPackage[] packages) =>
-        new(packages.ToDictionary(p => p.PackageId));
+    private static DarCrossPackageResolver Resolver(params DamlPackage[] packages) =>
+        RealResolution.Of(NamedPackage("local-pkg", "local"), new CodeGenOptions(), packages).Resolver;
 
-    private static StubResolver StdlibResolver() => Resolver(NamedPackage(StdlibPackageId, "daml-stdlib"));
+    private static DarCrossPackageResolver StdlibResolver() => Resolver(NamedPackage(StdlibPackageId, "daml-stdlib"));
 
     private static DamlPrimitiveType Prim(DamlPrimitive primitive) => new(primitive);
 
@@ -48,7 +39,7 @@ public class StdlibPackagesRequireForFieldTypeTests
     private static DamlTypeRef Ref(string packageId, string module, string name) =>
         new(packageId, module, name);
 
-    private static IReadOnlyCollection<string> RequiredFor(ICrossPackageResolver resolver, DamlType type)
+    private static IReadOnlyCollection<string> RequiredFor(DarCrossPackageResolver resolver, DamlType type)
     {
         var indent = new IndentWriter(new StringBuilder());
         StdlibPackages.RequireForFieldType(resolver, NamedPackage("local-pkg", "local"), indent, type);

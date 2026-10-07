@@ -17,21 +17,21 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// </summary>
 public sealed record Branch(
     string Label,
-    IReadOnlyList<Branch> Children
-) : IDamlRecord<Branch>
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch> Children
+) : global::Daml.Runtime.Data.IDamlRecord<Branch>
 {
     /// <summary>The Daml field <c>label</c>.</summary>
-    [DamlFieldAttribute("label")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("label")]
     public string Label { get; init; } = Label;
 
-    private readonly IReadOnlyList<Branch> _children = DamlFieldCollections.Copy(Children);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch> _children = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Children);
 
     /// <summary>The Daml field <c>children</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("children")]
-    public IReadOnlyList<Branch> Children
+    [global::Daml.Runtime.Data.DamlFieldAttribute("children")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch> Children
     {
         get => _children;
-        init => _children = DamlFieldCollections.Copy(value);
+        init => _children = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -39,38 +39,38 @@ public sealed record Branch(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(Branch? other) =>
         other is not null
-        && EqualityComparer<string>.Default.Equals(Label, other.Label)
-        && DamlFieldCollections.Equal(Children, other.Children);
+        && global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(Label, other.Label)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Children, other.Children);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Label);
-        hash.Add(DamlFieldCollections.Hash(Children));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Children));
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("label", new DamlText(Label)),
-        DamlField.Create("children", new DamlList(Children.Select(x => (DamlValue)x.ToRecord()).ToList()))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("label", new global::Daml.Runtime.Data.DamlText(Label)),
+        global::Daml.Runtime.Data.DamlField.Create("children", new global::Daml.Runtime.Data.DamlList(Children.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList()))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Branch FromRecord(DamlRecord record) => new Branch(
-        Label: record.GetRequiredField("label").As<DamlText>().Value,
-        Children: (IReadOnlyList<Branch>)record.GetRequiredField("children").As<DamlList>().Values.Select(x => Branch.FromRecord(x.As<DamlRecord>())).ToList()
+    public static Branch FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Branch(
+        Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Children: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch>)record.GetRequiredField("children").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("label", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "label"), context.Field("label"))),
-            DamlField.Create("children", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "children"), context.Field("children"), (__json0, __ctx0) => Branch.__ReadDamlLfJson(__json0, __ctx0)))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("label", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "label"), context.Field("label"))),
+            global::Daml.Runtime.Data.DamlField.Create("children", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "children"), context.Field("children"), (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.__ReadDamlLfJson(__json0, __ctx0)))
         );
     }
 

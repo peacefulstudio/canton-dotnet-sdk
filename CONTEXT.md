@@ -83,20 +83,30 @@ package. (The `Daml.Codegen.CSharp` emitter library is separately published
 as a NuGet library for programmatic use.)
 _Avoid_: "the cli", "codegen-cs tool", "codegen-cs plugin", "the container"
 
+**Package name table**:
+The one place that decides, for a Daml package, what each of its types is called in C# and
+where it lives: the emitted name of every top-level type, an interface's marker name, the
+namespace of every module, and which records are emitted nested inside a template as a
+choice's argument. Built once per package, immutable, and shared by the emitter and the
+cross-package resolver, so a type is spelled the same wherever it is declared or referenced.
+A package that cannot be named without a clash never yields one: building it fails codegen.
+_Avoid_: "name cache", "type-name sets", "naming helpers"
+
 **`PackageEmitContext`**:
 The immutable value the C# emitter threads through its emit methods, one per Daml module:
-the module's namespace, the `TypeReferenceQualifier` scoped to it, and the package-wide
-data-type lookup and local enum / variant / interface / choice-argument name sets shared by
-every module of the package. `PackageEmitContext.ForPackage` scans a package once and hands
-back one context per module; read-only during emission.
+the package, the module being emitted and its namespace, the package-wide data-type lookup,
+the package's name table, and the view-record markers. It holds no name sets of its own —
+emitters ask the package name table. `PackageEmitContext.ForPackage` scans a package once and
+hands back one context per module; read-only during emission.
 _Avoid_: "codegen state", "the current-package fields", "emit scratch"
 
-**`ICrossPackageResolver`**:
-The DAR-scoped module that resolves a `DamlTypeRef` to a C# name. It owns the archive lookup,
-the foreign-choice-argument memo, and the set of external package ids it has discovered —
-read after emission to emit a `<PackageReference>` per id. Lives for one `Generate` call. The
-prod adapter (`DarCrossPackageResolver`) resolves against an `IDarSource`; tests use a canned
-stub.
+**Cross-package resolver** (`DarCrossPackageResolver`):
+The DAR-scoped module that resolves a `DamlTypeRef` to a C# name. A reference into the package
+being emitted is answered from that package's name table, a reference into a dependency from
+the dependency's own name table, and a standard-library type from the runtime mapping. It owns
+the archive lookup, the index of each dependency's data-type kinds, and the set of external
+package ids it has discovered — read after emission to emit a `<PackageReference>` per id.
+Lives for one `Generate` call and resolves against an `IDarSource`.
 _Avoid_: "type resolver", "package resolver service", "the cross-package cache"
 
 **`PartyAnalysis`**:
@@ -110,7 +120,7 @@ _Avoid_: "party helper", "the party utils", "controller logic"
 **`DamlTypeMapper`**:
 The module that turns a `DamlType` into C#: `MapType` (→ a C# type name), `ToValue` and
 `FromValue` (→ serialize / deserialize expressions). An instance constructed per package over a
-`PackageEmitContext` and an `ICrossPackageResolver`, which it calls into for cross-package names
+`PackageEmitContext` and the cross-package resolver, which it calls into for cross-package names
 — it does not own resolution. Pure functions of its inputs: `DamlType` in, C# fragment out, with
 a trivially-constructible context, so it is unit-testable without a real DAR.
 _Avoid_: "type converter", "the mapping switch", "serializer"
@@ -123,15 +133,16 @@ deriving signatories and observers from the payload via `PartyAnalysis`. Distinc
 _Avoid_: "submitter", "the create wrapper", "named-submitter partial"
 
 **`ChoiceEmitter`**:
-The module that emits the C# to *exercise* a choice: the `<Choice>Arg` fallback type, the
+The module that emits the C# to *exercise* a choice: the
 `Choice<TOwner, TArg, TResult>` descriptor with its result decoder, the typed `Try<Choice>Async`
 exercisers (both the contract-id-returning and the value-returning flavour, partials of one
 class), and the interface-choice extensions. An instance constructed per package over a
-`PackageEmitContext`, an `ICrossPackageResolver`, the codegen options, the package's
+`PackageEmitContext`, the cross-package resolver, the codegen options, the package's
 `DamlTypeMapper`, and the shared `PartyAnalysis`; methods take `(IndentWriter, template/interface)`.
 It *calls* the mapper for every type fragment and *reads* — does not own — the resolved
-choice-argument metadata. The created-slot extraction (return type → list of `ContractId T`
-slots) is pulled out as the pure `ChoiceCreatedSlots.Extract` helper and unit-tested directly.
+choice-argument metadata. Which flavour a choice gets is decided by the pure
+`ChoiceEmitter.ReturnsContractIds` predicate over its return type, unit-tested directly; both
+flavours project the result through the descriptor, so no result record is synthesised.
 Distinct from `SubmissionExtensionsEmitter`: creating a contract is not exercising a choice.
 _Avoid_: "choice helper", "the exercise writer", "the async wrapper generator", "choice-arg owner"
 
@@ -345,14 +356,59 @@ the transport, or `CommittedUndecodable` — the command committed but the respo
 decoded, so the caller reads the transaction by its update id and never resubmits.
 _Avoid_: Result, response
 
+**Exercise-result projection**:
+Reading a committed transaction to find the exercise of one choice on one contract — matched
+through the template or the interface it was exercised on — and decoding that choice's result
+into an **Exercise outcome**. A result that fails to decode is `CommittedUndecodable`; an
+exercise of the same choice on another contract in the same transaction is not a match. The
+contract ids it reports are the choice's **returned contracts** — those its return value
+names — never inferred from the contracts the transaction created, which depend on the
+submitter's stakeholder rights and may include contracts the choice did not return.
+_Avoid_: Projector (that names one generated method, not the concept), result extraction
+
+**Generated type registry**:
+The process-wide table (`GeneratedTypeReaders`) that maps a Daml identifier to the generated
+code that decodes it — a template's create-argument reader, its key descriptor, and the choice
+descriptors of a template or interface. Each generated package fills it from its own module
+initializer; nothing scans for types, so a hand-written type is never in it. A lookup tries the
+exact package id, then the one type declaring the same module and entity, and answers
+`Resolved`, `Missing` or `Ambiguous`. The JSON transport decodes payloads through it, and a
+hand-built exercise finds its choice's result decoder there. When the JSON transport finds
+no single generated type for a node, it carries that node's payload as an **Undecoded value**
+instead of failing the transaction.
+_Avoid_: Type resolver (that names the codegen's `DarCrossPackageResolver`), type index, assembly scan
+
+**Undecoded value**:
+A Daml value read over the JSON Ledger API whose type has no single generated binding in the
+process, carried as the Daml-LF JSON the participant sent (`DamlUndecodedJson`). A created
+node keeps an empty payload record and holds the JSON in `UndecodedPayload`; an exercised
+node's argument and result are the value itself. The target type's own JSON reader decodes it
+later, through `FromDamlValue` or `ProjectChoiceResult`, once the binding is loaded.
+_Avoid_: Unknown value, raw value
+
 **Commit state**:
-Whether a failed write's command reached the ledger (`CommitState`): `NotCommitted` (retry
-freely), `Committed` (never resubmit) or `Unknown` (retry only with the same command id).
+Whether a failed call's command reached the ledger (`CommitState`): `NotCommitted` (retry
+freely), `Committed` (never resubmit) or `Unknown` (retry only with the same command id). It
+follows the kind of call: a failed read is always `NotCommitted`, and a write the participant
+may have received without answering is `Unknown`. A
+participant rejection of `DUPLICATE_COMMAND` is `Committed` (the ledger already accepted that
+command id; `Unknown` when its `accepted` metadata is `"false"`), and `SUBMISSION_ALREADY_IN_FLIGHT`
+is `Unknown`; the error id is checked before the category.
 _Avoid_: Retryable flag, success flag
+
+**Failure contract**:
+How any ledger call reports that it did not succeed, the same on either transport. A throwing
+call raises one exception kind (`LedgerOperationException`) carrying the transport status
+(`Grpc`, `Http`, `NoResponse` or `UndecodableBody`), the error category and the commit state.
+A `Try*` call returns an exercise outcome. A stream ends with a terminal stream error.
+Caller cancellation is not a failure; it stays a cancellation. A caller error (a bad argument, a
+value that cannot be encoded) is outside the contract.
+_Avoid_: "error mode", "exception contract"
 
 **Disclosed contract**:
 A contract attached to a submission as its created-event blob, so a party that does not see it
-natively can still use it. The blob comes from a created event read by a party that does see it.
+natively can still use it. The blob comes from a created event read by a party that does see it: by contract id with
+`GetDisclosureAsync`, or from an active-contract snapshot opened to include it.
 _Avoid_: Shared contract, attached contract
 
 **Interactive submission**:
@@ -482,8 +538,9 @@ _Avoid_: Update page, update batch
 
 **Documented default**:
 A value the client supplies for an absent field because the served document states what its
-absence means — the empty ledger end read from an offsetless response. The participant did say
-it, by omission, so decoding it is reading rather than guessing.
+absence means — the empty ledger end read from an offsetless response, or an omitted Optional
+record field read as None. The participant did say it, by omission, so decoding it is reading
+rather than guessing.
 _Avoid_: Assumed default, implicit value, sensible fallback
 
 **Fabricated value**:
@@ -510,14 +567,16 @@ _Avoid_: NA error, unknown error, redacted Daml error
 
 **Transport fault**:
 A failure of the connection carrying a request or stream, where the participant's answer never
-arrived — so nothing is known about whether the participant acted at all.
+arrived — so nothing is known about whether the participant acted at all. The JSON transport
+reports one, a deadline overrun included, with the `NoResponse` status.
 _Avoid_: Network error, connection error, RPC failure
 
 **Decode failure**:
 A payload the participant delivered and the client could not read — the transport worked and
 the message arrived, but it violates the wire contract the client decodes against. Distinct
 from a transport fault, which delivered nothing, and from a participant error, which the
-participant chose to send.
+participant chose to send. A throwing call reports it with the `UndecodableBody` status, and a
+`Try*` write the participant applied reports it as `CommittedUndecodable`.
 _Avoid_: Parse error, deserialization error, bad response
 
 **Typed decode**:
@@ -594,6 +653,15 @@ Despite the shared word it
 is not a conformance test and is not built from them: a corpus is what a test runs against, and
 one corpus serves the offline emitter checks here and the live round-trips in the client.
 _Avoid_: Test fixture, testdata, richtypes (name the package, not one member)
+
+**Conformance kit**:
+The abstract xUnit suite (`LedgerClientConformanceTests<TProbe>`, shipped as
+`Daml.Ledger.Abstractions.Testing.Conformance`) that an `ILedgerClient` implementation subclasses
+to prove it keeps the behavioural contract. Each stream check runs once against the template
+reads and once against the interface reads, so the probe the subclass supplies must implement the
+kit's `IConformanceProbe`. Distinct from the **Conformance corpus**, which is the Daml model the
+codegen is checked against.
+_Avoid_: Parity suite, contract tests
 
 **Integration suite**:
 The every-endpoint proof — tests driving the generated client against a live LocalNet across

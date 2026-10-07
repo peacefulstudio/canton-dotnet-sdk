@@ -9,6 +9,7 @@ using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Microsoft.Extensions.Options;
 using Xunit;
 using RuntimeCommands = Daml.Runtime.Commands;
@@ -191,7 +192,7 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
     }
 
     [Fact]
-    public async Task EstimateTrafficCostAsync_throws_when_a_cost_exceeds_the_signed_range()
+    public async Task EstimateTrafficCostAsync_raises_an_undecodable_body_failure_when_a_cost_exceeds_the_signed_range()
     {
         var client = ClientWith(TransportServing(
             """{"costEstimation": {"totalTrafficCostEstimation": "9223372036854775808"}}"""));
@@ -199,12 +200,16 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
         var act = () => client.EstimateTrafficCostAsync(
             SingleCreateSubmission(), cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*total traffic cost of 9223372036854775808 bytes*");
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Be(
+            "Server returned a malformed traffic-cost estimate response body: Malformed response from ledger: the participant reports a total traffic cost of 9223372036854775808 bytes, "
+            + "which exceeds the supported maximum of 9223372036854775807.");
     }
 
     [Fact]
-    public async Task EstimateTrafficCostAsync_throws_when_a_cost_is_not_a_whole_number_of_bytes()
+    public async Task EstimateTrafficCostAsync_raises_an_undecodable_body_failure_when_a_cost_is_not_a_whole_number_of_bytes()
     {
         var client = ClientWith(TransportServing(
             """{"costEstimation": {"totalTrafficCostEstimation": "4096.5"}}"""));
@@ -212,12 +217,16 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
         var act = () => client.EstimateTrafficCostAsync(
             SingleCreateSubmission(), cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not a whole number of bytes*");
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Be(
+            "Server returned a malformed traffic-cost estimate response body: Malformed response from ledger: the participant reports a total traffic cost of '4096.5', "
+            + "which is not a whole number of bytes.");
     }
 
     [Fact]
-    public async Task EstimateTrafficCostAsync_sends_the_submission_to_the_prepare_route_and_asks_for_cost_estimation()
+    public async Task EstimateTrafficCostAsync_sends_the_submission_to_the_prepare_route_without_cost_estimation_hints()
     {
         var transport = TransportServing("{}");
         var client = ClientWith(transport);
@@ -229,8 +238,7 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
         transport.LastRequest.RequestUri!.PathAndQuery.Should().Be("/v2/interactive-submission/prepare");
 
         using var body = JsonDocument.Parse(transport.LastRequestBody!);
-        body.RootElement.TryGetProperty("estimateTrafficCost", out var hints).Should().BeTrue();
-        hints.TryGetProperty("disabled", out _).Should().BeFalse();
+        body.RootElement.TryGetProperty("estimateTrafficCost", out _).Should().BeFalse();
         body.RootElement.GetProperty("actAs").EnumerateArray()
             .Select(party => party.GetString()).Should().Equal("party::alice");
         body.RootElement.GetProperty("commands").GetArrayLength().Should().Be(1);

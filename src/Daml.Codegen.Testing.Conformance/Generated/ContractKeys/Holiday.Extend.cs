@@ -15,26 +15,26 @@ public sealed partial record Holiday
     /// Choice argument type for Extend.
     /// </summary>
     public sealed record Extend(
-        [property: DamlFieldAttribute("added")] string Added
-    ) : IDamlRecord<Extend>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("added")] string Added
+    ) : global::Daml.Runtime.Data.IDamlRecord<Extend>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("added", new DamlText(Added))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("added", new global::Daml.Runtime.Data.DamlText(Added))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Extend FromRecord(DamlRecord record) => new Extend(
-            Added: record.GetRequiredField("added").As<DamlText>().Value
+        public static Extend FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Extend(
+            Added: record.GetRequiredField("added").As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("added", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "added"), context.Field("added")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("added", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "added"), context.Field("added")))
             );
         }
 

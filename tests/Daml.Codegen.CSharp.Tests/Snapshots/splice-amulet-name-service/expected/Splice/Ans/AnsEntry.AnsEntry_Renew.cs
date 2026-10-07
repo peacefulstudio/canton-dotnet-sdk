@@ -16,26 +16,26 @@ public sealed partial record AnsEntry
     /// Choice argument type for AnsEntry_Renew.
     /// </summary>
     public sealed record AnsEntry_Renew(
-        [property: DamlFieldAttribute("extension")] RelTime Extension
-    ) : IDamlRecord<AnsEntry_Renew>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("extension")] global::Daml.Runtime.Stdlib.RelTime Extension
+    ) : global::Daml.Runtime.Data.IDamlRecord<AnsEntry_Renew>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("extension", Extension.ToRecord())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("extension", Extension.ToRecord())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static AnsEntry_Renew FromRecord(DamlRecord record) => new AnsEntry_Renew(
-            Extension: RelTime.FromRecord(record.GetRequiredField("extension").As<DamlRecord>())
+        public static AnsEntry_Renew FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntry_Renew(
+            Extension: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("extension").As<global::Daml.Runtime.Data.DamlRecord>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("extension", RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extension"), context.Field("extension")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("extension", global::Daml.Runtime.Stdlib.RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extension"), context.Field("extension")))
             );
         }
 

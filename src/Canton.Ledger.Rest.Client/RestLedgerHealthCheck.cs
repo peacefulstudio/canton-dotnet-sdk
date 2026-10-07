@@ -28,10 +28,6 @@ internal sealed partial class RestLedgerHealthCheck(
                 description: $"Canton participant is reachable over HTTP (ledger end offset {ledgerEnd}).",
                 data: new Dictionary<string, object> { ["ledgerEnd"] = ledgerEnd });
         }
-        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            return Unhealthy(context, ex);
-        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Unhealthy(context, ex);

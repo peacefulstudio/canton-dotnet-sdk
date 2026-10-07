@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- snake_case test method names -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Splice.Amulet" />
+    <PackageReference Include="Splice.Wallet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Rest.Client\Canton.Ledger.Rest.Client.csproj" />
+  </ItemGroup>
+
+</Project>

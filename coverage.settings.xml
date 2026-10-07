@@ -16,6 +16,7 @@
         <Source>.*[/\\]obj[/\\].*</Source>
         <Source>.*[/\\]Proto[/\\]com[/\\]digitalasset[/\\].*</Source>
         <Source>.*[/\\]Daml\.Codegen\.Testing\.Conformance[/\\]Generated[/\\].*</Source>
+        <Source>.*[/\\]Daml\.Runtime[/\\]Stdlib[/\\]Generated[/\\].*</Source>
       </Exclude>
     </Sources>
     <Attributes>

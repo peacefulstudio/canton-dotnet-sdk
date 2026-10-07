@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
@@ -257,37 +258,10 @@ internal sealed partial class LedgerClient
 
             if (!step.Moved) yield break;
 
-            foreach (var typedEvent in ProjectUpdate<T>(stream.Current))
+            foreach (var typedEvent in GrpcContractStreamProjector.ProjectUpdate<T>(stream.Current, _logger))
             {
                 yield return typedEvent;
             }
-        }
-    }
-
-    private IEnumerable<ContractStreamEvent<T>> ProjectUpdate<T>(
-        GetUpdatesResponse response)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        switch (response.UpdateCase)
-        {
-            case GetUpdatesResponse.UpdateOneofCase.Transaction:
-                foreach (var typedEvent in GrpcContractStreamProjector.ProjectTransactionEvents<T>(response.Transaction, _logger))
-                {
-                    yield return typedEvent;
-                }
-                break;
-            case GetUpdatesResponse.UpdateOneofCase.OffsetCheckpoint:
-                yield return new ContractStreamEvent<T>.Checkpoint(LedgerOffset.At(response.OffsetCheckpoint.Offset));
-                break;
-            case GetUpdatesResponse.UpdateOneofCase.Reassignment:
-                foreach (var typedEvent in GrpcContractStreamProjector.ProjectReassignmentEvents<T>(response.Reassignment, _logger))
-                {
-                    yield return typedEvent;
-                }
-                break;
-            default:
-                LogStreamVariantSkipped(_logger, typeof(T).Name, response.UpdateCase);
-                break;
         }
     }
 
@@ -379,41 +353,20 @@ internal sealed partial class LedgerClient
                     LogActiveContractEntryUnclassified(
                         _logger, typeof(T).Name, stream.Current.ContractEntryCase, unclassified.Kind, unclassified.Offset?.Value);
                 }
-                yield return ToAcsSnapshotEntry(projected, disclosure);
+                yield return ContractSnapshotEntryArms<T>.From(projected, disclosure);
             }
         }
     }
 
-    private static AcsSnapshotEntry<T> ToAcsSnapshotEntry<T>(
-        ContractStreamEvent<T> entry, RuntimeCommands.DisclosedContract? disclosure)
-        where T : ITemplate, IDamlRecord<T> => entry switch
-    {
-        ContractStreamEvent<T>.Created created => new AcsSnapshotEntry<T>.Created(
-            created.ContractId, created.Payload, created.Key, created.Offset, created.SynchronizerId, created.WitnessParties)
-        {
-            Disclosure = disclosure,
-        },
-        ContractStreamEvent<T>.Unassigned unassigned => new AcsSnapshotEntry<T>.Unclassified(
-            unassigned.Offset, UnclassifiedKind.UnassignedEvent),
-        ContractStreamEvent<T>.Unclassified unclassified => new AcsSnapshotEntry<T>.Unclassified(
-            unclassified.Offset, unclassified.Kind, unclassified.RawKind),
-        _ => throw new InvalidOperationException(
-            $"Active-contract snapshot produced an unexpected entry variant: {entry.GetType().Name}"),
-    };
-
-    private async Task<GetLedgerEndResponse> GetLedgerEndForSnapshotAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _invoker.InvokeAsync(
-                (headers, deadline, token) => _stateService.GetLedgerEndAsync(new GetLedgerEndRequest(), headers, deadline, token),
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (RpcException ex) when (CallerCancellation.Signals(ex, cancellationToken))
-        {
-            throw CallerCancellation.AsOperationCanceled(ex, cancellationToken);
-        }
-    }
+    private Task<GetLedgerEndResponse> GetLedgerEndForSnapshotAsync(CancellationToken cancellationToken) =>
+        _invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, GetLedgerEndResponse>(
+            LedgerCallKind.Read,
+            LedgerCallInvoker.Source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (headers, deadline, token) => _stateService.GetLedgerEndAsync(new GetLedgerEndRequest(), headers, deadline, token),
+            response => response,
+            cancellationToken);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Completion stream started from offset {BeginExclusiveOffset}")]
     private static partial void LogCompletionStreamStarted(ILogger logger, long beginExclusiveOffset);
@@ -435,9 +388,6 @@ internal sealed partial class LedgerClient
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Subscribe stream failed for {TemplateType}: {Status} {Detail}")]
     private static partial void LogSubscribeStreamError(ILogger logger, string templateType, TransportStatus status, string detail);
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Subscribe stream for {TemplateType} skipped variant {Variant}")]
-    private static partial void LogStreamVariantSkipped(ILogger logger, string templateType, GetUpdatesResponse.UpdateOneofCase variant);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Active contracts snapshot for {TemplateType} could not classify entry {ContractEntryCase} — surfaced as Unclassified ({Kind}) carrying offset {Offset}")]
     private static partial void LogActiveContractEntryUnclassified(ILogger logger, string templateType, GetActiveContractsResponse.ContractEntryOneofCase contractEntryCase, UnclassifiedKind kind, long? offset);

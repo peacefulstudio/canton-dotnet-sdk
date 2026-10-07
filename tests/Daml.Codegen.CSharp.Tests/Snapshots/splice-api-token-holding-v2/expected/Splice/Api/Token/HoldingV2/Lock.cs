@@ -17,32 +17,32 @@ namespace Splice.Api.Token.HoldingV2;
 /// Generated from Daml record Lock
 /// </summary>
 public sealed record Lock(
-    IReadOnlyList<Party> Holders,
-    DateTimeOffset? ExpiresAt,
-    RelTime? ExpiresAfter,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Holders,
+    global::System.DateTimeOffset? ExpiresAt,
+    global::Daml.Runtime.Stdlib.RelTime? ExpiresAfter,
     string? Context
-) : IDamlRecord<Lock>
+) : global::Daml.Runtime.Data.IDamlRecord<Lock>
 {
-    private readonly IReadOnlyList<Party> _holders = DamlFieldCollections.Copy(Holders);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> _holders = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Holders);
 
     /// <summary>The Daml field <c>holders</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("holders")]
-    public IReadOnlyList<Party> Holders
+    [global::Daml.Runtime.Data.DamlFieldAttribute("holders")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Holders
     {
         get => _holders;
-        init => _holders = DamlFieldCollections.Copy(value);
+        init => _holders = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>expiresAt</c>.</summary>
-    [DamlFieldAttribute("expiresAt")]
-    public DateTimeOffset? ExpiresAt { get; init; } = ExpiresAt;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("expiresAt")]
+    public global::System.DateTimeOffset? ExpiresAt { get; init; } = ExpiresAt;
 
     /// <summary>The Daml field <c>expiresAfter</c>.</summary>
-    [DamlFieldAttribute("expiresAfter")]
-    public RelTime? ExpiresAfter { get; init; } = ExpiresAfter;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("expiresAfter")]
+    public global::Daml.Runtime.Stdlib.RelTime? ExpiresAfter { get; init; } = ExpiresAfter;
 
     /// <summary>The Daml field <c>context</c>.</summary>
-    [DamlFieldAttribute("context")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("context")]
     public string? Context { get; init; } = Context;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -50,16 +50,16 @@ public sealed record Lock(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(Lock? other) =>
         other is not null
-        && DamlFieldCollections.Equal(Holders, other.Holders)
-        && EqualityComparer<DateTimeOffset?>.Default.Equals(ExpiresAt, other.ExpiresAt)
-        && EqualityComparer<RelTime?>.Default.Equals(ExpiresAfter, other.ExpiresAfter)
-        && EqualityComparer<string?>.Default.Equals(Context, other.Context);
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Holders, other.Holders)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset?>.Default.Equals(ExpiresAt, other.ExpiresAt)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.RelTime?>.Default.Equals(ExpiresAfter, other.ExpiresAfter)
+        && global::System.Collections.Generic.EqualityComparer<string?>.Default.Equals(Context, other.Context);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(Holders));
+        var hash = new global::System.HashCode();
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Holders));
         hash.Add(ExpiresAt);
         hash.Add(ExpiresAfter);
         hash.Add(Context);
@@ -67,32 +67,32 @@ public sealed record Lock(
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("holders", new DamlList(Holders.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("expiresAt", ExpiresAt is { } __ExpiresAt ? new DamlOptional(new DamlTimestamp(__ExpiresAt)) : DamlOptional.None),
-        DamlField.Create("expiresAfter", ExpiresAfter is { } __ExpiresAfter ? new DamlOptional(__ExpiresAfter.ToRecord()) : DamlOptional.None),
-        DamlField.Create("context", Context is { } __Context ? new DamlOptional(new DamlText(__Context)) : DamlOptional.None)
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("holders", new global::Daml.Runtime.Data.DamlList(Holders.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("expiresAt", ExpiresAt is { } __ExpiresAt ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTimestamp(__ExpiresAt)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("expiresAfter", ExpiresAfter is { } __ExpiresAfter ? new global::Daml.Runtime.Data.DamlOptional(__ExpiresAfter.ToRecord()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("context", Context is { } __Context ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlText(__Context)) : global::Daml.Runtime.Data.DamlOptional.None)
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Lock FromRecord(DamlRecord record) => new Lock(
-        Holders: (IReadOnlyList<Party>)record.GetRequiredField("holders").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
-        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
-        ExpiresAfter: record.GetOptionalField("expiresAfter").AsOptional().HasValue ? RelTime.FromRecord(record.GetOptionalField("expiresAfter").AsOptional().Value!.As<DamlRecord>()) : null,
-        Context: record.GetOptionalField("context").AsOptional().HasValue ? record.GetOptionalField("context").AsOptional().Value!.As<DamlText>().Value : null
+    public static Lock FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Lock(
+        Holders: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("holders").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        ExpiresAfter: record.GetOptionalField("expiresAfter").AsOptional().HasValue ? global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetOptionalField("expiresAfter").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>()) : null,
+        Context: record.GetOptionalField("context").AsOptional().HasValue ? record.GetOptionalField("context").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("holders", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holders"), context.Field("holders"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
-            DamlField.Create("expiresAfter", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAfter"), context.Field("expiresAfter"), (__json0, __ctx0) => RelTime.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("context", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "context"), context.Field("context"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(4);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("holders", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holders"), context.Field("holders"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "expiresAt", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "expiresAfter", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("expiresAfter"), (__json0, __ctx0) => global::Daml.Runtime.Stdlib.RelTime.__ReadDamlLfJson(__json0, __ctx0)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "context", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("context"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

@@ -57,7 +57,7 @@ public static class Filter
     {
         ArgumentNullException.ThrowIfNull(selector);
         ArgumentNullException.ThrowIfNull(value);
-        return new PqsFilter.Predicate(PqsPredicateTranslator.FieldEquals(selector, value));
+        return PqsPredicateTranslator.FieldEquals(selector, value);
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public static class Filter
         where T : ITemplate
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        return new PqsFilter.Predicate(PqsPredicateTranslator.Where(predicate));
+        return PqsPredicateTranslator.Where(predicate);
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public static class Filter
             throw new ArgumentException("At least one filter is required.", nameof(filters));
         for (var i = 0; i < filters.Length; i++)
             ArgumentNullException.ThrowIfNull(filters[i], $"filters[{i}]");
-        return filters.Length == 1 ? filters[0] : new PqsFilter.OrFilter(filters);
+        return filters.Length == 1 ? filters[0] : new PqsAny([.. filters]);
     }
 
     /// <summary>
@@ -144,6 +144,6 @@ public static class Filter
             throw new ArgumentException("At least one filter is required.", nameof(filters));
         for (var i = 0; i < filters.Length; i++)
             ArgumentNullException.ThrowIfNull(filters[i], $"filters[{i}]");
-        return filters.Length == 1 ? filters[0] : new PqsFilter.AndFilter(filters);
+        return filters.Length == 1 ? filters[0] : new PqsAll([.. filters]);
     }
 }

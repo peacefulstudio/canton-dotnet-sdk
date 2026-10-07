@@ -8,70 +8,90 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Daml.Codegen.CSharp.CodeGen;
 
 /// <summary>
-/// Production <see cref="ICrossPackageResolver"/> that resolves type refs against an
-/// <see cref="IDarSource"/>. Every namespace it spells comes from
+/// DAR-scoped resolution of a <see cref="DamlTypeRef"/> to a C# name against an
+/// <see cref="IDarSource"/>. Owns the archive lookup, the foreign data-type index and the set of
+/// external package ids it has discovered while resolving — read after emission to emit a
+/// <c>&lt;PackageReference&gt;</c> per id. Lives for one
+/// <see cref="CSharpCodeGenerator.Generate"/> call. Every namespace it spells comes from
 /// <see cref="Identifiers.ModuleNamespace"/> — the same function the emitter names its
 /// files and namespaces with — so a reference always lands on a namespace that is emitted.
-/// The foreign-package memos and the discovered external-package-id set are DAR-scoped —
-/// they live for the resolver's lifetime, not per package.
+/// A foreign package is named through the <see cref="PackageNameTable"/> the shared
+/// <see cref="PackageNameTableCache"/> holds for it, so the resolver and the emit context never
+/// disagree about a name. The foreign data-type index and the discovered external-package-id set
+/// are DAR-scoped — they live for the resolver's lifetime, not per package.
 /// </summary>
-internal sealed partial class DarCrossPackageResolver : ICrossPackageResolver
+internal sealed partial class DarCrossPackageResolver
 {
     private readonly IDarSource _dar;
-    private readonly CodeGenOptions _options;
+    private readonly PackageNameTableCache _nameTables;
     private readonly ILogger _logger;
     private readonly HashSet<string> _discoveredExternalPackageIds = [];
-    private readonly Dictionary<string, IReadOnlyDictionary<string, NestingTemplate>> _foreignChoiceArgCache = [];
-    private readonly Dictionary<string, IReadOnlySet<string>> _foreignInterfaceCache = [];
-    private readonly Dictionary<string, IReadOnlySet<string>> _foreignReservedTypeNameCache = [];
-    private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _foreignInterfaceMarkerNameCache = [];
     private readonly Dictionary<string, ILookup<(string Module, string Name), DamlDataTypeDefinition>> _foreignDataTypeCache = [];
 
     /// <summary>Creates a resolver scoped to a single <see cref="IDarSource"/>.</summary>
     /// <param name="dar">The archive type refs are resolved against.</param>
-    /// <param name="options">
-    /// The emission options, read for <see cref="CodeGenOptions.NamespacePrefix"/>: a reference
-    /// into the main package is spelled under the same prefix the main package is emitted with.
+    /// <param name="nameTables">
+    /// The name tables of the archive, shared with the emit contexts: a reference into the main
+    /// package is spelled under the same namespace prefix the main package is emitted with.
     /// </param>
-    /// <param name="logger">Where cross-package warnings go; omit it and the resolver stays silent.</param>
-    public DarCrossPackageResolver(IDarSource dar, CodeGenOptions options, ILogger? logger = null)
+    /// <param name="logger">Where unmapped-stdlib warnings go; omit it and the resolver stays silent.</param>
+    public DarCrossPackageResolver(IDarSource dar, PackageNameTableCache nameTables, ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(dar);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(nameTables);
         _dar = dar;
-        _options = options;
+        _nameTables = nameTables;
         _logger = logger ?? NullLogger.Instance;
     }
 
-    /// <inheritdoc />
+    /// <summary>The external package ids encountered during resolution so far.</summary>
     public IReadOnlySet<string> DiscoveredExternalPackageIds => _discoveredExternalPackageIds;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns the package with the given id from the DAR, or <c>null</c> if absent.
+    /// Lets the emitter classify a type ref (local / stdlib / cross-package) without
+    /// holding the archive itself.
+    /// </summary>
     public DamlPackage? LookupPackage(string packageId) => _dar.GetPackageById(packageId);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// The data-type definitions the package with the given id declares, indexed by the
+    /// declaring module's name and the type's own name, so classifying a cross-package ref
+    /// costs a lookup instead of a walk of every module. Empty when the package is absent
+    /// from the DAR; a name declared under the same key more than once keeps every
+    /// definition, so asking whether any of them is a record, a variant or an enum answers
+    /// what a walk would have answered.
+    /// </summary>
     public ILookup<(string Module, string Name), DamlDataTypeDefinition> DataTypeDefinitions(string packageId)
     {
         if (!_foreignDataTypeCache.TryGetValue(packageId, out var definitions))
         {
-            definitions = ICrossPackageResolver.IndexDataTypeDefinitions(LookupPackage(packageId));
+            definitions = IndexDataTypeDefinitions(LookupPackage(packageId));
             _foreignDataTypeCache[packageId] = definitions;
         }
         return definitions;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Resolves <paramref name="typeRef"/> to a C# identifier or fully qualified name.
+    /// Every ref to a type declared in the DAR, other than an unmapped stdlib type,
+    /// returns a <c>global::</c>-rooted name. A local ref returns the emitted name under the
+    /// namespace of the module that homes the type — the emitting module or another module of
+    /// the same package — and a nested choice-argument type is qualified with its parent
+    /// template name under the template's module namespace. A cross-package ref returns the
+    /// same shape under the referent module's namespace and records the package id so a
+    /// <c>&lt;PackageReference&gt;</c> can be emitted for it. A stdlib ref returns the mapped
+    /// runtime type, rooted by <see cref="TypeReferenceQualifier.Qualify"/>, or, when the
+    /// stdlib type has no mapping, its bare sanitized name with warning 1100 logged.
+    /// </summary>
     public string Resolve(DamlTypeRef typeRef, PackageEmitContext context)
     {
         ArgumentNullException.ThrowIfNull(typeRef);
         ArgumentNullException.ThrowIfNull(context);
 
-        var sanitized = Identifiers.Sanitize(typeRef.Name);
-        var qualifiedName = $"{typeRef.Module}:{typeRef.Name}";
-
         if (context.IsLocalRef(typeRef))
         {
-            return ResolveLocal(typeRef, context, sanitized, qualifiedName);
+            return ResolveLocal(typeRef, context);
         }
 
         var foreignPkg = _dar.GetPackageById(typeRef.PackageId);
@@ -86,139 +106,66 @@ internal sealed partial class DarCrossPackageResolver : ICrossPackageResolver
             var mapped = StdlibPackages.MapStdlibType(typeRef.Module, typeRef.Name);
             if (mapped is not null)
             {
-                return context.Qualifier.Qualify(mapped);
+                return TypeReferenceQualifier.Qualify(mapped);
             }
             LogUnmappedStdlibType(_logger, foreignPkg.Name, typeRef.Module, typeRef.Name);
-            return sanitized;
+            return Identifiers.Sanitize(typeRef.Name);
         }
 
         _discoveredExternalPackageIds.Add(typeRef.PackageId);
-        if (ForeignInterfaceQualifiedNames(foreignPkg).Contains(qualifiedName))
+        return ResolveForeign(typeRef, ForeignNameTable(foreignPkg));
+    }
+
+    private static ILookup<(string Module, string Name), DamlDataTypeDefinition> IndexDataTypeDefinitions(DamlPackage? package) =>
+        (package?.Modules ?? [])
+            .SelectMany(module => module.DataTypes.Select(dataType =>
+                (Key: (Module: module.Name, Name: dataType.Name), dataType.Definition)))
+            .ToLookup(entry => entry.Key, entry => entry.Definition);
+
+    private static string ResolveForeign(DamlTypeRef typeRef, PackageNameTable nameTable)
+    {
+        if (nameTable.IsInterface(typeRef.Module, typeRef.Name))
         {
-            return Identifiers.GlobalQualified(ForeignNamespace(foreignPkg, typeRef.Module), ForeignInterfaceMarkerNames(foreignPkg)[qualifiedName]);
+            return Identifiers.GlobalQualified(nameTable.NamespaceOf(typeRef.Module), nameTable.InterfaceMarkerName(typeRef.Module, typeRef.Name));
         }
-        if (ForeignChoiceArgToTemplate(foreignPkg).TryGetValue(qualifiedName, out var nestingTemplate))
+        if (nameTable.NestedChoiceArgumentHome(typeRef.Module, typeRef.Name) is { } nestingTemplate)
         {
-            return $"{Identifiers.GlobalPrefix}{ForeignNamespace(foreignPkg, nestingTemplate.Module)}.{Identifiers.Sanitize(nestingTemplate.Name)}.{nestingTemplate.NestedClassName}";
+            return $"{Identifiers.GlobalPrefix}{nameTable.NamespaceOf(nestingTemplate.Module)}.{nameTable.EmittedName(nestingTemplate.Module, nestingTemplate.Name)}.{nestingTemplate.NestedClassName}";
         }
-        return Identifiers.GlobalQualified(ForeignNamespace(foreignPkg, typeRef.Module), sanitized);
+        return Identifiers.GlobalQualified(nameTable.NamespaceOf(typeRef.Module), nameTable.EmittedName(typeRef.Module, typeRef.Name));
     }
 
     /// <summary>
-    /// A same-package reference is bare when the referent lives in the emitting module's
-    /// namespace and <c>global::</c>-qualified with the referent module's namespace
-    /// otherwise — a relative spelling could bind to a same-named nested namespace of the
-    /// emitting one. A choice-argument record is homed on the template that nests it, which
+    /// A same-package reference is <c>global::</c>-qualified with the referent module's
+    /// namespace — a relative spelling could bind to a same-named member or nested type of
+    /// the emitting scope. A choice-argument record is homed on the template that nests it, which
     /// may sit in a different module than the record's own declaration.
     /// </summary>
-    private static string ResolveLocal(DamlTypeRef typeRef, PackageEmitContext context, string sanitized, string qualifiedName)
+    private static string ResolveLocal(DamlTypeRef typeRef, PackageEmitContext context)
     {
         var (homeModule, name) =
-            context.LocalInterfaceQualifiedNames.Contains(qualifiedName)
-                ? (typeRef.Module, context.LocalInterfaceMarkerNames[qualifiedName])
-                : context.LocalChoiceArgToTemplate.TryGetValue(qualifiedName, out var nestingTemplate)
-                    ? (nestingTemplate.Module, $"{Identifiers.Sanitize(nestingTemplate.Name)}.{nestingTemplate.NestedClassName}")
-                    : (typeRef.Module, sanitized);
+            context.NameTable.IsInterface(typeRef.Module, typeRef.Name)
+                ? (typeRef.Module, context.NameTable.InterfaceMarkerName(typeRef.Module, typeRef.Name))
+                : context.NameTable.NestedChoiceArgumentHome(typeRef.Module, typeRef.Name) is { } nestingTemplate
+                    ? (nestingTemplate.Module, $"{context.EmittedTypeName(nestingTemplate.Module, nestingTemplate.Name)}.{nestingTemplate.NestedClassName}")
+                    : (typeRef.Module, context.EmittedTypeName(typeRef.Module, typeRef.Name));
 
-        var homeNamespace = context.NamespaceOf(homeModule);
-        return homeNamespace == context.Namespace ? name : Identifiers.GlobalQualified(homeNamespace, name);
+        var homeNamespace = context.NameTable.NamespaceOf(homeModule);
+        return Identifiers.GlobalQualified(homeNamespace, name);
     }
 
-    private string ForeignNamespace(DamlPackage foreignPkg, string moduleName) =>
-        Identifiers.ModuleNamespace(moduleName, foreignPkg.PackageId == _dar.MainPackage.PackageId, _options);
-
-    private IReadOnlySet<string> ForeignInterfaceQualifiedNames(DamlPackage pkg)
+    private PackageNameTable ForeignNameTable(DamlPackage pkg)
     {
-        if (!_foreignInterfaceCache.TryGetValue(pkg.PackageId, out var qualifiedNames))
+        try
         {
-            qualifiedNames = pkg.Modules
-                .SelectMany(module => module.Interfaces.Select(iface => $"{module.Name}:{iface.Name}"))
-                .ToHashSet();
-            _foreignInterfaceCache[pkg.PackageId] = qualifiedNames;
+            return _nameTables.For(pkg);
         }
-        return qualifiedNames;
-    }
-
-    /// <summary>
-    /// Sanitised C# names of every top-level type declared in <paramref name="pkg"/>,
-    /// mirroring <see cref="PackageEmitContext.LocalReservedTypeNames"/> for a foreign
-    /// package — the seed <see cref="ForeignInterfaceMarkerNames"/> disambiguates against
-    /// so a marker referenced across packages agrees with the reserved set the declaring
-    /// package's own emission used.
-    /// </summary>
-    private IReadOnlySet<string> ForeignReservedTypeNames(DamlPackage pkg)
-    {
-        if (!_foreignReservedTypeNameCache.TryGetValue(pkg.PackageId, out var reservedTypeNames))
+        catch (CodegenException clash)
         {
-            reservedTypeNames = PackageEmitContext.ReservedTopLevelTypeNames(pkg);
-            _foreignReservedTypeNameCache[pkg.PackageId] = reservedTypeNames;
+            throw new CodegenException(
+                $"Dependency package '{pkg.Name}' cannot be referenced: {clash.Message} The clash is in the dependency's Daml source, so upgrade it or stop depending on it.",
+                clash);
         }
-        return reservedTypeNames;
-    }
-
-    /// <summary>
-    /// The precomputed interface-marker map for <paramref name="pkg"/>, mirroring
-    /// <see cref="PackageEmitContext.LocalInterfaceMarkerNames"/> for a foreign package —
-    /// so a marker referenced across packages agrees with the same deterministic
-    /// assignment the declaring package's own emission used.
-    /// </summary>
-    private IReadOnlyDictionary<string, string> ForeignInterfaceMarkerNames(DamlPackage pkg)
-    {
-        if (!_foreignInterfaceMarkerNameCache.TryGetValue(pkg.PackageId, out var markerNames))
-        {
-            markerNames = PackageEmitContext.InterfaceMarkerNames(pkg, ForeignReservedTypeNames(pkg));
-            _foreignInterfaceMarkerNameCache[pkg.PackageId] = markerNames;
-        }
-        return markerNames;
-    }
-
-    private IReadOnlyDictionary<string, NestingTemplate> ForeignChoiceArgToTemplate(DamlPackage pkg)
-    {
-        if (!_foreignChoiceArgCache.TryGetValue(pkg.PackageId, out var choiceArgToTemplate))
-        {
-            choiceArgToTemplate = BuildForeignChoiceArgToTemplate(pkg);
-            _foreignChoiceArgCache[pkg.PackageId] = choiceArgToTemplate;
-        }
-        return choiceArgToTemplate;
-    }
-
-    /// <summary>
-    /// Builds a mapping of choice-argument type's module-qualified (<c>Module:Name</c>)
-    /// name to the template nesting it for the given package, used to qualify cross-package
-    /// refs that point at a type nested inside a foreign template. Module-qualified so a
-    /// simple name reused across modules cannot collide. When two templates in the
-    /// package map the same module-qualified choice-argument type, warns and keeps the
-    /// first-seen mapping.
-    /// </summary>
-    private IReadOnlyDictionary<string, NestingTemplate> BuildForeignChoiceArgToTemplate(DamlPackage pkg)
-    {
-        var allTypeNames = pkg.Modules
-            .SelectMany(m => m.DataTypes)
-            .Select(dt => dt.Name)
-            .ToHashSet();
-
-        var result = new Dictionary<string, NestingTemplate>();
-        foreach (var module in pkg.Modules)
-        {
-            foreach (var template in module.Templates)
-            {
-                foreach (var choice in template.Choices)
-                {
-                    if (choice.ArgumentType is DamlTypeRef typeRef && allTypeNames.Contains(typeRef.Name))
-                    {
-                        var key = $"{typeRef.Module}:{typeRef.Name}";
-                        if (result.TryGetValue(key, out var existingTemplate)
-                            && existingTemplate.Name != template.Name)
-                        {
-                            LogAmbiguousForeignChoiceArgument(_logger, key, pkg.Name, existingTemplate.Name, template.Name);
-                            continue;
-                        }
-                        result[key] = new NestingTemplate(module.Name, template.Name, Identifiers.Sanitize(choice.Name));
-                    }
-                }
-            }
-        }
-        return result;
     }
 
     [LoggerMessage(
@@ -226,10 +173,4 @@ internal sealed partial class DarCrossPackageResolver : ICrossPackageResolver
         Level = LogLevel.Warning,
         Message = "Unmapped stdlib type {PackageName}:{ModuleName}:{TypeName} \u2014 generated code will not compile (no stdlib mapping for this type yet)")]
     private static partial void LogUnmappedStdlibType(ILogger logger, string packageName, string moduleName, string typeName);
-
-    [LoggerMessage(
-        EventId = 1101,
-        Level = LogLevel.Warning,
-        Message = "Choice-argument type {ChoiceArgumentKey} in package {PackageName} is used by both templates {KeptTemplate} and {IgnoredTemplate} in the same package; keeping {KeptTemplate} and ignoring {IgnoredTemplate}. Rename one choice-argument type to disambiguate.")]
-    private static partial void LogAmbiguousForeignChoiceArgument(ILogger logger, string choiceArgumentKey, string packageName, string keptTemplate, string ignoredTemplate);
 }

@@ -17,65 +17,65 @@ namespace Splice.Api.Token.TransferEventsV2;
 /// Generated from Daml record EventLog_HoldingsChange
 /// </summary>
 public sealed record EventLog_HoldingsChange(
-    Party Admin,
+    global::Daml.Runtime.Data.Party Admin,
     global::Splice.Api.Token.HoldingV2.Account Account,
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids,
-    IReadOnlyList<TransferLegSide> TransferLegSides,
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> OutputHoldingCids,
-    IReadOnlyList<Party> Observers,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.TransferEventsV2.TransferLegSide> TransferLegSides,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> OutputHoldingCids,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers,
     global::Splice.Api.Token.MetadataV1.ExtraArgs ExtraArgs
-) : IDamlRecord<EventLog_HoldingsChange>
+) : global::Daml.Runtime.Data.IDamlRecord<EventLog_HoldingsChange>
 {
     /// <summary>The Daml field <c>admin</c>.</summary>
-    [DamlFieldAttribute("admin")]
-    public Party Admin { get; init; } = Admin;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("admin")]
+    public global::Daml.Runtime.Data.Party Admin { get; init; } = Admin;
 
     /// <summary>The Daml field <c>account</c>.</summary>
-    [DamlFieldAttribute("account")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("account")]
     public global::Splice.Api.Token.HoldingV2.Account Account { get; init; } = Account;
 
-    private readonly IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _inputHoldingCids = DamlFieldCollections.Copy(InputHoldingCids);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _inputHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(InputHoldingCids);
 
     /// <summary>The Daml field <c>inputHoldingCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("inputHoldingCids")]
-    public IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("inputHoldingCids")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids
     {
         get => _inputHoldingCids;
-        init => _inputHoldingCids = DamlFieldCollections.Copy(value);
+        init => _inputHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyList<TransferLegSide> _transferLegSides = DamlFieldCollections.Copy(TransferLegSides);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.TransferEventsV2.TransferLegSide> _transferLegSides = global::Daml.Runtime.Data.DamlFieldCollections.Copy(TransferLegSides);
 
     /// <summary>The Daml field <c>transferLegSides</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("transferLegSides")]
-    public IReadOnlyList<TransferLegSide> TransferLegSides
+    [global::Daml.Runtime.Data.DamlFieldAttribute("transferLegSides")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.TransferEventsV2.TransferLegSide> TransferLegSides
     {
         get => _transferLegSides;
-        init => _transferLegSides = DamlFieldCollections.Copy(value);
+        init => _transferLegSides = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _outputHoldingCids = DamlFieldCollections.Copy(OutputHoldingCids);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _outputHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(OutputHoldingCids);
 
     /// <summary>The Daml field <c>outputHoldingCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("outputHoldingCids")]
-    public IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> OutputHoldingCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("outputHoldingCids")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> OutputHoldingCids
     {
         get => _outputHoldingCids;
-        init => _outputHoldingCids = DamlFieldCollections.Copy(value);
+        init => _outputHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyList<Party> _observers = DamlFieldCollections.Copy(Observers);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> _observers = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Observers);
 
     /// <summary>The Daml field <c>observers</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("observers")]
-    public IReadOnlyList<Party> Observers
+    [global::Daml.Runtime.Data.DamlFieldAttribute("observers")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers
     {
         get => _observers;
-        init => _observers = DamlFieldCollections.Copy(value);
+        init => _observers = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>extraArgs</c>.</summary>
-    [DamlFieldAttribute("extraArgs")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("extraArgs")]
     public global::Splice.Api.Token.MetadataV1.ExtraArgs ExtraArgs { get; init; } = ExtraArgs;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -83,63 +83,63 @@ public sealed record EventLog_HoldingsChange(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(EventLog_HoldingsChange? other) =>
         other is not null
-        && EqualityComparer<Party>.Default.Equals(Admin, other.Admin)
-        && EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Account, other.Account)
-        && DamlFieldCollections.Equal(InputHoldingCids, other.InputHoldingCids)
-        && DamlFieldCollections.Equal(TransferLegSides, other.TransferLegSides)
-        && DamlFieldCollections.Equal(OutputHoldingCids, other.OutputHoldingCids)
-        && DamlFieldCollections.Equal(Observers, other.Observers)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default.Equals(ExtraArgs, other.ExtraArgs);
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Data.Party>.Default.Equals(Admin, other.Admin)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Account, other.Account)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(InputHoldingCids, other.InputHoldingCids)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(TransferLegSides, other.TransferLegSides)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(OutputHoldingCids, other.OutputHoldingCids)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Observers, other.Observers)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default.Equals(ExtraArgs, other.ExtraArgs);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Admin);
         hash.Add(Account);
-        hash.Add(DamlFieldCollections.Hash(InputHoldingCids));
-        hash.Add(DamlFieldCollections.Hash(TransferLegSides));
-        hash.Add(DamlFieldCollections.Hash(OutputHoldingCids));
-        hash.Add(DamlFieldCollections.Hash(Observers));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(InputHoldingCids));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(TransferLegSides));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(OutputHoldingCids));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Observers));
         hash.Add(ExtraArgs);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("admin", Admin.ToDamlValue()),
-        DamlField.Create("account", Account.ToRecord()),
-        DamlField.Create("inputHoldingCids", new DamlList(InputHoldingCids.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("transferLegSides", new DamlList(TransferLegSides.Select(x => (DamlValue)x.ToRecord()).ToList())),
-        DamlField.Create("outputHoldingCids", new DamlList(OutputHoldingCids.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("observers", new DamlList(Observers.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("extraArgs", ExtraArgs.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("admin", Admin.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("account", Account.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("inputHoldingCids", new global::Daml.Runtime.Data.DamlList(InputHoldingCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("transferLegSides", new global::Daml.Runtime.Data.DamlList(TransferLegSides.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("outputHoldingCids", new global::Daml.Runtime.Data.DamlList(OutputHoldingCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("observers", new global::Daml.Runtime.Data.DamlList(Observers.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("extraArgs", ExtraArgs.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static EventLog_HoldingsChange FromRecord(DamlRecord record) => new EventLog_HoldingsChange(
-        Admin: Party.FromDamlValue(record.GetRequiredField("admin").As<DamlParty>()),
-        Account: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("account").As<DamlRecord>()),
-        InputHoldingCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("inputHoldingCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList(),
-        TransferLegSides: (IReadOnlyList<TransferLegSide>)record.GetRequiredField("transferLegSides").As<DamlList>().Values.Select(x => TransferLegSide.FromRecord(x.As<DamlRecord>())).ToList(),
-        OutputHoldingCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("outputHoldingCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList(),
-        Observers: (IReadOnlyList<Party>)record.GetRequiredField("observers").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
-        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<DamlRecord>())
+    public static EventLog_HoldingsChange FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new EventLog_HoldingsChange(
+        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin").As<global::Daml.Runtime.Data.DamlParty>()),
+        Account: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("account").As<global::Daml.Runtime.Data.DamlRecord>()),
+        InputHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("inputHoldingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        TransferLegSides: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.TransferEventsV2.TransferLegSide>)record.GetRequiredField("transferLegSides").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.TransferEventsV2.TransferLegSide.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        OutputHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("outputHoldingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        Observers: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("observers").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
-            DamlField.Create("account", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "account"), context.Field("account"))),
-            DamlField.Create("inputHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inputHoldingCids"), context.Field("inputHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("transferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegSides"), context.Field("transferLegSides"), (__json0, __ctx0) => TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("outputHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "outputHoldingCids"), context.Field("outputHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("observers", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "observers"), context.Field("observers"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
+            global::Daml.Runtime.Data.DamlField.Create("account", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "account"), context.Field("account"))),
+            global::Daml.Runtime.Data.DamlField.Create("inputHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inputHoldingCids"), context.Field("inputHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("transferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegSides"), context.Field("transferLegSides"), (__json0, __ctx0) => global::Splice.Api.Token.TransferEventsV2.TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("outputHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "outputHoldingCids"), context.Field("outputHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("observers", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "observers"), context.Field("observers"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
         );
     }
 

@@ -14,36 +14,36 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml variant AllocationResult_Output
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record AllocationResult_Output : IDamlVariant<AllocationResult_Output>
+public abstract record AllocationResult_Output : global::Daml.Runtime.Data.IDamlVariant<AllocationResult_Output>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs an AllocationResult_Output by dispatching on the DamlVariant constructor tag.</summary>
-    public static AllocationResult_Output FromVariant(DamlVariant variant) =>
+    public static AllocationResult_Output FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
-            "AllocationResult_Pending" => new AllocationResult_Pending(AllocationResult_Output_AllocationResult_Pending.FromRecord(variant.Value.As<DamlRecord>())),
-            "AllocationResult_Settled" => new AllocationResult_Settled(AllocationResult_Output_AllocationResult_Settled.FromRecord(variant.Value.As<DamlRecord>())),
+            "AllocationResult_Pending" => new AllocationResult_Pending(global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Pending.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
+            "AllocationResult_Settled" => new AllocationResult_Settled(global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Settled.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
             "AllocationResult_Cancelled" => new AllocationResult_Cancelled(),
             "AllocationResult_Withdrawn" => new AllocationResult_Withdrawn(),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AllocationResult_Output constructor")
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AllocationResult_Output constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "AllocationResult_Pending" => DamlVariant.Create("AllocationResult_Pending", AllocationResult_Output_AllocationResult_Pending.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AllocationResult_Settled" => DamlVariant.Create("AllocationResult_Settled", AllocationResult_Output_AllocationResult_Settled.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AllocationResult_Cancelled" => DamlVariant.Create("AllocationResult_Cancelled", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AllocationResult_Withdrawn" => DamlVariant.Create("AllocationResult_Withdrawn", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AllocationResult_Pending" => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Pending", global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Pending.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AllocationResult_Settled" => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Settled", global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Settled.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AllocationResult_Cancelled" => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Cancelled", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AllocationResult_Withdrawn" => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Withdrawn", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -51,23 +51,23 @@ public abstract record AllocationResult_Output : IDamlVariant<AllocationResult_O
     private static readonly string[] ExpectedConstructors = ["AllocationResult_Pending", "AllocationResult_Settled", "AllocationResult_Cancelled", "AllocationResult_Withdrawn"];
 
     /// <summary>AllocationResult_Pending constructor.</summary>
-    public sealed record AllocationResult_Pending(AllocationResult_Output_AllocationResult_Pending Value) : AllocationResult_Output
+    public sealed record AllocationResult_Pending(global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Pending Value) : AllocationResult_Output
     {
         /// <inheritdoc />
         public override string Tag => "AllocationResult_Pending";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AllocationResult_Pending", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Pending", Value.ToRecord());
     }
 
     /// <summary>AllocationResult_Settled constructor.</summary>
-    public sealed record AllocationResult_Settled(AllocationResult_Output_AllocationResult_Settled Value) : AllocationResult_Output
+    public sealed record AllocationResult_Settled(global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Settled Value) : AllocationResult_Output
     {
         /// <inheritdoc />
         public override string Tag => "AllocationResult_Settled";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AllocationResult_Settled", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Settled", Value.ToRecord());
     }
 
     /// <summary>AllocationResult_Cancelled constructor (no arguments).</summary>
@@ -77,7 +77,7 @@ public abstract record AllocationResult_Output : IDamlVariant<AllocationResult_O
         public override string Tag => "AllocationResult_Cancelled";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AllocationResult_Cancelled", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Cancelled", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>AllocationResult_Withdrawn constructor (no arguments).</summary>
@@ -87,7 +87,7 @@ public abstract record AllocationResult_Output : IDamlVariant<AllocationResult_O
         public override string Tag => "AllocationResult_Withdrawn";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AllocationResult_Withdrawn", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Withdrawn", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
 }

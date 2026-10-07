@@ -89,10 +89,10 @@ internal static class RestTransactionResultProjector
                 result, RestMarkerMatcher<TTemplate>.MatchesContract));
 
     public static ExerciseOutcome<TResult> ProjectChoiceResult<TResult>(
-        ExerciseOutcome<TransactionResult> outcome, ChoiceName choice) =>
+        ExerciseOutcome<TransactionResult> outcome, ExerciseCommand command) =>
         TransactionResultFolds.Project(
             outcome,
-            result => TransactionResultFolds.ToChoiceResult<TResult>(result, choice));
+            result => TransactionResultFolds.ToChoiceResult<TResult>(result, command));
 
     private static CommandId? ToCommandId(string? commandId) =>
         string.IsNullOrEmpty(commandId) ? null : MalformedResponse.Decoding(commandId, ToNamedCommandId);
@@ -108,12 +108,13 @@ internal static class RestTransactionResultProjector
             ?? throw MalformedResponse.MissingRequiredField(
                 $"CreatedEvent for contract '{created.ContractId}' has no nodeId");
         var runtimeTemplateId = ToRuntimeIdentifier(templateId);
+        var payload = RestPayloadDecoder.CreatePayloadOf(created, runtimeTemplateId);
 
         return new CreatedContract(
             TreeShape.EventIdOf(nodeId),
             created.ContractId,
             runtimeTemplateId,
-            RestPayloadDecoder.CreateArgumentOf(created, runtimeTemplateId),
+            payload.Arguments,
             RestWireConversions.ToPartyList(created.WitnessParties),
             RestWireConversions.ToPartyList(created.Signatories),
             RestWireConversions.ToPartyList(created.Observers),
@@ -121,6 +122,7 @@ internal static class RestTransactionResultProjector
             CreatedAt: created.CreatedAt)
         {
             InterfaceIds = ToInterfaceIds(created),
+            UndecodedPayload = payload.Undecoded,
         };
     }
 

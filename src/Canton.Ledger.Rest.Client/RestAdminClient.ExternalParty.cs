@@ -42,7 +42,7 @@ internal sealed partial class RestAdminClient
             () => _calls.SendAsync<Raw.GenerateExternalPartyTopologyResponse, ExternalPartyTopology>(
                 new RestCall(
                     HttpMethod.Post, GenerateExternalPartyTopologyPath, body,
-                    MissingBody("external party topology"), MalformedBody("external party topology")),
+                    MissingBody("external party topology"), MalformedBody("external party topology"), LedgerCallKind.Read),
                 ToExternalPartyTopology,
                 timeout: null,
                 cancellationToken));

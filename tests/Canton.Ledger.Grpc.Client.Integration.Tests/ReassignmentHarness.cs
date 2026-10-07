@@ -4,6 +4,7 @@
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Testing.Localnet;
 using Com.Daml.Ledger.Api.V2.Admin;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -169,7 +170,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         {
             await _client.SubmitReassignmentAsync(submission, cancellationToken: cancellationToken);
         }
-        catch (RpcException ex) when (IsReassignmentFeatureDisabled(ex))
+        catch (LedgerOperationException ex) when (IsReassignmentFeatureDisabled(ex))
         {
             if (MultiSyncReassignmentGate.Required)
             {
@@ -198,7 +199,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         {
             await _client.SubmitReassignmentAsync(submission, cancellationToken: cancellationToken);
         }
-        catch (RpcException ex) when (IsReassignmentFeatureDisabled(ex))
+        catch (LedgerOperationException ex) when (IsReassignmentFeatureDisabled(ex))
         {
             if (MultiSyncReassignmentGate.Required)
             {
@@ -209,10 +210,36 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         }
     }
 
-    private static bool IsReassignmentFeatureDisabled(RpcException ex) =>
-        ex.StatusCode == StatusCode.InvalidArgument
-        && ex.Status.Detail.Contains(
+    private static bool IsReassignmentFeatureDisabled(LedgerOperationException ex) =>
+        ex.Status == new TransportStatus.Grpc(GrpcStatusCode.InvalidArgument)
+        && ex.Message.Contains(
             "Multi-synchronizer feature flag is not enabled", StringComparison.Ordinal);
+
+    public Task<ExerciseOutcome<ContractStreamEvent<Asset>>> TryUnassignAsync(
+        Party submitter,
+        string contractId,
+        string sourceSynchronizerId,
+        string targetSynchronizerId,
+        CancellationToken cancellationToken) =>
+        _client.TrySubmitAndWaitForReassignmentAsync<Asset>(
+            ReassignmentSubmission.Of(
+                new UnassignCommand(
+                    contractId,
+                    new SynchronizerId(sourceSynchronizerId),
+                    new SynchronizerId(targetSynchronizerId)),
+                submitter),
+            cancellationToken: cancellationToken);
+
+    public async Task<Party> HostPartyOnOneSynchronizerAsync(
+        string partyIdHint, string synchronizerId, CancellationToken cancellationToken)
+    {
+        var allocated = await _admin.AllocatePartyAsync(
+            $"{partyIdHint}-{Guid.NewGuid():N}",
+            synchronizerId: new SynchronizerId(synchronizerId),
+            cancellationToken: cancellationToken);
+        await _actAsRights.GrantAsync(allocated.Party.Value, cancellationToken);
+        return allocated.Party;
+    }
 
     public async Task<ProtoV2.UnassignedEvent?> ObserveUnassignedAsync(
         ProtoV2.EventFormat reassignmentFormat,

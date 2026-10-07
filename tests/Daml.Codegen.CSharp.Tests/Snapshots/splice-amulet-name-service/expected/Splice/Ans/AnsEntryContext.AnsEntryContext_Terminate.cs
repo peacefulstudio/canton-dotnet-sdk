@@ -16,30 +16,30 @@ public sealed partial record AnsEntryContext
     /// Choice argument type for AnsEntryContext_Terminate.
     /// </summary>
     public sealed record AnsEntryContext_Terminate(
-        [property: DamlFieldAttribute("actor")] Party Actor,
-        [property: DamlFieldAttribute("terminatedSubscriptionCid")] ContractId<global::Splice.Wallet.Subscriptions.TerminatedSubscription> TerminatedSubscriptionCid
-    ) : IDamlRecord<AnsEntryContext_Terminate>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("actor")] global::Daml.Runtime.Data.Party Actor,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("terminatedSubscriptionCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.TerminatedSubscription> TerminatedSubscriptionCid
+    ) : global::Daml.Runtime.Data.IDamlRecord<AnsEntryContext_Terminate>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("actor", Actor.ToDamlValue()),
-            DamlField.Create("terminatedSubscriptionCid", TerminatedSubscriptionCid.ToDamlValue())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("actor", Actor.ToDamlValue()),
+            global::Daml.Runtime.Data.DamlField.Create("terminatedSubscriptionCid", TerminatedSubscriptionCid.ToDamlValue())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static AnsEntryContext_Terminate FromRecord(DamlRecord record) => new AnsEntryContext_Terminate(
-            Actor: Party.FromDamlValue(record.GetRequiredField("actor").As<DamlParty>()),
-            TerminatedSubscriptionCid: new ContractId<global::Splice.Wallet.Subscriptions.TerminatedSubscription>(record.GetRequiredField("terminatedSubscriptionCid").As<DamlContractId>().Value)
+        public static AnsEntryContext_Terminate FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntryContext_Terminate(
+            Actor: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("actor").As<global::Daml.Runtime.Data.DamlParty>()),
+            TerminatedSubscriptionCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.TerminatedSubscription>(record.GetRequiredField("terminatedSubscriptionCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("actor", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actor"), context.Field("actor"))),
-                DamlField.Create("terminatedSubscriptionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "terminatedSubscriptionCid"), context.Field("terminatedSubscriptionCid")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("actor", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actor"), context.Field("actor"))),
+                global::Daml.Runtime.Data.DamlField.Create("terminatedSubscriptionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "terminatedSubscriptionCid"), context.Field("terminatedSubscriptionCid")))
             );
         }
 

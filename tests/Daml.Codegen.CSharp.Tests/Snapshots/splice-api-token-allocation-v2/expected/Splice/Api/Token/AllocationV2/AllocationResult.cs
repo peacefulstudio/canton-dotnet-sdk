@@ -17,27 +17,27 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record AllocationResult
 /// </summary>
 public sealed record AllocationResult(
-    AllocationResult_Output Output,
-    IReadOnlyDictionary<string, IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>> AuthorizerHoldingCids,
+    global::Splice.Api.Token.AllocationV2.AllocationResult_Output Output,
+    global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>> AuthorizerHoldingCids,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<AllocationResult>
+) : global::Daml.Runtime.Data.IDamlRecord<AllocationResult>
 {
     /// <summary>The Daml field <c>output</c>.</summary>
-    [DamlFieldAttribute("output")]
-    public AllocationResult_Output Output { get; init; } = Output;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("output")]
+    public global::Splice.Api.Token.AllocationV2.AllocationResult_Output Output { get; init; } = Output;
 
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>> _authorizerHoldingCids = DamlFieldCollections.Copy(AuthorizerHoldingCids);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>> _authorizerHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(AuthorizerHoldingCids);
 
     /// <summary>The Daml field <c>authorizerHoldingCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("authorizerHoldingCids")]
-    public IReadOnlyDictionary<string, IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>> AuthorizerHoldingCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("authorizerHoldingCids")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>> AuthorizerHoldingCids
     {
         get => _authorizerHoldingCids;
-        init => _authorizerHoldingCids = DamlFieldCollections.Copy(value);
+        init => _authorizerHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -45,43 +45,43 @@ public sealed record AllocationResult(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(AllocationResult? other) =>
         other is not null
-        && EqualityComparer<AllocationResult_Output>.Default.Equals(Output, other.Output)
-        && DamlFieldCollections.Equal(AuthorizerHoldingCids, other.AuthorizerHoldingCids)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.AllocationV2.AllocationResult_Output>.Default.Equals(Output, other.Output)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(AuthorizerHoldingCids, other.AuthorizerHoldingCids)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Output);
-        hash.Add(DamlFieldCollections.Hash(AuthorizerHoldingCids));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(AuthorizerHoldingCids));
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("output", Output.ToVariant()),
-        DamlField.Create("authorizerHoldingCids", new DamlTextMap(AuthorizerHoldingCids.ToDictionary(kv => kv.Key, kv => (DamlValue)new DamlList(kv.Value.Select(x => (DamlValue)x.ToDamlValue()).ToList())))),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("output", Output.ToVariant()),
+        global::Daml.Runtime.Data.DamlField.Create("authorizerHoldingCids", new global::Daml.Runtime.Data.DamlTextMap(AuthorizerHoldingCids.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlList(kv.Value.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())))),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AllocationResult FromRecord(DamlRecord record) => new AllocationResult(
-        Output: AllocationResult_Output.FromVariant(record.GetRequiredField("output").As<DamlVariant>()),
-        AuthorizerHoldingCids: (IReadOnlyDictionary<string, IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>>)record.GetRequiredField("authorizerHoldingCids").As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)kv.Value.As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static AllocationResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationResult(
+        Output: global::Splice.Api.Token.AllocationV2.AllocationResult_Output.FromVariant(record.GetRequiredField("output").As<global::Daml.Runtime.Data.DamlVariant>()),
+        AuthorizerHoldingCids: (global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>>)record.GetRequiredField("authorizerHoldingCids").As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("output", AllocationResult_Output.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "output"), context.Field("output"))),
-            DamlField.Create("authorizerHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "authorizerHoldingCids"), context.Field("authorizerHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json1, __ctx1)))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("output", global::Splice.Api.Token.AllocationV2.AllocationResult_Output.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "output"), context.Field("output"))),
+            global::Daml.Runtime.Data.DamlField.Create("authorizerHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "authorizerHoldingCids"), context.Field("authorizerHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json1, __ctx1)))),
+            global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
 

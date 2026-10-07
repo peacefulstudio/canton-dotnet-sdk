@@ -12,20 +12,20 @@ namespace Splice.Api.Token.MetadataV1;
 /// <summary>
 /// Generated from Daml record AnyContractView
 /// </summary>
-public sealed record AnyContractView : IAnyContract, IDamlRecord<AnyContractView>
+public sealed record AnyContractView : global::Splice.Api.Token.MetadataV1.IAnyContract, global::Daml.Runtime.Data.IDamlRecord<AnyContractView>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create();
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create();
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnyContractView FromRecord(DamlRecord record) => new AnyContractView();
+    public static AnyContractView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnyContractView();
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create();
+        return global::Daml.Runtime.Data.DamlRecord.Create();
     }
 
 }

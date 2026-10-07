@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -31,26 +32,9 @@ public class ChoiceEmitterArchiveChoiceTests
         Name = "user-package",
         Version = new Version(1, 0, 0),
         LfVersion = "2.1",
-        Modules = [],
+        Modules = [TestPackages.ModuleOf("DA.Internal.Template", TestPackages.Record("Archive"))],
         DependencyReferences = [],
     };
-
-    private sealed class StubResolver(
-        string? resolvedName = null,
-        IReadOnlyDictionary<string, DamlPackage>? packages = null) : ICrossPackageResolver
-    {
-        private readonly IReadOnlyDictionary<string, DamlPackage> _packages = packages ?? new Dictionary<string, DamlPackage>();
-
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => resolvedName ?? Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) =>
-            _packages.TryGetValue(packageId, out var package) ? package : null;
-    }
-
-    private static IReadOnlyDictionary<string, DamlPackage> Packages(params DamlPackage[] packages) =>
-        packages.ToDictionary(p => p.PackageId, p => p);
 
     private static DamlPackage Package(DamlModule module) =>
         new()
@@ -63,8 +47,10 @@ public class ChoiceEmitterArchiveChoiceTests
             DependencyReferences = [],
         };
 
-    private static ChoiceEmitter Emitter(PackageEmitContext context, StubResolver resolver) =>
-        new(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
+    private static ChoiceEmitter Emitter(RealResolution resolution) =>
+        new(resolution.Context, resolution.Resolver, Options, new DamlTypeMapper(resolution.Context, resolution.Resolver), new PartyAnalysis());
+
+    private static CodeGenOptions Options => new() { NamespacePrefix = "Test.Package" };
 
     private static DamlChoice ArchiveChoice(string packageId) =>
         new()
@@ -82,55 +68,54 @@ public class ChoiceEmitterArchiveChoiceTests
             Choices = [ArchiveChoice(archiveArgPackageId)],
         };
 
-    private static string EmitNonContract(DamlTemplate template, StubResolver resolver)
+    private static string EmitNonContract(DamlTemplate template, params DamlPackage[] dependencies)
     {
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = [], Interfaces = [] });
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+        var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        Emitter(context, resolver).TryWriteNonContractChoiceExtensions(indent, template, context.DataTypes);
+        Emitter(resolution).TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }
 
-    private static string EmitContractIdExercisers(DamlTemplate template, StubResolver resolver)
+    private static string EmitContractIdExercisers(DamlTemplate template, params DamlPackage[] dependencies)
     {
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = [], Interfaces = [] });
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+        var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        Emitter(context, resolver).WriteChoiceAsyncExercisersClass(indent, template, template.Name, [], context.DataTypes);
+        Emitter(resolution).WriteChoiceAsyncExercisersClass(indent, template, template.Name, []);
         return sb.ToString();
     }
 
-    private static string EmitDescriptors(DamlTemplate template, StubResolver resolver)
+    private static string EmitDescriptors(DamlTemplate template, params DamlPackage[] dependencies)
     {
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = [], Interfaces = [] });
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+        var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        Emitter(context, resolver).WriteChoiceDescriptors(indent, template);
+        Emitter(resolution).WriteChoiceDescriptors(indent, template);
         return sb.ToString();
     }
 
-    private static string EmitInterfaceExtensions(DamlInterface iface, string interfaceName, StubResolver resolver)
+    private static string EmitInterfaceExtensions(DamlInterface iface, string interfaceName, params DamlPackage[] dependencies)
     {
         var package = Package(new DamlModule { Name = "Main", Templates = [], DataTypes = [], Interfaces = [iface] });
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+        var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb);
-        Emitter(context, resolver).WriteInterfaceChoiceExtensions(indent, iface, interfaceName);
+        Emitter(resolution).WriteInterfaceChoiceExtensions(indent, iface, interfaceName);
         return sb.ToString();
     }
 
     [Fact]
     public void ArchiveChoice_emits_synthetic_stdlib_archive_in_non_contract_wrappers()
     {
-        var resolver = new StubResolver(packages: Packages(StdlibPackage));
-
-        var output = EmitNonContract(ItemTemplate(StdlibPackageId), resolver);
+        
+        var output = EmitNonContract(ItemTemplate(StdlibPackageId), StdlibPackage);
 
         output.Should().Contain("ItemNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(");
         output.Should().Contain("DamlRecord.Create()");
         output.Should().NotContain("DamlUnit.Instance");
     }
@@ -138,9 +123,8 @@ public class ChoiceEmitterArchiveChoiceTests
     [Fact]
     public void ArchiveChoice_keeps_user_archive_choice_from_non_stdlib_package()
     {
-        var resolver = new StubResolver(packages: Packages(UserPackage));
-
-        var output = EmitNonContract(ItemTemplate(UserPackageId), resolver);
+        
+        var output = EmitNonContract(ItemTemplate(UserPackageId), UserPackage);
 
         output.Should().Contain("ItemNonContractExtensions");
         output.Should().Contain("TryArchiveAsync(");
@@ -149,18 +133,17 @@ public class ChoiceEmitterArchiveChoiceTests
     [Fact]
     public void ArchiveChoice_uses_actual_argument_type_not_damlunit_for_user_archive()
     {
-        var resolver = new StubResolver("User.Package.Archive", Packages(UserPackage));
-        var template = ItemTemplate(UserPackageId);
+                var template = ItemTemplate(UserPackageId);
 
-        var exerciser = EmitNonContract(template, resolver);
-        var descriptor = EmitDescriptors(template, resolver);
+        var exerciser = EmitNonContract(template, UserPackage);
+        var descriptor = EmitDescriptors(template, UserPackage);
 
         exerciser.Should().Contain("ItemNonContractExtensions");
         exerciser.Should().Contain("TryArchiveAsync(");
-        exerciser.Should().Contain("User.Package.Archive argument,");
+        exerciser.Should().Contain("global::DA.Internal.Template.Archive argument,");
         exerciser.Should().Contain("argument.ToRecord()");
         descriptor.Should().Contain("ArgumentEncoder = arg => arg.ToRecord(),");
-        descriptor.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance");
+        descriptor.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
     }
 
     [Fact]
@@ -172,27 +155,25 @@ public class ChoiceEmitterArchiveChoiceTests
             Choices = [ArchiveChoice(UserPackageId)],
             ViewType = null,
         };
-        var resolver = new StubResolver("User.Package.Archive", Packages(UserPackage));
-
-        var output = EmitInterfaceExtensions(iface, "IArchivable", resolver);
+        
+        var output = EmitInterfaceExtensions(iface, "IArchivable", UserPackage);
 
         output.Should().Contain("IArchivableExtensions");
         output.Should().Contain("TryArchiveAsync(");
-        output.Should().Contain("User.Package.Archive argument,");
+        output.Should().Contain("global::DA.Internal.Template.Archive argument,");
         output.Should().Contain("argument.ToRecord()");
     }
 
     [Fact]
     public void ArchiveChoice_encodes_synthetic_stdlib_archive_argument_as_empty_record_in_descriptor()
     {
-        var resolver = new StubResolver(packages: Packages(StdlibPackage));
-        var template = ItemTemplate(StdlibPackageId);
+                var template = ItemTemplate(StdlibPackageId);
 
-        var descriptor = EmitDescriptors(template, resolver);
+        var descriptor = EmitDescriptors(template, StdlibPackage);
 
-        descriptor.Should().Contain("public static Choice<Item, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()");
-        descriptor.Should().Contain("ArgumentEncoder = _ => DamlRecord.Create(),");
-        descriptor.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance");
+        descriptor.Should().Contain("public static global::Daml.Runtime.Commands.Choice<Item, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()");
+        descriptor.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),");
+        descriptor.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
     }
 
     public static TheoryData<string, DamlType, string, string> ArgumentlessContractIdCommandEncodings => new()
@@ -219,8 +200,7 @@ public class ChoiceEmitterArchiveChoiceTests
         string encodedArgument,
         string rejectedArgument)
     {
-        var resolver = new StubResolver(packages: Packages(StdlibPackage));
-        var template = new DamlTemplate
+                var template = new DamlTemplate
         {
             Name = "Item",
             Choices =
@@ -237,9 +217,9 @@ public class ChoiceEmitterArchiveChoiceTests
             ],
         };
 
-        var output = EmitContractIdExercisers(template, resolver);
+        var output = EmitContractIdExercisers(template, StdlibPackage);
 
-        output.Should().Contain($"public static ExerciseCommand {choiceName}Command(");
+        output.Should().Contain($"public static global::Daml.Runtime.Commands.ExerciseCommand {choiceName}Command(");
         output.Should().Contain(encodedArgument);
         output.Should().NotContain(rejectedArgument);
     }
@@ -253,11 +233,10 @@ public class ChoiceEmitterArchiveChoiceTests
             Choices = [ArchiveChoice(StdlibPackageId)],
             ViewType = null,
         };
-        var resolver = new StubResolver(packages: Packages(StdlibPackage));
+        
+        var output = EmitInterfaceExtensions(iface, "IArchivable", StdlibPackage);
 
-        var output = EmitInterfaceExtensions(iface, "IArchivable", resolver);
-
-        output.Should().Contain("ExerciseCommand.For<IArchivable>(contractId, new ChoiceName(\"Archive\"), DamlRecord.Create());");
+        output.Should().Contain("global::Daml.Runtime.Commands.ExerciseCommand.For<IArchivable>(contractId, new global::Daml.Runtime.Commands.ChoiceName(\"Archive\"), global::Daml.Runtime.Data.DamlRecord.Create());");
         output.Should().NotContain("DamlUnit.Instance");
     }
 }

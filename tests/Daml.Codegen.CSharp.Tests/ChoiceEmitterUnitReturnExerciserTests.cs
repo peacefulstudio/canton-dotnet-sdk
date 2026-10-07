@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -12,15 +13,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterUnitReturnExerciserTests
 {
     private const string LocalPackageId = "pkg-id";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(DamlTemplate template) =>
         new()
@@ -61,12 +53,13 @@ public class ChoiceEmitterUnitReturnExerciserTests
     private static (string Code, IReadOnlyCollection<string> Usings) EmitNonContract(DamlTemplate template)
     {
         var package = Package(template);
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, new CodeGenOptions { NamespacePrefix = "Test.Package" });
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        emitter.TryWriteNonContractChoiceExtensions(indent, template, context.DataTypes);
+        emitter.TryWriteNonContractChoiceExtensions(indent, template);
         return (sb.ToString(), indent.RequiredUsings);
     }
 
@@ -75,10 +68,8 @@ public class ChoiceEmitterUnitReturnExerciserTests
     {
         var (code, _) = EmitNonContract(Template(Choice("DoNothing", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryDoNothingAsync(");
-        code.Should().Contain("var decoded = Sink.ChoiceDoNothing.ResultDecoder!(exercised.ExerciseResult);");
-        code.Should().Contain("new ExerciseOutcome<DamlUnit>.One(decoded)");
-        code.Should().Contain("CommittedUndecodable");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryDoNothingAsync(");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceDoNothing, contractId);");
         code.Should().NotContain("Unit.Value");
     }
 
@@ -91,8 +82,8 @@ public class ChoiceEmitterUnitReturnExerciserTests
 
         var (code, _) = EmitNonContract(Template(Choice("MaybeNothing", optionalUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit?>> TryMaybeNothingAsync(");
-        code.Should().Contain("var decoded = Sink.ChoiceMaybeNothing.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit?>> TryMaybeNothingAsync(");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceMaybeNothing, contractId);");
         code.Should().NotContain("Unit.Value");
     }
 
@@ -105,8 +96,8 @@ public class ChoiceEmitterUnitReturnExerciserTests
 
         var (code, _) = EmitNonContract(Template(Choice("ListOfUnits", listOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyList<DamlUnit>>> TryListOfUnitsAsync(");
-        code.Should().Contain("var decoded = Sink.ChoiceListOfUnits.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.DamlUnit>>> TryListOfUnitsAsync(");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceListOfUnits, contractId);");
         code.Should().NotContain("Unit.Value");
     }
 
@@ -119,8 +110,8 @@ public class ChoiceEmitterUnitReturnExerciserTests
 
         var (code, _) = EmitNonContract(Template(Choice("MapOfUnits", mapOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, DamlUnit>>> TryMapOfUnitsAsync(");
-        code.Should().Contain("var decoded = Sink.ChoiceMapOfUnits.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, global::Daml.Runtime.Data.DamlUnit>>> TryMapOfUnitsAsync(");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceMapOfUnits, contractId);");
         code.Should().NotContain("Unit.Value");
     }
 
@@ -133,8 +124,8 @@ public class ChoiceEmitterUnitReturnExerciserTests
 
         var (code, _) = EmitNonContract(Template(Choice("UnitsByText", genMapOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, DamlUnit>>> TryUnitsByTextAsync(");
-        code.Should().Contain("var decoded = Sink.ChoiceUnitsByText.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, global::Daml.Runtime.Data.DamlUnit>>> TryUnitsByTextAsync(");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceUnitsByText, contractId);");
         code.Should().NotContain("Unit.Value");
     }
 
@@ -150,8 +141,8 @@ public class ChoiceEmitterUnitReturnExerciserTests
 
         var (code, _) = EmitNonContract(Template(Choice("UnitListsByParty", genMapOfListOfUnit)));
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<IReadOnlyDictionary<Party, IReadOnlyList<DamlUnit>>>> TryUnitListsByPartyAsync(");
-        code.Should().Contain("var decoded = Sink.ChoiceUnitListsByParty.ResultDecoder!(exercised.ExerciseResult);");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.DamlUnit>>>> TryUnitListsByPartyAsync(");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Sink.ChoiceUnitListsByParty, contractId);");
         code.Should().NotContain("Unit.Value");
     }
 }

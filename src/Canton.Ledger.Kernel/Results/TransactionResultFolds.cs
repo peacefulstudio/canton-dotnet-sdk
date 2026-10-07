@@ -1,7 +1,6 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-using Canton.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -54,23 +53,11 @@ internal static class TransactionResultFolds
         };
     }
 
-    internal static ExerciseOutcome<TResult> ToChoiceResult<TResult>(TransactionResult result, ChoiceName choice)
-    {
-        TResult? choiceResult;
-        try
-        {
-            choiceResult = result.ExerciseResult<TResult>(choice);
-        }
-        catch (Exception projectionFailure) when (projectionFailure is not OperationCanceledException)
-        {
-            return new ExerciseOutcome<TResult>.CommittedUndecodable(
-                string.IsNullOrEmpty(result.UpdateId) ? null : result.UpdateId,
-                $"The command committed, but its choice result could not be read: {projectionFailure.Message}",
-                projectionFailure);
-        }
-
-        return choiceResult is null
-            ? new ExerciseOutcome<TResult>.None()
-            : new ExerciseOutcome<TResult>.One(choiceResult);
-    }
+    internal static ExerciseOutcome<TResult> ToChoiceResult<TResult>(TransactionResult result, ExerciseCommand command) =>
+        ExerciseResultProjector.ProjectCommandedExercise<TResult>(
+            result,
+            command.TemplateId,
+            command.Choice,
+            static exercised => ExercisedResultDecoder.Decode<TResult>(exercised),
+            command.ContractId.Value);
 }

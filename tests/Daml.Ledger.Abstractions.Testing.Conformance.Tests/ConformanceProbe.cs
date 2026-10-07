@@ -10,7 +10,7 @@ using Daml.Runtime.Serialization;
 
 namespace Daml.Ledger.Abstractions.Testing.Conformance.Tests;
 
-public sealed record ConformanceProbe(string Owner) : ITemplate, IDamlRecord<ConformanceProbe>
+public sealed record ConformanceProbe(string Owner) : ITemplate, IDamlRecord<ConformanceProbe>, IImplements<IConformanceProbe>
 {
     public static Identifier TemplateId { get; } = new("pkg", "M", "ConformanceProbe");
     public static string PackageId => "pkg";

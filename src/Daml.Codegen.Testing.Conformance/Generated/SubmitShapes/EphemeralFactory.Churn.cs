@@ -16,26 +16,26 @@ public sealed partial record EphemeralFactory
     /// Choice argument type for Churn.
     /// </summary>
     public sealed record Churn(
-        [property: DamlFieldAttribute("retiring")] ContractId<Ephemeral> Retiring
-    ) : IDamlRecord<Churn>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("retiring")] global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral> Retiring
+    ) : global::Daml.Runtime.Data.IDamlRecord<Churn>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("retiring", Retiring.ToDamlValue())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("retiring", Retiring.ToDamlValue())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Churn FromRecord(DamlRecord record) => new Churn(
-            Retiring: new ContractId<Ephemeral>(record.GetRequiredField("retiring").As<DamlContractId>().Value)
+        public static Churn FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Churn(
+            Retiring: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>(record.GetRequiredField("retiring").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("retiring", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "retiring"), context.Field("retiring")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("retiring", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "retiring"), context.Field("retiring")))
             );
         }
 

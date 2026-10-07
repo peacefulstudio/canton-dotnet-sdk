@@ -17,6 +17,8 @@ internal sealed class IndentWriter(StringBuilder sb)
 
     public string CurrentTypeName { get; set; } = "";
 
+    public IReadOnlySet<string> CurrentReservedMemberNames { get; set; } = new HashSet<string>();
+
     /// <summary>Records that the given namespace is referenced in this file.</summary>
     public void Require(string ns) => _requiredUsings.Add(ns);
 

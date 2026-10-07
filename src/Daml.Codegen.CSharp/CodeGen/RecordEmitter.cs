@@ -28,8 +28,9 @@ internal sealed class RecordEmitter(
     /// </summary>
     internal void WriteRecordType(IndentWriter indent, DamlModule module, DamlDataType dataType, DamlRecordDefinition record)
     {
-        var className = EmitterHelpers.SanitizeIdentifier(dataType.Name);
+        var className = context.EmittedTypeName(module.Name, dataType.Name);
         indent.CurrentTypeName = className;
+        indent.CurrentReservedMemberNames = ReservedMemberNames.OfRecordField();
         var typeParams = EmitterHelpers.GetTypeParametersDeclaration(dataType.TypeParams);
         var typeParamConstraints = EmitterHelpers.GetTypeParameterConstraints(dataType.TypeParams);
         var fullClassName = $"{className}{typeParams}";
@@ -91,7 +92,7 @@ internal sealed class RecordEmitter(
             return string.Empty;
         }
 
-        var recordFacet = $"{context.Qualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{className}>";
+        var recordFacet = $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{className}>";
         return context.LocalViewRecordMarkerNames.TryGetValue($"{module.Name}:{dataType.Name}", out var marker)
             ? $" : {marker}, {recordFacet}"
             : $" : {recordFacet}";

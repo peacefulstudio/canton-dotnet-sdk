@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -12,15 +13,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterContractIdFilteringTests
 {
     private const string LocalPackageId = "pkg-id";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(DamlTemplate template) =>
         new()
@@ -64,34 +56,35 @@ public class ChoiceEmitterContractIdFilteringTests
     private static (string NonContract, string Exercisers) Emit(DamlTemplate template)
     {
         var package = Package(template);
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, new CodeGenOptions { NamespacePrefix = "Test.Package" });
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
 
         var nonContractSb = new StringBuilder();
         var nonContractIndent = new IndentWriter(nonContractSb) { CurrentTypeName = template.Name };
-        emitter.TryWriteNonContractChoiceExtensions(nonContractIndent, template, context.DataTypes);
+        emitter.TryWriteNonContractChoiceExtensions(nonContractIndent, template);
 
         var exercisersSb = new StringBuilder();
         var exercisersIndent = new IndentWriter(exercisersSb) { CurrentTypeName = template.Name };
-        emitter.WriteChoiceAsyncExercisersClass(exercisersIndent, template, template.Name, [], context.DataTypes);
+        emitter.WriteChoiceAsyncExercisersClass(exercisersIndent, template, template.Name, []);
 
         return (nonContractSb.ToString(), exercisersSb.ToString());
     }
 
     [Fact]
-    public void ChoiceEmitterContractIdFiltering_contract_id_return_routes_bare_contract_id_choice_to_slot_path_not_non_contract_path()
+    public void ChoiceEmitterContractIdFiltering_contract_id_return_routes_bare_contract_id_choice_to_the_exercisers_not_the_non_contract_class()
     {
         var (nonContract, exercisers) = Emit(Template(Choice("Mint", ContractIdOf("Coin"))));
 
         nonContract.Should().NotContain("FactoryNonContractExtensions");
         nonContract.Should().NotContain("ProjectMintResult");
         exercisers.Should().Contain("public static class FactoryExtensions");
-        exercisers.Should().Contain("MintResult.FromCreatedContracts");
+        exercisers.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Factory.ChoiceMint, contractId);");
     }
 
     [Fact]
-    public void ChoiceEmitterContractIdFiltering_contract_id_return_routes_optional_contract_id_choice_to_slot_path_not_non_contract_path()
+    public void ChoiceEmitterContractIdFiltering_contract_id_return_routes_optional_contract_id_choice_to_the_exercisers_not_the_non_contract_class()
     {
         var optionalCid = new DamlTypeApp(new DamlPrimitiveType(DamlPrimitive.Optional), [ContractIdOf("Coin")]);
 
@@ -99,6 +92,6 @@ public class ChoiceEmitterContractIdFilteringTests
 
         nonContract.Should().NotContain("FactoryNonContractExtensions");
         nonContract.Should().NotContain("ProjectMaybeMintResult(");
-        exercisers.Should().Contain("MaybeMintResult.FromCreatedContracts");
+        exercisers.Should().Contain("tx.ProjectChoiceResult(global::Test.Package.Main.Factory.ChoiceMaybeMint, contractId);");
     }
 }

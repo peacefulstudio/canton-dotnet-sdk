@@ -18,13 +18,13 @@ required.
 ## Installation
 
 ```bash
-dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.6.0-preview.3
+dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.6.0-preview.4
 ```
 
 A transport package subclasses it, supplying a client factory and the
 submitter whose visibility scopes the reads. `TProbe` is a Daml template in the
-template family (`ITemplate, IDamlRecord<TProbe>`) — a generated template already
-carries both facets:
+template family (`ITemplate, IDamlRecord<TProbe>`) that also implements the kit's own
+interface, `IConformanceProbe` (`IImplements<IConformanceProbe>`):
 
 ```csharp
 public class MyClientConformanceTests : LedgerClientConformanceTests<MyProbeTemplate>
@@ -35,44 +35,78 @@ public class MyClientConformanceTests : LedgerClientConformanceTests<MyProbeTemp
 }
 ```
 
-## Scope: the template family only
+A generated template is emitted `partial`, so add the interface in a partial declaration in
+the same assembly:
 
-Every check below drives the template-family read surface — `SubscribeAsync<T>`,
-`SubscribeActiveAsync<T>`, `SubscribeLedgerEffectsAsync<T>`. The interface-family
-overloads that take a marker's `View` witness are **not exercised**: the kit would need
-an interface marker and view record from the adopter's own corpus to drive them, which is
-a fixture this kit does not yet ask for. An implementation whose
-`SubscribeAsync<TInterface, TView>` gets its offset bounds, cancellation or view-absent
-downgrade wrong will still pass this suite. Until that fixture exists, hold those three
-members to the contract `ILedgerStreamer` documents by your own tests.
+```csharp
+public sealed partial record MyProbeTemplate : IImplements<IConformanceProbe>;
+```
+
+A probe compiled into another assembly cannot take a partial declaration, so hand-write the
+probe there: a record implementing `ITemplate`, `IDamlRecord<TProbe>` and
+`IImplements<IConformanceProbe>`.
+
+## Two read families
+
+An `ILedgerStreamer` reads each contract two ways: by its template, and through a Daml
+interface it implements, where the participant computes a view of the contract. The kit owns
+one interface for the second, `IConformanceProbe`, with the view `ConformanceProbeView`
+(one `Numeric` field, `amount`). Its Daml identity is module `Conformance.Kit`, entity
+`ConformanceProbe`, package name `ledger-conformance-kit`, package id
+`ledger-conformance-kit-pkg`, version `0.1.0`.
+
+Every stream check runs once per family. Each interface check carries the name of its
+template check with an `Interface_` prefix (`Interface_active_snapshot_ends_with_a_terminal_Checkpoint`,
+`Interface_bounded_subscription_delivers_the_event_at_toOffset_then_completes`),
+so the run output shows which family failed or was skipped and you can filter one family.
+Six further interface checks have no template twin. Three of them,
+`Interface_SubscribeActiveAsync_throws_ArgumentNullException_for_a_null_ViewDescriptor` and its
+`SubscribeAsync` and `SubscribeLedgerEffectsAsync` siblings, fail an interface read that does not
+throw `ArgumentNullException` at the call for a null `ViewDescriptor`. The other three,
+`Interface_active_snapshot_serves_the_template_contracts_with_the_view_amount_42_5` and its
+`acs_delta_subscription` and `ledger_effects_subscription` siblings, fail an interface read that
+serves other contract ids or offsets than the template read of the same window, a snapshot `Created`
+row under another `SynchronizerId` than the template snapshot, or a `Created` row whose view
+`amount` is not `42.5`.
 
 ## Covered contracts
 
 - **Cancellation** — a cancelled live subscription surfaces
-  `OperationCanceledException`, not an in-band error.
+  `OperationCanceledException`, not an in-band error. Checked on both families.
 - **Unclassified surfacing** — a snapshot row the projector cannot classify is
-  yielded as `Unclassified`, never silently dropped.
+  yielded as `Unclassified`, never silently dropped. Checked on both families.
 - **Terminal snapshot checkpoint** — the snapshot always ends with a single
-  terminal `Checkpoint`, and the seeded active rows precede it.
+  terminal `Checkpoint`, and the seeded active rows precede it. Checked on both families.
 - **Empty-snapshot checkpoint** — a snapshot with no active contracts (taken at
   `EmptySnapshotOffset`, `LedgerOffset.Begin` by default) still ends with that single
-  terminal `Checkpoint`.
+  terminal `Checkpoint`. Checked on both families.
 - **Fault surfacing (opt-in)** — a mid-snapshot transport fault surfaces in-band as a
   terminal `AcsSnapshotEntry<T>.StreamError` in place of the `Checkpoint`, never thrown,
-  so a caller draining the snapshot handles faults as values. Skipped unless the adopter
-  overrides `CreateFaultingSnapshotClient()` to return a client whose snapshot faults
+  so a caller draining the snapshot handles faults as values; the interface snapshot
+  surfaces it as an `InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.StreamError`.
+  Skipped unless the adopter
+  overrides `CreateFaultingSnapshotClient()` to return a client whose snapshots fault
   mid-stream; the default returns `null` because inducing a deterministic mid-snapshot
   fault is transport-specific.
 - **Offset boundaries `(fromOffset, toOffset]`** — `fromOffset` is exclusive, so
   resuming from a returned offset does not re-deliver the event at it;
   `toOffset` is inclusive and terminal, so a bounded subscription delivers the
-  event at `toOffset` and then completes.
+  event at `toOffset` and then completes. Checked on both families.
 - **Stream shapes** — the ACS-delta subscription conveys archival as a
   first-class `Archived` event and never an `Exercised`; the ledger-effects
   subscription conveys it as a consuming `Exercised` and never an `Archived`.
   Each shape is checked in both directions: emitting the wrong variant fails,
   and so does dropping archival altogether, because the signal a shape exists to
-  carry cannot be missing from a stream that claims to carry it.
+  carry cannot be missing from a stream that claims to carry it. Checked on both families.
+- **Required view descriptor** — each interface read (`SubscribeActiveAsync`, `SubscribeAsync`,
+  `SubscribeLedgerEffectsAsync`) called with a `null` `ViewDescriptor` throws
+  `ArgumentNullException` at the call, before the stream is enumerated, so a missing descriptor
+  fails fast instead of on the first `MoveNextAsync`. Interface only.
+- **Rendered view** — each interface read serves the template read's `Created` contracts, coerced
+  through `ToInterfaceContractId<TProbe, IConformanceProbe>`, at the same offsets, and every
+  `Created` row carries a `ConformanceProbeView` whose `amount` is `42.5`. The snapshot rows also
+  carry the same `SynchronizerId` as the template snapshot rows. Checked on the snapshot, the
+  ACS-delta window and the ledger-effects window. Interface only.
 - **Non-termination failure mode** — every stream the contract requires to
   terminate is enumerated under a time budget (`StreamTimeout`, default 30s;
   override to widen). A stream that never terminates fails loudly with a
@@ -92,7 +126,7 @@ members to the contract `ILedgerStreamer` documents by your own tests.
   each is a distinct fault. Skipped unless the adopter overrides
   `CreateCommandIdFixture()`.
 
-Nine of the eighteen checks belong to the three opt-in families above: they skip, rather than
+Ten of the thirty-four checks belong to the three opt-in families above: they skip, rather than
 fail, while the corresponding factory stays at its `null` default. A green run therefore
 reports your configuration as well as your correctness; the skips in the run output name which
 opt-in families your configuration omits.
@@ -104,6 +138,11 @@ scenario:
 
 - at least one active `TProbe` contract and one row the transport cannot fully
   classify (e.g. a missing synchronizer id);
+- the same snapshot rows through the interface read, `SubscribeActiveAsync(IConformanceProbe.View, …)`:
+  each probe contract under the same contract id, offset and synchronizer id, carrying a
+  `ConformanceProbeView` with `amount` `42.5`, and the unclassifiable row still
+  unclassifiable (an interface read that finds no view for it surfaces it as `Unclassified`);
+- an empty interface snapshot at `EmptySnapshotOffset` too;
 - at least one event on the `SubscribeAsync` stream at a known offset, with the
   `(fromOffset, toOffset]` bounds honored;
 - one archived `TProbe` at an offset no later than the seeded ledger end,
@@ -111,6 +150,17 @@ scenario:
   `SubscribeLedgerEffectsAsync` stream as a consuming `Exercised` event — the
   two shape checks read the archival signal itself, not only the absence of the
   wrong variant, so a scenario that archives nothing fails both;
+- the same stream rows through the interface reads, `SubscribeAsync(IConformanceProbe.View, …)` and
+  `SubscribeLedgerEffectsAsync(IConformanceProbe.View, …)`: each probe contract under the same
+  contract id and offset with the `ConformanceProbeView` carrying `amount` `42.5`, its archival as an
+  `Archived` event on the first and a consuming `Exercised` event on the second, the same
+  `(fromOffset, toOffset]` bounds, and a live subscription that honors cancellation;
+- each interface read throwing `ArgumentNullException` at the call for a `null` `ViewDescriptor`, not
+  on the first `MoveNextAsync`: guard in a non-iterator method and delegate to the iterator;
+- on a wire-level double (a participant stub behind a gRPC or JSON transport), the kit interface
+  listed in the implemented interfaces of the probe's archived and consuming exercised events: an
+  interface stream matches those two events only through that list, so without it both interface
+  shape checks fail;
 - `GetLedgerEndAsync` returning the seeded ledger end;
 - an empty active-contract-set snapshot at `EmptySnapshotOffset` (defaults to
   `LedgerOffset.Begin`; override it if your transport rejects an active-contract-set
@@ -121,9 +171,18 @@ The inherited `[Fact]` methods then exercise that seeded client against the
 documented contract.
 
 To also cover the fault path, override `CreateFaultingSnapshotClient()` to return a
-separate client whose snapshot faults mid-stream (yielding a terminal
-`AcsSnapshotEntry<T>.StreamError` and no `Checkpoint`). Leaving it at its `null` default
-skips only the fault-surfacing check.
+separate client whose snapshots fault mid-stream, the interface snapshot included
+(yielding a terminal `StreamError` and no `Checkpoint`). Leaving it at its `null` default
+skips only the two fault-surfacing checks.
+
+A wire-level double builds the interface's wire identity, on the view and in the implemented
+interfaces of the archived and exercised events, from `IConformanceProbe.InterfaceId` rather than
+from copied strings, so a later change of the interface's package id reaches the double without an edit.
+
+The interface identity is fixed by the kit for test doubles: it carries the names a future live
+Daml interface would, but no uploaded Daml package declares it yet, so the interface checks run
+against doubles only. Running them against a live participant needs a published Daml interface
+and is not supported yet.
 
 To also cover submitter authority, override `CreateWriteFixture()` to return a
 `WriteConformanceFixture`: a fresh client plus a submission it accepts from an

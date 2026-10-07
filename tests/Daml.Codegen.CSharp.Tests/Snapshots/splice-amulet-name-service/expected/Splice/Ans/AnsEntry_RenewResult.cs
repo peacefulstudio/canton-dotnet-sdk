@@ -14,26 +14,26 @@ namespace Splice.Ans;
 /// Generated from Daml record AnsEntry_RenewResult
 /// </summary>
 public sealed record AnsEntry_RenewResult(
-    [property: DamlFieldAttribute("entryCid")] ContractId<AnsEntry> EntryCid
-) : IDamlRecord<AnsEntry_RenewResult>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("entryCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> EntryCid
+) : global::Daml.Runtime.Data.IDamlRecord<AnsEntry_RenewResult>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("entryCid", EntryCid.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("entryCid", EntryCid.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnsEntry_RenewResult FromRecord(DamlRecord record) => new AnsEntry_RenewResult(
-        EntryCid: new ContractId<AnsEntry>(record.GetRequiredField("entryCid").As<DamlContractId>().Value)
+    public static AnsEntry_RenewResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntry_RenewResult(
+        EntryCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>(record.GetRequiredField("entryCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("entryCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryCid"), context.Field("entryCid")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("entryCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryCid"), context.Field("entryCid")))
         );
     }
 

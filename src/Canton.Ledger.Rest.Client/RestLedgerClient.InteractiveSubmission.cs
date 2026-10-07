@@ -9,7 +9,6 @@ using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using RuntimeCommands = Daml.Runtime.Commands;
-using WireCostEstimationHints = Canton.Ledger.Rest.Client.Raw.CostEstimationHints;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -39,8 +38,8 @@ internal sealed partial class RestLedgerClient
 
         return _calls.SendAsync<ServedPrepareSubmissionResponse, PreparedSubmission>(
             new RestCall(
-                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission, estimateTrafficCost: null),
-                MissingBody("prepared submission"), MalformedBody("prepared submission")),
+                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission),
+                MissingBody("prepared submission"), MalformedBody("prepared submission"), LedgerCallKind.Read),
             ProjectPreparedSubmission,
             timeout,
             cancellationToken);
@@ -60,7 +59,11 @@ internal sealed partial class RestLedgerClient
         ArgumentNullException.ThrowIfNull(submission);
 
         return _calls.SendAsync(
-            Execute(ExecuteSubmissionPath, BuildExecuteSubmissionRequest(submission, transactionFormat: null), "executed submission"),
+            Execute(
+                ExecuteSubmissionPath,
+                BuildExecuteSubmissionRequest(submission, transactionFormat: null),
+                "executed submission",
+                LedgerCallKind.AcceptedOnlyWrite),
             IgnoreBodyAsync,
             timeout,
             cancellationToken);
@@ -83,7 +86,8 @@ internal sealed partial class RestLedgerClient
             Execute(
                 ExecuteSubmissionAndWaitPath,
                 BuildExecuteSubmissionRequest(submission, transactionFormat: null),
-                "executed submission"),
+                "executed submission",
+                LedgerCallKind.EffectAppliedWrite),
             ProjectExecutedSubmission,
             timeout,
             cancellationToken);
@@ -111,7 +115,8 @@ internal sealed partial class RestLedgerClient
             Execute(
                 ExecuteSubmissionAndWaitForTransactionPath,
                 BuildExecuteSubmissionRequest(submission, RestSubscribeRequestBuilder.BuildTransactionFormat(submitter)),
-                "executed transaction"),
+                "executed transaction",
+                LedgerCallKind.EffectAppliedWrite),
             body => RestTransactionResultProjector.Project(
                 body.Transaction ?? throw MalformedResponse.MissingRequiredField("The response carries no transaction")),
             timeout,
@@ -150,7 +155,7 @@ internal sealed partial class RestLedgerClient
         return _calls.SendAsync<Raw.GetPreferredPackagesResponse, PreferredPackages>(
             new RestCall(
                 HttpMethod.Post, PreferredPackagesPath, request,
-                MissingBody("preferred packages"), MalformedBody("preferred packages")),
+                MissingBody("preferred packages"), MalformedBody("preferred packages"), LedgerCallKind.Read),
             body => new PreferredPackages(
                 [.. (body.PackageReferences ?? []).Select(ToPackageReference)],
                 ToSynchronizerId(body.SynchronizerId)),
@@ -182,7 +187,8 @@ internal sealed partial class RestLedgerClient
         return _calls.SendAsync<Raw.GetPreferredPackageVersionResponse, PackagePreference?>(
             new RestCall(
                 HttpMethod.Get, PreferredPackageVersionQuery(parties, packageName, synchronizerId, vettingValidAt),
-                Body: null, MissingBody("preferred package version"), MalformedBody("preferred package version")),
+                Body: null, MissingBody("preferred package version"), MalformedBody("preferred package version"),
+                LedgerCallKind.Read),
             body => body.PackagePreference is { } preference
                 ? new PackagePreference(
                     ToPackageReference(preference.PackageReference
@@ -194,8 +200,7 @@ internal sealed partial class RestLedgerClient
     }
 
     private ServedPrepareSubmissionRequest BuildPrepareSubmissionRequest(
-        RuntimeCommands.CommandsSubmission submission,
-        WireCostEstimationHints? estimateTrafficCost)
+        RuntimeCommands.CommandsSubmission submission)
     {
         var commands = RestCommandBuilder.BuildCommands(submission, _userId);
         return new ServedPrepareSubmissionRequest(
@@ -207,8 +212,7 @@ internal sealed partial class RestLedgerClient
             commands.ReadAs,
             commands.DisclosedContracts is { Count: > 0 } disclosedContracts ? disclosedContracts : null,
             commands.SynchronizerId ?? string.Empty,
-            [],
-            estimateTrafficCost);
+            []);
     }
 
     private ServedExecuteSubmissionRequest BuildExecuteSubmissionRequest(
@@ -271,8 +275,9 @@ internal sealed partial class RestLedgerClient
         return $"{PreferredPackageVersionPath}?{string.Join('&', query)}";
     }
 
-    private static RestCall Execute(string path, ServedExecuteSubmissionRequest body, string subject) =>
-        new(HttpMethod.Post, path, body, MissingBody(subject), MalformedBody(subject), Replayable: false);
+    private static RestCall Execute(
+        string path, ServedExecuteSubmissionRequest body, string subject, LedgerCallKind kind) =>
+        new(HttpMethod.Post, path, body, MissingBody(subject), MalformedBody(subject), kind, Replayable: false);
 
     private static string MissingBody(string subject) =>
         $"Server returned a successful response but no body was present for the {subject}.";

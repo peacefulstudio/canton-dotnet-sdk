@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.EmittedCodeCompilesTestHelpers;
@@ -15,15 +16,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterNonContractExerciserTests
 {
     private const string LocalPackageId = "pkg-id";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(DamlTemplate template) =>
         new()
@@ -65,15 +57,16 @@ public class ChoiceEmitterNonContractExerciserTests
             Observers = DamlPartyAnalysis.Dynamic,
         };
 
-    private static string Emit(DamlTemplate template)
+    private static string Emit(DamlTemplate template, params DamlPackage[] dependencies)
     {
         var package = Package(template);
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, dependencies);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        emitter.TryWriteNonContractChoiceExtensions(indent, template, context.DataTypes);
+        emitter.TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }
 
@@ -83,17 +76,20 @@ public class ChoiceEmitterNonContractExerciserTests
         var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
 
         output.Should().Contain("public static class VaultNonContractExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<decimal>> TryQuoteAsync(");
-        output.Should().Contain("this ContractId<Vault> contractId,");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<decimal>> TryQuoteAsync(");
+        output.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Vault> contractId,");
     }
 
     [Fact]
-    public void ChoiceEmitterNonContractExerciser_value_returning_choice_emits_an_exercised_events_projector()
+    public void ChoiceEmitterNonContractExerciser_value_returning_choice_hands_the_descriptor_to_the_runtime_projection()
     {
         var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
 
-        output.Should().Contain("private static ExerciseOutcome<decimal> ProjectQuoteResult(TransactionResult tx, string contractId)");
-        output.Should().Contain("foreach (var exercised in tx.ExercisedEvents)");
+        output.Should().Contain(
+            "private static global::Daml.Runtime.Outcomes.ExerciseOutcome<decimal> ProjectQuoteResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>\n" +
+            "        tx.ProjectChoiceResult(global::Test.Package.Main.Vault.ChoiceQuote, contractId);");
+        output.Should().NotContain("tx.ExercisedEvents");
+        output.Should().NotContain("InvalidOperationException");
     }
 
     [Fact]
@@ -101,7 +97,7 @@ public class ChoiceEmitterNonContractExerciserTests
     {
         var output = Emit(Template(Choice("Touch", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTouchAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryTouchAsync(");
         output.Should().Contain("ProjectTouchResult");
     }
 
@@ -125,9 +121,9 @@ public class ChoiceEmitterNonContractExerciserTests
         output.Should().Contain("CommandId? commandId = null,");
         output.Should().Contain(TrySubmitSingleArgumentOrder);
 
-        var idxWorkflowId = output.IndexOf("string? workflowId = null,", StringComparison.Ordinal);
-        var idxCommandId = output.IndexOf("CommandId? commandId = null,", StringComparison.Ordinal);
-        var idxCancellationToken = output.IndexOf("CancellationToken cancellationToken = default)", StringComparison.Ordinal);
+        var idxWorkflowId = output.IndexOf("string? workflowId = null,", global::System.StringComparison.Ordinal);
+        var idxCommandId = output.IndexOf("CommandId? commandId = null,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = output.IndexOf("global::System.Threading.CancellationToken cancellationToken = default)", global::System.StringComparison.Ordinal);
         idxWorkflowId.Should().BeLessThan(idxCommandId);
         idxCommandId.Should().BeLessThan(idxCancellationToken);
     }
@@ -137,12 +133,12 @@ public class ChoiceEmitterNonContractExerciserTests
     {
         var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
 
-        output.Should().Contain("TimeSpan? timeout = null,");
+        output.Should().Contain("global::System.TimeSpan? timeout = null,");
         output.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
-        var idxCommandId = output.IndexOf("CommandId? commandId = null,", StringComparison.Ordinal);
-        var idxTimeout = output.IndexOf("TimeSpan? timeout = null,", StringComparison.Ordinal);
-        var idxCancellationToken = output.IndexOf("CancellationToken cancellationToken = default)", StringComparison.Ordinal);
+        var idxCommandId = output.IndexOf("CommandId? commandId = null,", global::System.StringComparison.Ordinal);
+        var idxTimeout = output.IndexOf("global::System.TimeSpan? timeout = null,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = output.IndexOf("global::System.Threading.CancellationToken cancellationToken = default)", global::System.StringComparison.Ordinal);
         idxCommandId.Should().BeLessThan(idxTimeout);
         idxTimeout.Should().BeLessThan(idxCancellationToken);
     }
@@ -152,9 +148,9 @@ public class ChoiceEmitterNonContractExerciserTests
     {
         var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
 
-        output.Should().Contain("public static ExerciseCommand QuoteCommand(");
-        output.Should().Contain("this ContractId<Vault> contractId)");
-        output.Should().Contain("return new ExerciseCommand(");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand QuoteCommand(");
+        output.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Vault> contractId)");
+        output.Should().Contain("return new global::Daml.Runtime.Commands.ExerciseCommand(");
     }
 
     [Fact]
@@ -165,10 +161,10 @@ public class ChoiceEmitterNonContractExerciserTests
         output.Should().Contain("var command = contractId.QuoteCommand();");
         output.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
-        const string inlineConstructionMarker = "var command = new ExerciseCommand(";
+        const string inlineConstructionMarker = "var command = new global::Daml.Runtime.Commands.ExerciseCommand(";
         output.Should().NotContain(inlineConstructionMarker);
 
-        const string commandConstructionMarker = "new ExerciseCommand(";
+        const string commandConstructionMarker = "new global::Daml.Runtime.Commands.ExerciseCommand(";
         var firstConstruction = output.IndexOf(commandConstructionMarker, StringComparison.Ordinal);
         firstConstruction.Should().BeGreaterThanOrEqualTo(0);
         output.IndexOf(commandConstructionMarker, firstConstruction + 1, StringComparison.Ordinal).Should().Be(-1);
@@ -183,7 +179,7 @@ public class ChoiceEmitterNonContractExerciserTests
 
         var output = Emit(Template(Choice("LabelCounts", dictionaryReturn)));
 
-        output.Should().Contain("<c>IReadOnlyDictionary&lt;string, long&gt;</c>");
+        output.Should().Contain("<c>global::System.Collections.Generic.IReadOnlyDictionary&lt;string, long&gt;</c>");
         output.Should().NotContain("<c>IReadOnlyDictionary<string, long></c>");
     }
 
@@ -192,9 +188,9 @@ public class ChoiceEmitterNonContractExerciserTests
     {
         var tupleReturn = TupleType(new DamlPrimitiveType(DamlPrimitive.Party), new DamlPrimitiveType(DamlPrimitive.Int64));
 
-        var output = Emit(Template(Choice("OwnerAndCount", tupleReturn)));
+        var output = Emit(Template(Choice("OwnerAndCount", tupleReturn)), TestPackages.DamlPrim());
 
-        output.Should().Contain("<c>Tuple2&lt;Party, long&gt;</c>");
+        output.Should().Contain("<c>global::Daml.Runtime.Stdlib.Tuple2&lt;global::Daml.Runtime.Data.Party, long&gt;</c>");
         output.Should().NotContain("<c>Tuple2<Party, long></c>");
     }
 
@@ -209,7 +205,7 @@ public class ChoiceEmitterNonContractExerciserTests
 
         var output = Emit(Template(Choice("RankByOwner", nestedReturn)));
 
-        output.Should().Contain("<c>IReadOnlyList&lt;IReadOnlyDictionary&lt;string, long&gt;&gt;</c>");
+        output.Should().Contain("<c>global::System.Collections.Generic.IReadOnlyList&lt;global::System.Collections.Generic.IReadOnlyDictionary&lt;string, long&gt;&gt;</c>");
         output.Should().NotContain("<c>IReadOnlyList<IReadOnlyDictionary<string, long>></c>");
     }
 
@@ -218,7 +214,7 @@ public class ChoiceEmitterNonContractExerciserTests
     {
         var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
 
-        output.Should().MatchRegex(@"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        output.Should().MatchRegex(@"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
         Regex.Matches(output, Regex.Escape(ConfigureParameter)).Should().HaveCount(1);
     }
 

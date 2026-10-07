@@ -11,7 +11,7 @@ internal abstract record RestCallFailure
     {
     }
 
-    internal sealed record Rejected(ParsedLedgerError Parsed) : RestCallFailure;
+    internal sealed record Rejected(ParsedLedgerError Parsed, bool AfterRetry = false) : RestCallFailure;
 
     internal sealed record NoResponse(string Message, Exception Cause) : RestCallFailure;
 

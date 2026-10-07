@@ -3,6 +3,7 @@
 
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -21,15 +22,6 @@ public class OptionalRepresentationTests
     private const string EmittedPackageId = "emitted-pkg";
     private const string StdlibPackageId = "stdlib-pkg";
 
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => "Resolved";
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
-
     private static DamlPackage LocalPackage(params DamlModule[] modules) =>
         new()
         {
@@ -41,21 +33,11 @@ public class OptionalRepresentationTests
             DependencyReferences = []
         };
 
+    private static DarCrossPackageResolver ResolverOver(DamlPackage local, params DamlPackage[] dependencies) =>
+        RealResolution.Of(local, new CodeGenOptions(), dependencies).Resolver;
+
     private static DamlType Rewrite(DamlType type) =>
-        OptionalRepresentation.Rewrite(type, LocalPackage(), new StubResolver());
-
-    private sealed class DeclaringResolver(params DamlPackage[] packages) : ICrossPackageResolver
-    {
-        private readonly IReadOnlyDictionary<string, DamlPackage> _packages =
-            packages.ToDictionary(package => package.PackageId);
-
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => "Resolved";
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) =>
-            _packages.TryGetValue(packageId, out var package) ? package : null;
-    }
+        OptionalRepresentation.Rewrite(type, LocalPackage(), ResolverOver(LocalPackage()));
 
     private static DamlDataType Generic(string name, params DamlFieldDefinition[] fields) =>
         new()
@@ -97,10 +79,10 @@ public class OptionalRepresentationTests
         };
 
     private static DamlType RewriteAgainst(DamlType type, params DamlDataType[] declarations) =>
-        OptionalRepresentation.Rewrite(type, LocalPackage(), new DeclaringResolver(EmittedPackage(declarations)));
+        OptionalRepresentation.Rewrite(type, LocalPackage(), ResolverOver(LocalPackage(), EmittedPackage(declarations)));
 
     private static DamlType RewriteAgainstStdlib(DamlType type, params DamlDataType[] declarations) =>
-        OptionalRepresentation.Rewrite(type, LocalPackage(), new DeclaringResolver(StdlibPackage(declarations)));
+        OptionalRepresentation.Rewrite(type, LocalPackage(), ResolverOver(LocalPackage(), StdlibPackage(declarations)));
 
     private static DamlFieldDefinition Field(string name, DamlType type) => new(name, type);
 
@@ -346,7 +328,7 @@ public class OptionalRepresentationTests
             [new DamlOptionalType(Prim(DamlPrimitive.Text))]);
 
         var act = () => OptionalRepresentation.Rewrite(
-            selfReference, LocalPackage(ShapesModule(crate)), new DeclaringResolver());
+            selfReference, LocalPackage(ShapesModule(crate)), ResolverOver(LocalPackage(ShapesModule(crate))));
 
         act.Should().Throw<CodegenException>()
             .WithMessage("*Optional as the 'a' type argument of Acme.Shapes:Crate*");

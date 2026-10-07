@@ -3,6 +3,7 @@
 
 using System.Net;
 using AwesomeAssertions;
+using Daml.Ledger.Abstractions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Xunit;
 
@@ -42,7 +43,8 @@ public class RestLedgerHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck, HealthStatus.Degraded), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Degraded);
-        result.Exception.Should().BeOfType<HttpRequestException>();
+        result.Exception.Should().BeOfType<LedgerOperationException>()
+            .Which.InnerException.Should().BeOfType<HttpRequestException>();
     }
 
     [Fact]
@@ -66,7 +68,8 @@ public class RestLedgerHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Exception.Should().BeOfType<TaskCanceledException>();
+        result.Exception.Should().BeOfType<LedgerOperationException>()
+            .Which.InnerException.Should().BeOfType<TaskCanceledException>();
     }
 
     [Fact]

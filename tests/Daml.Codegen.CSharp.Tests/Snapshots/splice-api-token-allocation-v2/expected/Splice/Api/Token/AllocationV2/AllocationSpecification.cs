@@ -16,53 +16,53 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record AllocationSpecification
 /// </summary>
 public sealed record AllocationSpecification(
-    Party Admin,
+    global::Daml.Runtime.Data.Party Admin,
     global::Splice.Api.Token.HoldingV2.Account Authorizer,
-    IReadOnlyList<TransferLegSide> TransferLegSides,
-    DateTimeOffset? SettlementDeadline,
-    IReadOnlyDictionary<string, decimal>? NextIterationFunding,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide> TransferLegSides,
+    global::System.DateTimeOffset? SettlementDeadline,
+    global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>? NextIterationFunding,
     bool Committed,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<AllocationSpecification>
+) : global::Daml.Runtime.Data.IDamlRecord<AllocationSpecification>
 {
     /// <summary>The Daml field <c>admin</c>.</summary>
-    [DamlFieldAttribute("admin")]
-    public Party Admin { get; init; } = Admin;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("admin")]
+    public global::Daml.Runtime.Data.Party Admin { get; init; } = Admin;
 
     /// <summary>The Daml field <c>authorizer</c>.</summary>
-    [DamlFieldAttribute("authorizer")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("authorizer")]
     public global::Splice.Api.Token.HoldingV2.Account Authorizer { get; init; } = Authorizer;
 
-    private readonly IReadOnlyList<TransferLegSide> _transferLegSides = DamlFieldCollections.Copy(TransferLegSides);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide> _transferLegSides = global::Daml.Runtime.Data.DamlFieldCollections.Copy(TransferLegSides);
 
     /// <summary>The Daml field <c>transferLegSides</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("transferLegSides")]
-    public IReadOnlyList<TransferLegSide> TransferLegSides
+    [global::Daml.Runtime.Data.DamlFieldAttribute("transferLegSides")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide> TransferLegSides
     {
         get => _transferLegSides;
-        init => _transferLegSides = DamlFieldCollections.Copy(value);
+        init => _transferLegSides = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>settlementDeadline</c>.</summary>
-    [DamlFieldAttribute("settlementDeadline")]
-    public DateTimeOffset? SettlementDeadline { get; init; } = SettlementDeadline;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("settlementDeadline")]
+    public global::System.DateTimeOffset? SettlementDeadline { get; init; } = SettlementDeadline;
 
-    private readonly IReadOnlyDictionary<string, decimal>? _nextIterationFunding = DamlFieldCollections.Copy(NextIterationFunding);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>? _nextIterationFunding = global::Daml.Runtime.Data.DamlFieldCollections.Copy(NextIterationFunding);
 
     /// <summary>The Daml field <c>nextIterationFunding</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("nextIterationFunding")]
-    public IReadOnlyDictionary<string, decimal>? NextIterationFunding
+    [global::Daml.Runtime.Data.DamlFieldAttribute("nextIterationFunding")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>? NextIterationFunding
     {
         get => _nextIterationFunding;
-        init => _nextIterationFunding = DamlFieldCollections.Copy(value);
+        init => _nextIterationFunding = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>committed</c>.</summary>
-    [DamlFieldAttribute("committed")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("committed")]
     public bool Committed { get; init; } = Committed;
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -70,64 +70,64 @@ public sealed record AllocationSpecification(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(AllocationSpecification? other) =>
         other is not null
-        && EqualityComparer<Party>.Default.Equals(Admin, other.Admin)
-        && EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Authorizer, other.Authorizer)
-        && DamlFieldCollections.Equal(TransferLegSides, other.TransferLegSides)
-        && EqualityComparer<DateTimeOffset?>.Default.Equals(SettlementDeadline, other.SettlementDeadline)
-        && DamlFieldCollections.Equal(NextIterationFunding, other.NextIterationFunding)
-        && EqualityComparer<bool>.Default.Equals(Committed, other.Committed)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Data.Party>.Default.Equals(Admin, other.Admin)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Authorizer, other.Authorizer)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(TransferLegSides, other.TransferLegSides)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset?>.Default.Equals(SettlementDeadline, other.SettlementDeadline)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(NextIterationFunding, other.NextIterationFunding)
+        && global::System.Collections.Generic.EqualityComparer<bool>.Default.Equals(Committed, other.Committed)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Admin);
         hash.Add(Authorizer);
-        hash.Add(DamlFieldCollections.Hash(TransferLegSides));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(TransferLegSides));
         hash.Add(SettlementDeadline);
-        hash.Add(DamlFieldCollections.Hash(NextIterationFunding));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(NextIterationFunding));
         hash.Add(Committed);
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("admin", Admin.ToDamlValue()),
-        DamlField.Create("authorizer", Authorizer.ToRecord()),
-        DamlField.Create("transferLegSides", new DamlList(TransferLegSides.Select(x => (DamlValue)x.ToRecord()).ToList())),
-        DamlField.Create("settlementDeadline", SettlementDeadline is { } __SettlementDeadline ? new DamlOptional(new DamlTimestamp(__SettlementDeadline)) : DamlOptional.None),
-        DamlField.Create("nextIterationFunding", NextIterationFunding is { } __NextIterationFunding ? new DamlOptional(new DamlTextMap(__NextIterationFunding.ToDictionary(kv => kv.Key, kv => (DamlValue)new DamlNumeric(kv.Value)))) : DamlOptional.None),
-        DamlField.Create("committed", new DamlBool(Committed)),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("admin", Admin.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("authorizer", Authorizer.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("transferLegSides", new global::Daml.Runtime.Data.DamlList(TransferLegSides.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("settlementDeadline", SettlementDeadline is { } __SettlementDeadline ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTimestamp(__SettlementDeadline)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("nextIterationFunding", NextIterationFunding is { } __NextIterationFunding ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTextMap(__NextIterationFunding.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlNumeric(kv.Value)))) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("committed", new global::Daml.Runtime.Data.DamlBool(Committed)),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AllocationSpecification FromRecord(DamlRecord record) => new AllocationSpecification(
-        Admin: Party.FromDamlValue(record.GetRequiredField("admin").As<DamlParty>()),
-        Authorizer: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("authorizer").As<DamlRecord>()),
-        TransferLegSides: (IReadOnlyList<TransferLegSide>)record.GetRequiredField("transferLegSides").As<DamlList>().Values.Select(x => TransferLegSide.FromRecord(x.As<DamlRecord>())).ToList(),
-        SettlementDeadline: record.GetOptionalField("settlementDeadline").AsOptional().HasValue ? record.GetOptionalField("settlementDeadline").AsOptional().Value!.As<DamlTimestamp>().Value : null,
-        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlNumeric>().Value) : null,
-        Committed: record.GetRequiredField("committed").As<DamlBool>().Value,
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static AllocationSpecification FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationSpecification(
+        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin").As<global::Daml.Runtime.Data.DamlParty>()),
+        Authorizer: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("authorizer").As<global::Daml.Runtime.Data.DamlRecord>()),
+        TransferLegSides: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide>)record.GetRequiredField("transferLegSides").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLegSide.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        SettlementDeadline: record.GetOptionalField("settlementDeadline").AsOptional().HasValue ? record.GetOptionalField("settlementDeadline").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlNumeric>().Value) : null,
+        Committed: record.GetRequiredField("committed").As<global::Daml.Runtime.Data.DamlBool>().Value,
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
-            DamlField.Create("authorizer", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "authorizer"), context.Field("authorizer"))),
-            DamlField.Create("transferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegSides"), context.Field("transferLegSides"), (__json0, __ctx0) => TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("settlementDeadline", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "settlementDeadline"), context.Field("settlementDeadline"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
-            DamlField.Create("nextIterationFunding", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextIterationFunding"), context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1)))),
-            DamlField.Create("committed", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "committed"), context.Field("committed"))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(7);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("authorizer", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "authorizer"), context.Field("authorizer"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("transferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegSides"), context.Field("transferLegSides"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "settlementDeadline", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("settlementDeadline"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nextIterationFunding", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("committed", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "committed"), context.Field("committed"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

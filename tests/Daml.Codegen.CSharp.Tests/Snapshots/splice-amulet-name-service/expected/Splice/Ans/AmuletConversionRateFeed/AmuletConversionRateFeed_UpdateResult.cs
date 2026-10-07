@@ -14,26 +14,26 @@ namespace Splice.Ans.AmuletConversionRateFeed;
 /// Generated from Daml record AmuletConversionRateFeed_UpdateResult
 /// </summary>
 public sealed record AmuletConversionRateFeed_UpdateResult(
-    [property: DamlFieldAttribute("cid")] ContractId<AmuletConversionRateFeed> Cid
-) : IDamlRecord<AmuletConversionRateFeed_UpdateResult>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("cid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> Cid
+) : global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed_UpdateResult>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("cid", Cid.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("cid", Cid.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AmuletConversionRateFeed_UpdateResult FromRecord(DamlRecord record) => new AmuletConversionRateFeed_UpdateResult(
-        Cid: new ContractId<AmuletConversionRateFeed>(record.GetRequiredField("cid").As<DamlContractId>().Value)
+    public static AmuletConversionRateFeed_UpdateResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed_UpdateResult(
+        Cid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed>(record.GetRequiredField("cid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("cid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "cid"), context.Field("cid")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("cid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "cid"), context.Field("cid")))
         );
     }
 

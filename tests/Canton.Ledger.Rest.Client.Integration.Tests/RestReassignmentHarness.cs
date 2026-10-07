@@ -232,6 +232,31 @@ internal sealed class RestReassignmentHarness
         return RequireVariant<ContractStreamEvent<Asset>.Unassigned>(outcome);
     }
 
+    internal Task<ExerciseOutcome<ContractStreamEvent<Asset>>> TryUnassignAsync(
+        Party submitter,
+        string contractId,
+        SynchronizerPair synchronizers,
+        CancellationToken cancellationToken) =>
+        _lane.LedgerClient.TrySubmitAndWaitForReassignmentAsync<Asset>(
+            ReassignmentSubmission.Of(
+                new UnassignCommand(contractId, synchronizers.Source, synchronizers.Target), submitter),
+            cancellationToken: cancellationToken);
+
+    internal async Task<Party> HostPartyOnOneSynchronizerAsync(
+        string partyIdHint, SynchronizerId synchronizerId, CancellationToken cancellationToken)
+    {
+        var allocated = await _lane.Api<IPartyManagementServiceApi>().AllocateParty(
+            new AllocatePartyRequest
+            {
+                PartyIdHint = $"{partyIdHint}-{Guid.NewGuid():N}",
+                SynchronizerId = synchronizerId.Value,
+            },
+            cancellationToken);
+        var party = new Party(allocated.PartyDetails.Party);
+        await _lane.GrantActAsAsync(party.Value, cancellationToken);
+        return party;
+    }
+
     internal async Task<ContractStreamEvent<Asset>.Assigned> SubmitAndWaitAssignAsync(
         Party submitter,
         string reassignmentId,

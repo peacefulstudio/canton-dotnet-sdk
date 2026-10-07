@@ -14,18 +14,18 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine("/// <param name=\"cancellationToken\">Cancellation token.</param>");
     }
 
-    private void WriteSubmissionParametersAndCloseSignature(IndentWriter indent)
+    private static void WriteSubmissionParametersAndCloseSignature(IndentWriter indent)
     {
         indent.AppendLine("string? workflowId = null,");
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.CommandId)}? commandId = null,");
-        indent.AppendLine("TimeSpan? timeout = null,");
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.CommandId)}? commandId = null,");
+        indent.AppendLine("global::System.TimeSpan? timeout = null,");
         indent.AppendLine($"{ConfigureParameterType()}? configure = null,");
-        indent.AppendLine("CancellationToken cancellationToken = default)");
+        indent.AppendLine("global::System.Threading.CancellationToken cancellationToken = default)");
     }
 
-    private string ConfigureParameterType()
+    private static string ConfigureParameterType()
     {
-        var submission = context.Qualifier.Qualify(RuntimeTypeNames.CommandsSubmission);
-        return $"{context.Qualifier.Qualify("Func")}<{submission}, {submission}>";
+        var submission = TypeReferenceQualifier.Qualify(RuntimeTypeNames.CommandsSubmission);
+        return $"{TypeReferenceQualifier.Qualify("Func")}<{submission}, {submission}>";
     }
 }

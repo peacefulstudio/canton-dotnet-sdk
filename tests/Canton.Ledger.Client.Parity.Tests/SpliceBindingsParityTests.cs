@@ -5,19 +5,24 @@ using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Splice.Api.Token.HoldingV1;
 using Splice.ValidatorLicense;
+using Splice.Wallet.Payment;
+using Splice.Wallet.TransferOffer;
 using Xunit;
 
 namespace Canton.Ledger.Client.Parity.Tests;
 
 /// <summary>
-/// Parity suite over the generated Splice bindings (the <c>Splice.Amulet</c> NuGet emitted by
-/// canton-dotnet-sdk), run against every transport that reaches a live LocalNet participant.
-/// Each lane reads the contracts Splice itself created when the validator onboarded — nothing the
-/// test uploads or submits — so a green row proves the generated binding decodes real Splice
-/// payloads over that transport.
+/// Parity suite over the Splice bindings this checkout's codegen generates, at build time, from the
+/// <c>splice-wallet</c> DAR vendored in <c>Canton.Ledger.Client.Parity.SpliceBindings</c>,
+/// run against every transport that reaches a live LocalNet participant.
+/// Most lanes read the contracts Splice itself created when the validator onboarded, proving the
+/// generated binding decodes real Splice payloads over that transport; the
+/// <c>Splice.Wallet</c> <see cref="TransferOffer"/> lane also submits a create and a choice through
+/// the generated binding, proving the write path over that transport.
 /// </summary>
 public abstract class SpliceBindingsParityTests
 {
@@ -153,5 +158,82 @@ public abstract class SpliceBindingsParityTests
             amulet.Payload.Amount.Should().BeGreaterThan(0);
         }
         entries[^1].Should().BeOfType<InterfaceAcsSnapshotEntry<IHolding, HoldingView>.Checkpoint>();
+    }
+
+    [Fact]
+    public async Task TransferOffer_created_and_withdrawn_through_the_generated_Splice_Wallet_binding_commits_and_reads_back()
+    {
+        await using var lane = await OpenOperatorLaneAsync(TestContext.Current.CancellationToken);
+        var (client, @operator, _) = lane.Capability;
+        var dso = (await ReadOperatorValidatorLicenseAsync(lane, TestContext.Current.CancellationToken)).Payload.Dso;
+        var trackingId = $"parity-1511-{Guid.NewGuid():N}";
+        var offer = new TransferOffer(
+            Sender: @operator,
+            Receiver: dso,
+            Dso: dso,
+            Amount: new PaymentAmount(12.5m, Unit.AmuletUnit),
+            Description: "splice parity live write",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            TrackingId: trackingId);
+
+        var createOutcome = await client.TryCreateAsync(
+            offer, @operator, cancellationToken: TestContext.Current.CancellationToken);
+
+        var offerCid = createOutcome.Should().BeOfType<ExerciseOutcome<ContractId<TransferOffer>>.One>(
+            "the sender alone signs a TransferOffer, so the create has to commit; got {0}", createOutcome).Subject.Result;
+        var created = await FindTransferOfferAsync(lane, trackingId, TestContext.Current.CancellationToken);
+        created.Should().NotBeNull("the committed create has to be in the sender's active contract set");
+        created!.ContractId.Value.Should().Be(offerCid.Value);
+        created.Payload.Sender.Should().Be(@operator);
+        created.Payload.Receiver.Should().Be(dso);
+        created.Payload.Amount.Should().Be(new PaymentAmount(12.5m, Unit.AmuletUnit));
+        created.Payload.Description.Should().Be("splice parity live write");
+
+        var withdrawOutcome = await offerCid.TryTransferOffer_WithdrawAsync(
+            client,
+            new TransferOffer.TransferOffer_Withdraw(Reason: "splice parity live write cleanup"),
+            @operator,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var withdrawn = withdrawOutcome.Should().BeOfType<ExerciseOutcome<TransferOffer_WithdrawResult>.One>(
+            "the sender controls the withdrawal, so it has to commit; got {0}", withdrawOutcome).Subject.Result;
+        withdrawn.TrackingInfo.Should().Be(new TransferOfferTrackingInfo(trackingId, @operator, dso));
+        (await FindTransferOfferAsync(lane, trackingId, TestContext.Current.CancellationToken))
+            .Should().BeNull("withdrawing the offer archives it");
+    }
+
+    private static async Task<AcsSnapshotEntry<ValidatorLicense>.Created> ReadOperatorValidatorLicenseAsync(
+        CapabilityLane<(ICantonLedgerClient Client, Party Operator, LocalnetValidatorWallet OperatorWallet)> lane,
+        CancellationToken cancellationToken)
+    {
+        var (client, @operator, _) = lane.Capability;
+        var entries = new List<AcsSnapshotEntry<ValidatorLicense>>();
+        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
+        await foreach (var entry in client.SubscribeActiveAsync<ValidatorLicense>(
+            @operator, cancellationToken: cancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        return entries.OfType<AcsSnapshotEntry<ValidatorLicense>.Created>().Should().ContainSingle().Subject;
+    }
+
+    private static async Task<AcsSnapshotEntry<TransferOffer>.Created?> FindTransferOfferAsync(
+        CapabilityLane<(ICantonLedgerClient Client, Party Operator, LocalnetValidatorWallet OperatorWallet)> lane,
+        string trackingId,
+        CancellationToken cancellationToken)
+    {
+        var (client, @operator, _) = lane.Capability;
+        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
+        await foreach (var entry in client.SubscribeActiveAsync<TransferOffer>(
+            @operator, cancellationToken: cancellationToken))
+        {
+            if (entry is AcsSnapshotEntry<TransferOffer>.Created created && created.Payload.TrackingId == trackingId)
+            {
+                return created;
+            }
+        }
+
+        return null;
     }
 }

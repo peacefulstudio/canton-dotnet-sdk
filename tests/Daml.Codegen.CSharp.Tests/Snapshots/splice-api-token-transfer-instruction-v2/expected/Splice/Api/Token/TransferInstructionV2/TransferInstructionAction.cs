@@ -14,36 +14,36 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml variant TransferInstructionAction
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record TransferInstructionAction : IDamlVariant<TransferInstructionAction>
+public abstract record TransferInstructionAction : global::Daml.Runtime.Data.IDamlVariant<TransferInstructionAction>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs a TransferInstructionAction by dispatching on the DamlVariant constructor tag.</summary>
-    public static TransferInstructionAction FromVariant(DamlVariant variant) =>
+    public static TransferInstructionAction FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
             "TIA_Accept" => new TIA_Accept(),
             "TIA_Reject" => new TIA_Reject(),
             "TIA_Withdraw" => new TIA_Withdraw(),
-            "TIA_Custom" => new TIA_Custom(TransferInstructionAction_TIA_Custom.FromRecord(variant.Value.As<DamlRecord>())),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown TransferInstructionAction constructor")
+            "TIA_Custom" => new TIA_Custom(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction_TIA_Custom.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown TransferInstructionAction constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "TIA_Accept" => DamlVariant.Create("TIA_Accept", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "TIA_Reject" => DamlVariant.Create("TIA_Reject", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "TIA_Withdraw" => DamlVariant.Create("TIA_Withdraw", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "TIA_Custom" => DamlVariant.Create("TIA_Custom", TransferInstructionAction_TIA_Custom.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TIA_Accept" => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Accept", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TIA_Reject" => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Reject", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TIA_Withdraw" => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Withdraw", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TIA_Custom" => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Custom", global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction_TIA_Custom.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -57,7 +57,7 @@ public abstract record TransferInstructionAction : IDamlVariant<TransferInstruct
         public override string Tag => "TIA_Accept";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TIA_Accept", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Accept", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>TIA_Reject constructor (no arguments).</summary>
@@ -67,7 +67,7 @@ public abstract record TransferInstructionAction : IDamlVariant<TransferInstruct
         public override string Tag => "TIA_Reject";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TIA_Reject", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Reject", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>TIA_Withdraw constructor (no arguments).</summary>
@@ -77,17 +77,17 @@ public abstract record TransferInstructionAction : IDamlVariant<TransferInstruct
         public override string Tag => "TIA_Withdraw";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TIA_Withdraw", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Withdraw", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>TIA_Custom constructor.</summary>
-    public sealed record TIA_Custom(TransferInstructionAction_TIA_Custom Value) : TransferInstructionAction
+    public sealed record TIA_Custom(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction_TIA_Custom Value) : TransferInstructionAction
     {
         /// <inheritdoc />
         public override string Tag => "TIA_Custom";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TIA_Custom", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Custom", Value.ToRecord());
     }
 
 }

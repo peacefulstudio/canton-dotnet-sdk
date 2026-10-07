@@ -23,4 +23,7 @@ internal static class RuntimeNamespaces
 
     /// <summary>The <c>Daml.Runtime.Outcomes</c> namespace.</summary>
     public const string Outcomes = "Daml.Runtime.Outcomes";
+
+    /// <summary>The <c>Daml.Runtime.Serialization</c> namespace.</summary>
+    public const string Serialization = "Daml.Runtime.Serialization";
 }

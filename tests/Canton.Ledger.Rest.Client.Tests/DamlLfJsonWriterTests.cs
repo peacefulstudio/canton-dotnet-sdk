@@ -121,39 +121,11 @@ public class DamlLfJsonWriterTests
     }
 
     [Fact]
-    public void WriteValue_writes_Unit_as_an_empty_object() => Write(UnitValue()).Should().Be("{}");
-
-    [Fact]
-    public void WriteValue_writes_a_Unit_built_by_RestValueEncoder() =>
-        Write(RestValueEncoder.ToWireValue(DamlUnit.Instance)).Should().Be("{}");
-
-    [Fact]
     public void WriteValue_writes_an_empty_Optional_as_null() => Write(new Value { Optional = new Optional() }).Should().Be("null");
 
     [Fact]
     public void WriteValue_writes_a_present_Optional_as_the_inner_value() =>
         Write(new Value { Optional = new Optional { Value = new Value { Text = "CH-1234" } } }).Should().Be("\"CH-1234\"");
-
-    [Fact]
-    public void WriteValue_writes_an_absent_Optional_chain_level_as_an_empty_array() =>
-        Write(RestValueEncoder.ToWireValue(DamlOptionalChain.None)).Should().Be("[]");
-
-    [Fact]
-    public void WriteValue_writes_Some_None_of_an_Optional_chain_as_an_array_holding_an_empty_array() =>
-        Write(RestValueEncoder.ToWireValue(DamlOptionalChain.Some(DamlOptionalChain.None))).Should().Be("[[]]");
-
-    [Fact]
-    public void WriteValue_writes_Some_Some_of_an_Optional_chain_as_one_array_level_per_Optional() =>
-        Write(RestValueEncoder.ToWireValue(DamlOptionalChain.Some(DamlOptionalChain.Some(new DamlText("deep")))))
-            .Should().Be("[[\"deep\"]]");
-
-    [Fact]
-    public void WriteValue_writes_an_Optional_chain_inside_a_record_as_the_participant_echoed_it()
-    {
-        var record = new DamlRecord(null, [new DamlField("nestedNote", DamlOptionalChain.Some(DamlOptionalChain.Some(new DamlText("deep"))))]);
-
-        WriteRecord(RestValueEncoder.ToWireRecord(record)).Should().Be("{\"nestedNote\":[[\"deep\"]]}");
-    }
 
     [Fact]
     public void WriteValue_rejects_a_flat_Optional_directly_carrying_another_Optional()
@@ -242,30 +214,42 @@ public class DamlLfJsonWriterTests
     [Fact]
     public void WriteValue_writes_a_GenMap_as_an_array_of_key_value_pairs()
     {
-        var genMap = new DamlGenMap([(new DamlParty("wiree3ed3454::1220141a"), new DamlInt64(7))]);
+        var genMap = GenMapOf((new Value { Party = "wiree3ed3454::1220141a" }, new Value { Int64 = "7" }));
 
-        Write(RestValueEncoder.ToWireValue(genMap)).Should().Be("[[\"wiree3ed3454::1220141a\",\"7\"]]");
+        Write(genMap).Should().Be("[[\"wiree3ed3454::1220141a\",\"7\"]]");
     }
 
     [Fact]
     public void WriteValue_writes_an_empty_GenMap_as_an_empty_array() =>
-        Write(RestValueEncoder.ToWireValue(new DamlGenMap([]))).Should().Be("[]");
+        Write(GenMapOf()).Should().Be("[]");
 
     [Fact]
     public void WriteValue_writes_a_GenMap_with_Int64_keys_in_entry_order()
     {
-        var genMap = new DamlGenMap([(new DamlInt64(2), new DamlText("two")), (new DamlInt64(1), new DamlText("one"))]);
+        var genMap = GenMapOf(
+            (new Value { Int64 = "2" }, new Value { Text = "two" }),
+            (new Value { Int64 = "1" }, new Value { Text = "one" }));
 
-        Write(RestValueEncoder.ToWireValue(genMap)).Should().Be("[[\"2\",\"two\"],[\"1\",\"one\"]]");
+        Write(genMap).Should().Be("[[\"2\",\"two\"],[\"1\",\"one\"]]");
     }
 
     [Fact]
     public void WriteValue_writes_a_GenMap_with_a_record_key_as_an_object_in_key_position()
     {
-        var key = new DamlRecord(null, [new DamlField("_1", new DamlText("a")), new DamlField("_2", new DamlInt64(1))]);
-        var genMap = new DamlGenMap([(key, DamlUnit.Instance)]);
+        var key = new Value
+        {
+            Record = new Record
+            {
+                Fields =
+                [
+                    new RecordField { Label = "_1", Value = new Value { Text = "a" } },
+                    new RecordField { Label = "_2", Value = new Value { Int64 = "1" } },
+                ],
+            },
+        };
+        var genMap = GenMapOf((key, new Value { Record = new Record { Fields = [] } }));
 
-        Write(RestValueEncoder.ToWireValue(genMap)).Should().Be("[[{\"_1\":\"a\",\"_2\":\"1\"},{}]]");
+        Write(genMap).Should().Be("[[{\"_1\":\"a\",\"_2\":\"1\"},{}]]");
     }
 
     [Fact]
@@ -410,7 +394,7 @@ public class DamlLfJsonWriterTests
             TemplateId = new Identifier { PackageId = "3557ff", ModuleName = "RichTypes", EntityName = "Marker" },
             ContractId = "00abcd",
             Choice = "Archive",
-            ChoiceArgument = RestValueEncoder.ToWireValue(DamlUnit.Instance),
+            ChoiceArgument = new Value { Record = new Record { Fields = [] } },
         };
 
         var json = JsonSerializer.Serialize(command, DamlLfOptions);
@@ -511,12 +495,11 @@ public class DamlLfJsonWriterTests
     private static Value Timestamp(long microsecondsSinceEpoch) =>
         new() { Timestamp = microsecondsSinceEpoch.ToString(System.Globalization.CultureInfo.InvariantCulture) };
 
-    private static Value UnitValue()
-    {
-        var value = new Value();
-        value.AdditionalProperties["unit"] = new object();
-        return value;
-    }
+    private static Value GenMapOf(params (Value Key, Value Value)[] entries) =>
+        new()
+        {
+            GenMap = new GenMap { Entries = [.. entries.Select(entry => new GenMap_Entry { Key = entry.Key, Value = entry.Value })] },
+        };
 
     private static string Write(Value value) => WriteThrough(writer => DamlLfJsonWriter.WriteValue(writer, value));
 

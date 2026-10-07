@@ -24,34 +24,34 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml interface RichTypes:Holding
 /// </summary>
 /// <remarks>
-/// Instance properties mirror the fields of the interface view <see cref="HoldingView"/>,
+/// Instance properties mirror the fields of the interface view <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.HoldingView"/>,
 /// which implements this marker, so a view can be read through a marker-typed variable.
 /// <c>==</c> between marker-typed variables compares by reference equality; view payloads
-/// materialize as concrete <see cref="HoldingView"/> values, whose record value equality
+/// materialize as concrete <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.HoldingView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IHolding : IDamlInterface, IHasView<HoldingView>, IHasChoices<IHolding>
+public interface IHolding : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Daml.Codegen.Testing.Conformance.RichTypes.HoldingView>, global::Daml.Runtime.Contracts.IHasChoices<IHolding>
 {
     /// <summary>Gets the interface identifier.</summary>
-    static Identifier IDamlInterface.InterfaceId => InterfaceId;
+    static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "Holding");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "RichTypes", "Holding");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "richtypes-hecd531570c32";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "richtypes-hf9ffaa5ee2ff";
 
     /// <summary>Gets the package version.</summary>
-    static Version IDamlInterface.PackageVersion => new(0, 0, 1);
+    static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "Holding"), DamlTypeKind.Interface, "richtypes-hecd531570c32");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "RichTypes", "Holding"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "richtypes-hf9ffaa5ee2ff");
 
-    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="HoldingView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static ViewDescriptor<IHolding, HoldingView> View { get; } = new();
+    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.HoldingView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
+    public static global::Daml.Runtime.Contracts.ViewDescriptor<IHolding, global::Daml.Codegen.Testing.Conformance.RichTypes.HoldingView> View { get; } = new();
 
     /// <summary>Gets the amount field of the interface view.</summary>
     decimal Amount { get; }
@@ -60,17 +60,17 @@ public interface IHolding : IDamlInterface, IHasView<HoldingView>, IHasChoices<I
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<IHolding, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IHolding, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -78,28 +78,42 @@ public interface IHolding : IDamlInterface, IHasView<HoldingView>, IHasChoices<I
     /// <summary>
     /// Exercise the Describe choice.
     /// </summary>
-    public static Choice<IHolding, Describe, string> ChoiceDescribe { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IHolding, global::Daml.Codegen.Testing.Conformance.RichTypes.Describe, string> ChoiceDescribe { get; } = new()
     {
-        Name = new ChoiceName("Describe"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Describe"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Describe.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => val.As<DamlText>().Value,
+        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Describe.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => val.As<global::Daml.Runtime.Data.DamlText>().Value,
         ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Describe.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(json, context),
+    };
+
+    /// <summary>
+    /// Exercise the Grade choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<IHolding, global::Daml.Codegen.Testing.Conformance.RichTypes.Grade, global::Daml.Codegen.Testing.Conformance.RichTypes.Suit> ChoiceGrade { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Grade"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Grade.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.FromDamlEnum(val.As<global::Daml.Runtime.Data.DamlEnum>()),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Grade.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>
     /// Exercise the Reissue choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<IHolding, Reissue, ContractId<IHolding>> ChoiceReissue { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IHolding, global::Daml.Codegen.Testing.Conformance.RichTypes.Reissue, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>> ChoiceReissue { get; } = new()
     {
-        Name = new ChoiceName("Reissue"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Reissue"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Reissue.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(val.As<DamlContractId>().Value),
+        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Reissue.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
         ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Reissue.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
@@ -107,19 +121,19 @@ public interface IHolding : IDamlInterface, IHasView<HoldingView>, IHasChoices<I
     /// <summary>
     /// Exercise the Split choice.
     /// </summary>
-    public static Choice<IHolding, Split, IReadOnlyList<ContractId<IHolding>>> ChoiceSplit { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<IHolding, global::Daml.Codegen.Testing.Conformance.RichTypes.Split, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>> ChoiceSplit { get; } = new()
     {
-        Name = new ChoiceName("Split"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Split"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Split.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => (IReadOnlyList<ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>)val.As<DamlList>().Values.Select(x => new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(x.As<DamlContractId>().Value)).ToList(),
+        ArgumentDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Split.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>)val.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
         ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Split.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    static IReadOnlyList<IChoice> IHasChoices<IHolding>.Choices { get; } = [ChoiceArchive, ChoiceDescribe, ChoiceReissue, ChoiceSplit];
+    static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IHolding>.Choices { get; } = [ChoiceArchive, ChoiceDescribe, ChoiceGrade, ChoiceReissue, ChoiceSplit];
 
 }
 
@@ -144,11 +158,11 @@ public static class IHoldingExtensions
     /// ledger API resolves the concrete implementing template at the participant.
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<IHolding> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return ExerciseCommand.For<IHolding>(contractId, new ChoiceName("Archive"), DamlRecord.Create());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -165,17 +179,17 @@ public static class IHoldingExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<IHolding> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -191,13 +205,13 @@ public static class IHoldingExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand DescribeCommand(
-        this ContractId<IHolding> contractId,
-        Describe argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand DescribeCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Describe argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<IHolding>(contractId, new ChoiceName("Describe"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Describe"), argument.ToRecord());
     }
 
     /// <summary>
@@ -215,18 +229,18 @@ public static class IHoldingExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<string>> TryDescribeAsync(
-        this ContractId<IHolding> contractId,
-        ILedgerWriter client,
-        Describe argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<string>> TryDescribeAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Describe argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.DescribeCommand(argument);
 
@@ -236,19 +250,70 @@ public static class IHoldingExtensions
     }
 
     /// <summary>
+    /// Builds the interface-typed <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the <c>Grade</c> choice on this contract id.
+    /// The wire-level <c>template_id</c> slot carries the interface id — Canton's
+    /// ledger API resolves the concrete implementing template at the participant.
+    /// </summary>
+    /// <param name="contractId">The interface-typed contract id to exercise on.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand GradeCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Grade argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Grade"), argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the <c>Grade</c> interface choice on this contract id, submitting the
+    /// resulting <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> through
+    /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
+    /// and decoding the committed result through <c>ChoiceGrade.ResultDecoder</c>.
+    /// </summary>
+    /// <param name="contractId">The interface-typed contract id to exercise on.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit>> TryGradeAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Grade argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.GradeCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectGradeResult(tx, contractId.Value));
+    }
+
+    /// <summary>
     /// Builds the interface-typed <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the <c>Reissue</c> choice on this contract id.
     /// The wire-level <c>template_id</c> slot carries the interface id — Canton's
     /// ledger API resolves the concrete implementing template at the participant.
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReissueCommand(
-        this ContractId<IHolding> contractId,
-        Reissue argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReissueCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Reissue argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<IHolding>(contractId, new ChoiceName("Reissue"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Reissue"), argument.ToRecord());
     }
 
     /// <summary>
@@ -266,18 +331,18 @@ public static class IHoldingExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<ContractId<IHolding>>> TryReissueAsync(
-        this ContractId<IHolding> contractId,
-        ILedgerWriter client,
-        Reissue argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>> TryReissueAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Reissue argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReissueCommand(argument);
 
@@ -293,13 +358,13 @@ public static class IHoldingExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand SplitCommand(
-        this ContractId<IHolding> contractId,
-        Split argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand SplitCommand(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Split argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<IHolding>(contractId, new ChoiceName("Split"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Split"), argument.ToRecord());
     }
 
     /// <summary>
@@ -317,18 +382,18 @@ public static class IHoldingExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<IReadOnlyList<ContractId<IHolding>>>> TrySplitAsync(
-        this ContractId<IHolding> contractId,
-        ILedgerWriter client,
-        Split argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>>> TrySplitAsync(
+        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Split argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.SplitCommand(argument);
 
@@ -337,123 +402,18 @@ public static class IHoldingExtensions
         return outcome.ProjectCommitted(tx => ProjectSplitResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IHolding.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IHolding.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IHolding.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IHolding.ChoiceArchive, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<string> ProjectDescribeResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IHolding.ChoiceDescribe, contractId);
 
-    private static ExerciseOutcome<string> ProjectDescribeResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IHolding.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IHolding.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Describe", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IHolding.ChoiceDescribe.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<string>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<string>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit> ProjectGradeResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IHolding.ChoiceGrade, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Describe' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>> ProjectReissueResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IHolding.ChoiceReissue, contractId);
 
-    private static ExerciseOutcome<ContractId<IHolding>> ProjectReissueResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IHolding.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IHolding.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Reissue", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IHolding.ChoiceReissue.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<ContractId<IHolding>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<ContractId<IHolding>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Reissue' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<IReadOnlyList<ContractId<IHolding>>> ProjectSplitResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, IHolding.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, IHolding.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Split", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = IHolding.ChoiceSplit.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<IReadOnlyList<ContractId<IHolding>>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<IReadOnlyList<ContractId<IHolding>>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Split' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>> ProjectSplitResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(IHolding.ChoiceSplit, contractId);
 }

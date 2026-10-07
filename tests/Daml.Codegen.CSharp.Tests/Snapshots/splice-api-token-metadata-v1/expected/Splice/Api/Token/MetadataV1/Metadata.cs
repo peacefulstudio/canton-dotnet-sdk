@@ -16,17 +16,17 @@ namespace Splice.Api.Token.MetadataV1;
 /// Generated from Daml record Metadata
 /// </summary>
 public sealed record Metadata(
-    IReadOnlyDictionary<string, string> Values
-) : IDamlRecord<Metadata>
+    global::System.Collections.Generic.IReadOnlyDictionary<string, string> Values
+) : global::Daml.Runtime.Data.IDamlRecord<Metadata>
 {
-    private readonly IReadOnlyDictionary<string, string> _values = DamlFieldCollections.Copy(Values);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, string> _values = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Values);
 
     /// <summary>The Daml field <c>values</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("values")]
-    public IReadOnlyDictionary<string, string> Values
+    [global::Daml.Runtime.Data.DamlFieldAttribute("values")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<string, string> Values
     {
         get => _values;
-        init => _values = DamlFieldCollections.Copy(value);
+        init => _values = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -34,33 +34,33 @@ public sealed record Metadata(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(Metadata? other) =>
         other is not null
-        && DamlFieldCollections.Equal(Values, other.Values);
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Values, other.Values);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(Values));
+        var hash = new global::System.HashCode();
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Values));
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("values", new DamlTextMap(Values.ToDictionary(kv => kv.Key, kv => (DamlValue)new DamlText(kv.Value))))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("values", new global::Daml.Runtime.Data.DamlTextMap(Values.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(kv.Value))))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Metadata FromRecord(DamlRecord record) => new Metadata(
-        Values: (IReadOnlyDictionary<string, string>)record.GetRequiredField("values").As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlText>().Value)
+    public static Metadata FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Metadata(
+        Values: (global::System.Collections.Generic.IReadOnlyDictionary<string, string>)record.GetRequiredField("values").As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("values", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "values"), context.Field("values"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("values", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "values"), context.Field("values"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
         );
     }
 

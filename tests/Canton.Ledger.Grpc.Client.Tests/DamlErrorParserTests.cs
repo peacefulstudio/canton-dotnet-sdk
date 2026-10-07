@@ -30,7 +30,7 @@ public class DamlErrorParserTests
     [InlineData("InvalidGivenCurrentSystemStateOther", DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
     [InlineData("InvalidGivenCurrentSystemStateResourceExists", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
     [InlineData("InvalidGivenCurrentSystemStateResourceMissing", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing)]
-    [InlineData("InvalidGivenCurrentSystemStateSeekDifferentResource", DamlErrorCategory.InvalidGivenCurrentSystemStateSeekDifferentResource)]
+    [InlineData("InvalidGivenCurrentSystemStateSeekAfterEnd", DamlErrorCategory.InvalidGivenCurrentSystemStateSeekAfterEnd)]
     [InlineData("BackgroundProcessDegradationWarning", DamlErrorCategory.BackgroundProcessDegradationWarning)]
     [InlineData("InternalUnsupportedOperation", DamlErrorCategory.InternalUnsupportedOperation)]
     public void Parse_maps_known_category_to_enum(string raw, DamlErrorCategory expected)
@@ -56,7 +56,7 @@ public class DamlErrorParserTests
     [InlineData("9", DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
     [InlineData("10", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
     [InlineData("11", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing)]
-    [InlineData("12", DamlErrorCategory.InvalidGivenCurrentSystemStateSeekDifferentResource)]
+    [InlineData("12", DamlErrorCategory.InvalidGivenCurrentSystemStateSeekAfterEnd)]
     [InlineData("13", DamlErrorCategory.BackgroundProcessDegradationWarning)]
     [InlineData("14", DamlErrorCategory.InternalUnsupportedOperation)]
     public void Parse_maps_documented_numeric_category_ids_to_enum(string wireCategoryId, DamlErrorCategory expected)

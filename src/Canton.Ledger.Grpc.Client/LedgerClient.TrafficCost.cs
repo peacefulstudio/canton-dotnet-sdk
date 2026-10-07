@@ -3,6 +3,8 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
+using Daml.Ledger.Abstractions;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Interactive = Com.Daml.Ledger.Api.V2.Interactive;
@@ -19,11 +21,12 @@ internal sealed partial class LedgerClient
     /// <see langword="null"/> the call carries no deadline. The estimated total is tagged onto the
     /// call's activity as <c>canton.traffic_cost_bytes</c>.
     /// </remarks>
-    /// <exception cref="RpcException">The participant rejected or failed the request.</exception>
-    /// <exception cref="InvalidOperationException">
-    /// A reported cost exceeded <see cref="long.MaxValue"/>. Unreachable for any real participant — that
-    /// is over nine exabytes of traffic for one transaction — so it signals a corrupt or hostile
-    /// response rather than an expensive submission; the message names the offending value.
+    /// <exception cref="LedgerOperationException">
+    /// The participant rejected or failed the request, or answered with a cost estimate that cannot be
+    /// read: a cost above <see cref="long.MaxValue"/> (over nine exabytes for one transaction, so a corrupt
+    /// or hostile response rather than an expensive submission) or an out-of-range estimation timestamp.
+    /// The latter two carry <c>UndecodableBody</c> and a <see cref="MalformedResponseException"/> naming the
+    /// offending value.
     /// </exception>
     public Task<TrafficCostEstimate?> EstimateTrafficCostAsync(
         RuntimeCommands.CommandsSubmission submission,
@@ -33,6 +36,7 @@ internal sealed partial class LedgerClient
         var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: true);
 
         return _invoker.ExecuteTracedAsync<LedgerClient, TrafficCostEstimate?>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "PrepareSubmission",
@@ -59,7 +63,7 @@ internal sealed partial class LedgerClient
         estimation is null
             ? null
             : new TrafficCostEstimate(
-                estimation.EstimationTimestamp?.ToDateTimeOffset(),
+                MalformedResponse.Decoding(estimation.EstimationTimestamp, timestamp => timestamp?.ToDateTimeOffset()),
                 ToSignedCost(estimation.ConfirmationRequestTrafficCostEstimation, "confirmation request"),
                 ToSignedCost(estimation.ConfirmationResponseTrafficCostEstimation, "confirmation response"),
                 ToSignedCost(estimation.TotalTrafficCostEstimation, "total"));
@@ -67,8 +71,8 @@ internal sealed partial class LedgerClient
     private static long ToSignedCost(ulong reportedCost, string component) =>
         reportedCost <= long.MaxValue
             ? (long)reportedCost
-            : throw new InvalidOperationException(
-                $"The participant reports a {component} traffic cost of {reportedCost} bytes, which exceeds the supported maximum of {long.MaxValue}.");
+            : throw MalformedResponse.WithDetail(
+                $"the participant reports a {component} traffic cost of {reportedCost} bytes, which exceeds the supported maximum of {long.MaxValue}.");
 
     private Interactive.PrepareSubmissionRequest BuildPrepareSubmissionRequest(
         RuntimeCommands.CommandsSubmission submission,

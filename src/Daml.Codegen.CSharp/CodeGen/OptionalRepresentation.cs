@@ -34,7 +34,7 @@ internal static class OptionalRepresentation
     /// An Optional is passed as a type argument to a generic whose declaration wraps that
     /// same type parameter in an Optional.
     /// </exception>
-    public static DamlType Rewrite(DamlType type, DamlPackage localPackage, ICrossPackageResolver resolver)
+    public static DamlType Rewrite(DamlType type, DamlPackage localPackage, DarCrossPackageResolver resolver)
     {
         ArgumentNullException.ThrowIfNull(type);
         ArgumentNullException.ThrowIfNull(localPackage);
@@ -45,7 +45,7 @@ internal static class OptionalRepresentation
     private static DamlType Rewrite(
         DamlType type,
         DamlPackage localPackage,
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         OptionalEncoding? required,
         bool parentIsOptional,
         int depth)
@@ -81,7 +81,7 @@ internal static class OptionalRepresentation
     /// </summary>
     private sealed class RewriteVisitor(
         DamlPackage localPackage,
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         OptionalEncoding? required,
         bool parentIsOptional,
         int depth) : IDamlTypeVisitor<DamlType>
@@ -173,7 +173,7 @@ internal static class OptionalRepresentation
         DamlType key,
         DamlType value,
         DamlPackage localPackage,
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         int depth) =>
     [
         Rewrite(key, localPackage, resolver, OptionalEncoding.Flat, parentIsOptional: false, depth + 1),
@@ -195,7 +195,7 @@ internal static class OptionalRepresentation
         DamlType argument,
         int index,
         DamlPackage localPackage,
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         int depth)
     {
         if (IsOptional(argument)
@@ -222,7 +222,7 @@ internal static class OptionalRepresentation
     /// recursive data type terminates.
     /// </summary>
     private static string? OptionalWrappedParameter(
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         DamlPackage referringPackage,
         DamlTypeRef typeRef,
         int index,
@@ -250,7 +250,7 @@ internal static class OptionalRepresentation
     }
 
     private static DamlPackage? DeclaringPackage(
-        ICrossPackageResolver resolver, DamlPackage referringPackage, DamlTypeRef typeRef) =>
+        DarCrossPackageResolver resolver, DamlPackage referringPackage, DamlTypeRef typeRef) =>
         string.IsNullOrEmpty(typeRef.PackageId) || typeRef.PackageId == referringPackage.PackageId
             ? referringPackage
             : resolver.LookupPackage(typeRef.PackageId);
@@ -273,7 +273,7 @@ internal static class OptionalRepresentation
     /// <see cref="ParameterWrapVisitor"/>.
     /// </summary>
     private static bool WrapsParameterInOptional(
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         DamlPackage declaringPackage,
         DamlType declaredType,
         string parameter,
@@ -286,7 +286,7 @@ internal static class OptionalRepresentation
     /// through its slots, and the remaining constructors answer through their children.
     /// </summary>
     private sealed class ParameterWrapVisitor(
-        ICrossPackageResolver resolver,
+        DarCrossPackageResolver resolver,
         DamlPackage declaringPackage,
         string parameter,
         HashSet<string> visited) : IDamlTypeVisitor<bool>

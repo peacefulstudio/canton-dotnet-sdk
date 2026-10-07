@@ -50,6 +50,7 @@ public class RuntimeTypeNameDriftGuardTests
 
     [Theory]
     [InlineData("DA.Date.Types", "DayOfWeek")]
+    [InlineData("DA.Date.Types", "Month")]
     [InlineData("DA.Time.Types", "RelTime")]
     [InlineData("DA.Types", "Tuple2")]
     [InlineData("DA.Types", "Tuple3")]

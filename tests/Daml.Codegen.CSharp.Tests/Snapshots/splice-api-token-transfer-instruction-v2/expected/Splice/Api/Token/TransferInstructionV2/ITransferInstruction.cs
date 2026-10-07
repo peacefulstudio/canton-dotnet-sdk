@@ -24,46 +24,46 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml interface Splice.Api.Token.TransferInstructionV2:TransferInstruction
 /// </summary>
 /// <remarks>
-/// Instance properties mirror the fields of the interface view <see cref="TransferInstructionView"/>,
+/// Instance properties mirror the fields of the interface view <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView"/>,
 /// which implements this marker, so a view can be read through a marker-typed variable.
 /// <c>==</c> between marker-typed variables compares by reference equality; view payloads
-/// materialize as concrete <see cref="TransferInstructionView"/> values, whose record value equality
+/// materialize as concrete <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface ITransferInstruction : IDamlInterface, IHasView<TransferInstructionView>, IHasChoices<ITransferInstruction>
+public interface ITransferInstruction : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView>, global::Daml.Runtime.Contracts.IHasChoices<ITransferInstruction>
 {
     /// <summary>Gets the interface identifier.</summary>
-    static Identifier IDamlInterface.InterfaceId => InterfaceId;
+    static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new Identifier InterfaceId { get; } = new("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferInstruction");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferInstruction");
 
     /// <summary>Gets the package ID.</summary>
-    static string IDamlInterface.PackageId => "29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099";
 
     /// <summary>Gets the package name.</summary>
-    static string IDamlInterface.PackageName => "splice-api-token-transfer-instruction-v2";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "splice-api-token-transfer-instruction-v2";
 
     /// <summary>Gets the package version.</summary>
-    static Version IDamlInterface.PackageVersion => new(1, 0, 0);
+    static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(1, 0, 0);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new Identifier("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferInstruction"), DamlTypeKind.Interface, "splice-api-token-transfer-instruction-v2");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("29317e3b7b165d2bbf16721bcca0ec4869e53eddb2738bddf790d61af28e0099", "Splice.Api.Token.TransferInstructionV2", "TransferInstruction"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "splice-api-token-transfer-instruction-v2");
 
-    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="TransferInstructionView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static ViewDescriptor<ITransferInstruction, TransferInstructionView> View { get; } = new();
+    /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
+    public static global::Daml.Runtime.Contracts.ViewDescriptor<ITransferInstruction, global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView> View { get; } = new();
 
     /// <summary>Gets the originalInstructionCid field of the interface view.</summary>
-    ContractId<ITransferInstruction>? OriginalInstructionCid { get; }
+    global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>? OriginalInstructionCid { get; }
 
     /// <summary>Gets the transfer field of the interface view.</summary>
-    Transfer Transfer { get; }
+    global::Splice.Api.Token.TransferInstructionV2.Transfer Transfer { get; }
 
     /// <summary>Gets the expiresAt field of the interface view.</summary>
-    DateTimeOffset? ExpiresAt { get; }
+    global::System.DateTimeOffset? ExpiresAt { get; }
 
     /// <summary>Gets the availableActions field of the interface view.</summary>
-    IReadOnlyDictionary<TransferInstructionAction, IReadOnlyList<IReadOnlyList<Party>>> AvailableActions { get; }
+    global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> AvailableActions { get; }
 
     /// <summary>Gets the meta field of the interface view.</summary>
     global::Splice.Api.Token.MetadataV1.Metadata Meta { get; }
@@ -72,17 +72,17 @@ public interface ITransferInstruction : IDamlInterface, IHasView<TransferInstruc
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<ITransferInstruction, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -90,13 +90,13 @@ public interface ITransferInstruction : IDamlInterface, IHasView<TransferInstruc
     /// <summary>
     /// Exercise the TransferInstruction_Accept choice.
     /// </summary>
-    public static Choice<ITransferInstruction, TransferInstruction_Accept, TransferInstructionResult> ChoiceTransferInstruction_Accept { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Accept, global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ChoiceTransferInstruction_Accept { get; } = new()
     {
-        Name = new ChoiceName("TransferInstruction_Accept"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("TransferInstruction_Accept"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Accept.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Accept.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Accept.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.__ReadDamlLfJson(json, context),
     };
@@ -104,13 +104,13 @@ public interface ITransferInstruction : IDamlInterface, IHasView<TransferInstruc
     /// <summary>
     /// Exercise the TransferInstruction_Reject choice.
     /// </summary>
-    public static Choice<ITransferInstruction, TransferInstruction_Reject, TransferInstructionResult> ChoiceTransferInstruction_Reject { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Reject, global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ChoiceTransferInstruction_Reject { get; } = new()
     {
-        Name = new ChoiceName("TransferInstruction_Reject"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("TransferInstruction_Reject"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Reject.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Reject.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Reject.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.__ReadDamlLfJson(json, context),
     };
@@ -118,19 +118,19 @@ public interface ITransferInstruction : IDamlInterface, IHasView<TransferInstruc
     /// <summary>
     /// Exercise the TransferInstruction_Withdraw choice.
     /// </summary>
-    public static Choice<ITransferInstruction, TransferInstruction_Withdraw, TransferInstructionResult> ChoiceTransferInstruction_Withdraw { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Withdraw, global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ChoiceTransferInstruction_Withdraw { get; } = new()
     {
-        Name = new ChoiceName("TransferInstruction_Withdraw"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("TransferInstruction_Withdraw"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Withdraw.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<DamlRecord>()),
+        ArgumentDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Withdraw.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
         ArgumentJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Withdraw.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    static IReadOnlyList<IChoice> IHasChoices<ITransferInstruction>.Choices { get; } = [ChoiceArchive, ChoiceTransferInstruction_Accept, ChoiceTransferInstruction_Reject, ChoiceTransferInstruction_Withdraw];
+    static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<ITransferInstruction>.Choices { get; } = [ChoiceArchive, ChoiceTransferInstruction_Accept, ChoiceTransferInstruction_Reject, ChoiceTransferInstruction_Withdraw];
 
 }
 
@@ -155,11 +155,11 @@ public static class ITransferInstructionExtensions
     /// ledger API resolves the concrete implementing template at the participant.
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<ITransferInstruction> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return ExerciseCommand.For<ITransferInstruction>(contractId, new ChoiceName("Archive"), DamlRecord.Create());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -176,17 +176,17 @@ public static class ITransferInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<ITransferInstruction> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -202,13 +202,13 @@ public static class ITransferInstructionExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand TransferInstruction_AcceptCommand(
-        this ContractId<ITransferInstruction> contractId,
-        TransferInstruction_Accept argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand TransferInstruction_AcceptCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Accept argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<ITransferInstruction>(contractId, new ChoiceName("TransferInstruction_Accept"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("TransferInstruction_Accept"), argument.ToRecord());
     }
 
     /// <summary>
@@ -226,18 +226,18 @@ public static class ITransferInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<TransferInstructionResult>> TryTransferInstruction_AcceptAsync(
-        this ContractId<ITransferInstruction> contractId,
-        ILedgerWriter client,
-        TransferInstruction_Accept argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult>> TryTransferInstruction_AcceptAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Accept argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.TransferInstruction_AcceptCommand(argument);
 
@@ -253,13 +253,13 @@ public static class ITransferInstructionExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand TransferInstruction_RejectCommand(
-        this ContractId<ITransferInstruction> contractId,
-        TransferInstruction_Reject argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand TransferInstruction_RejectCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Reject argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<ITransferInstruction>(contractId, new ChoiceName("TransferInstruction_Reject"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("TransferInstruction_Reject"), argument.ToRecord());
     }
 
     /// <summary>
@@ -277,18 +277,18 @@ public static class ITransferInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<TransferInstructionResult>> TryTransferInstruction_RejectAsync(
-        this ContractId<ITransferInstruction> contractId,
-        ILedgerWriter client,
-        TransferInstruction_Reject argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult>> TryTransferInstruction_RejectAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Reject argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.TransferInstruction_RejectCommand(argument);
 
@@ -304,13 +304,13 @@ public static class ITransferInstructionExtensions
     /// </summary>
     /// <param name="contractId">The interface-typed contract id to exercise on.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand TransferInstruction_WithdrawCommand(
-        this ContractId<ITransferInstruction> contractId,
-        TransferInstruction_Withdraw argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand TransferInstruction_WithdrawCommand(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Withdraw argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return ExerciseCommand.For<ITransferInstruction>(contractId, new ChoiceName("TransferInstruction_Withdraw"), argument.ToRecord());
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("TransferInstruction_Withdraw"), argument.ToRecord());
     }
 
     /// <summary>
@@ -328,18 +328,18 @@ public static class ITransferInstructionExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<TransferInstructionResult>> TryTransferInstruction_WithdrawAsync(
-        this ContractId<ITransferInstruction> contractId,
-        ILedgerWriter client,
-        TransferInstruction_Withdraw argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult>> TryTransferInstruction_WithdrawAsync(
+        this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Api.Token.TransferInstructionV2.TransferInstruction_Withdraw argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.TransferInstruction_WithdrawCommand(argument);
 
@@ -348,123 +348,15 @@ public static class ITransferInstructionExtensions
         return outcome.ProjectCommitted(tx => ProjectTransferInstruction_WithdrawResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferInstruction.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferInstruction.ChoiceArchive, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ProjectTransferInstruction_AcceptResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferInstruction.ChoiceTransferInstruction_Accept, contractId);
 
-    private static ExerciseOutcome<TransferInstructionResult> ProjectTransferInstruction_AcceptResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "TransferInstruction_Accept", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferInstruction.ChoiceTransferInstruction_Accept.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<TransferInstructionResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<TransferInstructionResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ProjectTransferInstruction_RejectResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferInstruction.ChoiceTransferInstruction_Reject, contractId);
 
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'TransferInstruction_Accept' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<TransferInstructionResult> ProjectTransferInstruction_RejectResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "TransferInstruction_Reject", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferInstruction.ChoiceTransferInstruction_Reject.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<TransferInstructionResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<TransferInstructionResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'TransferInstruction_Reject' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<TransferInstructionResult> ProjectTransferInstruction_WithdrawResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (exercised.InterfaceId is { } interfaceId
-                && string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.ModuleName, ITransferInstruction.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)
-                && string.Equals(interfaceId.EntityName, ITransferInstruction.InterfaceId.EntityName, global::System.StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "TransferInstruction_Withdraw", global::System.StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = ITransferInstruction.ChoiceTransferInstruction_Withdraw.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<TransferInstructionResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<TransferInstructionResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new global::System.InvalidOperationException(
-            $"Submission succeeded but no 'TransferInstruction_Withdraw' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult> ProjectTransferInstruction_WithdrawResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(ITransferInstruction.ChoiceTransferInstruction_Withdraw, contractId);
 }

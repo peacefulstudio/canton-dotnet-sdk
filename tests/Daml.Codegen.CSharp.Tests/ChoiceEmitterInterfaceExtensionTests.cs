@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.EmittedSubmissionShape;
@@ -14,15 +15,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterInterfaceExtensionTests
 {
     private const string LocalPackageId = "pkg-id";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package() =>
         new()
@@ -48,8 +40,9 @@ public class ChoiceEmitterInterfaceExtensionTests
 
     private static ChoiceEmitter Emitter()
     {
-        var context = PackageEmitContext.ForPackage(Package(), new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(Package(), new CodeGenOptions { NamespacePrefix = "Test.Package" });
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         return new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
     }
 
@@ -76,9 +69,9 @@ public class ChoiceEmitterInterfaceExtensionTests
             Choice("Freeze", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
         output.Should().Contain("public static class IAssetExtensions");
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(");
-        output.Should().Contain("public static async Task<ExerciseOutcome<DamlUnit>> TryFreezeAsync(");
-        output.Should().Contain("this ContractId<IAsset> contractId,");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryTransferAsync(");
+        output.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryFreezeAsync(");
+        output.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<IAsset> contractId,");
     }
 
     [Fact]
@@ -87,16 +80,16 @@ public class ChoiceEmitterInterfaceExtensionTests
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
         output.Should().Contain(
-            "public static async Task<ExerciseOutcome<DamlUnit>> TryTransferAsync(\n"
-            + "        this ContractId<IAsset> contractId,\n"
-            + "        ILedgerWriter client,\n"
-            + "        SubmitterInfo submitter,");
+            "public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryTransferAsync(\n"
+            + "        this global::Daml.Runtime.Contracts.ContractId<IAsset> contractId,\n"
+            + "        global::Daml.Ledger.Abstractions.ILedgerWriter client,\n"
+            + "        global::Daml.Runtime.Commands.SubmitterInfo submitter,");
         output.Should().Contain("var outcome = await client." + TrySubmitSingleArgumentOrder + ".ConfigureAwait(false);");
         output.Should().Contain("return outcome.ProjectCommitted(tx => ProjectTransferResult(tx, contractId.Value));");
     }
 
     [Fact]
-    public void ChoiceEmitterInterfaceExtension_emits_a_private_projector_per_choice_that_decodes_through_the_choice_descriptor()
+    public void ChoiceEmitterInterfaceExtension_emits_a_private_projector_per_choice_that_hands_the_choice_descriptor_to_the_runtime()
     {
         var textReturningChoice = new DamlChoice
         {
@@ -109,20 +102,9 @@ public class ChoiceEmitterInterfaceExtensionTests
         };
         var output = EmitExtensions(Interface(textReturningChoice));
 
-        output.Should().Contain("private static ExerciseOutcome<string> ProjectTransferResult(TransactionResult tx, string contractId)");
-        output.Should().Contain("if (exercised.InterfaceId is { } interfaceId");
-        output.Should().Contain("&& string.Equals(interfaceId.ModuleName, IAsset.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)");
-        output.Should().Contain("&& string.Equals(interfaceId.EntityName, IAsset.InterfaceId.EntityName, global::System.StringComparison.Ordinal)");
-        output.Should().Contain("&& string.Equals(exercised.ChoiceName.Value, \"Transfer\", global::System.StringComparison.Ordinal))");
-        output.Should().Contain("var decoded = IAsset.ChoiceTransfer.ResultDecoder!(exercised.ExerciseResult);");
-        output.Should().Contain("return new ExerciseOutcome<string>.One(decoded);");
-        output.Should().Contain("catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)");
-        output.Should().Contain("return new ExerciseOutcome<string>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);");
-        output.Should().Contain("throw new global::System.InvalidOperationException(");
-        output.Should().Contain("no 'Transfer' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}");
-        output.Should().Contain("Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, ");
-        output.Should().Contain("or the transaction was requested in a shape without exercised events (ACS_DELTA); ");
-        output.Should().Contain("request the LEDGER_EFFECTS shape with verbose events.");
+        output.Should().Contain("private static global::Daml.Runtime.Outcomes.ExerciseOutcome<string> ProjectTransferResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId)");
+        output.Should().Contain("tx.ProjectChoiceResult(IAsset.ChoiceTransfer, contractId);");
+        output.Should().NotContain("tx.ExercisedEvents");
     }
 
     [Fact]
@@ -130,7 +112,7 @@ public class ChoiceEmitterInterfaceExtensionTests
     {
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        output.Should().Contain("ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Transfer\"), DamlUnit.Instance)");
+        output.Should().Contain("global::Daml.Runtime.Commands.ExerciseCommand.For<IAsset>(contractId, new global::Daml.Runtime.Commands.ChoiceName(\"Transfer\"), global::Daml.Runtime.Data.DamlUnit.Instance)");
     }
 
     [Fact]
@@ -147,9 +129,9 @@ public class ChoiceEmitterInterfaceExtensionTests
         output.Should().Contain("CommandId? commandId = null,");
         output.Should().Contain(TrySubmitSingleArgumentOrder);
 
-        var idxWorkflowId = output.IndexOf("string? workflowId = null,", StringComparison.Ordinal);
-        var idxCommandId = output.IndexOf("CommandId? commandId = null,", StringComparison.Ordinal);
-        var idxCancellationToken = output.IndexOf("CancellationToken cancellationToken = default)", StringComparison.Ordinal);
+        var idxWorkflowId = output.IndexOf("string? workflowId = null,", global::System.StringComparison.Ordinal);
+        var idxCommandId = output.IndexOf("CommandId? commandId = null,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = output.IndexOf("global::System.Threading.CancellationToken cancellationToken = default)", global::System.StringComparison.Ordinal);
         idxWorkflowId.Should().BeLessThan(idxCommandId);
         idxCommandId.Should().BeLessThan(idxCancellationToken);
     }
@@ -159,12 +141,12 @@ public class ChoiceEmitterInterfaceExtensionTests
     {
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        output.Should().Contain("TimeSpan? timeout = null,");
+        output.Should().Contain("global::System.TimeSpan? timeout = null,");
         output.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
-        var idxCommandId = output.IndexOf("CommandId? commandId = null,", StringComparison.Ordinal);
-        var idxTimeout = output.IndexOf("TimeSpan? timeout = null,", StringComparison.Ordinal);
-        var idxCancellationToken = output.IndexOf("CancellationToken cancellationToken = default)", StringComparison.Ordinal);
+        var idxCommandId = output.IndexOf("CommandId? commandId = null,", global::System.StringComparison.Ordinal);
+        var idxTimeout = output.IndexOf("global::System.TimeSpan? timeout = null,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = output.IndexOf("global::System.Threading.CancellationToken cancellationToken = default)", global::System.StringComparison.Ordinal);
         idxCommandId.Should().BeLessThan(idxTimeout);
         idxTimeout.Should().BeLessThan(idxCancellationToken);
     }
@@ -174,9 +156,9 @@ public class ChoiceEmitterInterfaceExtensionTests
     {
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        output.Should().Contain("public static ExerciseCommand TransferCommand(");
-        output.Should().Contain("this ContractId<IAsset> contractId)");
-        output.Should().Contain("return ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Transfer\"), DamlUnit.Instance);");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand TransferCommand(");
+        output.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<IAsset> contractId)");
+        output.Should().Contain("return global::Daml.Runtime.Commands.ExerciseCommand.For<IAsset>(contractId, new global::Daml.Runtime.Commands.ChoiceName(\"Transfer\"), global::Daml.Runtime.Data.DamlUnit.Instance);");
     }
 
     [Fact]
@@ -186,7 +168,7 @@ public class ChoiceEmitterInterfaceExtensionTests
 
         output.Should().Contain("var command = contractId.TransferCommand();");
         output.Should().Contain("client." + TrySubmitSingleArgumentOrder);
-        output.Should().NotContain("var command = ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Transfer\")");
+        output.Should().NotContain("var command = global::Daml.Runtime.Commands.ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Transfer\")");
     }
 
     [Fact]
@@ -194,10 +176,10 @@ public class ChoiceEmitterInterfaceExtensionTests
     {
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlTypeRef(LocalPackageId, "Main", "TransferArg"))));
 
-        output.Should().Contain("public static ExerciseCommand TransferCommand(");
-        output.Should().Contain("this ContractId<IAsset> contractId,");
-        output.Should().Contain("TransferArg argument)");
-        output.Should().Contain("return ExerciseCommand.For<IAsset>(contractId, new ChoiceName(\"Transfer\"), argument.ToRecord());");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand TransferCommand(");
+        output.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<IAsset> contractId,");
+        output.Should().Contain("global::Test.Package.Main.TransferArg argument)");
+        output.Should().Contain("return global::Daml.Runtime.Commands.ExerciseCommand.For<IAsset>(contractId, new global::Daml.Runtime.Commands.ChoiceName(\"Transfer\"), argument.ToRecord());");
         output.Should().Contain("var command = contractId.TransferCommand(argument);");
     }
 
@@ -206,7 +188,7 @@ public class ChoiceEmitterInterfaceExtensionTests
     {
         var output = EmitExtensions(Interface(Choice("Transfer", new DamlPrimitiveType(DamlPrimitive.Unit))));
 
-        output.Should().MatchRegex(@"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        output.Should().MatchRegex(@"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
         Regex.Matches(output, Regex.Escape(ConfigureParameter)).Should().HaveCount(1);
     }
 

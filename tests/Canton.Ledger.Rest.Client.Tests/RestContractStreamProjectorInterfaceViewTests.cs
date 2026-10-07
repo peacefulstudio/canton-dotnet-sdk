@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Net;
 using System.Text.Json;
@@ -21,6 +22,14 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestContractStreamProjectorInterfaceViewTests
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TemplateMarker>();
+        GeneratedTypeReaders.ForRecord<ImplementingTemplateMarker>();
+        GeneratedTypeReaders.ForKey<ImplementingTemplateMarker, AccountKey>();
+    }
+
     private sealed record TemplateMarker(
         [property: DamlFieldAttribute("amount")] string Amount) : ITemplate, IDamlRecord<TemplateMarker>
     {

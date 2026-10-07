@@ -23,14 +23,14 @@ namespace Iou;
 /// Generated from Daml template Iou:Iou
 /// </summary>
 public sealed partial record Iou(
-    [property: DamlFieldAttribute("issuer")] Party Issuer,
-    [property: DamlFieldAttribute("owner")] Party Owner,
-    [property: DamlFieldAttribute("currency")] string Currency,
-    [property: DamlFieldAttribute("amount")] decimal Amount
-) : ITemplate, IHasChoices<Iou>, IDamlRecord<Iou>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("issuer")] global::Daml.Runtime.Data.Party Issuer,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("currency")] string Currency,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Iou>, global::Daml.Runtime.Data.IDamlRecord<Iou>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("61d1c8472218a119a9e73167b9e9af82bfed91bf5ae5a89a82da27c10ea7f763", "Iou", "Iou");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("61d1c8472218a119a9e73167b9e9af82bfed91bf5ae5a89a82da27c10ea7f763", "Iou", "Iou");
 
     /// <summary>Gets the package ID.</summary>
     public static string PackageId => "61d1c8472218a119a9e73167b9e9af82bfed91bf5ae5a89a82da27c10ea7f763";
@@ -39,37 +39,37 @@ public sealed partial record Iou(
     public static string PackageName => "quickstart";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("issuer", Issuer.ToDamlValue()),
-        DamlField.Create("owner", Owner.ToDamlValue()),
-        DamlField.Create("currency", new DamlText(Currency)),
-        DamlField.Create("amount", new DamlNumeric(Amount))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("issuer", Issuer.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("currency", new global::Daml.Runtime.Data.DamlText(Currency)),
+        global::Daml.Runtime.Data.DamlField.Create("amount", new global::Daml.Runtime.Data.DamlNumeric(Amount))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Iou FromRecord(DamlRecord record) => new Iou(
-        Issuer: Party.FromDamlValue(record.GetRequiredField("issuer").As<DamlParty>()),
-        Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()),
-        Currency: record.GetRequiredField("currency").As<DamlText>().Value,
-        Amount: record.GetRequiredField("amount").As<DamlNumeric>().Value
+    public static Iou FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Iou(
+        Issuer: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("issuer").As<global::Daml.Runtime.Data.DamlParty>()),
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
+        Currency: record.GetRequiredField("currency").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("issuer", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "issuer"), context.Field("issuer"))),
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
-            DamlField.Create("currency", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "currency"), context.Field("currency"))),
-            DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("issuer", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "issuer"), context.Field("issuer"))),
+            global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
+            global::Daml.Runtime.Data.DamlField.Create("currency", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "currency"), context.Field("currency"))),
+            global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount")))
         );
     }
 
@@ -77,17 +77,17 @@ public sealed partial record Iou(
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Iou, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Iou, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -96,85 +96,25 @@ public sealed partial record Iou(
     /// Exercise the Transfer choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Iou, Transfer, ContractId<Iou>> ChoiceTransfer { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Iou, Transfer, global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>> ChoiceTransfer { get; } = new()
     {
-        Name = new ChoiceName("Transfer"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Transfer"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Transfer.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<Iou>(val.As<DamlContractId>().Value),
-        ArgumentJsonReader = (json, context) => Iou.Transfer.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Transfer.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Iou.Iou.Transfer.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceTransfer];
-
-}
-
-/// <summary>
-/// Typed projection of the contracts created by the Transfer choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record TransferResult(
-    ContractId<Iou> Iou
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="TransferResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<TransferResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Iou.Iou.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Iou.Iou.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<TransferResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<TransferResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<TransferResult>.One(new TransferResult(
-            Iou: new ContractId<global::Iou.Iou>(matches0[0])
-        ));
-    }
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceTransfer];
 
 }
 
 
 /// <summary>
-/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="Iou"/>.
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Iou.Iou"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
 /// and projects success from the choice's own exercise result.
@@ -186,21 +126,21 @@ public static class IouExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand TransferCommand(
-        this ContractId<Iou> contractId,
-        Iou.Transfer argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand TransferCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou> contractId,
+        global::Iou.Iou.Transfer argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            Iou.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Iou.Iou.TemplateId,
             contractId,
-            new ChoiceName("Transfer"),
+            new global::Daml.Runtime.Commands.ChoiceName("Transfer"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Transfer choice and projects the choice's exercise result to a typed <see cref="TransferResult"/>.
+    /// Exercises the Transfer choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Iou.Iou&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -214,20 +154,20 @@ public static class IouExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<TransferResult>> TryTransferAsync(
-        this ContractId<Iou> contractId,
-        ILedgerWriter client,
-        Iou.Transfer argument,
-        Party owner,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>>> TryTransferAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Iou.Iou.Transfer argument,
+        global::Daml.Runtime.Data.Party owner,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = owner;
 
         return contractId.TryTransferAsync(
             client,
@@ -241,7 +181,7 @@ public static class IouExtensions
     }
 
     /// <summary>
-    /// Exercises the Transfer choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="TransferResult"/>.
+    /// Exercises the Transfer choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Iou.Iou&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -255,18 +195,18 @@ public static class IouExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<TransferResult>> TryTransferAsync(
-        this ContractId<Iou> contractId,
-        ILedgerWriter client,
-        Iou.Transfer argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>>> TryTransferAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Iou.Iou.Transfer argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.TransferCommand(argument);
 
@@ -276,10 +216,10 @@ public static class IouExtensions
     }
 
     /// <summary>
-    /// Exercises the Transfer choice on a fetched <see cref="Iou"/> contract,
+    /// Exercises the Transfer choice on a fetched <see cref="global::Iou.Iou"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;Iou&gt;</c> overload.
+    /// <c>ContractId&lt;global::Iou.Iou&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -289,19 +229,19 @@ public static class IouExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<TransferResult>> TryTransferAsync(
-        this IContract<ContractId<Iou>, Iou> contract,
-        ILedgerWriter client,
-        Iou.Transfer argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>>> TryTransferAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>, global::Iou.Iou> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Iou.Iou.Transfer argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryTransferAsync(
             client,
@@ -315,11 +255,11 @@ public static class IouExtensions
     }
 
     /// <summary>
-    /// Exercises the Transfer choice on a fetched <see cref="Iou"/> contract with an
+    /// Exercises the Transfer choice on a fetched <see cref="global::Iou.Iou"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;Iou&gt;</c> overload.
+    /// <c>ContractId&lt;global::Iou.Iou&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -330,20 +270,20 @@ public static class IouExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<TransferResult>> TryTransferAsync(
-        this IContract<ContractId<Iou>, Iou> contract,
-        ILedgerWriter client,
-        Iou.Transfer argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>>> TryTransferAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>, global::Iou.Iou> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Iou.Iou.Transfer argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryTransferAsync(
             client,
@@ -356,53 +296,8 @@ public static class IouExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<TransferResult> ProjectTransferResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = TransferResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<TransferResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Iou.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Iou.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Transfer", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeTransferResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<TransferResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<TransferResult> DecodeTransferResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlContractId>().Value);
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<TransferResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<TransferResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<TransferResult>.One(new TransferResult(
-            Iou: new ContractId<global::Iou.Iou>(matches0[0])
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou>> ProjectTransferResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Iou.Iou.ChoiceTransfer, contractId);
 }
 
 /// <summary>
@@ -426,16 +321,16 @@ public static class IouSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<Iou>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Iou>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         Iou payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Issuer;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Issuer;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Iou>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
@@ -448,10 +343,10 @@ public static class IouSubmissionExtensions
     /// choice.
     /// </summary>
     /// <param name="payload">The contract payload.</param>
-    public static IReadOnlyList<Party> Observers(Iou payload)
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers(Iou payload)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        return new Party[]
+        global::System.ArgumentNullException.ThrowIfNull(payload);
+        return new global::Daml.Runtime.Data.Party[]
         {
             payload.Owner
         };
@@ -459,7 +354,7 @@ public static class IouSubmissionExtensions
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="Iou"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Iou.Iou"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -471,20 +366,20 @@ public static class IouNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<Iou> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            Iou.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Iou.Iou.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -495,17 +390,17 @@ public static class IouNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<Iou> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Iou.Iou> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -514,32 +409,6 @@ public static class IouNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Iou.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Iou.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = Iou.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Iou.Iou.ChoiceArchive, contractId);
 }

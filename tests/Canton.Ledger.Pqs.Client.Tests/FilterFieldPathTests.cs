@@ -66,6 +66,26 @@ public class FilterFieldPathTests
             .WithMessage("*regenerate*");
     }
 
+    public static TheoryData<string, Func<PqsFilter>> NonDamlMembers => new()
+    {
+        { "string_length", () => Filter.Field<RichRecord>(r => r.Label.Length, "3") },
+        { "list_count", () => Filter.Field<RichRecord>(r => r.Tags.Count, "1") },
+        { "party_value", () => Filter.Field<RichRecord>(r => r.Owner.Value, "alice::0000") },
+        { "date_time_offset_year", () => Filter.Field<RichRecord>(r => r.ObservedAt.Year, "2026") },
+        { "variant_tag", () => Filter.Field<RichRecord>(r => r.Outcome.Tag, "Win") },
+    };
+
+    [Theory]
+    [MemberData(nameof(NonDamlMembers))]
+    public void Field_throws_the_unsupported_expression_error_for_a_member_of_a_non_Daml_type(
+        string memberName, Func<PqsFilter> build)
+    {
+        var failure = Assert.Throws<ArgumentException>(build);
+
+        failure.ParamName.Should().Be("selector", memberName);
+        failure.Message.Should().StartWith("Unsupported expression in a PQS filter", memberName);
+    }
+
     [Fact]
     public void Field_throws_on_method_call()
     {

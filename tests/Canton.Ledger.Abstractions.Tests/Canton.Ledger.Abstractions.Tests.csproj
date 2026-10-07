@@ -12,7 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\SnapshotPolicy\*.cs" Link="Shared\SnapshotPolicy\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
   </ItemGroup>
 
 </Project>

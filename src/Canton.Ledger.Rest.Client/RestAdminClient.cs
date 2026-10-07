@@ -324,7 +324,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(DeleteUserAsync),
             () => _calls.SendAsync(
-                new RestCall(HttpMethod.Delete, path, Body: null, MissingBody("user deletion"), MalformedBody("user deletion"), Replayable: false),
+                new RestCall(HttpMethod.Delete, path, Body: null, MissingBody("user deletion"), MalformedBody("user deletion"), LedgerCallKind.EffectAppliedWrite, Replayable: false),
                 IgnoreBodyAsync,
                 timeout: null,
                 cancellationToken),
@@ -413,6 +413,7 @@ internal sealed partial class RestAdminClient : IAdminClient
                     Body: null,
                     MissingBody("package archive"),
                     MalformedBody("package archive"),
+                    LedgerCallKind.Read,
                     Accept: RestCallEnvelope.OctetStream),
                 ReadPackageArchiveAsync,
                 timeout: null,
@@ -512,6 +513,7 @@ internal sealed partial class RestAdminClient : IAdminClient
                     Body: null,
                     MissingBody("identity provider config deletion"),
                     MalformedBody("identity provider config deletion"),
+                    LedgerCallKind.EffectAppliedWrite,
                     Replayable: false),
                 IgnoreBodyAsync,
                 timeout: null,
@@ -538,7 +540,10 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(UpdateVettedPackagesAsync),
             () => _calls.SendAsync<Raw.UpdateVettedPackagesResponse, VettedPackagesUpdateResult>(
-                Mutate(HttpMethod.Post, UpdateVettedPackagesPath, request, "vetted packages update"),
+                Mutate(HttpMethod.Post, UpdateVettedPackagesPath, request, "vetted packages update") with
+                {
+                    Kind = dryRun ? LedgerCallKind.Read : LedgerCallKind.EffectAppliedWrite,
+                },
                 response => new VettedPackagesUpdateResult(
                     FromWireSnapshot(response.PastVettedPackages),
                     FromWireSnapshot(response.NewVettedPackages)),
@@ -570,7 +575,8 @@ internal sealed partial class RestAdminClient : IAdminClient
                     VettedPackagesPath,
                     VettedPackagesPage(filter, pageToken),
                     MissingBody("vetted packages"),
-                    MalformedBody("vetted packages")),
+                    MalformedBody("vetted packages"),
+                    LedgerCallKind.Read),
                 response => response,
                 timeout: null,
                 cancellationToken),
@@ -614,7 +620,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         LogUploadingDar(_logger, darFile.Length);
 
         await _calls.SendAsync(
-            new RestCall(HttpMethod.Post, DarPath(DarsPath, synchronizerId), darFile, MissingBody("DAR upload"), MalformedBody("DAR upload"), Replayable: false),
+            new RestCall(HttpMethod.Post, DarPath(DarsPath, synchronizerId), darFile, MissingBody("DAR upload"), MalformedBody("DAR upload"), LedgerCallKind.EffectAppliedWrite, Replayable: false),
             IgnoreBodyAsync,
             timeout: null,
             cancellationToken).ConfigureAwait(false);
@@ -645,7 +651,7 @@ internal sealed partial class RestAdminClient : IAdminClient
     private async Task<bool> ValidateDarCoreAsync(byte[] darFile, SynchronizerId? synchronizerId, CancellationToken cancellationToken)
     {
         await _calls.SendAsync(
-            new RestCall(HttpMethod.Post, DarPath(ValidateDarPath, synchronizerId), darFile, MissingBody("DAR validation"), MalformedBody("DAR validation")),
+            new RestCall(HttpMethod.Post, DarPath(ValidateDarPath, synchronizerId), darFile, MissingBody("DAR validation"), MalformedBody("DAR validation"), LedgerCallKind.Read),
             IgnoreBodyAsync,
             timeout: null,
             cancellationToken).ConfigureAwait(false);
@@ -733,10 +739,10 @@ internal sealed partial class RestAdminClient : IAdminClient
         || rejection.Status is TransportStatus.Http { StatusCode: HttpStatusCode.NotFound };
 
     private static RestCall Read(string path, string subject) =>
-        new(HttpMethod.Get, path, Body: null, MissingBody(subject), MalformedBody(subject));
+        new(HttpMethod.Get, path, Body: null, MissingBody(subject), MalformedBody(subject), LedgerCallKind.Read);
 
     private static RestCall Mutate(HttpMethod method, string path, object body, string subject) =>
-        new(method, path, body, MissingBody(subject), MalformedBody(subject), Replayable: false);
+        new(method, path, body, MissingBody(subject), MalformedBody(subject), LedgerCallKind.EffectAppliedWrite, Replayable: false);
 
     private static string MissingBody(string subject) =>
         $"Server returned a successful response but no body was present for the {subject}.";

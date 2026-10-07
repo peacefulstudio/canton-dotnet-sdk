@@ -302,13 +302,40 @@ public abstract record ContractStreamEvent<T>
     /// a real caught exception (which always has a <see cref="Exception.TargetSite"/>) is
     /// serialized this way. A read restores this member as <see langword="null"/> rather than
     /// reconstructing the original exception, which the CLR type offers no JSON-constructible
-    /// shape for in general anyway.</param>
+    /// shape for in general anyway.
+    /// A diagnostic only: excluded from <see cref="Equals(StreamError)"/> and <see cref="GetHashCode"/>.</param>
     public sealed record StreamError(
         TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
         string? ErrorId = null,
-        [property: JsonIgnore] Exception? SourceException = null) : ContractStreamEvent<T>;
+        [property: JsonIgnore] Exception? SourceException = null) : ContractStreamEvent<T>
+    {
+        /// <summary>
+        /// Compares two stream errors by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>, ignoring <see cref="SourceException"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
+        /// it does not travel through <see cref="System.Text.Json"/>, so a value read back from JSON
+        /// must equal the value that was written, and two failures with the same content are the same
+        /// failure whichever exception each one caught. It is excluded from <see cref="GetHashCode"/> likewise.
+        /// </remarks>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
+        public bool Equals(StreamError? other) =>
+            other is not null
+            && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
+            && Message == other.Message
+            && Category == other.Category
+            && ErrorId == other.ErrorId;
+
+        /// <summary>
+        /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
+        /// <see cref="Equals(StreamError)"/>.
+        /// </summary>
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, ErrorId);
+    }
 
     /// <summary>
     /// An event the transport delivered but this layer could not map to any

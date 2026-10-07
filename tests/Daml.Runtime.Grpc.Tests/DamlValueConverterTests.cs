@@ -405,6 +405,15 @@ public class DamlValueConverterTests
     }
 
     [Fact]
+    public void ToProtoValue_refuses_a_carried_undecoded_json_value_by_name()
+    {
+        var action = () => DamlValueConverter.ToProtoValue(new DamlUndecodedJson("{\"owner\":\"alice::ns\"}"));
+
+        action.Should().Throw<NotSupportedException>()
+            .WithMessage("DamlValue type DamlUndecodedJson is not supported");
+    }
+
+    [Fact]
     public void ToProtoRecord_converts_correctly()
     {
         var record = new DamlRecord(
@@ -739,6 +748,30 @@ public class DamlValueConverterTests
 
         result.Should().BeOfType<DamlOptional>();
         result.As<DamlOptional>().Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void FromProtoValue_then_FromDamlValue_flattens_a_Some_of_Some_Text_to_the_carried_string()
+    {
+        var wire = DamlValueConverter.ToProtoValue(DamlOptionalChain.Some(DamlOptionalChain.Some(new DamlText("x"))));
+
+        DamlValueConverter.FromProtoValue(wire).FromDamlValue<string>().Should().Be("x");
+    }
+
+    [Fact]
+    public void FromProtoValue_then_FromDamlValue_flattens_a_Some_of_None_Text_to_null()
+    {
+        var wire = DamlValueConverter.ToProtoValue(DamlOptionalChain.Some(DamlOptionalChain.None));
+
+        DamlValueConverter.FromProtoValue(wire).FromDamlValue<string>().Should().BeNull();
+    }
+
+    [Fact]
+    public void FromProtoValue_then_FromDamlValue_flattens_a_None_Text_to_null()
+    {
+        var wire = DamlValueConverter.ToProtoValue(DamlOptionalChain.None);
+
+        DamlValueConverter.FromProtoValue(wire).FromDamlValue<string>().Should().BeNull();
     }
 
     [Fact]

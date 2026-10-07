@@ -27,6 +27,7 @@ public sealed class RuntimeReadmeSnippetsCompileTests
 
     private const string IdentifiersTheProseIntroduces = """
                 private static readonly Daml.Runtime.Contracts.TransactionResult tx = null!;
+                private static readonly Daml.Runtime.Contracts.ContractId<Iou.Iou> contractId = null!;
                 private static readonly string json = "{}";
                 private static readonly string pqsRowJson = "{}";
         """;

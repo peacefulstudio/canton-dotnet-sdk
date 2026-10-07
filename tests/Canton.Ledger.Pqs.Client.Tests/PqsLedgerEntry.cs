@@ -25,16 +25,17 @@ internal sealed record PqsLedgerEntry(
     public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
     {
         DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", DamlLfJsonDecoders.ReadParty(DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
-            DamlField.Create("quantity", DamlLfJsonDecoders.ReadInt64(DamlLfJsonDecoders.RequireField(json, context, "quantity"), context.Field("quantity"))),
-            DamlField.Create("price", DamlLfJsonDecoders.ReadNumeric(DamlLfJsonDecoders.RequireField(json, context, "price"), context.Field("price"))),
-            DamlField.Create("note", DamlLfJsonDecoders.ReadOptional(DamlLfJsonDecoders.OptionalField(json, "note"), context.Field("note"), DamlLfJsonDecoders.ReadText)));
+        var fields = new List<DamlField>(4);
+        fields.Add(DamlField.Create("owner", DamlLfJsonDecoders.ReadParty(DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))));
+        fields.Add(DamlField.Create("quantity", DamlLfJsonDecoders.ReadInt64(DamlLfJsonDecoders.RequireField(json, context, "quantity"), context.Field("quantity"))));
+        fields.Add(DamlField.Create("price", DamlLfJsonDecoders.ReadNumeric(DamlLfJsonDecoders.RequireField(json, context, "price"), context.Field("price"))));
+        DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "note", present => DamlLfJsonDecoders.ReadOptional(present, context.Field("note"), DamlLfJsonDecoders.ReadText));
+        return DamlRecord.Create(fields.ToArray());
     }
 
     public static PqsLedgerEntry FromRecord(DamlRecord record) => new(
         Owner: record.GetRequiredField("owner").As<DamlParty>().Value,
         Quantity: record.GetRequiredField("quantity").As<DamlInt64>().Value,
         Price: record.GetRequiredField("price").As<DamlNumeric>().Value,
-        Note: record.GetRequiredField("note").As<DamlOptional>().Value?.As<DamlText>().Value);
+        Note: record.GetOptionalField("note").As<DamlOptional>().Value?.As<DamlText>().Value);
 }

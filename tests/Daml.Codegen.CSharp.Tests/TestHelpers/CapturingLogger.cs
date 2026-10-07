@@ -18,6 +18,11 @@ public sealed class CapturingLogger : ILogger
     public IEnumerable<string> Warnings =>
         Records.Where(r => r.Level == LogLevel.Warning).Select(r => r.Message);
 
+    /// <summary>The event id of every warning logged so far.</summary>
+    public IEnumerable<int> WarningEventIds => _warningEventIds;
+
+    private readonly List<int> _warningEventIds = [];
+
     /// <inheritdoc />
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull => null;
@@ -35,5 +40,9 @@ public sealed class CapturingLogger : ILogger
     {
         ArgumentNullException.ThrowIfNull(formatter);
         Records.Add((logLevel, formatter(state, exception)));
+        if (logLevel == LogLevel.Warning)
+        {
+            _warningEventIds.Add(eventId.Id);
+        }
     }
 }

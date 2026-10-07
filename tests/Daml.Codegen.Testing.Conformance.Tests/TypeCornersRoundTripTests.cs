@@ -147,15 +147,16 @@ public class TypeCornersRoundTripTests
             DamlField.Create("item", Item.ToValue(value => new DamlText(value))));
 
         public static NestedNoteBox FromRecord(DamlRecord record) =>
-            new(Optional<string>.FromValue(record.GetRequiredField("item"), value => value.As<DamlText>().Value));
+            new(Optional<string>.FromValue(record.GetOptionalField("item"), value => value.As<DamlText>().Value));
 
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
         {
             DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("item", DamlLfJsonDecoders.ReadOptional(
-                    DamlLfJsonDecoders.OptionalField(json, "item"), context.Field("item"),
-                    (itemJson, itemContext) => DamlLfJsonDecoders.ReadText(itemJson, itemContext))));
+            var fields = new List<DamlField>(1);
+            DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "item", present => DamlLfJsonDecoders.ReadOptional(
+                present, context.Field("item"),
+                (itemJson, itemContext) => DamlLfJsonDecoders.ReadText(itemJson, itemContext)));
+            return DamlRecord.Create(fields.ToArray());
         }
     }
 
@@ -233,7 +234,7 @@ public class TypeCornersRoundTripTests
     }
 
     [Fact]
-    public void TypeCornersRoundTrip_records_the_short_write_codegen_refuses_to_emit()
+    public void TypeCornersRoundTrip_writes_the_accepted_chain_form_for_the_substitution_codegen_refuses_to_emit()
     {
         var substituted = new Crate<Optional<string>>(
             new Optional<Optional<string>>.Some(new Optional<string>.None()));
@@ -242,16 +243,17 @@ public class TypeCornersRoundTripTests
             substituted.ToRecord(item => item.ToValue(text => new DamlText(text)))
                 .GetRequiredField("item"));
 
-        written.Should().Be("null",
-            "Crate's field converter is emitted once from its declaration and writes the flat form, so "
-            + "composing it with an Optional type argument lands one array level short of the chain the "
-            + "participant accepts - which is why codegen refuses to emit that substitution and this "
-            + "composition can only be reached by hand");
+        written.Should().Be("[[]]",
+            "Crate's field converter is emitted once from its declaration and writes the flat form, but "
+            + "the serializer gives a flat optional that carries another optional one array level per "
+            + "optional, which is the chain the participant accepts - codegen still refuses to emit that "
+            + "substitution, so this composition can only be reached by hand");
 
         var decodedAcceptedForm = Crate<Optional<string>>.FromRecord(
             DamlRecord.Create(DamlField.Create(
                 "item", DamlOptionalChain.Some(DamlOptionalChain.None))),
-            value => Optional<string>.FromValue(value, text => text.As<DamlText>().Value));
+            value => Optional<string>.FromValue(value, text => text.As<DamlText>().Value),
+            DamlOptional.None);
 
         decodedAcceptedForm.Should().Be(substituted,
             "the read takes a chain level and a flat level alike, so the form the participant accepts "

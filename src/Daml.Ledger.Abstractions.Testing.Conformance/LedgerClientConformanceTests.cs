@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -29,15 +30,20 @@ namespace Daml.Ledger.Abstractions.Testing.Conformance;
 /// (<see cref="ILedgerStreamer.SubscribeLedgerEffectsAsync{T}"/>, which signals archival
 /// with a consuming <see cref="ContractStreamEvent{T}.Exercised"/> and never an
 /// <see cref="ContractStreamEvent{T}.Archived"/>), honored <c>(fromOffset, toOffset]</c>
-/// bounds, and cancellation-honoring streams.
+/// bounds, and cancellation-honoring streams. Every stream check runs once against the template
+/// reads and once against the interface reads, where the probe is read through
+/// <see cref="IConformanceProbe"/> and each probe contract carries a
+/// <see cref="ConformanceProbeView"/> under the same contract id and offset.
 /// </summary>
-/// <typeparam name="TProbe">The Daml template the seeded snapshot/stream is filtered to.</typeparam>
+/// <typeparam name="TProbe">The Daml template the seeded snapshot/stream is filtered to. It
+/// implements <see cref="IConformanceProbe"/>, so the same seeded rows are served through the
+/// interface reads.</typeparam>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Naming",
     "CA1707:Identifiers should not contain underscores",
     Justification = "These are xUnit test methods shipped as an abstract conformance base; they follow the repo-wide Subject_scenario_expectation naming that test readers and failure output depend on.")]
 public abstract class LedgerClientConformanceTests<TProbe>
-    where TProbe : ITemplate, IDamlRecord<TProbe>
+    where TProbe : ITemplate, IDamlRecord<TProbe>, IImplements<IConformanceProbe>
 {
     /// <summary>
     /// Creates a client seeded with the canonical conformance scenario. The seed must include
@@ -71,10 +77,11 @@ public abstract class LedgerClientConformanceTests<TProbe>
     /// A client whose active-contract-set snapshot faults mid-stream, or <c>null</c> if
     /// the adopter's transport cannot induce a mid-snapshot transport fault
     /// deterministically. When non-null, the returned client's
-    /// <see cref="ILedgerStreamer.SubscribeActiveAsync{T}"/> must terminate with a single
-    /// <see cref="AcsSnapshotEntry{T}.StreamError"/> and yield no terminal
+    /// <see cref="ILedgerStreamer.SubscribeActiveAsync{T}"/> and its interface counterpart
+    /// <see cref="ILedgerStreamer.SubscribeActiveAsync{TInterface, TView}"/> must each terminate
+    /// with a single <see cref="AcsSnapshotEntry{T}.StreamError"/> and yield no terminal
     /// <see cref="AcsSnapshotEntry{T}.Checkpoint"/>. Defaults to <c>null</c>, which skips
-    /// the fault-path conformance check.
+    /// both fault-path conformance checks.
     /// </summary>
     protected virtual ILedgerClient? CreateFaultingSnapshotClient() => null;
 
@@ -100,65 +107,28 @@ public abstract class LedgerClientConformanceTests<TProbe>
 
     /// <summary>A cancelled live subscription surfaces cancellation, not an in-band error.</summary>
     [Fact]
-    public async Task Cancelling_a_live_subscription_throws_OperationCanceledException()
-    {
-        await using var client = CreateClient();
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
-
-        var act = () => DrainWithinBudget(
-            client.SubscribeAsync<TProbe>(Reader, cancellationToken: cts.Token),
-            "a cancelled live subscription must throw OperationCanceledException, not ignore the token");
-
-        await act.Should().ThrowAsync<OperationCanceledException>();
-    }
+    public Task Cancelling_a_live_subscription_throws_OperationCanceledException() =>
+        VerifyCancellationThrows(TemplateFamily.Instance);
 
     /// <summary>An unclassifiable snapshot row is surfaced, never silently dropped.</summary>
     [Fact]
-    public async Task Active_snapshot_surfaces_unclassifiable_rows_as_Unclassified()
-    {
-        await using var client = CreateClient();
-
-        var entries = await CollectSnapshot(client);
-
-        entries.Should().Contain(e => e is AcsSnapshotEntry<TProbe>.Unclassified);
-    }
+    public Task Active_snapshot_surfaces_unclassifiable_rows_as_Unclassified() =>
+        VerifySnapshotSurfacesUnclassifiedRows(TemplateFamily.Instance);
 
     /// <summary>The snapshot's final entry is the terminal checkpoint.</summary>
     [Fact]
-    public async Task Active_snapshot_ends_with_a_terminal_Checkpoint()
-    {
-        await using var client = CreateClient();
-
-        var entries = await CollectSnapshot(client);
-
-        entries.Should().NotBeEmpty();
-        entries[^1].Should().BeOfType<AcsSnapshotEntry<TProbe>.Checkpoint>();
-    }
+    public Task Active_snapshot_ends_with_a_terminal_Checkpoint() =>
+        VerifySnapshotEndsWithCheckpoint(TemplateFamily.Instance);
 
     /// <summary>Seeded active contracts arrive before the checkpoint; the stream is not truncated.</summary>
     [Fact]
-    public async Task Active_snapshot_yields_seeded_rows_before_the_checkpoint()
-    {
-        await using var client = CreateClient();
-
-        var entries = await CollectSnapshot(client);
-
-        entries.Count(e => e is AcsSnapshotEntry<TProbe>.Created).Should().BeGreaterThan(0);
-        entries.SkipLast(1).Should().NotContain(e => e is AcsSnapshotEntry<TProbe>.Checkpoint);
-    }
+    public Task Active_snapshot_yields_seeded_rows_before_the_checkpoint() =>
+        VerifySnapshotYieldsSeededRowsBeforeCheckpoint(TemplateFamily.Instance);
 
     /// <summary>An empty snapshot still terminates with the single terminal checkpoint.</summary>
     [Fact]
-    public async Task Empty_active_snapshot_still_ends_with_a_terminal_Checkpoint()
-    {
-        await using var client = CreateClient();
-
-        var entries = await CollectSnapshot(client, EmptySnapshotOffset);
-
-        entries.Should().ContainSingle()
-            .Which.Should().BeOfType<AcsSnapshotEntry<TProbe>.Checkpoint>();
-    }
+    public Task Empty_active_snapshot_still_ends_with_a_terminal_Checkpoint() =>
+        VerifyEmptySnapshotEndsWithCheckpoint(TemplateFamily.Instance);
 
     /// <summary>
     /// A mid-snapshot transport fault surfaces in-band as a terminal
@@ -167,65 +137,99 @@ public abstract class LedgerClientConformanceTests<TProbe>
     /// Opt-in: skipped unless the adopter overrides <see cref="CreateFaultingSnapshotClient"/>.
     /// </summary>
     [Fact]
-    public async Task Active_snapshot_surfaces_a_mid_snapshot_fault_as_StreamError()
+    public Task Active_snapshot_surfaces_a_mid_snapshot_fault_as_StreamError() =>
+        VerifySnapshotSurfacesMidSnapshotFault(TemplateFamily.Instance);
+
+    /// <summary>An unclassifiable interface snapshot row is surfaced, never silently dropped.</summary>
+    [Fact]
+    public Task Interface_active_snapshot_surfaces_unclassifiable_rows_as_Unclassified() =>
+        VerifySnapshotSurfacesUnclassifiedRows(InterfaceFamily.Instance);
+
+    /// <summary>The interface snapshot's final entry is the terminal checkpoint.</summary>
+    [Fact]
+    public Task Interface_active_snapshot_ends_with_a_terminal_Checkpoint() =>
+        VerifySnapshotEndsWithCheckpoint(InterfaceFamily.Instance);
+
+    /// <summary>Seeded interface contracts arrive before the checkpoint; the stream is not truncated.</summary>
+    [Fact]
+    public Task Interface_active_snapshot_yields_seeded_rows_before_the_checkpoint() =>
+        VerifySnapshotYieldsSeededRowsBeforeCheckpoint(InterfaceFamily.Instance);
+
+    /// <summary>An empty interface snapshot still terminates with the single terminal checkpoint.</summary>
+    [Fact]
+    public Task Interface_empty_active_snapshot_still_ends_with_a_terminal_Checkpoint() =>
+        VerifyEmptySnapshotEndsWithCheckpoint(InterfaceFamily.Instance);
+
+    /// <summary>
+    /// A mid-snapshot transport fault on the interface snapshot surfaces in-band as a terminal
+    /// <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}.StreamError"/>, never thrown, and in
+    /// place of the terminal <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}.Checkpoint"/>
+    /// a successful snapshot ends with. Opt-in: skipped unless the adopter overrides
+    /// <see cref="CreateFaultingSnapshotClient"/>.
+    /// </summary>
+    [Fact]
+    public Task Interface_active_snapshot_surfaces_a_mid_snapshot_fault_as_StreamError() =>
+        VerifySnapshotSurfacesMidSnapshotFault(InterfaceFamily.Instance);
+
+    /// <summary>
+    /// The interface snapshot serves the template snapshot's <c>Created</c> contracts, each
+    /// coerced through <c>ToInterfaceContractId</c>, under the same offsets and the same
+    /// <c>SynchronizerId</c>, with a <see cref="ConformanceProbeView"/> whose
+    /// <see cref="ConformanceProbeView.Amount"/> is 42.5. A transport that shapes the rows correctly
+    /// but corrupts the decoded view, assigns the wrong contract id or the wrong synchronizer would
+    /// pass every structure check; this check catches that regression.
+    /// </summary>
+    [Fact]
+    public async Task Interface_active_snapshot_serves_the_template_contracts_with_the_view_amount_42_5()
     {
-        var faultingClient = CreateFaultingSnapshotClient();
-        Assert.SkipWhen(
-            faultingClient is null,
-            "adopter opted out of the fault-path check: its transport cannot induce a deterministic mid-snapshot fault");
-        await using var client = faultingClient!;
+        await using var client = CreateClient();
 
-        var entries = await CollectSnapshot(client);
+        await VerifyInterfaceServesTemplateContractsWithRenderedView(
+            family => CollectSnapshot(family, client), "interface SubscribeActiveAsync");
+    }
 
-        entries.Should().NotBeEmpty();
-        entries[^1].Should().BeOfType<AcsSnapshotEntry<TProbe>.StreamError>(
-            "a mid-snapshot transport fault must surface in-band as a terminal StreamError, not be thrown");
-        entries.Should().NotContain(
-            e => e is AcsSnapshotEntry<TProbe>.Checkpoint,
-            "a faulted snapshot yields no terminal Checkpoint — there is no valid snapshot offset to hand over to a live subscription");
+    /// <summary>
+    /// The interface ACS-delta window serves the template window's <c>Created</c> contracts, each
+    /// coerced through <c>ToInterfaceContractId</c>, under the same offsets, with a
+    /// <see cref="ConformanceProbeView"/> whose <see cref="ConformanceProbeView.Amount"/> is 42.5.
+    /// </summary>
+    [Fact]
+    public async Task Interface_acs_delta_subscription_serves_the_template_contracts_with_the_view_amount_42_5()
+    {
+        await using var client = CreateClient();
+        var end = await client.GetLedgerEndAsync();
+
+        await VerifyInterfaceServesTemplateContractsWithRenderedView(
+            family => CollectBounded(family, client, LedgerOffset.Begin, end), "interface SubscribeAsync");
+    }
+
+    /// <summary>
+    /// The interface ledger-effects window serves the template window's <c>Created</c> contracts,
+    /// each coerced through <c>ToInterfaceContractId</c>, under the same offsets, with a
+    /// <see cref="ConformanceProbeView"/> whose <see cref="ConformanceProbeView.Amount"/> is 42.5.
+    /// </summary>
+    [Fact]
+    public async Task Interface_ledger_effects_subscription_serves_the_template_contracts_with_the_view_amount_42_5()
+    {
+        await using var client = CreateClient();
+        var end = await client.GetLedgerEndAsync();
+
+        await VerifyInterfaceServesTemplateContractsWithRenderedView(
+            family => CollectWithinBudget(
+                family.LedgerEffects(client, Reader, LedgerOffset.Begin, end, CancellationToken.None),
+                $"A bounded {family.SubscribeLedgerEffectsName} (toOffset {end.Value}) must complete"),
+            "interface SubscribeLedgerEffectsAsync");
     }
 
     /// <summary>fromOffset is exclusive: resuming from an offset does not re-deliver the event at it.</summary>
     [Fact]
-    public async Task Subscribing_from_an_offset_excludes_the_event_at_that_offset()
-    {
-        await using var client = CreateClient();
-        var end = await client.GetLedgerEndAsync();
-
-        var all = await CollectBounded(client, LedgerOffset.Begin, end);
-        all.Should().NotBeEmpty(
-            "the conformance scenario must seed at least one event on the subscription stream");
-        var resumeFrom = FirstPosition(all);
-
-        var resumed = await CollectBounded(client, resumeFrom, end);
-
-        resumed.Should().NotContain(
-            e => PositionOf(e) == resumeFrom,
-            "fromOffset is exclusive: resuming from an offset must not re-deliver the event at it");
-    }
+    public Task Subscribing_from_an_offset_excludes_the_event_at_that_offset() =>
+        VerifyFromOffsetIsExclusive(TemplateFamily.Instance);
 
     /// <summary>toOffset is inclusive and terminal: the event at toOffset is delivered, then the stream completes.</summary>
     [Fact]
-    public async Task Bounded_subscription_delivers_the_event_at_toOffset_then_completes()
-    {
-        await using var client = CreateClient();
-        var end = await client.GetLedgerEndAsync();
-
-        var all = await CollectBounded(client, LedgerOffset.Begin, end);
-        all.Should().NotBeEmpty(
-            "the conformance scenario must seed at least one event on the subscription stream");
-        var boundary = FirstPosition(all);
-
-        var bounded = await CollectBounded(client, LedgerOffset.Begin, boundary);
-
-        bounded.Should().Contain(
-            e => PositionOf(e) == boundary,
-            "toOffset is inclusive: the event at toOffset must be delivered");
-        bounded.Should().OnlyContain(
-            e => SitsAtOrBefore(e, boundary),
-            "a bounded subscription must complete at toOffset and deliver nothing past it; an event "
-            + "carrying no ledger position cannot sit past the boundary because it sits nowhere");
-    }
+    public Task Bounded_subscription_delivers_the_event_at_toOffset_then_completes() =>
+        VerifyToOffsetIsInclusiveAndTerminal(TemplateFamily.Instance);
 
     /// <summary>
     /// The ledger-effects subscription signals archival with a consuming
@@ -236,26 +240,8 @@ public abstract class LedgerClientConformanceTests<TProbe>
     /// archival altogether satisfies the exclusion vacuously and conveys nothing.
     /// </summary>
     [Fact]
-    public async Task Ledger_effects_subscription_never_yields_Archived()
-    {
-        await using var client = CreateClient();
-        var end = await client.GetLedgerEndAsync();
-
-        var events = await CollectWithinBudget(
-            client.SubscribeLedgerEffectsAsync<TProbe>(Reader, LedgerOffset.Begin, end),
-            $"A bounded SubscribeLedgerEffectsAsync (toOffset {end.Value}) must complete");
-
-        events.Should().NotBeEmpty(
-            "the conformance scenario must seed at least one event on the ledger-effects stream");
-        events.Should().NotContain(
-            e => e is ContractStreamEvent<TProbe>.Archived,
-            "the ledger-effects shape signals archival via a consuming Exercised, never an Archived variant");
-        events.OfType<ContractStreamEvent<TProbe>.Exercised>().Should().Contain(
-            x => x.Consuming,
-            "the ledger-effects shape conveys archival as a consuming Exercised event, so the seeded "
-            + "scenario must archive one TProbe at an offset within the seeded ledger end; a stream "
-            + "carrying no archival signal certifies nothing on this axis");
-    }
+    public Task Ledger_effects_subscription_never_yields_Archived() =>
+        VerifyLedgerEffectsNeverYieldArchived(TemplateFamily.Instance);
 
     /// <summary>
     /// The ACS-delta subscription surfaces archival as a first-class
@@ -266,24 +252,84 @@ public abstract class LedgerClientConformanceTests<TProbe>
     /// altogether satisfies the exclusion vacuously and conveys nothing.
     /// </summary>
     [Fact]
-    public async Task Acs_delta_subscription_never_yields_Exercised()
-    {
-        await using var client = CreateClient();
-        var end = await client.GetLedgerEndAsync();
+    public Task Acs_delta_subscription_never_yields_Exercised() =>
+        VerifyAcsDeltaNeverYieldsExercised(TemplateFamily.Instance);
 
-        var events = await CollectBounded(client, LedgerOffset.Begin, end);
+    /// <summary>A cancelled live interface subscription surfaces cancellation, not an in-band error.</summary>
+    [Fact]
+    public Task Interface_cancelling_a_live_subscription_throws_OperationCanceledException() =>
+        VerifyCancellationThrows(InterfaceFamily.Instance);
 
-        events.Should().NotBeEmpty(
-            "the conformance scenario must seed at least one event on the subscription stream");
-        events.Should().NotContain(
-            e => e is ContractStreamEvent<TProbe>.Exercised,
-            "the ACS-delta shape surfaces archival as a first-class Archived event, never an Exercised variant");
-        events.Should().Contain(
-            e => e is ContractStreamEvent<TProbe>.Archived,
-            "the ACS-delta shape conveys archival as a first-class Archived event, so the seeded "
-            + "scenario must archive one TProbe at an offset within the seeded ledger end; a stream "
-            + "carrying no archival signal certifies nothing on this axis");
-    }
+    /// <summary>
+    /// fromOffset is exclusive on the interface subscription: resuming from an offset does not
+    /// re-deliver the event at it.
+    /// </summary>
+    [Fact]
+    public Task Interface_subscribing_from_an_offset_excludes_the_event_at_that_offset() =>
+        VerifyFromOffsetIsExclusive(InterfaceFamily.Instance);
+
+    /// <summary>
+    /// toOffset is inclusive and terminal on the interface subscription: the event at toOffset is
+    /// delivered, then the stream completes.
+    /// </summary>
+    [Fact]
+    public Task Interface_bounded_subscription_delivers_the_event_at_toOffset_then_completes() =>
+        VerifyToOffsetIsInclusiveAndTerminal(InterfaceFamily.Instance);
+
+    /// <summary>
+    /// The interface ledger-effects subscription signals archival with a consuming
+    /// <see cref="InterfaceStreamEvent{TInterface, TView}.Exercised"/>, never an
+    /// <see cref="InterfaceStreamEvent{TInterface, TView}.Archived"/> variant, and the seeded
+    /// scenario's archived <typeparamref name="TProbe"/> must reach it as that consuming event.
+    /// </summary>
+    [Fact]
+    public Task Interface_ledger_effects_subscription_never_yields_Archived() =>
+        VerifyLedgerEffectsNeverYieldArchived(InterfaceFamily.Instance);
+
+    /// <summary>
+    /// The interface ACS-delta subscription surfaces archival as a first-class
+    /// <see cref="InterfaceStreamEvent{TInterface, TView}.Archived"/> event, never an
+    /// <see cref="InterfaceStreamEvent{TInterface, TView}.Exercised"/> variant, and the seeded
+    /// scenario's archived <typeparamref name="TProbe"/> must reach it as that event.
+    /// </summary>
+    [Fact]
+    public Task Interface_acs_delta_subscription_never_yields_Exercised() =>
+        VerifyAcsDeltaNeverYieldsExercised(InterfaceFamily.Instance);
+
+    /// <summary>
+    /// <see cref="ILedgerStreamer.SubscribeActiveAsync{TInterface, TView}"/> rejects a <c>null</c>
+    /// <see cref="ViewDescriptor{TInterface, TView}"/> with an <see cref="ArgumentNullException"/>
+    /// thrown at the call, before the stream is enumerated.
+    /// </summary>
+    [Fact]
+    public Task Interface_SubscribeActiveAsync_throws_ArgumentNullException_for_a_null_ViewDescriptor() =>
+        VerifyNullDescriptorIsRejectedAtTheCall(
+            client => client.SubscribeActiveAsync<IConformanceProbe, ConformanceProbeView>(null!, Reader),
+            "interface SubscribeActiveAsync");
+
+    /// <summary>
+    /// <see cref="ILedgerStreamer.SubscribeAsync{TInterface, TView}(ViewDescriptor{TInterface, TView}, SubmitterInfo, LedgerOffset?, LedgerOffset?, CancellationToken)"/>
+    /// rejects a <c>null</c> <see cref="ViewDescriptor{TInterface, TView}"/> with an
+    /// <see cref="ArgumentNullException"/> thrown at the call, before the stream is enumerated.
+    /// </summary>
+    [Fact]
+    public Task Interface_SubscribeAsync_throws_ArgumentNullException_for_a_null_ViewDescriptor() =>
+        VerifyNullDescriptorIsRejectedAtTheCall(
+            client => client.SubscribeAsync<IConformanceProbe, ConformanceProbeView>(
+                null!, Reader, LedgerOffset.Begin, null, CancellationToken.None),
+            "interface SubscribeAsync");
+
+    /// <summary>
+    /// <see cref="ILedgerStreamer.SubscribeLedgerEffectsAsync{TInterface, TView}"/> rejects a
+    /// <c>null</c> <see cref="ViewDescriptor{TInterface, TView}"/> with an
+    /// <see cref="ArgumentNullException"/> thrown at the call, before the stream is enumerated.
+    /// </summary>
+    [Fact]
+    public Task Interface_SubscribeLedgerEffectsAsync_throws_ArgumentNullException_for_a_null_ViewDescriptor() =>
+        VerifyNullDescriptorIsRejectedAtTheCall(
+            client => client.SubscribeLedgerEffectsAsync<IConformanceProbe, ConformanceProbeView>(
+                null!, Reader, LedgerOffset.Begin, null, CancellationToken.None),
+            "interface SubscribeLedgerEffectsAsync");
 
     /// <summary>
     /// <see cref="ILedgerWriter.TrySubmitAndWaitForTransactionAsync"/> must apply the
@@ -490,17 +536,203 @@ public abstract class LedgerClientConformanceTests<TProbe>
     private const string WriteFixtureSkipReason =
         "adopter opted out of the submitter-authority check: CreateWriteFixture() returned null";
 
-    private Task<IReadOnlyList<AcsSnapshotEntry<TProbe>>> CollectSnapshot(
-        ILedgerClient client, LedgerOffset? activeAtOffset = null) =>
-        CollectWithinBudget(
-            client.SubscribeActiveAsync<TProbe>(Reader, activeAtOffset),
-            "SubscribeActiveAsync must terminate with a terminal Checkpoint");
+    private async Task VerifyNullDescriptorIsRejectedAtTheCall<TItem>(
+        Func<ILedgerClient, IAsyncEnumerable<TItem>> read, string readName)
+    {
+        await using var client = CreateClient();
 
-    private Task<IReadOnlyList<ContractStreamEvent<TProbe>>> CollectBounded(
-        ILedgerClient client, LedgerOffset? fromOffset, LedgerOffset toOffset) =>
+        var call = () => read(client);
+
+        call.Should().Throw<ArgumentNullException>(
+            $"{readName} must reject a null ViewDescriptor at the call, before the stream is enumerated, "
+            + "so a missing descriptor fails fast instead of on the first MoveNextAsync");
+    }
+
+    private static async Task VerifyInterfaceServesTemplateContractsWithRenderedView(
+        Func<IReadFamily, Task<IReadOnlyList<ReadRow>>> collect, string readName)
+    {
+        var templateCreated = CreatedRows(await collect(TemplateFamily.Instance));
+        var interfaceCreated = CreatedRows(await collect(InterfaceFamily.Instance));
+
+        interfaceCreated.Select(r => (r.ContractId, r.Offset)).Should().BeEquivalentTo(
+            templateCreated.Select(r => (AsInterfaceContractId(r.ContractId), r.Offset)),
+            $"{readName} must serve the template family's Created contracts under the same contract ids as the template family, at the same offsets");
+        interfaceCreated.Should().NotBeEmpty(
+            $"the conformance scenario must seed at least one probe contract that {readName} classifies");
+        interfaceCreated.Select(r => (r.ContractId, r.SynchronizerId)).Should().BeEquivalentTo(
+            templateCreated.Select(r => (AsInterfaceContractId(r.ContractId), r.SynchronizerId)),
+            $"{readName} must serve each Created row under the same SynchronizerId as the template family");
+        interfaceCreated.Should().OnlyContain(
+            r => r.ViewAmount == 42.5m,
+            $"every Created row of {readName} must carry the view amount 42.5 the kit documents");
+    }
+
+    private static List<ReadRow> CreatedRows(IReadOnlyList<ReadRow> rows) =>
+        rows.Where(r => r.Kind == RowKind.Created).ToList();
+
+    private static string? AsInterfaceContractId(string? templateContractId) =>
+        new ContractId<TProbe>(templateContractId!).ToInterfaceContractId<TProbe, IConformanceProbe>().Value;
+
+    private async Task VerifyCancellationThrows(IReadFamily family)
+    {
+        await using var client = CreateClient();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var act = () => DrainWithinBudget(
+            family.AcsDelta(client, Reader, null, null, cts.Token),
+            $"a cancelled {family.LiveSubscriptionName} must throw OperationCanceledException, not ignore the token");
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    private async Task VerifySnapshotSurfacesUnclassifiedRows(IReadFamily family)
+    {
+        await using var client = CreateClient();
+
+        var entries = await CollectSnapshot(family, client);
+
+        entries.Should().Contain(e => e.Kind == RowKind.Unclassified);
+    }
+
+    private async Task VerifySnapshotEndsWithCheckpoint(IReadFamily family)
+    {
+        await using var client = CreateClient();
+
+        var entries = await CollectSnapshot(family, client);
+
+        entries.Should().NotBeEmpty();
+        entries[^1].Kind.Should().Be(RowKind.Checkpoint);
+    }
+
+    private async Task VerifySnapshotYieldsSeededRowsBeforeCheckpoint(IReadFamily family)
+    {
+        await using var client = CreateClient();
+
+        var entries = await CollectSnapshot(family, client);
+
+        entries.Count(e => e.Kind == RowKind.Created).Should().BeGreaterThan(0);
+        entries.SkipLast(1).Should().NotContain(e => e.Kind == RowKind.Checkpoint);
+    }
+
+    private async Task VerifyEmptySnapshotEndsWithCheckpoint(IReadFamily family)
+    {
+        await using var client = CreateClient();
+
+        var entries = await CollectSnapshot(family, client, EmptySnapshotOffset);
+
+        entries.Should().ContainSingle()
+            .Which.Kind.Should().Be(RowKind.Checkpoint);
+    }
+
+    private async Task VerifySnapshotSurfacesMidSnapshotFault(IReadFamily family)
+    {
+        var faultingClient = CreateFaultingSnapshotClient();
+        Assert.SkipWhen(
+            faultingClient is null,
+            $"adopter opted out of the {family.FaultPathCheckName}: its transport cannot induce a deterministic mid-snapshot fault");
+        await using var client = faultingClient!;
+
+        var entries = await CollectSnapshot(family, client);
+
+        entries.Should().NotBeEmpty();
+        entries[^1].Kind.Should().Be(
+            RowKind.StreamError,
+            "a mid-snapshot transport fault must surface in-band as a terminal StreamError, not be thrown");
+        entries.Should().NotContain(
+            e => e.Kind == RowKind.Checkpoint,
+            "a faulted snapshot yields no terminal Checkpoint — there is no valid snapshot offset to hand over to a live subscription");
+    }
+
+    private async Task VerifyFromOffsetIsExclusive(IReadFamily family)
+    {
+        await using var client = CreateClient();
+        var end = await client.GetLedgerEndAsync();
+
+        var all = await CollectBounded(family, client, LedgerOffset.Begin, end);
+        all.Should().NotBeEmpty(
+            "the conformance scenario must seed at least one event on the subscription stream");
+        var resumeFrom = FirstPosition(all);
+
+        var resumed = await CollectBounded(family, client, resumeFrom, end);
+
+        resumed.Should().NotContain(
+            e => PositionOf(e) == resumeFrom,
+            "fromOffset is exclusive: resuming from an offset must not re-deliver the event at it");
+    }
+
+    private async Task VerifyToOffsetIsInclusiveAndTerminal(IReadFamily family)
+    {
+        await using var client = CreateClient();
+        var end = await client.GetLedgerEndAsync();
+
+        var all = await CollectBounded(family, client, LedgerOffset.Begin, end);
+        all.Should().NotBeEmpty(
+            "the conformance scenario must seed at least one event on the subscription stream");
+        var boundary = FirstPosition(all);
+
+        var bounded = await CollectBounded(family, client, LedgerOffset.Begin, boundary);
+
+        bounded.Should().Contain(
+            e => PositionOf(e) == boundary,
+            "toOffset is inclusive: the event at toOffset must be delivered");
+        bounded.Should().OnlyContain(
+            e => SitsAtOrBefore(e, boundary),
+            "a bounded subscription must complete at toOffset and deliver nothing past it; an event "
+            + "carrying no ledger position cannot sit past the boundary because it sits nowhere");
+    }
+
+    private async Task VerifyLedgerEffectsNeverYieldArchived(IReadFamily family)
+    {
+        await using var client = CreateClient();
+        var end = await client.GetLedgerEndAsync();
+
+        var events = await CollectWithinBudget(
+            family.LedgerEffects(client, Reader, LedgerOffset.Begin, end, CancellationToken.None),
+            $"A bounded {family.SubscribeLedgerEffectsName} (toOffset {end.Value}) must complete");
+
+        events.Should().NotBeEmpty(
+            "the conformance scenario must seed at least one event on the ledger-effects stream");
+        events.Should().NotContain(
+            e => e.Kind == RowKind.Archived,
+            "the ledger-effects shape signals archival via a consuming Exercised, never an Archived variant");
+        events.Where(e => e.Kind == RowKind.Exercised).Should().Contain(
+            x => x.Consuming,
+            "the ledger-effects shape conveys archival as a consuming Exercised event, so the seeded "
+            + "scenario must archive one TProbe at an offset within the seeded ledger end; a stream "
+            + "carrying no archival signal certifies nothing on this axis");
+    }
+
+    private async Task VerifyAcsDeltaNeverYieldsExercised(IReadFamily family)
+    {
+        await using var client = CreateClient();
+        var end = await client.GetLedgerEndAsync();
+
+        var events = await CollectBounded(family, client, LedgerOffset.Begin, end);
+
+        events.Should().NotBeEmpty(
+            "the conformance scenario must seed at least one event on the subscription stream");
+        events.Should().NotContain(
+            e => e.Kind == RowKind.Exercised,
+            "the ACS-delta shape surfaces archival as a first-class Archived event, never an Exercised variant");
+        events.Should().Contain(
+            e => e.Kind == RowKind.Archived,
+            "the ACS-delta shape conveys archival as a first-class Archived event, so the seeded "
+            + "scenario must archive one TProbe at an offset within the seeded ledger end; a stream "
+            + "carrying no archival signal certifies nothing on this axis");
+    }
+
+    private Task<IReadOnlyList<ReadRow>> CollectSnapshot(
+        IReadFamily family, ILedgerClient client, LedgerOffset? activeAtOffset = null) =>
         CollectWithinBudget(
-            client.SubscribeAsync<TProbe>(Reader, fromOffset, toOffset),
-            $"A bounded SubscribeAsync (toOffset {toOffset.Value}) must complete");
+            family.Snapshot(client, Reader, activeAtOffset, CancellationToken.None),
+            $"{family.SubscribeActiveName} must terminate with a terminal Checkpoint");
+
+    private Task<IReadOnlyList<ReadRow>> CollectBounded(
+        IReadFamily family, ILedgerClient client, LedgerOffset? fromOffset, LedgerOffset toOffset) =>
+        CollectWithinBudget(
+            family.AcsDelta(client, Reader, fromOffset, toOffset, CancellationToken.None),
+            $"A bounded {family.SubscribeName} (toOffset {toOffset.Value}) must complete");
 
     private async Task DrainWithinBudget<TItem>(
         IAsyncEnumerable<TItem> stream, string cancellationContract)
@@ -605,26 +837,18 @@ public abstract class LedgerClientConformanceTests<TProbe>
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-    private static LedgerOffset? PositionOf(ContractStreamEvent<TProbe> e) => e switch
-    {
-        ContractStreamEvent<TProbe>.Created c => c.Offset,
-        ContractStreamEvent<TProbe>.Archived a => a.Offset,
-        ContractStreamEvent<TProbe>.Exercised x => x.Offset,
-        ContractStreamEvent<TProbe>.Assigned a => a.Offset,
-        ContractStreamEvent<TProbe>.Unassigned u => u.Offset,
-        ContractStreamEvent<TProbe>.Checkpoint cp => cp.Offset,
-        ContractStreamEvent<TProbe>.Unclassified u => u.Offset,
-        ContractStreamEvent<TProbe>.StreamError => throw new InvalidOperationException(
-            "a bounded conformance subscription must not surface a transport StreamError"),
-        _ => throw new InvalidOperationException("unrecognized ContractStreamEvent variant"),
-    };
+    private static LedgerOffset? PositionOf(ReadRow row) =>
+        row.Kind == RowKind.StreamError
+            ? throw new InvalidOperationException(
+                "a bounded conformance subscription must not surface a transport StreamError")
+            : row.Offset;
 
-    private static bool SitsAtOrBefore(ContractStreamEvent<TProbe> e, LedgerOffset boundary) =>
-        PositionOf(e) is not { } position || position.Value <= boundary.Value;
+    private static bool SitsAtOrBefore(ReadRow row, LedgerOffset boundary) =>
+        PositionOf(row) is not { } position || position.Value <= boundary.Value;
 
-    private static LedgerOffset FirstPosition(IReadOnlyList<ContractStreamEvent<TProbe>> events)
+    private static LedgerOffset FirstPosition(IReadOnlyList<ReadRow> rows)
     {
-        var positioned = events.Select(PositionOf).OfType<LedgerOffset>().ToList();
+        var positioned = rows.Select(PositionOf).OfType<LedgerOffset>().ToList();
 
         positioned.Should().NotBeEmpty(
             "the conformance scenario must seed at least one event that carries a ledger position "
@@ -632,5 +856,207 @@ public abstract class LedgerClientConformanceTests<TProbe>
             + "so it alone cannot anchor the offset-boundary checks");
 
         return positioned[0];
+    }
+
+    private static async IAsyncEnumerable<ReadRow> Project<TSource>(
+        IAsyncEnumerable<TSource> source,
+        Func<TSource, ReadRow> toRow,
+        [EnumeratorCancellation] CancellationToken enumerationToken = default)
+    {
+        await foreach (var item in source.WithCancellation(enumerationToken))
+        {
+            yield return toRow(item);
+        }
+    }
+
+    private enum RowKind
+    {
+        Created,
+        Archived,
+        Exercised,
+        Assigned,
+        Unassigned,
+        Checkpoint,
+        Unclassified,
+        StreamError,
+    }
+
+    private readonly record struct ReadRow(
+        RowKind Kind,
+        LedgerOffset? Offset = null,
+        bool Consuming = false,
+        string? ContractId = null,
+        decimal? ViewAmount = null,
+        string? SynchronizerId = null);
+
+    private interface IReadFamily
+    {
+        string SubscribeActiveName { get; }
+
+        string SubscribeName { get; }
+
+        string SubscribeLedgerEffectsName { get; }
+
+        string FaultPathCheckName { get; }
+
+        string LiveSubscriptionName { get; }
+
+        IAsyncEnumerable<ReadRow> Snapshot(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? activeAtOffset,
+            CancellationToken cancellationToken);
+
+        IAsyncEnumerable<ReadRow> AcsDelta(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? fromOffset, LedgerOffset? toOffset,
+            CancellationToken cancellationToken);
+
+        IAsyncEnumerable<ReadRow> LedgerEffects(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? fromOffset, LedgerOffset? toOffset,
+            CancellationToken cancellationToken);
+    }
+
+    private sealed class TemplateFamily : IReadFamily
+    {
+        public static TemplateFamily Instance { get; } = new();
+
+        public string SubscribeActiveName => "SubscribeActiveAsync";
+
+        public string SubscribeName => "SubscribeAsync";
+
+        public string SubscribeLedgerEffectsName => "SubscribeLedgerEffectsAsync";
+
+        public string FaultPathCheckName => "fault-path check";
+
+        public string LiveSubscriptionName => "live subscription";
+
+        public IAsyncEnumerable<ReadRow> Snapshot(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? activeAtOffset,
+            CancellationToken cancellationToken) =>
+            Project(
+                client.SubscribeActiveAsync<TProbe>(reader, activeAtOffset, cancellationToken: cancellationToken),
+                SnapshotRow,
+                CancellationToken.None);
+
+        public IAsyncEnumerable<ReadRow> AcsDelta(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? fromOffset, LedgerOffset? toOffset,
+            CancellationToken cancellationToken) =>
+            Project(
+                client.SubscribeAsync<TProbe>(reader, fromOffset, toOffset, cancellationToken),
+                StreamRow,
+                CancellationToken.None);
+
+        public IAsyncEnumerable<ReadRow> LedgerEffects(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? fromOffset, LedgerOffset? toOffset,
+            CancellationToken cancellationToken) =>
+            Project(
+                client.SubscribeLedgerEffectsAsync<TProbe>(reader, fromOffset, toOffset, cancellationToken),
+                StreamRow,
+                CancellationToken.None);
+
+        private static ReadRow SnapshotRow(AcsSnapshotEntry<TProbe> entry) => entry switch
+        {
+            AcsSnapshotEntry<TProbe>.Created c =>
+                new(RowKind.Created, c.Offset, ContractId: c.ContractId.Value, SynchronizerId: c.SynchronizerId.Value),
+            AcsSnapshotEntry<TProbe>.Unclassified u => new(RowKind.Unclassified, u.Offset),
+            AcsSnapshotEntry<TProbe>.Checkpoint => new(RowKind.Checkpoint),
+            AcsSnapshotEntry<TProbe>.StreamError => new(RowKind.StreamError),
+            _ => throw new InvalidOperationException("unrecognized AcsSnapshotEntry variant"),
+        };
+
+        private static ReadRow StreamRow(ContractStreamEvent<TProbe> e) => e switch
+        {
+            ContractStreamEvent<TProbe>.Created c => new(RowKind.Created, c.Offset, ContractId: c.ContractId.Value),
+            ContractStreamEvent<TProbe>.Archived a => new(RowKind.Archived, a.Offset, ContractId: a.ContractId.Value),
+            ContractStreamEvent<TProbe>.Exercised x =>
+                new(RowKind.Exercised, x.Offset, x.Consuming, x.ContractId.Value),
+            ContractStreamEvent<TProbe>.Assigned a => new(RowKind.Assigned, a.Offset, ContractId: a.ContractId.Value),
+            ContractStreamEvent<TProbe>.Unassigned u =>
+                new(RowKind.Unassigned, u.Offset, ContractId: u.ContractId.Value),
+            ContractStreamEvent<TProbe>.Checkpoint cp => new(RowKind.Checkpoint, cp.Offset),
+            ContractStreamEvent<TProbe>.Unclassified u => new(RowKind.Unclassified, u.Offset),
+            ContractStreamEvent<TProbe>.StreamError => new(RowKind.StreamError),
+            _ => throw new InvalidOperationException("unrecognized ContractStreamEvent variant"),
+        };
+    }
+
+    private sealed class InterfaceFamily : IReadFamily
+    {
+        public static InterfaceFamily Instance { get; } = new();
+
+        public string SubscribeActiveName => "interface SubscribeActiveAsync";
+
+        public string SubscribeName => "interface SubscribeAsync";
+
+        public string SubscribeLedgerEffectsName => "interface SubscribeLedgerEffectsAsync";
+
+        public string FaultPathCheckName => "interface fault-path check";
+
+        public string LiveSubscriptionName => "live interface subscription";
+
+        public IAsyncEnumerable<ReadRow> Snapshot(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? activeAtOffset,
+            CancellationToken cancellationToken) =>
+            Project(
+                client.SubscribeActiveAsync(
+                    IConformanceProbe.View, reader, activeAtOffset, cancellationToken: cancellationToken),
+                SnapshotRow,
+                CancellationToken.None);
+
+        public IAsyncEnumerable<ReadRow> AcsDelta(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? fromOffset, LedgerOffset? toOffset,
+            CancellationToken cancellationToken) =>
+            Project(
+                client.SubscribeAsync(IConformanceProbe.View, reader, fromOffset, toOffset, cancellationToken),
+                StreamRow,
+                CancellationToken.None);
+
+        public IAsyncEnumerable<ReadRow> LedgerEffects(
+            ILedgerClient client, SubmitterInfo reader, LedgerOffset? fromOffset, LedgerOffset? toOffset,
+            CancellationToken cancellationToken) =>
+            Project(
+                client.SubscribeLedgerEffectsAsync(
+                    IConformanceProbe.View, reader, fromOffset, toOffset, cancellationToken),
+                StreamRow,
+                CancellationToken.None);
+
+        private static ReadRow SnapshotRow(InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView> entry) =>
+            entry switch
+            {
+                InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.Created c =>
+                    new(
+                        RowKind.Created,
+                        c.Offset,
+                        ContractId: c.ContractId.Value,
+                        ViewAmount: c.Payload.Amount,
+                        SynchronizerId: c.SynchronizerId.Value),
+                InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.Unclassified u =>
+                    new(RowKind.Unclassified, u.Offset),
+                InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.Checkpoint =>
+                    new(RowKind.Checkpoint),
+                InterfaceAcsSnapshotEntry<IConformanceProbe, ConformanceProbeView>.StreamError =>
+                    new(RowKind.StreamError),
+                _ => throw new InvalidOperationException("unrecognized InterfaceAcsSnapshotEntry variant"),
+            };
+
+        private static ReadRow StreamRow(InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView> e) =>
+            e switch
+            {
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Created c =>
+                    new(RowKind.Created, c.Offset, ContractId: c.ContractId.Value, ViewAmount: c.Payload.Amount),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Archived a =>
+                    new(RowKind.Archived, a.Offset, ContractId: a.ContractId.Value),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Exercised x =>
+                    new(RowKind.Exercised, x.Offset, x.Consuming, x.ContractId.Value),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Assigned a =>
+                    new(RowKind.Assigned, a.Offset, ContractId: a.ContractId.Value),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Unassigned u =>
+                    new(RowKind.Unassigned, u.Offset, ContractId: u.ContractId.Value),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Checkpoint cp =>
+                    new(RowKind.Checkpoint, cp.Offset),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.Unclassified u =>
+                    new(RowKind.Unclassified, u.Offset),
+                InterfaceStreamEvent<IConformanceProbe, ConformanceProbeView>.StreamError =>
+                    new(RowKind.StreamError),
+                _ => throw new InvalidOperationException("unrecognized InterfaceStreamEvent variant"),
+            };
     }
 }

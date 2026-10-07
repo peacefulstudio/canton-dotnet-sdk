@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -43,6 +44,7 @@ public sealed partial class FakeLedgerClientBuilder
     private TransactionResult? _executedTransaction;
     private PreferredPackages? _preferredPackages;
     private StagedPackagePreference? _packagePreference;
+    private LedgerOperationException? _throwingCallFailure;
 
     /// <summary>
     /// Stages the offset <see cref="FakeLedgerClient.GetLedgerEndAsync"/> starts from. The end
@@ -459,6 +461,39 @@ public sealed partial class FakeLedgerClientBuilder
         return this;
     }
 
+    /// <summary>
+    /// Stages the failure every <em>throwing</em> member of the built <see cref="FakeLedgerClient"/>
+    /// raises from its returned task, as the very instance staged, so a test can drive its handling of a
+    /// failed call the way a real transport fails, without a participant. The throwing members are the
+    /// ones that return a result or a command id directly: the ledger-end, synchronizer and version
+    /// reads, <c>SubmitAndWaitAsync</c>, <c>SubmitAsync</c>, <c>SubmitReassignmentAsync</c>, the point
+    /// and typed reads, <c>GetDisclosureAsync</c>, <c>EstimateTrafficCostAsync</c> and the
+    /// interactive-submission members.
+    /// </summary>
+    /// <remarks>
+    /// This covers the throwing members only. The <c>Try*</c> members keep returning the
+    /// <see cref="ExerciseOutcome{T}"/> staged for them and the streams keep yielding their staged
+    /// events, because a real transport does not throw from those either. A null argument still throws
+    /// synchronously ahead of the staged failure, and a member with neither an answer nor a failure
+    /// staged still throws its <see cref="NotSupportedException"/>.
+    /// The fake raises the instance exactly as staged and does not derive its
+    /// <see cref="LedgerOperationException.CommitState"/> from the member called, so stage a failure whose
+    /// commit state suits the members under test: under the failure contract a failed read reports
+    /// <see cref="CommitState.NotCommitted"/>, so stage it accordingly. To stage a failure that carries
+    /// both a <see cref="LedgerOperationException.Status"/> and an explicit
+    /// <see cref="LedgerOperationException.CommitState"/> — a read that got no answer, say — build it with
+    /// the <see cref="LedgerOperationException"/> constructor that takes a <see cref="TransportStatus"/>
+    /// followed by a <see cref="CommitState"/>.
+    /// </remarks>
+    /// <param name="failure">The exception every throwing member raises.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithThrowingCallFailure(LedgerOperationException failure)
+    {
+        ArgumentNullException.ThrowIfNull(failure);
+        _throwingCallFailure = failure;
+        return this;
+    }
+
     /// <summary>Builds a <see cref="FakeLedgerClient"/> from the currently staged behaviour.</summary>
     /// <returns>
     /// A fake whose behaviour is a snapshot of this builder; later mutation of the builder does
@@ -494,5 +529,6 @@ public sealed partial class FakeLedgerClientBuilder
             new Dictionary<Type, object>(_interfaceLedgerEffects)))
     {
         TypedReads = SnapshotTypedReads(),
+        ThrowingCallFailure = _throwingCallFailure,
     };
 }

@@ -112,7 +112,7 @@ public class EmittedPayloadPropertyCollidingWithTemplateNameCompilesTests
             .Single(f => f.RelativePath.EndsWith("Warden.cs", StringComparison.Ordinal));
 
         warden.Content.Should().Contain(
-            "new SubmitterInfo(new HashSet<Party>",
+            "new global::Daml.Runtime.Commands.SubmitterInfo(new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party>",
             "a template with several static signatories derives its submitter from a party set");
         warden.Content.Should().Contain(
             "payload.Warden_",

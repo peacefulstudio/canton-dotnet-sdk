@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
@@ -64,6 +65,7 @@ internal sealed partial class SubmissionClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteOutcomeTracedAsync<SubmissionClient, ExerciseOutcome<TResult>>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             new ServerCall(CommandService.Descriptor, "SubmitAndWaitForTransaction"),
             async (activity, token) =>
@@ -79,7 +81,7 @@ internal sealed partial class SubmissionClient
 
                 LogChoiceExerciseOutcome(outcome, command);
 
-                return GrpcTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command.Choice);
+                return GrpcTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command);
             },
             RecordOutcome,
             cancellationToken);
@@ -89,6 +91,7 @@ internal sealed partial class SubmissionClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteTracedAsync<SubmissionClient, SubmitAndWaitResult>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             CommandService.Descriptor,
             "SubmitAndWait",
@@ -99,7 +102,7 @@ internal sealed partial class SubmissionClient
                 return new SubmitAndWaitResult(
                     (RuntimeCommands.CommandId)commands.CommandId,
                     response.UpdateId,
-                    LedgerOffset.At(response.CompletionOffset));
+                    LedgerWireConversions.ToLedgerOffset(response.CompletionOffset));
             },
             cancellationToken);
 
@@ -108,6 +111,7 @@ internal sealed partial class SubmissionClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteTracedAsync<SubmissionClient, RuntimeCommands.CommandId>(
+            LedgerCallKind.AcceptedOnlyWrite,
             LedgerCallInvoker.Source,
             CommandSubmissionService.Descriptor,
             "Submit",
@@ -132,6 +136,7 @@ internal sealed partial class SubmissionClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteTracedAsync<SubmissionClient, RuntimeCommands.CommandId>(
+            LedgerCallKind.AcceptedOnlyWrite,
             LedgerCallInvoker.Source,
             CommandSubmissionService.Descriptor,
             "SubmitReassignment",
@@ -157,6 +162,7 @@ internal sealed partial class SubmissionClient
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T> =>
         _invoker.ExecuteOutcomeTracedAsync<SubmissionClient, ExerciseOutcome<ContractStreamEvent<T>>>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             new ServerCall(CommandService.Descriptor, "SubmitAndWaitForReassignment"),
             async (_, token) =>
@@ -227,6 +233,7 @@ internal sealed partial class SubmissionClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteOutcomeTracedAsync<SubmissionClient, ExerciseOutcome<TransactionResult>>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             new ServerCall(CommandService.Descriptor, "SubmitAndWaitForTransaction"),
             (_, token) =>
@@ -253,6 +260,7 @@ internal sealed partial class SubmissionClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteOutcomeTracedAsync<SubmissionClient, ExerciseOutcome<TransactionTree>>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             new ServerCall(CommandService.Descriptor, "SubmitAndWaitForTransaction"),
             (_, token) =>
@@ -282,6 +290,7 @@ internal sealed partial class SubmissionClient
         CancellationToken cancellationToken = default)
         where TTemplate : ITemplate =>
         _invoker.ExecuteOutcomeTracedAsync<SubmissionClient, ExerciseOutcome<ContractId<TTemplate>>>(
+            LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             serverCall: null,
             async (_, token) =>

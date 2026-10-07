@@ -16,44 +16,44 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record Allocation_Settle
 /// </summary>
 public sealed record Allocation_Settle(
-    IReadOnlyList<Party> Actors,
-    IReadOnlyList<TransferLegSide> ExtraTransferLegSides,
-    IReadOnlyDictionary<string, decimal>? NextIterationFunding,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Actors,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide> ExtraTransferLegSides,
+    global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>? NextIterationFunding,
     global::Splice.Api.Token.MetadataV1.ExtraArgs ExtraArgs
-) : IDamlRecord<Allocation_Settle>
+) : global::Daml.Runtime.Data.IDamlRecord<Allocation_Settle>
 {
-    private readonly IReadOnlyList<Party> _actors = DamlFieldCollections.Copy(Actors);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> _actors = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Actors);
 
     /// <summary>The Daml field <c>actors</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("actors")]
-    public IReadOnlyList<Party> Actors
+    [global::Daml.Runtime.Data.DamlFieldAttribute("actors")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Actors
     {
         get => _actors;
-        init => _actors = DamlFieldCollections.Copy(value);
+        init => _actors = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyList<TransferLegSide> _extraTransferLegSides = DamlFieldCollections.Copy(ExtraTransferLegSides);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide> _extraTransferLegSides = global::Daml.Runtime.Data.DamlFieldCollections.Copy(ExtraTransferLegSides);
 
     /// <summary>The Daml field <c>extraTransferLegSides</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("extraTransferLegSides")]
-    public IReadOnlyList<TransferLegSide> ExtraTransferLegSides
+    [global::Daml.Runtime.Data.DamlFieldAttribute("extraTransferLegSides")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide> ExtraTransferLegSides
     {
         get => _extraTransferLegSides;
-        init => _extraTransferLegSides = DamlFieldCollections.Copy(value);
+        init => _extraTransferLegSides = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyDictionary<string, decimal>? _nextIterationFunding = DamlFieldCollections.Copy(NextIterationFunding);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>? _nextIterationFunding = global::Daml.Runtime.Data.DamlFieldCollections.Copy(NextIterationFunding);
 
     /// <summary>The Daml field <c>nextIterationFunding</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("nextIterationFunding")]
-    public IReadOnlyDictionary<string, decimal>? NextIterationFunding
+    [global::Daml.Runtime.Data.DamlFieldAttribute("nextIterationFunding")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>? NextIterationFunding
     {
         get => _nextIterationFunding;
-        init => _nextIterationFunding = DamlFieldCollections.Copy(value);
+        init => _nextIterationFunding = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>extraArgs</c>.</summary>
-    [DamlFieldAttribute("extraArgs")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("extraArgs")]
     public global::Splice.Api.Token.MetadataV1.ExtraArgs ExtraArgs { get; init; } = ExtraArgs;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -61,49 +61,49 @@ public sealed record Allocation_Settle(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(Allocation_Settle? other) =>
         other is not null
-        && DamlFieldCollections.Equal(Actors, other.Actors)
-        && DamlFieldCollections.Equal(ExtraTransferLegSides, other.ExtraTransferLegSides)
-        && DamlFieldCollections.Equal(NextIterationFunding, other.NextIterationFunding)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default.Equals(ExtraArgs, other.ExtraArgs);
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Actors, other.Actors)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(ExtraTransferLegSides, other.ExtraTransferLegSides)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(NextIterationFunding, other.NextIterationFunding)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default.Equals(ExtraArgs, other.ExtraArgs);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(Actors));
-        hash.Add(DamlFieldCollections.Hash(ExtraTransferLegSides));
-        hash.Add(DamlFieldCollections.Hash(NextIterationFunding));
+        var hash = new global::System.HashCode();
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Actors));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(ExtraTransferLegSides));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(NextIterationFunding));
         hash.Add(ExtraArgs);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("actors", new DamlList(Actors.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("extraTransferLegSides", new DamlList(ExtraTransferLegSides.Select(x => (DamlValue)x.ToRecord()).ToList())),
-        DamlField.Create("nextIterationFunding", NextIterationFunding is { } __NextIterationFunding ? new DamlOptional(new DamlTextMap(__NextIterationFunding.ToDictionary(kv => kv.Key, kv => (DamlValue)new DamlNumeric(kv.Value)))) : DamlOptional.None),
-        DamlField.Create("extraArgs", ExtraArgs.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("actors", new global::Daml.Runtime.Data.DamlList(Actors.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("extraTransferLegSides", new global::Daml.Runtime.Data.DamlList(ExtraTransferLegSides.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("nextIterationFunding", NextIterationFunding is { } __NextIterationFunding ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTextMap(__NextIterationFunding.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlNumeric(kv.Value)))) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("extraArgs", ExtraArgs.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Allocation_Settle FromRecord(DamlRecord record) => new Allocation_Settle(
-        Actors: (IReadOnlyList<Party>)record.GetRequiredField("actors").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
-        ExtraTransferLegSides: (IReadOnlyList<TransferLegSide>)record.GetRequiredField("extraTransferLegSides").As<DamlList>().Values.Select(x => TransferLegSide.FromRecord(x.As<DamlRecord>())).ToList(),
-        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlNumeric>().Value) : null,
-        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<DamlRecord>())
+    public static Allocation_Settle FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Allocation_Settle(
+        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExtraTransferLegSides: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide>)record.GetRequiredField("extraTransferLegSides").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLegSide.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlNumeric>().Value) : null,
+        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("actors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actors"), context.Field("actors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("extraTransferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraTransferLegSides"), context.Field("extraTransferLegSides"), (__json0, __ctx0) => TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("nextIterationFunding", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextIterationFunding"), context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1)))),
-            DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(4);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("actors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actors"), context.Field("actors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("extraTransferLegSides", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraTransferLegSides"), context.Field("extraTransferLegSides"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.TransferLegSide.__ReadDamlLfJson(__json0, __ctx0))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nextIterationFunding", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

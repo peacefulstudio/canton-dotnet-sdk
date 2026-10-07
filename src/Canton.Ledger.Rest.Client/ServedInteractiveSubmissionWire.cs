@@ -4,7 +4,6 @@
 using System.Text.Json.Serialization;
 using WireCommand = Canton.Ledger.Rest.Client.Raw.Command;
 using WireCostEstimation = Canton.Ledger.Rest.Client.Raw.CostEstimation;
-using WireCostEstimationHints = Canton.Ledger.Rest.Client.Raw.CostEstimationHints;
 using WireDeduplicationPeriod = Canton.Ledger.Rest.Client.Raw.DeduplicationPeriod;
 using WireDisclosedContract = Canton.Ledger.Rest.Client.Raw.DisclosedContract;
 using WireTransactionFormat = Canton.Ledger.Rest.Client.Raw.TransactionFormat;
@@ -20,8 +19,7 @@ internal sealed record ServedPrepareSubmissionRequest(
     [property: JsonPropertyName("readAs")] ICollection<string> ReadAs,
     [property: JsonPropertyName("disclosedContracts")] ICollection<WireDisclosedContract>? DisclosedContracts,
     [property: JsonPropertyName("synchronizerId")] string SynchronizerId,
-    [property: JsonPropertyName("packageIdSelectionPreference")] ICollection<string> PackageIdSelectionPreference,
-    [property: JsonPropertyName("estimateTrafficCost")] WireCostEstimationHints? EstimateTrafficCost);
+    [property: JsonPropertyName("packageIdSelectionPreference")] ICollection<string> PackageIdSelectionPreference);
 
 internal sealed record ServedPrepareSubmissionResponse(
     [property: JsonPropertyName("preparedTransaction")] string? PreparedTransaction,

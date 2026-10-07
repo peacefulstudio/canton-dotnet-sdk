@@ -14,36 +14,36 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml variant AllocationAction
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record AllocationAction : IDamlVariant<AllocationAction>
+public abstract record AllocationAction : global::Daml.Runtime.Data.IDamlVariant<AllocationAction>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs an AllocationAction by dispatching on the DamlVariant constructor tag.</summary>
-    public static AllocationAction FromVariant(DamlVariant variant) =>
+    public static AllocationAction FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
             "AA_Settle" => new AA_Settle(),
             "AA_Cancel" => new AA_Cancel(),
             "AA_Withdraw" => new AA_Withdraw(),
-            "AA_Custom" => new AA_Custom(AllocationAction_AA_Custom.FromRecord(variant.Value.As<DamlRecord>())),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AllocationAction constructor")
+            "AA_Custom" => new AA_Custom(global::Splice.Api.Token.AllocationV2.AllocationAction_AA_Custom.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AllocationAction constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "AA_Settle" => DamlVariant.Create("AA_Settle", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AA_Cancel" => DamlVariant.Create("AA_Cancel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AA_Withdraw" => DamlVariant.Create("AA_Withdraw", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AA_Custom" => DamlVariant.Create("AA_Custom", AllocationAction_AA_Custom.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AA_Settle" => global::Daml.Runtime.Data.DamlVariant.Create("AA_Settle", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AA_Cancel" => global::Daml.Runtime.Data.DamlVariant.Create("AA_Cancel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AA_Withdraw" => global::Daml.Runtime.Data.DamlVariant.Create("AA_Withdraw", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AA_Custom" => global::Daml.Runtime.Data.DamlVariant.Create("AA_Custom", global::Splice.Api.Token.AllocationV2.AllocationAction_AA_Custom.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -57,7 +57,7 @@ public abstract record AllocationAction : IDamlVariant<AllocationAction>
         public override string Tag => "AA_Settle";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AA_Settle", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AA_Settle", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>AA_Cancel constructor (no arguments).</summary>
@@ -67,7 +67,7 @@ public abstract record AllocationAction : IDamlVariant<AllocationAction>
         public override string Tag => "AA_Cancel";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AA_Cancel", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AA_Cancel", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>AA_Withdraw constructor (no arguments).</summary>
@@ -77,17 +77,17 @@ public abstract record AllocationAction : IDamlVariant<AllocationAction>
         public override string Tag => "AA_Withdraw";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AA_Withdraw", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AA_Withdraw", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>AA_Custom constructor.</summary>
-    public sealed record AA_Custom(AllocationAction_AA_Custom Value) : AllocationAction
+    public sealed record AA_Custom(global::Splice.Api.Token.AllocationV2.AllocationAction_AA_Custom Value) : AllocationAction
     {
         /// <inheritdoc />
         public override string Tag => "AA_Custom";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AA_Custom", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AA_Custom", Value.ToRecord());
     }
 
 }

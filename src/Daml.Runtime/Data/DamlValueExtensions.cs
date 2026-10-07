@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Daml.Runtime.Contracts;
+using Daml.Runtime.Stdlib;
 
 namespace Daml.Runtime.Data;
 
@@ -53,6 +55,20 @@ public static class DamlValueExtensions
     /// <c>DateTimeOffset</c>, and <see cref="Party"/>. Each primitive branch also accepts
     /// <see cref="Nullable{T}"/> of the same underlying type.</item>
     /// <item><see cref="DamlContractId"/> → <see cref="ContractId{T}"/> via reflection.</item>
+    /// <item><see cref="DamlOptional"/> or <see cref="DamlOptionalChain"/> to a
+    /// <see cref="Optional{T}"/> target: <see cref="Optional{T}.None"/> when empty, otherwise
+    /// <see cref="Optional{T}.Some"/> of the carried value converted by these same rules, so
+    /// nested Optionals keep their levels.</item>
+    /// <item><see cref="DamlOptional"/> or <see cref="DamlOptionalChain"/> to any other target: an empty
+    /// level is <c>default(TResult)</c> — <c>null</c> for reference types and <see cref="Nullable{T}"/>, and a
+    /// <see cref="NotSupportedException"/> for a non-nullable value type; a present one is its carried
+    /// value converted to <typeparamref name="TResult"/> by these same rules, so nested levels flatten to
+    /// one: <c>Some (Some x)</c> is <c>x</c>, while <c>Some None</c> and <c>None</c> are both
+    /// <c>default(TResult)</c>. A <see cref="DamlOptionalChain"/> is never flattened
+    /// into a <see cref="DamlValue"/>-derived target, which would lose its levels.</item>
+    /// <item><see cref="DamlRecord"/> → a generated record type, through its
+    /// <see cref="IDamlRecord{TSelf}.FromRecord(DamlRecord)"/> factory. A failure inside the factory
+    /// surfaces as itself, not wrapped.</item>
     /// </list>
     /// Any other combination throws <see cref="NotSupportedException"/>.
     /// <para>
@@ -74,6 +90,9 @@ public static class DamlValueExtensions
 
         var targetType = Nullable.GetUnderlyingType(typeof(TResult)) ?? typeof(TResult);
 
+        if (value is DamlUndecodedJson undecoded)
+            return UndecodedJsonReader.Read(undecoded, targetType).FromDamlValue<TResult>();
+
         if (value is DamlUnit)
         {
             if (typeof(TResult).IsValueType && Nullable.GetUnderlyingType(typeof(TResult)) is null)
@@ -82,6 +101,12 @@ public static class DamlValueExtensions
                     $"Unit represents 'no value' and has no meaningful conversion to {typeof(TResult)}.");
             return default!;
         }
+
+        if (value is (DamlOptional or DamlOptionalChain) && IsStdlibOptional(targetType))
+            return (TResult)InvokeUnwrapped(StdlibOptionalFactory(targetType), value)!;
+
+        if (value is DamlOptional || (value is DamlOptionalChain && !IsDamlValueType(typeof(TResult))))
+            return FromOptional<TResult>(value.AsOptional());
 
         if (targetType == typeof(string))
         {
@@ -124,8 +149,59 @@ public static class DamlValueExtensions
             return (TResult)instance;
         }
 
+        if (value is DamlRecord record && RecordFactoryOf(targetType) is { } recordFactory)
+            return (TResult)InvokeUnwrapped(recordFactory, record)!;
+
         throw new NotSupportedException(
             $"Cannot convert {value.GetType()} to {typeof(TResult)}. " +
             $"Use a DamlValue-derived type as TResult for direct access.");
     }
+
+    private static readonly MethodInfo FromDamlValueMethod =
+        typeof(DamlValueExtensions).GetMethod(nameof(FromDamlValue))!;
+
+    [return: MaybeNull]
+    private static TResult FromOptional<TResult>(DamlOptional optional)
+    {
+        if (optional.Value is null)
+        {
+            if (typeof(TResult).IsValueType && Nullable.GetUnderlyingType(typeof(TResult)) is null)
+                throw new NotSupportedException(
+                    $"Cannot convert an empty DamlOptional to value type {typeof(TResult)}. " +
+                    $"None represents 'no value' and has no meaningful conversion to {typeof(TResult)}; use {typeof(TResult)}? instead.");
+            return default!;
+        }
+
+        return (TResult)InvokeUnwrapped(FromDamlValueMethod.MakeGenericMethod(typeof(TResult)), optional.Value)!;
+    }
+
+    private static bool IsDamlValueType(Type type) => typeof(DamlValue).IsAssignableFrom(type);
+
+    private static bool IsStdlibOptional(Type type) =>
+        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Optional<>);
+
+    private static MethodInfo StdlibOptionalFactory(Type optionalType) =>
+        StdlibOptionalMethod.MakeGenericMethod(optionalType.GetGenericArguments()[0]);
+
+    private static readonly MethodInfo StdlibOptionalMethod =
+        typeof(DamlValueExtensions).GetMethod(nameof(ToStdlibOptional), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static Optional<T> ToStdlibOptional<T>(DamlValue value)
+        where T : notnull =>
+        Optional<T>.FromValue(value, static carried => carried.FromDamlValue<T>()!);
+
+    private static MethodInfo? RecordFactoryOf(Type recordType)
+    {
+        var implementsRecordFactory = recordType.GetInterfaces().Any(contract =>
+            contract.IsGenericType
+            && contract.GetGenericTypeDefinition() == typeof(IDamlRecord<>)
+            && contract.GetGenericArguments()[0] == recordType);
+
+        return implementsRecordFactory
+            ? recordType.GetMethod(nameof(IDamlRecord<>.FromRecord), BindingFlags.Public | BindingFlags.Static, [typeof(DamlRecord)])
+            : null;
+    }
+
+    private static object? InvokeUnwrapped(MethodInfo method, DamlValue argument) =>
+        method.Invoke(null, BindingFlags.DoNotWrapExceptions, binder: null, [argument], culture: null);
 }

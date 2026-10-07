@@ -24,98 +24,98 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml template RichTypes:TypeCorners
 /// </summary>
 public sealed partial record TypeCorners(
-    Party Owner,
-    Box<string> BoxedText,
-    Box<Profile> BoxedProfile,
-    Slot<long> Slot,
-    Box<Optional<string>>? NestedNote,
-    Optional<Optional<string>> MaybeMaybeNote,
-    Crate<string> Crate,
-    IReadOnlyDictionary<Party, long> QuotaByParty,
-    IReadOnlyDictionary<long, string> LabelByRank,
-    Either<long, string> RankOrLabel,
-    Either<Optional<string>, long> NoteOrRank,
-    Tuple2<string, long> Pair,
-    Tuple3<string, long, bool> Triple,
-    Branch Branch,
+    global::Daml.Runtime.Data.Party Owner,
+    global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string> BoxedText,
+    global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile> BoxedProfile,
+    global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long> Slot,
+    global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>? NestedNote,
+    global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> MaybeMaybeNote,
+    global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string> Crate,
+    global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long> QuotaByParty,
+    global::System.Collections.Generic.IReadOnlyDictionary<long, string> LabelByRank,
+    global::Daml.Runtime.Stdlib.Either<long, string> RankOrLabel,
+    global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long> NoteOrRank,
+    global::Daml.Runtime.Stdlib.Tuple2<string, long> Pair,
+    global::Daml.Runtime.Stdlib.Tuple3<string, long, bool> Triple,
+    global::Daml.Codegen.Testing.Conformance.RichTypes.Branch Branch,
     decimal Whole,
     decimal Finest
-) : ITemplate, IHasChoices<TypeCorners>, IDamlRecord<TypeCorners>
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<TypeCorners>, global::Daml.Runtime.Data.IDamlRecord<TypeCorners>
 {
     /// <summary>The Daml field <c>owner</c>.</summary>
-    [DamlFieldAttribute("owner")]
-    public Party Owner { get; init; } = Owner;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("owner")]
+    public global::Daml.Runtime.Data.Party Owner { get; init; } = Owner;
 
     /// <summary>The Daml field <c>boxedText</c>.</summary>
-    [DamlFieldAttribute("boxedText")]
-    public Box<string> BoxedText { get; init; } = BoxedText;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("boxedText")]
+    public global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string> BoxedText { get; init; } = BoxedText;
 
     /// <summary>The Daml field <c>boxedProfile</c>.</summary>
-    [DamlFieldAttribute("boxedProfile")]
-    public Box<Profile> BoxedProfile { get; init; } = BoxedProfile;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("boxedProfile")]
+    public global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile> BoxedProfile { get; init; } = BoxedProfile;
 
     /// <summary>The Daml field <c>slot</c>.</summary>
-    [DamlFieldAttribute("slot")]
-    public Slot<long> Slot { get; init; } = Slot;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("slot")]
+    public global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long> Slot { get; init; } = Slot;
 
     /// <summary>The Daml field <c>nestedNote</c>.</summary>
-    [DamlFieldAttribute("nestedNote")]
-    public Box<Optional<string>>? NestedNote { get; init; } = NestedNote;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("nestedNote")]
+    public global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>? NestedNote { get; init; } = NestedNote;
 
     /// <summary>The Daml field <c>maybeMaybeNote</c>.</summary>
-    [DamlFieldAttribute("maybeMaybeNote")]
-    public Optional<Optional<string>> MaybeMaybeNote { get; init; } = MaybeMaybeNote;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("maybeMaybeNote")]
+    public global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> MaybeMaybeNote { get; init; } = MaybeMaybeNote;
 
     /// <summary>The Daml field <c>crate</c>.</summary>
-    [DamlFieldAttribute("crate")]
-    public Crate<string> Crate { get; init; } = Crate;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("crate")]
+    public global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string> Crate { get; init; } = Crate;
 
-    private readonly IReadOnlyDictionary<Party, long> _quotaByParty = DamlFieldCollections.Copy(QuotaByParty);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long> _quotaByParty = global::Daml.Runtime.Data.DamlFieldCollections.Copy(QuotaByParty);
 
     /// <summary>The Daml field <c>quotaByParty</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("quotaByParty")]
-    public IReadOnlyDictionary<Party, long> QuotaByParty
+    [global::Daml.Runtime.Data.DamlFieldAttribute("quotaByParty")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long> QuotaByParty
     {
         get => _quotaByParty;
-        init => _quotaByParty = DamlFieldCollections.Copy(value);
+        init => _quotaByParty = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
-    private readonly IReadOnlyDictionary<long, string> _labelByRank = DamlFieldCollections.Copy(LabelByRank);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<long, string> _labelByRank = global::Daml.Runtime.Data.DamlFieldCollections.Copy(LabelByRank);
 
     /// <summary>The Daml field <c>labelByRank</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("labelByRank")]
-    public IReadOnlyDictionary<long, string> LabelByRank
+    [global::Daml.Runtime.Data.DamlFieldAttribute("labelByRank")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<long, string> LabelByRank
     {
         get => _labelByRank;
-        init => _labelByRank = DamlFieldCollections.Copy(value);
+        init => _labelByRank = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>rankOrLabel</c>.</summary>
-    [DamlFieldAttribute("rankOrLabel")]
-    public Either<long, string> RankOrLabel { get; init; } = RankOrLabel;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("rankOrLabel")]
+    public global::Daml.Runtime.Stdlib.Either<long, string> RankOrLabel { get; init; } = RankOrLabel;
 
     /// <summary>The Daml field <c>noteOrRank</c>.</summary>
-    [DamlFieldAttribute("noteOrRank")]
-    public Either<Optional<string>, long> NoteOrRank { get; init; } = NoteOrRank;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("noteOrRank")]
+    public global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long> NoteOrRank { get; init; } = NoteOrRank;
 
     /// <summary>The Daml field <c>pair</c>.</summary>
-    [DamlFieldAttribute("pair")]
-    public Tuple2<string, long> Pair { get; init; } = Pair;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("pair")]
+    public global::Daml.Runtime.Stdlib.Tuple2<string, long> Pair { get; init; } = Pair;
 
     /// <summary>The Daml field <c>triple</c>.</summary>
-    [DamlFieldAttribute("triple")]
-    public Tuple3<string, long, bool> Triple { get; init; } = Triple;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("triple")]
+    public global::Daml.Runtime.Stdlib.Tuple3<string, long, bool> Triple { get; init; } = Triple;
 
     /// <summary>The Daml field <c>branch</c>.</summary>
-    [DamlFieldAttribute("branch")]
-    public Branch Branch { get; init; } = Branch;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("branch")]
+    public global::Daml.Codegen.Testing.Conformance.RichTypes.Branch Branch { get; init; } = Branch;
 
     /// <summary>The Daml field <c>whole</c>.</summary>
-    [DamlFieldAttribute("whole")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("whole")]
     public decimal Whole { get; init; } = Whole;
 
     /// <summary>The Daml field <c>finest</c>.</summary>
-    [DamlFieldAttribute("finest")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("finest")]
     public decimal Finest { get; init; } = Finest;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -123,27 +123,27 @@ public sealed partial record TypeCorners(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(TypeCorners? other) =>
         other is not null
-        && EqualityComparer<Party>.Default.Equals(Owner, other.Owner)
-        && EqualityComparer<Box<string>>.Default.Equals(BoxedText, other.BoxedText)
-        && EqualityComparer<Box<Profile>>.Default.Equals(BoxedProfile, other.BoxedProfile)
-        && EqualityComparer<Slot<long>>.Default.Equals(Slot, other.Slot)
-        && EqualityComparer<Box<Optional<string>>?>.Default.Equals(NestedNote, other.NestedNote)
-        && EqualityComparer<Optional<Optional<string>>>.Default.Equals(MaybeMaybeNote, other.MaybeMaybeNote)
-        && EqualityComparer<Crate<string>>.Default.Equals(Crate, other.Crate)
-        && DamlFieldCollections.Equal(QuotaByParty, other.QuotaByParty)
-        && DamlFieldCollections.Equal(LabelByRank, other.LabelByRank)
-        && EqualityComparer<Either<long, string>>.Default.Equals(RankOrLabel, other.RankOrLabel)
-        && EqualityComparer<Either<Optional<string>, long>>.Default.Equals(NoteOrRank, other.NoteOrRank)
-        && EqualityComparer<Tuple2<string, long>>.Default.Equals(Pair, other.Pair)
-        && EqualityComparer<Tuple3<string, long, bool>>.Default.Equals(Triple, other.Triple)
-        && EqualityComparer<Branch>.Default.Equals(Branch, other.Branch)
-        && EqualityComparer<decimal>.Default.Equals(Whole, other.Whole)
-        && EqualityComparer<decimal>.Default.Equals(Finest, other.Finest);
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Data.Party>.Default.Equals(Owner, other.Owner)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>>.Default.Equals(BoxedText, other.BoxedText)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>>.Default.Equals(BoxedProfile, other.BoxedProfile)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>>.Default.Equals(Slot, other.Slot)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>?>.Default.Equals(NestedNote, other.NestedNote)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>.Default.Equals(MaybeMaybeNote, other.MaybeMaybeNote)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string>>.Default.Equals(Crate, other.Crate)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(QuotaByParty, other.QuotaByParty)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(LabelByRank, other.LabelByRank)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.Either<long, string>>.Default.Equals(RankOrLabel, other.RankOrLabel)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long>>.Default.Equals(NoteOrRank, other.NoteOrRank)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.Tuple2<string, long>>.Default.Equals(Pair, other.Pair)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.Tuple3<string, long, bool>>.Default.Equals(Triple, other.Triple)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch>.Default.Equals(Branch, other.Branch)
+        && global::System.Collections.Generic.EqualityComparer<decimal>.Default.Equals(Whole, other.Whole)
+        && global::System.Collections.Generic.EqualityComparer<decimal>.Default.Equals(Finest, other.Finest);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Owner);
         hash.Add(BoxedText);
         hash.Add(BoxedProfile);
@@ -151,8 +151,8 @@ public sealed partial record TypeCorners(
         hash.Add(NestedNote);
         hash.Add(MaybeMaybeNote);
         hash.Add(Crate);
-        hash.Add(DamlFieldCollections.Hash(QuotaByParty));
-        hash.Add(DamlFieldCollections.Hash(LabelByRank));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(QuotaByParty));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(LabelByRank));
         hash.Add(RankOrLabel);
         hash.Add(NoteOrRank);
         hash.Add(Pair);
@@ -164,100 +164,100 @@ public sealed partial record TypeCorners(
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "TypeCorners");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "RichTypes", "TypeCorners");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    public static string PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hecd531570c32";
+    public static string PackageName => "richtypes-hf9ffaa5ee2ff";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("owner", Owner.ToDamlValue()),
-        DamlField.Create("boxedText", BoxedText.ToRecord(__t0 => (DamlValue)(new DamlText(__t0)))),
-        DamlField.Create("boxedProfile", BoxedProfile.ToRecord(__t0 => (DamlValue)(__t0.ToRecord()))),
-        DamlField.Create("slot", Slot.ToVariant(__t0 => (DamlValue)(new DamlInt64(__t0)))),
-        DamlField.Create("nestedNote", NestedNote is { } __NestedNote ? new DamlOptional(__NestedNote.ToRecord(__t0 => (DamlValue)(__t0.ToValue(__optional2 => new DamlText(__optional2))))) : DamlOptional.None),
-        DamlField.Create("maybeMaybeNote", MaybeMaybeNote.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new DamlText(__optional1)))),
-        DamlField.Create("crate", Crate.ToRecord(__t0 => (DamlValue)(new DamlText(__t0)))),
-        DamlField.Create("quotaByParty", new DamlGenMap(QuotaByParty.Select(kv => ((DamlValue)kv.Key.ToDamlValue(), (DamlValue)new DamlInt64(kv.Value))).ToList())),
-        DamlField.Create("labelByRank", new DamlGenMap(LabelByRank.Select(kv => ((DamlValue)new DamlInt64(kv.Key), (DamlValue)new DamlText(kv.Value))).ToList())),
-        DamlField.Create("rankOrLabel", RankOrLabel.ToValue(__t0 => (DamlValue)(new DamlInt64(__t0)), __t1 => (DamlValue)(new DamlText(__t1)))),
-        DamlField.Create("noteOrRank", NoteOrRank.ToValue(__t0 => (DamlValue)(__t0.ToValue(__optional1 => new DamlText(__optional1))), __t1 => (DamlValue)(new DamlInt64(__t1)))),
-        DamlField.Create("pair", Pair.ToRecord(__t0 => (DamlValue)(new DamlText(__t0)), __t1 => (DamlValue)(new DamlInt64(__t1)))),
-        DamlField.Create("triple", Triple.ToRecord(__t0 => (DamlValue)(new DamlText(__t0)), __t1 => (DamlValue)(new DamlInt64(__t1)), __t2 => (DamlValue)(new DamlBool(__t2)))),
-        DamlField.Create("branch", Branch.ToRecord()),
-        DamlField.Create("whole", new DamlNumeric(Whole)),
-        DamlField.Create("finest", new DamlNumeric(Finest))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("boxedText", BoxedText.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlText(__t0)))),
+        global::Daml.Runtime.Data.DamlField.Create("boxedProfile", BoxedProfile.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToRecord()))),
+        global::Daml.Runtime.Data.DamlField.Create("slot", Slot.ToVariant(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlInt64(__t0)))),
+        global::Daml.Runtime.Data.DamlField.Create("nestedNote", NestedNote is { } __NestedNote ? new global::Daml.Runtime.Data.DamlOptional(__NestedNote.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToValue(__optional2 => new global::Daml.Runtime.Data.DamlText(__optional2))))) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("maybeMaybeNote", MaybeMaybeNote.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1)))),
+        global::Daml.Runtime.Data.DamlField.Create("crate", Crate.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlText(__t0)))),
+        global::Daml.Runtime.Data.DamlField.Create("quotaByParty", new global::Daml.Runtime.Data.DamlGenMap(QuotaByParty.Select(kv => ((global::Daml.Runtime.Data.DamlValue)kv.Key.ToDamlValue(), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlInt64(kv.Value))).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("labelByRank", new global::Daml.Runtime.Data.DamlGenMap(LabelByRank.Select(kv => ((global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlInt64(kv.Key), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(kv.Value))).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("rankOrLabel", RankOrLabel.ToValue(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlInt64(__t0)), __t1 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlText(__t1)))),
+        global::Daml.Runtime.Data.DamlField.Create("noteOrRank", NoteOrRank.ToValue(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1))), __t1 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlInt64(__t1)))),
+        global::Daml.Runtime.Data.DamlField.Create("pair", Pair.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlText(__t0)), __t1 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlInt64(__t1)))),
+        global::Daml.Runtime.Data.DamlField.Create("triple", Triple.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlText(__t0)), __t1 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlInt64(__t1)), __t2 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlBool(__t2)))),
+        global::Daml.Runtime.Data.DamlField.Create("branch", Branch.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("whole", new global::Daml.Runtime.Data.DamlNumeric(Whole)),
+        global::Daml.Runtime.Data.DamlField.Create("finest", new global::Daml.Runtime.Data.DamlNumeric(Finest))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TypeCorners FromRecord(DamlRecord record) => new TypeCorners(
-        Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()),
-        BoxedText: Box<string>.FromRecord(record.GetRequiredField("boxedText").As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value),
-        BoxedProfile: Box<Profile>.FromRecord(record.GetRequiredField("boxedProfile").As<DamlRecord>(), __v0 => Profile.FromRecord(__v0.As<DamlRecord>())),
-        Slot: Slot<long>.FromVariant(record.GetRequiredField("slot").As<DamlVariant>(), __v0 => __v0.As<DamlInt64>().Value),
-        NestedNote: record.GetOptionalField("nestedNote").AsOptional().HasValue ? Box<Optional<string>>.FromRecord(record.GetOptionalField("nestedNote").AsOptional().Value!.As<DamlRecord>(), __v0 => Optional<string>.FromValue(__v0, __optional2 => __optional2.As<DamlText>().Value)) : null,
-        MaybeMaybeNote: Optional<Optional<string>>.FromChainValue(record.GetOptionalChainField("maybeMaybeNote"), __optional0 => Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<DamlText>().Value)),
-        Crate: Crate<string>.FromRecord(record.GetRequiredField("crate").As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value),
-        QuotaByParty: (IReadOnlyDictionary<Party, long>)record.GetRequiredField("quotaByParty").As<DamlGenMap>().Entries.ToDictionary(kv => Party.FromDamlValue(kv.Key.As<DamlParty>()), kv => kv.Value.As<DamlInt64>().Value),
-        LabelByRank: (IReadOnlyDictionary<long, string>)record.GetRequiredField("labelByRank").As<DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<DamlInt64>().Value, kv => kv.Value.As<DamlText>().Value),
-        RankOrLabel: Either<long, string>.FromValue(record.GetRequiredField("rankOrLabel"), __v0 => __v0.As<DamlInt64>().Value, __v1 => __v1.As<DamlText>().Value),
-        NoteOrRank: Either<Optional<string>, long>.FromValue(record.GetRequiredField("noteOrRank"), __v0 => Optional<string>.FromValue(__v0, __optional1 => __optional1.As<DamlText>().Value), __v1 => __v1.As<DamlInt64>().Value),
-        Pair: Tuple2<string, long>.FromRecord(record.GetRequiredField("pair").As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value, __v1 => __v1.As<DamlInt64>().Value),
-        Triple: Tuple3<string, long, bool>.FromRecord(record.GetRequiredField("triple").As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value, __v1 => __v1.As<DamlInt64>().Value, __v2 => __v2.As<DamlBool>().Value),
-        Branch: Branch.FromRecord(record.GetRequiredField("branch").As<DamlRecord>()),
-        Whole: record.GetRequiredField("whole").As<DamlNumeric>().Value,
-        Finest: record.GetRequiredField("finest").As<DamlNumeric>().Value
+    public static TypeCorners FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TypeCorners(
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
+        BoxedText: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.FromRecord(record.GetRequiredField("boxedText").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null),
+        BoxedProfile: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>.FromRecord(record.GetRequiredField("boxedProfile").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.FromRecord(__v0.As<global::Daml.Runtime.Data.DamlRecord>()), null),
+        Slot: global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>.FromVariant(record.GetRequiredField("slot").As<global::Daml.Runtime.Data.DamlVariant>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        NestedNote: record.GetOptionalField("nestedNote").AsOptional().HasValue ? global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>.FromRecord(record.GetOptionalField("nestedNote").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v0, __optional2 => __optional2.As<global::Daml.Runtime.Data.DamlText>().Value), global::Daml.Runtime.Data.DamlOptional.None) : null,
+        MaybeMaybeNote: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("maybeMaybeNote"), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value)),
+        Crate: global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string>.FromRecord(record.GetRequiredField("crate").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null),
+        QuotaByParty: (global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long>)record.GetRequiredField("quotaByParty").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Daml.Runtime.Data.Party.FromDamlValue(kv.Key.As<global::Daml.Runtime.Data.DamlParty>()), kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        LabelByRank: (global::System.Collections.Generic.IReadOnlyDictionary<long, string>)record.GetRequiredField("labelByRank").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlInt64>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value),
+        RankOrLabel: global::Daml.Runtime.Stdlib.Either<long, string>.FromValue(record.GetRequiredField("rankOrLabel"), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, __v1 => __v1.As<global::Daml.Runtime.Data.DamlText>().Value),
+        NoteOrRank: global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long>.FromValue(record.GetRequiredField("noteOrRank"), __v0 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value), __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        Pair: global::Daml.Runtime.Stdlib.Tuple2<string, long>.FromRecord(record.GetRequiredField("pair").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        Triple: global::Daml.Runtime.Stdlib.Tuple3<string, long, bool>.FromRecord(record.GetRequiredField("triple").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null, __v2 => __v2.As<global::Daml.Runtime.Data.DamlBool>().Value, null),
+        Branch: global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.FromRecord(record.GetRequiredField("branch").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Whole: record.GetRequiredField("whole").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        Finest: record.GetRequiredField("finest").As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))),
-            DamlField.Create("boxedText", Box<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "boxedText"), context.Field("boxedText"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
-            DamlField.Create("boxedProfile", Box<Profile>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "boxedProfile"), context.Field("boxedProfile"), (__json0, __ctx0) => Profile.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("slot", Slot<long>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "slot"), context.Field("slot"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))),
-            DamlField.Create("nestedNote", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nestedNote"), context.Field("nestedNote"), (__json0, __ctx0) => Box<Optional<string>>.__ReadDamlLfJson(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json2, __ctx2))))),
-            DamlField.Create("maybeMaybeNote", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalChainField(json, "maybeMaybeNote"), context.Field("maybeMaybeNote"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)))),
-            DamlField.Create("crate", Crate<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "crate"), context.Field("crate"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
-            DamlField.Create("quotaByParty", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "quotaByParty"), context.Field("quotaByParty"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))),
-            DamlField.Create("labelByRank", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "labelByRank"), context.Field("labelByRank"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
-            DamlField.Create("rankOrLabel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEither(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "rankOrLabel"), context.Field("rankOrLabel"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
-            DamlField.Create("noteOrRank", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEither(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "noteOrRank"), context.Field("noteOrRank"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))),
-            DamlField.Create("pair", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "pair"), context.Field("pair"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))),
-            DamlField.Create("triple", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple3(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "triple"), context.Field("triple"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(__json0, __ctx0))),
-            DamlField.Create("branch", Branch.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "branch"), context.Field("branch"))),
-            DamlField.Create("whole", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "whole"), context.Field("whole"))),
-            DamlField.Create("finest", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "finest"), context.Field("finest")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(16);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("boxedText", global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "boxedText"), context.Field("boxedText"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), null)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("boxedProfile", global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "boxedProfile"), context.Field("boxedProfile"), (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.__ReadDamlLfJson(__json0, __ctx0), null)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("slot", global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "slot"), context.Field("slot"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), null)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nestedNote", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nestedNote"), (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>.__ReadDamlLfJson(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json2, __ctx2)), global::Daml.Runtime.Data.DamlOptional.None)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "maybeMaybeNote", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(present, context.Field("maybeMaybeNote"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("crate", global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "crate"), context.Field("crate"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), null)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("quotaByParty", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "quotaByParty"), context.Field("quotaByParty"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("labelByRank", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "labelByRank"), context.Field("labelByRank"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("rankOrLabel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEither(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "rankOrLabel"), context.Field("rankOrLabel"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("noteOrRank", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEither(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "noteOrRank"), context.Field("noteOrRank"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("pair", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "pair"), context.Field("pair"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), null, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), null)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("triple", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple3(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "triple"), context.Field("triple"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), null, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), null, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(__json0, __ctx0), null)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("branch", global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "branch"), context.Field("branch"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("whole", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "whole"), context.Field("whole"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("finest", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "finest"), context.Field("finest"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
     /// <summary>
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<TypeCorners, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TypeCorners, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -265,85 +265,25 @@ public sealed partial record TypeCorners(
     /// <summary>
     /// Exercise the Rebox choice.
     /// </summary>
-    public static Choice<TypeCorners, Rebox, ContractId<TypeCorners>> ChoiceRebox { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TypeCorners, Rebox, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>> ChoiceRebox { get; } = new()
     {
-        Name = new ChoiceName("Rebox"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Rebox"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Rebox.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<TypeCorners>(val.As<DamlContractId>().Value),
-        ArgumentJsonReader = (json, context) => TypeCorners.Rebox.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Rebox.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceRebox];
-
-}
-
-/// <summary>
-/// Typed projection of the contracts created by the Rebox choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record ReboxResult(
-    ContractId<TypeCorners> TypeCorners
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="ReboxResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<ReboxResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ReboxResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ReboxResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ReboxResult>.One(new ReboxResult(
-            TypeCorners: new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>(matches0[0])
-        ));
-    }
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceRebox];
 
 }
 
 
 /// <summary>
-/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="TypeCorners"/>.
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
 /// and projects success from the choice's own exercise result.
@@ -355,21 +295,21 @@ public static class TypeCornersExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReboxCommand(
-        this ContractId<TypeCorners> contractId,
-        TypeCorners.Rebox argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReboxCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            TypeCorners.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.TemplateId,
             contractId,
-            new ChoiceName("Rebox"),
+            new global::Daml.Runtime.Commands.ChoiceName("Rebox"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Rebox choice and projects the choice's exercise result to a typed <see cref="ReboxResult"/>.
+    /// Exercises the Rebox choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -383,20 +323,20 @@ public static class TypeCornersExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
-        this ContractId<TypeCorners> contractId,
-        ILedgerWriter client,
-        TypeCorners.Rebox argument,
-        Party owner,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox argument,
+        global::Daml.Runtime.Data.Party owner,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = owner;
 
         return contractId.TryReboxAsync(
             client,
@@ -410,7 +350,7 @@ public static class TypeCornersExtensions
     }
 
     /// <summary>
-    /// Exercises the Rebox choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ReboxResult"/>.
+    /// Exercises the Rebox choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -424,18 +364,18 @@ public static class TypeCornersExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
-        this ContractId<TypeCorners> contractId,
-        ILedgerWriter client,
-        TypeCorners.Rebox argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReboxCommand(argument);
 
@@ -445,10 +385,10 @@ public static class TypeCornersExtensions
     }
 
     /// <summary>
-    /// Exercises the Rebox choice on a fetched <see cref="TypeCorners"/> contract,
+    /// Exercises the Rebox choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;TypeCorners&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -458,19 +398,19 @@ public static class TypeCornersExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
-        this IContract<ContractId<TypeCorners>, TypeCorners> contract,
-        ILedgerWriter client,
-        TypeCorners.Rebox argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>, global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryReboxAsync(
             client,
@@ -484,11 +424,11 @@ public static class TypeCornersExtensions
     }
 
     /// <summary>
-    /// Exercises the Rebox choice on a fetched <see cref="TypeCorners"/> contract with an
+    /// Exercises the Rebox choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;TypeCorners&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -499,20 +439,20 @@ public static class TypeCornersExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReboxResult>> TryReboxAsync(
-        this IContract<ContractId<TypeCorners>, TypeCorners> contract,
-        ILedgerWriter client,
-        TypeCorners.Rebox argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>, global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.Rebox argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryReboxAsync(
             client,
@@ -525,53 +465,8 @@ public static class TypeCornersExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<ReboxResult> ProjectReboxResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = ReboxResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<ReboxResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TypeCorners.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TypeCorners.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Rebox", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeReboxResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<ReboxResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<ReboxResult> DecodeReboxResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlContractId>().Value);
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ReboxResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ReboxResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ReboxResult>.One(new ReboxResult(
-            TypeCorners: new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>(matches0[0])
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>> ProjectReboxResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.ChoiceRebox, contractId);
 }
 
 /// <summary>
@@ -595,23 +490,23 @@ public static class TypeCornersSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<TypeCorners>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<TypeCorners>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         TypeCorners payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Owner;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<TypeCorners>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="TypeCorners"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -623,20 +518,20 @@ public static class TypeCornersNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<TypeCorners> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            TypeCorners.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -647,17 +542,17 @@ public static class TypeCornersNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<TypeCorners> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -666,32 +561,6 @@ public static class TypeCornersNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TypeCorners.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TypeCorners.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = TypeCorners.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners.ChoiceArchive, contractId);
 }

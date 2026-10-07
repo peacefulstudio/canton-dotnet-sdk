@@ -73,54 +73,6 @@ public class GrpcInterfaceStreamProjectorGapTests
     }
 
     [Fact]
-    public void ProjectReassignmentEvents_Assigned_is_refused_when_the_created_event_does_not_implement_the_interface_marker()
-    {
-        var created = new ProtoCreatedEvent
-        {
-            ContractId = "00other",
-            TemplateId = new ProtoIdentifier { PackageId = "other-pkg", ModuleName = "Other.Module", EntityName = "Other" },
-            CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
-            Offset = 65L,
-        };
-        var reassignment = new Reassignment { Offset = 65L };
-        reassignment.Events.Add(new ReassignmentEvent
-        {
-            Assigned = new AssignedEvent { Source = "sync-src", Target = "sync-tgt", CreatedEvent = created },
-        });
-
-        var events = GrpcInterfaceStreamProjector.ProjectReassignmentEvents<InterfaceMarker, InterfaceMarkerView>(reassignment).ToList();
-
-        var unclassified = events.Should().ContainSingle().Subject
-            .Should().BeOfType<InterfaceStreamEvent<InterfaceMarker, InterfaceMarkerView>.Unclassified>().Subject;
-        unclassified.Offset.Should().Be(LedgerOffset.At(65L));
-        unclassified.Kind.Should().Be(UnclassifiedKind.AssignedEvent);
-    }
-
-    [Fact]
-    public void ProjectReassignmentEvents_Unassigned_reports_MissingSynchronizerId_when_the_target_synchronizer_is_missing()
-    {
-        var reassignment = new Reassignment { Offset = 70L };
-        reassignment.Events.Add(new ReassignmentEvent
-        {
-            Unassigned = new UnassignedEvent
-            {
-                ContractId = "00holding",
-                TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
-                Source = "sync-src",
-                Target = string.Empty,
-                Offset = 71L,
-            },
-        });
-
-        var events = GrpcInterfaceStreamProjector.ProjectReassignmentEvents<InterfaceMarker, InterfaceMarkerView>(reassignment).ToList();
-
-        var unclassified = events.Should().ContainSingle().Subject
-            .Should().BeOfType<InterfaceStreamEvent<InterfaceMarker, InterfaceMarkerView>.Unclassified>().Subject;
-        unclassified.Offset.Should().Be(LedgerOffset.At(71L));
-        unclassified.Kind.Should().Be(UnclassifiedKind.MissingSynchronizerId);
-    }
-
-    [Fact]
     public void ProjectReassignmentEvents_yields_Unclassified_for_a_reassignment_event_carrying_no_recognized_variant()
     {
         var reassignment = new Reassignment { Offset = 80L };

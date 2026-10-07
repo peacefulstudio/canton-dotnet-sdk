@@ -14,34 +14,34 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml variant TransferInstructionResult_Output
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record TransferInstructionResult_Output : IDamlVariant<TransferInstructionResult_Output>
+public abstract record TransferInstructionResult_Output : global::Daml.Runtime.Data.IDamlVariant<TransferInstructionResult_Output>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs a TransferInstructionResult_Output by dispatching on the DamlVariant constructor tag.</summary>
-    public static TransferInstructionResult_Output FromVariant(DamlVariant variant) =>
+    public static TransferInstructionResult_Output FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
-            "TransferInstructionResult_Pending" => new TransferInstructionResult_Pending(TransferInstructionResult_Output_TransferInstructionResult_Pending.FromRecord(variant.Value.As<DamlRecord>())),
-            "TransferInstructionResult_Completed" => new TransferInstructionResult_Completed(TransferInstructionResult_Output_TransferInstructionResult_Completed.FromRecord(variant.Value.As<DamlRecord>())),
+            "TransferInstructionResult_Pending" => new TransferInstructionResult_Pending(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Pending.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
+            "TransferInstructionResult_Completed" => new TransferInstructionResult_Completed(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Completed.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
             "TransferInstructionResult_Failed" => new TransferInstructionResult_Failed(),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown TransferInstructionResult_Output constructor")
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown TransferInstructionResult_Output constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "TransferInstructionResult_Pending" => DamlVariant.Create("TransferInstructionResult_Pending", TransferInstructionResult_Output_TransferInstructionResult_Pending.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "TransferInstructionResult_Completed" => DamlVariant.Create("TransferInstructionResult_Completed", TransferInstructionResult_Output_TransferInstructionResult_Completed.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "TransferInstructionResult_Failed" => DamlVariant.Create("TransferInstructionResult_Failed", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TransferInstructionResult_Pending" => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Pending", global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Pending.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TransferInstructionResult_Completed" => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Completed", global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Completed.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "TransferInstructionResult_Failed" => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Failed", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -49,23 +49,23 @@ public abstract record TransferInstructionResult_Output : IDamlVariant<TransferI
     private static readonly string[] ExpectedConstructors = ["TransferInstructionResult_Pending", "TransferInstructionResult_Completed", "TransferInstructionResult_Failed"];
 
     /// <summary>TransferInstructionResult_Pending constructor.</summary>
-    public sealed record TransferInstructionResult_Pending(TransferInstructionResult_Output_TransferInstructionResult_Pending Value) : TransferInstructionResult_Output
+    public sealed record TransferInstructionResult_Pending(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Pending Value) : TransferInstructionResult_Output
     {
         /// <inheritdoc />
         public override string Tag => "TransferInstructionResult_Pending";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TransferInstructionResult_Pending", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Pending", Value.ToRecord());
     }
 
     /// <summary>TransferInstructionResult_Completed constructor.</summary>
-    public sealed record TransferInstructionResult_Completed(TransferInstructionResult_Output_TransferInstructionResult_Completed Value) : TransferInstructionResult_Output
+    public sealed record TransferInstructionResult_Completed(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Completed Value) : TransferInstructionResult_Output
     {
         /// <inheritdoc />
         public override string Tag => "TransferInstructionResult_Completed";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TransferInstructionResult_Completed", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Completed", Value.ToRecord());
     }
 
     /// <summary>TransferInstructionResult_Failed constructor (no arguments).</summary>
@@ -75,7 +75,7 @@ public abstract record TransferInstructionResult_Output : IDamlVariant<TransferI
         public override string Tag => "TransferInstructionResult_Failed";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("TransferInstructionResult_Failed", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Failed", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
 }

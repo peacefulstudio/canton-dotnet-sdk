@@ -3,6 +3,7 @@
 
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -12,16 +13,6 @@ public class StdlibPackagesTests
 {
     private const string StdlibPackageId = "stdlib-pkg";
     private const string UserPackageId = "user-pkg";
-
-    private sealed class StubResolver(IReadOnlyDictionary<string, DamlPackage> packages) : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => "Resolved";
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) =>
-            packages.TryGetValue(packageId, out var package) ? package : null;
-    }
 
     private static DamlPackage NamedPackage(string packageId, string name) =>
         new()
@@ -34,8 +25,8 @@ public class StdlibPackagesTests
             DependencyReferences = []
         };
 
-    private static StubResolver Resolver(params DamlPackage[] packages) =>
-        new(packages.ToDictionary(p => p.PackageId));
+    private static DarCrossPackageResolver Resolver(params DamlPackage[] packages) =>
+        RealResolution.Of(NamedPackage("local-pkg", "local"), new CodeGenOptions(), packages).Resolver;
 
     private static DamlTypeRef Ref(string packageId, string module, string name) =>
         new(packageId, module, name);

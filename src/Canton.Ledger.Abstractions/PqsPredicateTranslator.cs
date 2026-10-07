@@ -13,42 +13,39 @@ internal sealed class PqsPredicateTranslator
 {
     private const string VariantTagProperty = "Tag";
     private const string VariantValueProperty = "Value";
+    private const string VariantTagField = "tag";
+    private const string VariantValueField = "value";
 
-    private static readonly SqlFragment PayloadColumn = SqlFragment.Of($"payload");
-    private static readonly SqlFragment VariantTagKey = SqlFragment.JsonKey("tag");
-    private static readonly SqlFragment VariantValueKey = SqlFragment.JsonKey("value");
-
-    private readonly Dictionary<ParameterExpression, PayloadNode> scopes = [];
+    private readonly Dictionary<ParameterExpression, Cursor> scopes = [];
     private readonly string paramName;
     private int aliasCount;
 
     private PqsPredicateTranslator(ParameterExpression root, string paramName)
     {
-        scopes[root] = PayloadNode.Root(PayloadColumn, root.Type);
+        scopes[root] = Cursor.Root(PqsScope.Payload, root.Type);
         this.paramName = paramName;
     }
 
-    public static SqlFragment FieldEquals(LambdaExpression selector, string value)
+    public static PqsFilter FieldEquals(LambdaExpression selector, string value)
     {
         var translator = new PqsPredicateTranslator(selector.Parameters[0], nameof(selector));
         var node = UnwrapOptionals(translator.Node(StripBoxing(selector.Body)));
         var leaf = translator.LeafOf(node);
-        return node.Apply(SqlFragment.Of($"{TypedValue(node, leaf)} = {leaf.ParseParameter(value, nameof(value))}"));
+        return new PqsCompare(ComparedPath(node, leaf), PqsComparison.Equal, leaf.ParseOperand(value, nameof(value)));
     }
 
-    public static SqlFragment Where(LambdaExpression predicate) =>
+    public static PqsFilter Where(LambdaExpression predicate) =>
         new PqsPredicateTranslator(predicate.Parameters[0], nameof(predicate)).Predicate(predicate.Body);
 
-    private SqlFragment Predicate(Expression expression) =>
+    private PqsFilter Predicate(Expression expression) =>
         expression switch
         {
             BinaryExpression { NodeType: ExpressionType.AndAlso } and =>
-                SqlFragment.Of($"({Predicate(and.Left)} AND {Predicate(and.Right)})"),
+                new PqsAll([Predicate(and.Left), Predicate(and.Right)]),
             BinaryExpression { NodeType: ExpressionType.OrElse } or =>
-                SqlFragment.Of($"({Predicate(or.Left)} OR {Predicate(or.Right)})"),
-            UnaryExpression { NodeType: ExpressionType.Not } not =>
-                SqlFragment.Of($"NOT COALESCE({Predicate(not.Operand)}, FALSE)"),
-            BinaryExpression binary when ComparisonOperator(binary.NodeType) is not null => Comparison(binary),
+                new PqsAny([Predicate(or.Left), Predicate(or.Right)]),
+            UnaryExpression { NodeType: ExpressionType.Not } not => new PqsNot(Predicate(not.Operand)),
+            BinaryExpression binary when ComparisonOf(binary.NodeType) is not null => Comparison(binary),
             MemberExpression { Member.Name: nameof(Nullable<int>.HasValue), Expression: { } optional }
                 when IsOptional(optional.Type) => OptionalPresence(Node(optional), isSome: true),
             TypeBinaryExpression { NodeType: ExpressionType.TypeIs } typeIs => TypeTest(typeIs),
@@ -61,7 +58,7 @@ internal sealed class PqsPredicateTranslator
             _ => throw Unsupported(expression),
         };
 
-    private SqlFragment Comparison(BinaryExpression binary)
+    private PqsFilter Comparison(BinaryExpression binary)
     {
         var leftIsPayload = ReferencesScope(binary.Left);
         var rightIsPayload = ReferencesScope(binary.Right);
@@ -78,15 +75,15 @@ internal sealed class PqsPredicateTranslator
             && comparison == ExpressionType.Equal
             && payloadSide is UnaryExpression { NodeType: ExpressionType.TypeAs, Operand: { } variant } cast
             && IsVariantConstructor(cast.Type, variant.Type)
-            && PayloadNode.OptionalElementType(variant.Type) is null
+            && Cursor.OptionalElementType(variant.Type) is null
             ? ConstructorAbsence(Node(variant), cast.Type)
             : Compare(Node(payloadSide), comparison, value);
     }
 
-    private static SqlFragment ConstructorAbsence(PayloadNode variant, Type constructorType) =>
-        variant.Apply(SqlFragment.Of($"{variant.Field(VariantTagKey, typeof(string)).Text} IS DISTINCT FROM {SqlFragment.Parameter(TagOf(constructorType))}"));
+    private PqsFilter ConstructorAbsence(Cursor variant, Type constructorType) =>
+        Compare(variant.Field(VariantTagField, typeof(string)), ExpressionType.NotEqual, TagOf(constructorType));
 
-    private SqlFragment Compare(PayloadNode node, ExpressionType comparison, object? value)
+    private PqsFilter Compare(Cursor node, ExpressionType comparison, object? value)
     {
         if (value is null)
             return CompareWithNull(node, comparison);
@@ -94,23 +91,21 @@ internal sealed class PqsPredicateTranslator
         if (!leaf.IsOrdered && comparison is not (ExpressionType.Equal or ExpressionType.NotEqual))
             throw new ArgumentException(
                 $"A Daml {leaf.DamlTypeName} field only supports == and != in a PQS filter.", paramName);
-        var sqlOperator = ComparisonOperator(comparison)!;
-        return node.Apply(SqlFragment.Of($"{TypedValue(node, leaf)} {sqlOperator} {leaf.Parameter(value!)}"));
+        var path = ComparedPath(node, leaf);
+        return new PqsCompare(path, ComparisonOf(comparison)!.Value, leaf.Operand(value));
     }
 
-    private static SqlFragment TypedValue(PayloadNode node, PqsLeafType leaf) =>
-        node.DefaultsWhenAbsent
-            ? SqlFragment.Of($"COALESCE({leaf.Typed(node.Text)}, {leaf.DefaultParameter(node.ClrType)})")
-            : leaf.Typed(node.Text);
+    private static PqsPath ComparedPath(Cursor node, PqsLeafType leaf) =>
+        node.DefaultsWhenAbsent ? new PqsDefaulted(node.Path, leaf.DefaultOperand(node.ClrType)) : node.Path;
 
-    private static PayloadNode UnwrapOptionals(PayloadNode node)
+    private static Cursor UnwrapOptionals(Cursor node)
     {
-        while (PayloadNode.OptionalElementType(node.ClrType) is { } element)
+        while (Cursor.OptionalElementType(node.ClrType) is { } element)
             node = node.OptionalValue(element);
         return node;
     }
 
-    private PayloadNode OptionalRead(PayloadNode optional, MethodCallExpression call)
+    private Cursor OptionalRead(Cursor optional, MethodCallExpression call)
     {
         var value = optional.OptionalValue(call.Type);
         if (call.Method.Name != nameof(Nullable<int>.GetValueOrDefault) || !call.Type.IsValueType)
@@ -123,24 +118,24 @@ internal sealed class PqsPredicateTranslator
         return value.DefaultingWhenAbsent();
     }
 
-    private SqlFragment CompareWithNull(PayloadNode node, ExpressionType comparison)
+    private PqsFilter CompareWithNull(Cursor node, ExpressionType comparison)
     {
         if (comparison is not (ExpressionType.Equal or ExpressionType.NotEqual))
             throw new ArgumentException("A null value can be compared only with == and != in a PQS filter.", paramName);
-        if (PayloadNode.OptionalElementType(node.ClrType) is not null)
+        if (Cursor.OptionalElementType(node.ClrType) is not null)
             throw new ArgumentException(
                 $"An Optional<T> field is never null; test it with .HasValue or an 'is Optional<T>.None' pattern instead.",
                 paramName);
         return OptionalPresence(node, isSome: comparison == ExpressionType.NotEqual);
     }
 
-    private static SqlFragment OptionalPresence(PayloadNode node, bool isSome) =>
-        node.Apply(isSome ? node.IsSome() : node.IsNone());
+    private static PqsFilter OptionalPresence(Cursor node, bool isSome) =>
+        new PqsOptionalPresence(node.Path, isSome, node.IsListEncodedOptional);
 
-    private SqlFragment TypeTest(TypeBinaryExpression typeIs)
+    private PqsFilter TypeTest(TypeBinaryExpression typeIs)
     {
         var node = Node(typeIs.Expression);
-        if (PayloadNode.OptionalElementType(typeIs.Expression.Type) is { } element)
+        if (Cursor.OptionalElementType(typeIs.Expression.Type) is { } element)
         {
             if (typeIs.TypeOperand == typeof(Optional<>.Some).MakeGenericType(element))
                 return OptionalPresence(node, isSome: true);
@@ -149,43 +144,39 @@ internal sealed class PqsPredicateTranslator
         }
 
         if (IsVariantConstructor(typeIs.TypeOperand, typeIs.Expression.Type))
-            return node.Apply(TagEquals(node, typeIs.TypeOperand));
+            return Compare(node.Field(VariantTagField, typeof(string)), ExpressionType.Equal, TagOf(typeIs.TypeOperand));
 
         throw Unsupported(typeIs);
     }
 
-    private SqlFragment ListPredicate(MethodCallExpression call)
+    private PqsFilter ListPredicate(MethodCallExpression call)
     {
-        var list = Node(call.Arguments[0]);
-        var alias = SqlFragment.Alias('e', aliasCount++);
-        var elements = SqlFragment.Of(
-            $"SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof({list.Json}) = 'array' THEN {list.Json} END) AS {alias}(value)");
-        var element = PayloadNode.Root(SqlFragment.Of($"{alias}.value"), call.Method.GetGenericArguments()[0]);
+        var list = Node(call.Arguments[0]).Path;
+        var scope = PqsScope.Element(aliasCount++);
+        var element = Cursor.Root(scope, call.Method.GetGenericArguments()[0]);
 
-        var predicate = call switch
+        return call switch
         {
-            { Method.Name: nameof(Enumerable.Any), Arguments.Count: 1 } => SqlFragment.Of($"EXISTS ({elements})"),
+            { Method.Name: nameof(Enumerable.Any), Arguments.Count: 1 } => new PqsListAny(list, scope, null),
             { Method.Name: nameof(Enumerable.Any), Arguments: [_, LambdaExpression condition] } =>
-                SqlFragment.Of($"EXISTS ({elements} WHERE {ElementPredicate(condition, element)})"),
+                new PqsListAny(list, scope, ElementPredicate(condition, element)),
             { Method.Name: nameof(Enumerable.All), Arguments: [_, LambdaExpression condition] } =>
-                SqlFragment.Of($"NOT EXISTS ({elements} WHERE NOT COALESCE({ElementPredicate(condition, element)}, FALSE))"),
+                new PqsListAll(list, scope, ElementPredicate(condition, element)),
             { Method.Name: nameof(Enumerable.Contains), Arguments: [_, var item] } when !ReferencesScope(item) =>
-                SqlFragment.Of($"EXISTS ({elements} WHERE {Compare(element, ExpressionType.Equal, Evaluate(item))})"),
+                new PqsListAny(list, scope, Compare(element, ExpressionType.Equal, Evaluate(item))),
             _ => throw Unsupported(call),
         };
-        return list.Apply(predicate);
     }
 
-    private SqlFragment ElementPredicate(LambdaExpression condition, PayloadNode element)
+    private PqsFilter ElementPredicate(LambdaExpression condition, Cursor element)
     {
         scopes[condition.Parameters[0]] = element;
         return Predicate(condition.Body);
     }
 
-    private SqlFragment KeyPresence(PayloadNode map, Expression key) =>
-        map.Apply(SqlFragment.Of($"{MapLookup(map, key).Json} IS NOT NULL"));
+    private PqsFilter KeyPresence(Cursor map, Expression key) => new PqsNotNull(MapLookup(map, key).Path);
 
-    private PayloadNode MapLookup(PayloadNode map, Expression keyExpression)
+    private Cursor MapLookup(Cursor map, Expression keyExpression)
     {
         if (ReferencesScope(keyExpression))
             throw new ArgumentException(
@@ -196,22 +187,15 @@ internal sealed class PqsPredicateTranslator
         var keyLeaf = PqsLeafType.For(keyType)
             ?? throw new ArgumentException($"A '{keyType.Name}' Map key is not supported in a PQS filter.", paramName);
 
-        var alias = SqlFragment.Alias('m', aliasCount++);
-        var genMapLookup = SqlFragment.Of(
-            $"(SELECT {alias}.value->1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof({map.Json}) = 'array' THEN {map.Json} END) " +
-            $"AS {alias}(value) WHERE {keyLeaf.Typed(SqlFragment.Of($"{alias}.value->>0"))} = {keyLeaf.Parameter(key)} LIMIT 1)");
-        var lookup = keyType == typeof(string)
-            ? SqlFragment.Of($"COALESCE({map.Json}->{SqlFragment.Parameter(key)}, {genMapLookup})")
-            : genMapLookup;
-        return map.Derived(lookup, valueType);
+        return map.MapEntry(keyLeaf.Operand(key), aliasCount++, valueType);
     }
 
-    private PqsLeafType LeafOf(PayloadNode node) =>
+    private PqsLeafType LeafOf(Cursor node) =>
         PqsLeafType.For(node.ClrType)
         ?? throw new ArgumentException(
             $"'{node.ClrType.Name}' is not a Daml leaf type; select one of its fields instead.", paramName);
 
-    private PayloadNode Node(Expression expression) =>
+    private Cursor Node(Expression expression) =>
         expression switch
         {
             ParameterExpression parameter when scopes.TryGetValue(parameter, out var scope) => scope,
@@ -230,28 +214,30 @@ internal sealed class PqsPredicateTranslator
             _ => throw Unsupported(expression),
         };
 
-    private static PayloadNode Member(PayloadNode parent, MemberExpression member)
+    private Cursor Member(Cursor parent, MemberExpression member)
     {
         if (member.Member.Name == nameof(Nullable<int>.Value) && IsOptional(member.Expression!.Type))
             return parent.OptionalValue(member.Type);
         if (member.Member.Name == VariantValueProperty && IsVariantConstructor(member.Expression!.Type, member.Expression.Type.BaseType))
-            return parent.Field(VariantValueKey, member.Type);
+            return parent.Field(VariantValueField, member.Type);
         if (IsTuple(member.Member.DeclaringType))
-            return parent.Field(SqlFragment.JsonKey(member.Member.Name), member.Type);
-        var attribute = member.Member.GetCustomAttribute<DamlFieldAttribute>()
-            ?? throw new InvalidOperationException(
-                $"Property '{member.Member.DeclaringType?.Name}.{member.Member.Name}' carries no [DamlField] metadata, so its " +
-                $"PQS wire field name cannot be resolved. Regenerate the Daml bindings with a codegen " +
-                $"that emits field-name metadata; the typed filter DSL reads the wire name from that " +
-                $"attribute and never guesses from the C# property name.");
-        return parent.Field(SqlFragment.JsonKey(attribute.Name), member.Type);
+            return parent.Field(member.Member.Name, member.Type);
+        if (member.Member.GetCustomAttribute<DamlFieldAttribute>() is { } attribute)
+            return parent.Field(attribute.Name, member.Type);
+        if (!IsGeneratedRecordMember(member.Member))
+            throw Unsupported(member);
+        throw new InvalidOperationException(
+            $"Property '{member.Member.DeclaringType?.Name}.{member.Member.Name}' carries no [DamlField] metadata, so its " +
+            $"PQS wire field name cannot be resolved. Regenerate the Daml bindings with a codegen " +
+            $"that emits field-name metadata; the typed filter DSL reads the wire name from that " +
+            $"attribute and never guesses from the C# property name.");
     }
 
-    private static PayloadNode ConstructorCast(PayloadNode variant, Type constructorType) =>
-        variant.Guarded(TagEquals(variant, constructorType)).As(constructorType);
+    private static bool IsGeneratedRecordMember(MemberInfo member) =>
+        member.DeclaringType is { } declaringType && typeof(IDamlRecord).IsAssignableFrom(declaringType);
 
-    private static SqlFragment TagEquals(PayloadNode variant, Type constructorType) =>
-        SqlFragment.Of($"{variant.Field(VariantTagKey, typeof(string)).Text} = {SqlFragment.Parameter(TagOf(constructorType))}");
+    private static Cursor ConstructorCast(Cursor variant, Type constructorType) =>
+        variant.ConstructorCast(TagOf(constructorType), constructorType);
 
     private static string TagOf(Type constructorType) =>
         constructorType.GetProperty(VariantTagProperty, BindingFlags.Public | BindingFlags.Instance) is { PropertyType: var tagType } tag
@@ -282,20 +268,24 @@ internal sealed class PqsPredicateTranslator
         && declaringType.GetGenericTypeDefinition() is var definition
         && (definition == typeof(Tuple2<,>) || definition == typeof(Tuple3<,,>));
 
-    private static PayloadNode SomeCast(PayloadNode optional, Type someType) =>
-        optional.Guarded(optional.IsSome()).As(someType);
+    private static Cursor SomeCast(Cursor optional, Type someType) => optional.SomeCast(someType);
 
     private static bool IsOptional(Type type) =>
-        Nullable.GetUnderlyingType(type) is not null || PayloadNode.OptionalElementType(type) is not null;
+        Nullable.GetUnderlyingType(type) is not null || Cursor.OptionalElementType(type) is not null;
 
     private static bool IsOptionalSome(Type target, Type source) =>
-        PayloadNode.OptionalElementType(source) is { } element
+        Cursor.OptionalElementType(source) is { } element
         && target == typeof(Optional<>.Some).MakeGenericType(element);
 
     private static bool IsRepresentationPreserving(Type from, Type to) =>
         to == typeof(object)
         || Nullable.GetUnderlyingType(to) == from
-        || (from.IsEnum && to == Enum.GetUnderlyingType(from));
+        || IsEnumToUnderlying(from, to)
+        || (Nullable.GetUnderlyingType(from) is { } fromValue
+            && Nullable.GetUnderlyingType(to) is { } toValue
+            && IsEnumToUnderlying(fromValue, toValue));
+
+    private static bool IsEnumToUnderlying(Type from, Type to) => from.IsEnum && to == Enum.GetUnderlyingType(from);
 
     private bool ReferencesScope(Expression expression)
     {
@@ -310,15 +300,15 @@ internal sealed class PqsPredicateTranslator
             : Expression.Lambda<Func<object?>>(Expression.Convert(expression, typeof(object)))
                 .Compile(preferInterpretation: true)();
 
-    private static SqlFragment? ComparisonOperator(ExpressionType comparison) =>
+    private static PqsComparison? ComparisonOf(ExpressionType comparison) =>
         comparison switch
         {
-            ExpressionType.Equal => SqlFragment.Of($"="),
-            ExpressionType.NotEqual => SqlFragment.Of($"IS DISTINCT FROM"),
-            ExpressionType.LessThan => SqlFragment.Of($"<"),
-            ExpressionType.LessThanOrEqual => SqlFragment.Of($"<="),
-            ExpressionType.GreaterThan => SqlFragment.Of($">"),
-            ExpressionType.GreaterThanOrEqual => SqlFragment.Of($">="),
+            ExpressionType.Equal => PqsComparison.Equal,
+            ExpressionType.NotEqual => PqsComparison.NotEqual,
+            ExpressionType.LessThan => PqsComparison.LessThan,
+            ExpressionType.LessThanOrEqual => PqsComparison.LessThanOrEqual,
+            ExpressionType.GreaterThan => PqsComparison.GreaterThan,
+            ExpressionType.GreaterThanOrEqual => PqsComparison.GreaterThanOrEqual,
             _ => null,
         };
 
@@ -343,7 +333,7 @@ internal sealed class PqsPredicateTranslator
             "variant navigation, comparisons against a captured value, and && / || / !.",
             paramName);
 
-    private sealed class ScopeReferenceFinder(Dictionary<ParameterExpression, PayloadNode> scopes) : ExpressionVisitor
+    private sealed class ScopeReferenceFinder(Dictionary<ParameterExpression, Cursor> scopes) : ExpressionVisitor
     {
         public bool Found { get; private set; }
 
@@ -352,5 +342,46 @@ internal sealed class PqsPredicateTranslator
             Found |= scopes.ContainsKey(node);
             return node;
         }
+    }
+
+    private sealed record Cursor(PqsPath Path, Type ClrType)
+    {
+        public bool InOptionalChain { get; private init; }
+
+        public bool DefaultsWhenAbsent { get; private init; }
+
+        public bool IsListEncodedOptional =>
+            OptionalElementType(ClrType) is { } element && (InOptionalChain || OptionalElementType(element) is not null);
+
+        public static Cursor Root(PqsScope scope, Type clrType) => new(new PqsScopeRoot(scope), clrType);
+
+        public static Type? OptionalElementType(Type type)
+        {
+            for (var candidate = type; candidate is not null; candidate = candidate.BaseType)
+            {
+                if (candidate.IsGenericType && candidate.GetGenericTypeDefinition() == typeof(Optional<>))
+                    return candidate.GetGenericArguments()[0];
+            }
+
+            return null;
+        }
+
+        public Cursor Field(string name, Type clrType) => new(new PqsField(Path, name), clrType);
+
+        public Cursor OptionalValue(Type clrType) =>
+            IsListEncodedOptional ? new(new PqsFirstElement(Path), clrType) { InOptionalChain = true } : As(clrType);
+
+        public Cursor DefaultingWhenAbsent() => this with { DefaultsWhenAbsent = true };
+
+        public Cursor SomeCast(Type someType) =>
+            this with { Path = new PqsSomeCast(Path, IsListEncodedOptional), ClrType = someType };
+
+        public Cursor ConstructorCast(string tag, Type constructorType) =>
+            this with { Path = new PqsConstructorCast(Path, tag), ClrType = constructorType };
+
+        public Cursor MapEntry(PqsOperand key, int aliasOrdinal, Type valueType) =>
+            new(new PqsMapEntry(Path, key, aliasOrdinal), valueType);
+
+        public Cursor As(Type clrType) => this with { ClrType = clrType };
     }
 }

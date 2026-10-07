@@ -22,23 +22,22 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// the shared <see cref="SubmissionExtensionsEmitter"/> — the same per-package
 /// instances the sibling emitters use, so record, template, and choice output stay
 /// byte-identical. Constructed once per package over the package's
-/// <see cref="PackageEmitContext"/>, the DAR-scoped <see cref="ICrossPackageResolver"/>,
-/// those three composed emitters, and the shared <see cref="CodeGenOptions"/>. The
-/// contract-key slot is mapped through its own <see cref="DamlTypeMapper"/> over a
-/// <see cref="PackageQualifiedResolver"/>, so it does not share the sibling emitters'
-/// unqualified names. The caller owns the file scaffold and the
+/// <see cref="PackageEmitContext"/>, the DAR-scoped <see cref="DarCrossPackageResolver"/>,
+/// those three composed emitters, and the shared <see cref="CodeGenOptions"/>. The caller owns the file scaffold and the
 /// common usings; this emitter writes the template body into the provided
 /// <see cref="IndentWriter"/>.
 /// </summary>
 internal sealed partial class TemplateEmitter(
     PackageEmitContext context,
-    ICrossPackageResolver resolver,
+    DarCrossPackageResolver resolver,
     RecordSerializationEmitter recordSerialization,
     ChoiceEmitter choiceEmitter,
     SubmissionExtensionsEmitter submissionExtensions,
     CodeGenOptions options,
     ILogger? logger = null)
 {
+    private readonly DamlTypeMapper mapper = new(context, resolver);
+
     private const string KeyMemberName = "Key";
     private const string ChoicesMemberName = "Choices";
     private const string KeyEncoderMemberName = "KeyEncoder";
@@ -63,8 +62,6 @@ internal sealed partial class TemplateEmitter(
         DamlTemplate template,
         IReadOnlyList<DamlFieldDefinition> fields)
     {
-        var dataTypes = context.DataTypes;
-
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
@@ -72,27 +69,27 @@ internal sealed partial class TemplateEmitter(
             indent.AppendLine("/// </summary>");
         }
 
-        var className = EmitterHelpers.SanitizeIdentifier(template.Name);
+        var className = context.EmittedTypeName(module.Name, template.Name);
         indent.CurrentTypeName = className;
+        indent.CurrentReservedMemberNames = context.TemplateFieldReservedNames(template);
 
-        var nestedArgTypeNames = choiceEmitter.GetNestedChoiceArgumentTypeNames(template.Choices);
-        var keyWitness = DescribeKeyWitness(className, template.Key, fields, nestedArgTypeNames);
+        var keyWitness = DescribeKeyWitness(className, template, fields);
 
-        var interfacesList = new List<string> { context.Qualifier.Qualify(RuntimeTypeNames.ITemplate) };
+        var interfacesList = new List<string> { TypeReferenceQualifier.Qualify(RuntimeTypeNames.ITemplate) };
         if (package.UpgradedPackageId is not null)
-            interfacesList.Add(context.Qualifier.Qualify(RuntimeTypeNames.IUpgradeable));
+            interfacesList.Add(TypeReferenceQualifier.Qualify(RuntimeTypeNames.IUpgradeable));
         foreach (var implemented in template.Implements)
-            interfacesList.Add($"{context.Qualifier.Qualify(RuntimeTypeNames.IImplements)}<{resolver.Resolve(implemented, context)}>");
+            interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IImplements)}<{resolver.Resolve(implemented, context)}>");
         if (keyWitness is not null)
             interfacesList.Add(keyWitness.FacetType);
-        interfacesList.Add($"{context.Qualifier.Qualify(RuntimeTypeNames.IHasChoices)}<{className}>");
-        interfacesList.Add($"{context.Qualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{className}>");
+        interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IHasChoices)}<{className}>");
+        interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{className}>");
         var interfaces = string.Join(", ", interfacesList);
 
         if (fields.Count > 0)
         {
             indent.Append($"public sealed partial record {className}(");
-            recordSerialization.WriteRecordParameters(indent, fields, nestedArgTypeNames);
+            recordSerialization.WriteRecordParameters(indent, fields);
             indent.AppendLine($") : {interfaces}");
         }
         else
@@ -103,7 +100,7 @@ internal sealed partial class TemplateEmitter(
         indent.AppendLine("{");
         indent.Indent();
 
-        recordSerialization.WriteCollectionValueSemantics(indent, className, fields, nestedArgTypeNames);
+        recordSerialization.WriteCollectionValueSemantics(indent, className, fields);
         WriteTemplateMetadata(indent, package, module, template);
 
         if (keyWitness is not null)
@@ -111,18 +108,18 @@ internal sealed partial class TemplateEmitter(
             WriteKeyWitness(indent, module, template, keyWitness);
         }
 
-        recordSerialization.WriteToRecordMethod(indent, fields, [], nestedArgTypeNames);
-        recordSerialization.WriteFromRecordMethod(indent, className, fields, [], nestedArgTypeNames);
-        recordSerialization.WriteReadDamlLfJsonMethod(indent, fields, [], nestedArgTypeNames);
+        recordSerialization.WriteToRecordMethod(indent, fields, []);
+        recordSerialization.WriteFromRecordMethod(indent, className, fields, []);
+        recordSerialization.WriteReadDamlLfJsonMethod(indent, fields, []);
 
         choiceEmitter.WriteChoiceDescriptors(indent, template);
 
         var choicesFieldTakingTheMemberName = fields.FirstOrDefault(
-            field => Identifiers.MemberName(field.Name, className) == ChoicesMemberName);
+            field => Identifiers.MemberName(field.Name, className, context.TemplateFieldReservedNames(template)) == ChoicesMemberName);
         var templateNameTakesTheChoicesMemberName = className == ChoicesMemberName;
         var nestedChoiceArgChoice = template.Choices.FirstOrDefault(c =>
             EmitterHelpers.SanitizeIdentifier(c.Name) == ChoicesMemberName &&
-            choiceEmitter.GetChoiceArgumentInfo(c, dataTypes).IsNestedTemplateArg);
+            choiceEmitter.GetChoiceArgumentInfo(c).IsNestedTemplateArg);
         var choicesMemberNameIsTaken = templateNameTakesTheChoicesMemberName
             || choicesFieldTakingTheMemberName is not null
             || nestedChoiceArgChoice is not null;
@@ -141,19 +138,17 @@ internal sealed partial class TemplateEmitter(
         choiceEmitter.WriteChoicesAggregateProperty(
             indent,
             template.Choices,
-            explicitInterfaceOwner: choicesMemberNameIsTaken ? className : null,
-            nestedArgTypeNames: nestedArgTypeNames);
+            explicitInterfaceOwner: choicesMemberNameIsTaken ? className : null);
 
-        choiceEmitter.WriteChoiceByKeyCommandBuilders(indent, template, className, dataTypes);
+        choiceEmitter.WriteChoiceByKeyCommandBuilders(indent, template, className);
 
         indent.Dedent();
         indent.AppendLine("}");
         indent.AppendLine();
 
-        choiceEmitter.WriteChoiceResultStructs(indent, template);
-        choiceEmitter.WriteChoiceAsyncExercisersClass(indent, template, className, fields, dataTypes);
-        submissionExtensions.TryWriteSubmissionExtensions(indent, template, fields);
-        choiceEmitter.TryWriteNonContractChoiceExtensions(indent, template, dataTypes);
+        choiceEmitter.WriteChoiceAsyncExercisersClass(indent, template, className, fields);
+        submissionExtensions.TryWriteSubmissionExtensions(indent, template, className, context.TemplateFieldReservedNames(template), fields);
+        choiceEmitter.TryWriteNonContractChoiceExtensions(indent, template);
     }
 
     /// <summary>
@@ -165,48 +160,45 @@ internal sealed partial class TemplateEmitter(
         IndentWriter indent,
         DamlTemplate template,
         DamlChoice choice,
-        DamlDataType argDataType)
+        DamlRecordDefinition record)
     {
-        var templateClassName = EmitterHelpers.SanitizeIdentifier(template.Name);
+        var templateClassName = context.EmittedTypeName(context.Module.Name, template.Name);
         indent.AppendLine($"public sealed partial record {templateClassName}");
         indent.AppendLine("{");
         indent.Indent();
 
-        if (argDataType.Definition is DamlRecordDefinition record)
+        var choiceTypeName = EmitterHelpers.SanitizeIdentifier(choice.Name);
+        indent.CurrentTypeName = choiceTypeName;
+        indent.CurrentReservedMemberNames = ReservedMemberNames.OfRecordField();
+
+        if (options.GenerateXmlDocs)
         {
-            var choiceTypeName = EmitterHelpers.SanitizeIdentifier(choice.Name);
-            indent.CurrentTypeName = choiceTypeName;
-            var nestedArgTypeNames = choiceEmitter.GetNestedChoiceArgumentTypeNames(template.Choices);
-
-            if (options.GenerateXmlDocs)
-            {
-                indent.AppendLine("/// <summary>");
-                indent.AppendLine($"/// Choice argument type for {choice.Name}.");
-                indent.AppendLine("/// </summary>");
-            }
-
-            if (record.Fields.Count > 0)
-            {
-                indent.Append($"public sealed record {choiceTypeName}(");
-                recordSerialization.WriteRecordParameters(indent, record.Fields, nestedArgTypeNames);
-                indent.AppendLine($") : {context.Qualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{choiceTypeName}>");
-            }
-            else
-            {
-                indent.AppendLine($"public sealed record {choiceTypeName} : {context.Qualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{choiceTypeName}>");
-            }
-
-            indent.AppendLine("{");
-            indent.Indent();
-
-            recordSerialization.WriteCollectionValueSemantics(indent, choiceTypeName, record.Fields, nestedArgTypeNames);
-            recordSerialization.WriteToRecordMethod(indent, record.Fields, [], nestedArgTypeNames);
-            recordSerialization.WriteFromRecordMethod(indent, choiceTypeName, record.Fields, [], nestedArgTypeNames);
-            recordSerialization.WriteReadDamlLfJsonMethod(indent, record.Fields, [], nestedArgTypeNames);
-
-            indent.Dedent();
-            indent.AppendLine("}");
+            indent.AppendLine("/// <summary>");
+            indent.AppendLine($"/// Choice argument type for {choice.Name}.");
+            indent.AppendLine("/// </summary>");
         }
+
+        if (record.Fields.Count > 0)
+        {
+            indent.Append($"public sealed record {choiceTypeName}(");
+            recordSerialization.WriteRecordParameters(indent, record.Fields);
+            indent.AppendLine($") : {TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{choiceTypeName}>");
+        }
+        else
+        {
+            indent.AppendLine($"public sealed record {choiceTypeName} : {TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{choiceTypeName}>");
+        }
+
+        indent.AppendLine("{");
+        indent.Indent();
+
+        recordSerialization.WriteCollectionValueSemantics(indent, choiceTypeName, record.Fields);
+        recordSerialization.WriteToRecordMethod(indent, record.Fields, []);
+        recordSerialization.WriteFromRecordMethod(indent, choiceTypeName, record.Fields, []);
+        recordSerialization.WriteReadDamlLfJsonMethod(indent, record.Fields, []);
+
+        indent.Dedent();
+        indent.AppendLine("}");
 
         indent.Dedent();
         indent.AppendLine("}");
@@ -222,7 +214,7 @@ internal sealed partial class TemplateEmitter(
 
         if (options.GenerateXmlDocs)
             indent.AppendLine("/// <summary>Gets the template identifier.</summary>");
-        indent.AppendLine($"public static {context.Qualifier.Qualify(RuntimeTypeNames.Identifier)} TemplateId {{ get; }} = new(\"{package.PackageId}\", \"{module.Name}\", \"{template.Name}\");");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.Identifier)} TemplateId {{ get; }} = new(\"{package.PackageId}\", \"{module.Name}\", \"{template.Name}\");");
         indent.AppendLine();
 
         if (options.GenerateXmlDocs)
@@ -237,12 +229,12 @@ internal sealed partial class TemplateEmitter(
 
         if (options.GenerateXmlDocs)
             indent.AppendLine("/// <summary>Gets the package version.</summary>");
-        indent.AppendLine($"public static Version {nameof(Daml.Runtime.Contracts.ITemplate.PackageVersion)} {{ get; }} = new({package.Version.Major}, {package.Version.Minor}, {package.Version.Build});");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify("Version")} {nameof(Daml.Runtime.Contracts.ITemplate.PackageVersion)} {{ get; }} = new({package.Version.Major}, {package.Version.Minor}, {package.Version.Build});");
         indent.AppendLine();
 
         if (options.GenerateXmlDocs)
             indent.AppendLine("/// <summary>Gets the compile-time Daml type descriptor.</summary>");
-        indent.AppendLine($"public static {context.Qualifier.Qualify(RuntimeTypeNames.DamlTypeDescriptor)} DamlTypeId {{ get; }} = new(TemplateId, {context.Qualifier.Qualify(RuntimeTypeNames.DamlTypeKind)}.Template, PackageName);");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlTypeDescriptor)} DamlTypeId {{ get; }} = new(TemplateId, {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlTypeKind)}.Template, PackageName);");
         indent.AppendLine();
 
         if (package.UpgradedPackageId is not null)
@@ -279,25 +271,24 @@ internal sealed partial class TemplateEmitter(
 
     private KeyWitness? DescribeKeyWitness(
         string className,
-        DamlType? keyType,
-        IReadOnlyList<DamlFieldDefinition> fields,
-        IReadOnlySet<string>? nestedArgTypeNames)
+        DamlTemplate template,
+        IReadOnlyList<DamlFieldDefinition> fields)
     {
-        if (keyType is null)
+        if (template.Key is not { } keyType)
         {
             return null;
         }
 
-        var typeArguments = $"<{className}, {PackageQualifiedMapper.MapType(keyType)}>";
+        var typeArguments = $"<{className}, {mapper.MapType(keyType)}>";
         var fieldTakingTheMemberName = fields.FirstOrDefault(
-            field => Identifiers.MemberName(field.Name, className) == KeyMemberName);
+            field => Identifiers.MemberName(field.Name, className, context.TemplateFieldReservedNames(template)) == KeyMemberName);
 
         return new KeyWitness(
-            $"{context.Qualifier.Qualify(RuntimeTypeNames.IHasKey)}{typeArguments}",
-            $"{context.Qualifier.Qualify(RuntimeTypeNames.KeyDescriptor)}{typeArguments}",
-            PackageQualifiedMapper.ToValue(keyType, KeyEncoderParameterName),
-            PackageQualifiedMapper.FromValue(keyType, KeyDecoderParameterName, nestedArgTypeNames: nestedArgTypeNames),
-            PackageQualifiedMapper.FromJson(keyType, KeyJsonReaderJsonParameterName, KeyJsonReaderContextParameterName, nestedArgTypeNames),
+            $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IHasKey)}{typeArguments}",
+            $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.KeyDescriptor)}{typeArguments}",
+            mapper.ToValue(keyType, KeyEncoderParameterName),
+            mapper.FromValue(keyType, KeyDecoderParameterName),
+            mapper.FromJson(keyType, KeyJsonReaderJsonParameterName, KeyJsonReaderContextParameterName),
             className == KeyMemberName,
             fieldTakingTheMemberName?.Name);
     }
@@ -356,17 +347,6 @@ internal sealed partial class TemplateEmitter(
         indent.Dedent();
         indent.AppendLine();
     }
-
-    /// <summary>
-    /// Maps the contract-key slot and its decoder. The template record nests one argument record
-    /// per choice and declares <c>Key</c> / <c>Choices</c> members, any of which binds ahead of a
-    /// package type the key names, so every in-package name in the key slot is resolved
-    /// <c>global::</c>-qualified.
-    /// </summary>
-    private DamlTypeMapper PackageQualifiedMapper =>
-        _packageQualifiedMapper ??= new DamlTypeMapper(context, new PackageQualifiedResolver(resolver));
-
-    private DamlTypeMapper? _packageQualifiedMapper;
 
     [LoggerMessage(
         EventId = 1300,

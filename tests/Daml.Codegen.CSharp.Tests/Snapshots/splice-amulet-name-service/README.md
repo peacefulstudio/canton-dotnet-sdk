@@ -13,16 +13,16 @@ and exercises the codegen paths the interface-only fixture cannot reach:
 
 - Concrete `template ... where` declarations (`AnsEntry`, `AnsEntryContext`,
   `AnsRules`, `AmuletConversionRateFeed`).
-- Non-Unit choices whose typed `<Choice>Result` records carry contract IDs
+- Non-Unit choices that return contract IDs
   (e.g. `AnsRules_RequestEntry`, `AnsEntryContext_CollectInitialEntryPayment`),
-  driving the `<Choice>Result` projector, the `FromCreatedContracts` factory,
-  and the `<Choice>Async(this ContractId<T>, ...)` extension.
+  driving the exercise-result projector and the `Try<Choice>Async(this ContractId<T>, ...)`
+  extension.
 - A `Numeric n` field mapped to `decimal` (`AnsRulesConfig.EntryFee`).
 - Cross-family references to the `splice-amulet` package, exercising the
   qualified-reference emission path without emitting the referenced package.
 
 It also exercises a parameterized generic type applied across a package
-boundary: a few `<Choice>Result` records (e.g.
+boundary: a few Daml choice result records (e.g.
 `AnsRules_RejectEntryInitialPaymentResult`) carry a
 `Splice.Amulet.AmuletCreateSummary<...>` field. `ToRecord`/`FromRecord`
 serialize and deserialize it for real, via a converter delegate per type

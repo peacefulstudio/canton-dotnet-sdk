@@ -21,6 +21,8 @@ internal sealed class RestRetryHandler : DelegatingHandler
 
     private static readonly HttpRequestOptionsKey<bool> NotReplayable = new("Canton.Ledger.Rest.NotReplayable");
 
+    private static readonly HttpRequestOptionsKey<int> AttemptsSent = new("Canton.Ledger.Rest.AttemptsSent");
+
     private static readonly ActivitySource Source = LedgerActivitySource.Create<RestLedgerClient>();
 
     private readonly ResiliencePipeline _retryPipeline;
@@ -46,9 +48,21 @@ internal sealed class RestRetryHandler : DelegatingHandler
         await BufferBodySoEveryAttemptCanReplayItAsync(request, cancellationToken).ConfigureAwait(false);
 
         return await _retryPipeline
-            .ExecuteAsync(async token => await base.SendAsync(request, token).ConfigureAwait(false), cancellationToken)
+            .ExecuteAsync(
+                async token =>
+                {
+                    RecordAttemptSent(request);
+                    return await base.SendAsync(request, token).ConfigureAwait(false);
+                },
+                cancellationToken)
             .ConfigureAwait(false);
     }
+
+    internal static bool WasRetried(HttpRequestMessage request) =>
+        request.Options.TryGetValue(AttemptsSent, out var attemptsSent) && attemptsSent > 1;
+
+    private static void RecordAttemptSent(HttpRequestMessage request) =>
+        request.Options.Set(AttemptsSent, request.Options.TryGetValue(AttemptsSent, out var attemptsSent) ? attemptsSent + 1 : 1);
 
     internal static void MarkNotReplayable(HttpRequestMessage request) =>
         request.Options.Set(NotReplayable, true);

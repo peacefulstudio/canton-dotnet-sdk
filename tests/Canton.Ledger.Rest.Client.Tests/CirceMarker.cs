@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Text.Json;
 using Daml.Runtime;
@@ -13,8 +14,15 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 internal sealed record CirceMarker(
     [property: DamlFieldAttribute("owner")] Party Owner,
-    [property: DamlFieldAttribute("amount")] decimal Amount) : ITemplate, IDamlRecord<CirceMarker>
+    [property: DamlFieldAttribute("amount")] decimal Amount) : ITemplate, IDamlRecord<CirceMarker>, IHasChoices<CirceMarker>
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWritten()
+    {
+        GeneratedTypeReaders.ForRecord<CirceMarker>();
+        GeneratedTypeReaders.ForChoices<CirceMarker>();
+    }
+
     public static RuntimeIdentifier TemplateId { get; } = new("tmpl-pkg", "Sample.Token", "CirceHolding");
 
     public static string PackageId => "tmpl-pkg";
@@ -60,4 +68,6 @@ internal sealed record CirceMarker(
     public static CirceMarker FromRecord(DamlRecord record) => new(
         Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()),
         record.GetRequiredField("amount").As<DamlNumeric>().Value);
+
+    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceSplit, ChoiceSettle];
 }

@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Diagnostics;
 using System.Net;
@@ -24,6 +25,12 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public sealed class RestLedgerClientCantonTests : IDisposable
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TestTemplate>();
+    }
+
     private static readonly Party Alice = new("party::alice");
     private static readonly RuntimeCommands.SubmitterInfo AliceSubmitter =
         new(new HashSet<Party> { Alice }, new HashSet<Party>());
@@ -210,6 +217,63 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     }
 
     [Fact]
+    public async Task QueryActiveAsync_reports_a_failed_later_page_as_NotCommitted_with_its_category_and_error_id()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseSequence(
+                (HttpStatusCode.OK, ViewedActiveContractsPage("00impl-1", OkViewJson, nextPageToken: "page-2")),
+                (
+                    HttpStatusCode.Conflict,
+                    """
+                    {
+                      "code": 9,
+                      "message": "the user's rights changed",
+                      "details": [
+                        {
+                          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                          "reason": "STALE_STREAM_AUTHORIZATION",
+                          "metadata": {"category": "2"}
+                        }
+                      ]
+                    }
+                    """));
+        ICantonLedgerClient client = ClientWith(transport);
+
+        var querying = async () => await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await querying.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.Conflict));
+        thrown.Category.Should().Be(DamlErrorCategory.ContentionOnSharedResources);
+        thrown.ErrorId.Should().Be("STALE_STREAM_AUTHORIZATION");
+        thrown.InnerException.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_reports_an_undecodable_later_page_as_NotCommitted_keeping_the_decode_failure_as_inner_exception()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseSequence(
+                (HttpStatusCode.OK, ViewedActiveContractsPage("00impl-1", OkViewJson, nextPageToken: "page-2")),
+                (HttpStatusCode.OK, "null"));
+        ICantonLedgerClient client = ClientWith(transport);
+
+        var querying = async () => await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await querying.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Category.Should().BeNull();
+        thrown.ErrorId.Should().BeNull();
+        thrown.InnerException.Should().BeOfType<JsonException>()
+            .Which.Message.Should().Be("The active-contracts page response body deserialized to null.");
+    }
+
+    [Fact]
     public async Task GetLedgerApiVersionAsync_binds_the_version_from_v2_version()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"version":"3.5.9"}""");
@@ -280,13 +344,8 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     }
 
     [Fact]
-    public async Task GetConnectedSynchronizersAsync_throws_JsonException_for_a_permission_value_outside_the_vendored_enum()
+    public async Task GetConnectedSynchronizersAsync_reports_a_permission_value_outside_the_vendored_enum_as_an_undecodable_body()
     {
-        // The wire permission is a string enum (JsonStringEnumConverter has no fallback), so a
-        // value the vendored spec doesn't know about fails deserialization rather than degrading
-        // to SynchronizerPermissionLevel.Unrecognized -- unlike the retired int-ordinal encoding,
-        // where any out-of-range number bound successfully and MapPermission's default case
-        // caught it.
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.OK,
             """{"connectedSynchronizers": [{"synchronizerAlias": "a", "synchronizerId": "a::id", "permission": "PARTICIPANT_PERMISSION_SOME_FUTURE_VALUE"}]}""");
@@ -294,7 +353,66 @@ public sealed class RestLedgerClientCantonTests : IDisposable
 
         var act = () => client.GetConnectedSynchronizersAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<JsonException>();
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Which.InnerException.Should().BeOfType<JsonException>();
+    }
+
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_reports_a_successful_response_carrying_no_body_as_an_undecodable_body()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "null");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetConnectedSynchronizersAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.Message.Should().Be(
+            "Server returned a successful response but no body was present for the connected synchronizers.");
+    }
+
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_reads_a_body_listing_no_synchronizer_as_an_empty_list()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        var client = ClientWith(transport);
+
+        var synchronizers = await client.GetConnectedSynchronizersAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        synchronizers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetLedgerApiVersionAsync_reports_a_body_carrying_no_version_as_an_undecodable_body()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetLedgerApiVersionAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Which.Message.Should().Be(
+            "Server returned a malformed Ledger API version response body: no version was present for the Ledger API version query.");
+    }
+
+    [Fact]
+    public async Task GetUpdateByOffsetAsync_reports_a_successful_response_carrying_no_body_as_an_undecodable_body()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "null");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetUpdateByOffsetAsync(
+            LedgerOffset.At(7), AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Which.Message.Should().Be("Server returned a successful response but no update was present for offset 7.");
     }
 
     [Fact]
@@ -332,7 +450,9 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         var act = () => client.GetUpdateByOffsetAsync(LedgerOffset.At(7), AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
 
         var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
-        thrown.Which.Message.Should().Contain("Reassignment");
+        thrown.Which.Should().NotBeOfType<LedgerOperationException>();
+        thrown.Which.Message.Should().Be(
+            "Update at offset 7 is a Reassignment, not a Transaction; point reads only project transaction-shaped updates.");
     }
 
     [Fact]
@@ -472,6 +592,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     }
 
     [Theory]
+    [InlineData(nameof(RestLedgerClient.GetLedgerEndAsync))]
     [InlineData(nameof(RestLedgerClient.SubmitAsync))]
     [InlineData(nameof(RestLedgerClient.SubmitReassignmentAsync))]
     [InlineData(nameof(RestLedgerClient.GetConnectedSynchronizersAsync))]
@@ -487,10 +608,12 @@ public sealed class RestLedgerClientCantonTests : IDisposable
             client, operation, TimeSpan.FromMilliseconds(50), TestContext.Current.CancellationToken);
 
         var elapsed = Stopwatch.StartNew();
-        await act.Should().ThrowAsync<OperationCanceledException>(
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>(
             "the per-call deadline is the only thing that can end a request the participant never answers, so a "
             + "timeout the transport never sees would hang the caller for the HttpClient default instead");
 
+        thrown.Which.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.Which.Message.Should().Be("Request exceeded the 00:00:00.0500000 deadline.");
         elapsed.Elapsed.Should().BeLessThan(
             TimeSpan.FromSeconds(30),
             "a timeout the transport never sees still ends this request eventually, on HttpClient's own 100-second "
@@ -498,6 +621,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     }
 
     [Theory]
+    [InlineData(nameof(RestLedgerClient.GetLedgerEndAsync))]
     [InlineData(nameof(RestLedgerClient.SubmitAsync))]
     [InlineData(nameof(RestLedgerClient.SubmitReassignmentAsync))]
     [InlineData(nameof(RestLedgerClient.GetConnectedSynchronizersAsync))]
@@ -520,6 +644,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         RestLedgerClient client, string operation, TimeSpan? timeout, CancellationToken cancellationToken) =>
         operation switch
         {
+            nameof(RestLedgerClient.GetLedgerEndAsync) => client.GetLedgerEndAsync(timeout, cancellationToken),
             nameof(RestLedgerClient.SubmitAsync) =>
                 client.SubmitAsync(FireSubmission(), timeout, cancellationToken),
             nameof(RestLedgerClient.SubmitReassignmentAsync) =>

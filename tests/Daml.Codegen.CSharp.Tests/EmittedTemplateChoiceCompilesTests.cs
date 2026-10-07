@@ -69,13 +69,6 @@ public class EmittedTemplateChoiceCompilesTests
     [Fact]
     public void Emitted_template_with_create_bearing_choice_compiles()
     {
-        // Bare ContractId<T> return is the simplest path that exercises:
-        //   - the <Choice>Result record (one slot named after the template)
-        //   - the FromCreatedContracts projector (cardinality + global:: qualifier)
-        //   - the <Choice>Async extension (ILedgerWriter + ExerciseOutcome plumbing)
-        // Tuple returns hit the unrelated DA.Types:TupleN result-decoder mapping
-        // path, which is orthogonal to this PR — covered by string-shape tests
-        // upstream.
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -130,11 +123,6 @@ public class EmittedTemplateChoiceCompilesTests
     [Fact]
     public void Emitted_choice_returning_an_interface_contract_id_compiles()
     {
-        // Regression: a choice returning `ContractId I` for a Daml interface `I` made the
-        // <Choice>Result projector emit `IFactory.TemplateId.ModuleName` — but generated
-        // interface markers expose no public TemplateId (it is an explicit IDamlType
-        // member), so the projector failed with CS0117. The projector must match an
-        // interface slot against the created contract's InterfaceIds instead.
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -194,7 +182,7 @@ public class EmittedTemplateChoiceCompilesTests
     }
 
     [Fact]
-    public void Emitted_choice_returning_a_local_interface_contract_id_compiles_and_reads_the_marker_identity()
+    public void Emitted_choice_returning_a_local_interface_contract_id_compiles_and_projects_the_exercise_result()
     {
         var module = new DamlModule
         {
@@ -251,14 +239,10 @@ public class EmittedTemplateChoiceCompilesTests
             "a choice returning a local interface-typed ContractId resolves to the interface's marker, so the projector's InterfaceId reads must compile, but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
 
-        var code = files.First(f => f.RelativePath.EndsWith("Vault.cs", StringComparison.Ordinal)).Content;
-        code.Should().Contain("item.InterfaceIds.Any(interfaceId =>");
-        code.Should().Contain("string.Equals(interfaceId.ModuleName, global::Test.Module.IHoldable.InterfaceId.ModuleName, StringComparison.Ordinal)");
-        code.Should().Contain("string.Equals(interfaceId.EntityName, global::Test.Module.IHoldable.InterfaceId.EntityName, StringComparison.Ordinal)");
-        code.Should().NotContain(
-            "\"Holdable\", StringComparison.Ordinal",
-            "a local interface now resolves to a marker carrying InterfaceId, so the projector reads that "
-            + "static instead of baking the identity in as a string literal the marker could drift from");
+        var code = files.First(f => f.RelativePath.EndsWith("Vault.cs", global::System.StringComparison.Ordinal)).Content;
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Module.Vault.ChoiceIssueHoldable, contractId);");
+        code.Should().NotContain("InterfaceIds");
+        code.Should().NotContain("CreatedContracts");
     }
 
     [Fact]
@@ -305,8 +289,8 @@ public class EmittedTemplateChoiceCompilesTests
         var dar = new DarModel { MainPackage = package, Dependencies = [] };
         var files = CreateGenerator().Generate(dar).ToList();
 
-        var vault = files.First(f => f.RelativePath.EndsWith("Vault.cs", StringComparison.Ordinal)).Content;
-        vault.Should().Contain("IImplements<IHoldable>");
+        var vault = files.First(f => f.RelativePath.EndsWith("Vault.cs", global::System.StringComparison.Ordinal)).Content;
+        vault.Should().Contain("global::Daml.Runtime.Contracts.IImplements<global::Test.Module.IHoldable>");
 
         var diagnostics = CompileEmittedFiles(files);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -371,8 +355,8 @@ public class EmittedTemplateChoiceCompilesTests
         var dar = new DarModel { MainPackage = package, Dependencies = [] };
         var files = CreateGenerator().Generate(dar);
 
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
-        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
+        content.Should().Contain("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>, global::Test.Module.Agreement> contract,");
         content.Should().Contain("return contract.Id.TryRenewAsync(");
 
         var consumerHoldingFromCreatedEventResult = GeneratedFile.Text(
@@ -461,14 +445,14 @@ public class EmittedTemplateChoiceCompilesTests
         var dar = new DarModel { MainPackage = package, Dependencies = [] };
         var files = CreateGenerator().Generate(dar);
 
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
-        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
+        content.Should().Contain("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>, global::Test.Module.Agreement> contract,");
         content.Should().Contain("return contract.Id.TrySettleAsync(");
-        var idxArg = content.IndexOf("return contract.Id.TrySettleAsync(", StringComparison.Ordinal);
+        var idxArg = content.IndexOf("return contract.Id.TrySettleAsync(", global::System.StringComparison.Ordinal);
         var delegateBody = content[idxArg..];
-        var idxArgument = delegateBody.IndexOf("argument,", StringComparison.Ordinal);
-        var idxBuyer = delegateBody.IndexOf("contract.Data.Buyer,", StringComparison.Ordinal);
-        var idxSeller = delegateBody.IndexOf("contract.Data.Seller,", StringComparison.Ordinal);
+        var idxArgument = delegateBody.IndexOf("argument,", global::System.StringComparison.Ordinal);
+        var idxBuyer = delegateBody.IndexOf("contract.Data.Buyer,", global::System.StringComparison.Ordinal);
+        var idxSeller = delegateBody.IndexOf("contract.Data.Seller,", global::System.StringComparison.Ordinal);
         idxArgument.Should().BeGreaterThan(0);
         idxArgument.Should().BeLessThan(idxBuyer);
         idxBuyer.Should().BeLessThan(idxSeller);

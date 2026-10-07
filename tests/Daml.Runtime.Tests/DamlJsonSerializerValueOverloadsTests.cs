@@ -260,4 +260,24 @@ public class DamlJsonSerializerValueOverloadsTests
             System.Threading.Thread.CurrentThread.CurrentCulture = previousCulture;
         }
     }
+
+    [Fact]
+    public void Serialize_refuses_a_carried_undecoded_json_value_by_name()
+    {
+        var action = () => DamlJsonSerializer.Serialize(new DamlUndecodedJson("{\"owner\":\"alice::ns\"}"));
+
+        action.Should().Throw<JsonException>()
+            .WithMessage("Cannot serialize DamlUndecodedJson to JSON");
+    }
+
+    [Fact]
+    public void Serialize_refuses_a_carried_undecoded_json_value_nested_in_a_record()
+    {
+        var record = new DamlRecord(null, [new DamlField("inner", new DamlUndecodedJson("{}"))]);
+
+        var action = () => DamlJsonSerializer.Serialize(record);
+
+        action.Should().Throw<JsonException>()
+            .WithMessage("Cannot serialize DamlUndecodedJson to JSON");
+    }
 }

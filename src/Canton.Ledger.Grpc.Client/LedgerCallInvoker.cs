@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime.Outcomes;
 using Google.Protobuf.Reflection;
 using Grpc.Core;
 using Polly;
@@ -55,9 +58,24 @@ internal sealed class LedgerCallInvoker
             return await call(headers, GetDeadline(timeout), token).ConfigureAwait(false);
         }
 
-        return replayable
-            ? _retryPipeline.ExecuteAsync(Attempt, cancellationToken)
-            : Attempt(cancellationToken);
+        async ValueTask<TResponse> AttemptAndAcknowledge()
+        {
+            ResponseReceipt.AwaitResponse();
+            TResponse response;
+            if (replayable)
+            {
+                response = await _retryPipeline.ExecuteAsync(Attempt, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                response = await Attempt(cancellationToken).ConfigureAwait(false);
+            }
+
+            ResponseReceipt.MarkResponseReceived();
+            return response;
+        }
+
+        return AttemptAndAcknowledge();
     }
 
     /// <summary>
@@ -66,10 +84,13 @@ internal sealed class LedgerCallInvoker
     /// gRPC semantic-convention attributes for <paramref name="service"/>/<paramref name="method"/>;
     /// <paramref name="configureActivity"/> runs before the call for request-derived tags. A caller
     /// cancellation surfaces as <see cref="OperationCanceledException"/>; an
-    /// <paramref name="isExpectedFailure"/> match is rethrown unrecorded for the caller to translate;
-    /// any other <see cref="RpcException"/> is recorded on the span and rethrown.
+    /// <paramref name="isExpectedFailure"/> match is rethrown unrecorded as the <see cref="RpcException"/>
+    /// for the caller to translate; any other <see cref="RpcException"/>, once the retry pipeline has
+    /// given up on it, is recorded on the span and raised as a <see cref="LedgerOperationException"/>
+    /// whose commit state follows <paramref name="kind"/>.
     /// </summary>
     internal Task<TProjected> InvokeTracedAsync<TClient, TResponse, TProjected>(
+        LedgerCallKind kind,
         ActivitySource activitySource,
         ServiceDescriptor service,
         string method,
@@ -82,6 +103,7 @@ internal sealed class LedgerCallInvoker
         [CallerMemberName] string callerMemberName = "",
         bool replayable = true) =>
         ExecuteTracedAsync<TClient, TProjected>(
+            kind,
             activitySource,
             service,
             method,
@@ -96,6 +118,7 @@ internal sealed class LedgerCallInvoker
     /// Span and error semantics match <see cref="InvokeTracedAsync{TClient,TResponse,TProjected}"/>.
     /// </summary>
     internal Task InvokeTracedAsync<TClient, TResponse>(
+        LedgerCallKind kind,
         ActivitySource activitySource,
         ServiceDescriptor service,
         string method,
@@ -106,6 +129,7 @@ internal sealed class LedgerCallInvoker
         [CallerMemberName] string callerMemberName = "",
         bool replayable = true) =>
         ExecuteTracedAsync<TClient, TResponse>(
+            kind,
             activitySource,
             service,
             method,
@@ -120,9 +144,11 @@ internal sealed class LedgerCallInvoker
     /// operation (e.g. server-paginated reads) shares one span and one error envelope. Reclassifies a
     /// caller cancellation to <see cref="OperationCanceledException"/>, rethrows an
     /// <paramref name="isExpectedFailure"/> match unrecorded, and records any other
-    /// <see cref="RpcException"/> on the span before rethrowing.
+    /// <see cref="RpcException"/> on the span before raising it as a
+    /// <see cref="LedgerOperationException"/> whose commit state follows <paramref name="kind"/>.
     /// </summary>
     internal Task<T> ExecuteTracedAsync<TClient, T>(
+        LedgerCallKind kind,
         ActivitySource activitySource,
         ServiceDescriptor service,
         string method,
@@ -133,6 +159,7 @@ internal sealed class LedgerCallInvoker
         ActivityKind activityKind = ActivityKind.Client,
         [CallerMemberName] string callerMemberName = "") =>
         ExecuteOutcomeTracedAsync<TClient, T>(
+            kind,
             activitySource,
             new ServerCall(service, method),
             body,
@@ -152,12 +179,16 @@ internal sealed class LedgerCallInvoker
     /// error is recorded — an operation that records nothing passes
     /// <see cref="RecordNothing{TOutcome}"/> and says so. Reclassifies a caller cancellation to
     /// <see cref="OperationCanceledException"/>, rethrows an <paramref name="isExpectedFailure"/> match
-    /// unrecorded, and records any other <see cref="RpcException"/> on the span before rethrowing. An
-    /// operation that composes other traced operations instead of making its own RPC passes a null
+    /// unrecorded, and records any other <see cref="RpcException"/> on the span before raising it as a
+    /// <see cref="LedgerOperationException"/> whose commit state follows <paramref name="kind"/>. A wire
+    /// decode failure is raised as a <see cref="LedgerOperationException"/> only once a response has
+    /// been received, so a failure while building the request or fetching the token escapes unchanged.
+    /// An operation that composes other traced operations instead of making its own RPC passes a null
     /// <paramref name="serverCall"/> and its own <paramref name="activityKind"/>, so it carries no
     /// server-call tags.
     /// </summary>
     internal Task<TOutcome> ExecuteOutcomeTracedAsync<TClient, TOutcome>(
+        LedgerCallKind kind,
         ActivitySource activitySource,
         ServerCall? serverCall,
         Func<Activity?, CancellationToken, Task<TOutcome>> body,
@@ -168,6 +199,7 @@ internal sealed class LedgerCallInvoker
         ActivityKind activityKind = ActivityKind.Client,
         [CallerMemberName] string callerMemberName = "") =>
         ExecuteCoreAsync<TClient, TOutcome>(
+            kind,
             activitySource,
             serverCall,
             activityKind,
@@ -187,6 +219,7 @@ internal sealed class LedgerCallInvoker
     }
 
     private async Task<T> ExecuteCoreAsync<TClient, T>(
+        LedgerCallKind kind,
         ActivitySource activitySource,
         ServerCall? serverCall,
         ActivityKind activityKind,
@@ -202,6 +235,7 @@ internal sealed class LedgerCallInvoker
             TagServerCall(activity, call.Descriptor, call.Method);
         }
         configureActivity?.Invoke(activity);
+        var receipt = ResponseReceipt.OpenForCurrentCall();
 
         try
         {
@@ -218,7 +252,13 @@ internal sealed class LedgerCallInvoker
         catch (RpcException ex)
         {
             activity.RecordGrpcError(ex);
-            throw;
+            throw DamlErrorParser.Parse(ex).ToException(kind, ex);
+        }
+        catch (Exception decodeFailure) when (receipt.ResponseReceived && MalformedResponse.IsWireDecodeFailure(decodeFailure))
+        {
+            var undecodable = decodeFailure.ToUndecodableBodyException(kind);
+            activity.RecordInfraError(new TransportStatus.UndecodableBody(), undecodable.Message);
+            throw undecodable;
         }
     }
 

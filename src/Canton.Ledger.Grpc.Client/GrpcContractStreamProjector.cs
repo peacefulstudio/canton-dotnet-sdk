@@ -6,10 +6,8 @@ using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime;
-using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
@@ -21,216 +19,23 @@ namespace Canton.Ledger.Grpc.Client;
 
 internal static class GrpcContractStreamProjector
 {
+    public static IEnumerable<ContractStreamEvent<T>> ProjectUpdate<T>(
+        GetUpdatesResponse response,
+        ILogger? logger = null)
+        where T : ITemplate, IDamlRecord<T> =>
+        GrpcProjectionCore.ProjectUpdate<ContractArms<T>, ContractStreamEvent<T>, T, T>(response, logger);
+
     public static IEnumerable<ContractStreamEvent<T>> ProjectTransactionEvents<T>(
         Transaction transaction,
         ILogger? logger = null)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        var synchronizerId = StreamEventClassifier.Synchronizer(transaction.SynchronizerId);
-        foreach (var evt in transaction.Events)
-        {
-            ContractStreamEvent<T> projected;
-            try
-            {
-                projected = ProjectTransactionEvent<T>(evt, synchronizerId, transaction.Offset);
-            }
-            catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
-            {
-                projected = StreamEventClassifier.DecodeFailure<T>(transaction.Offset, logger, decodeFailure);
-            }
-            yield return projected;
-        }
-    }
-
-    private static ContractStreamEvent<T> ProjectTransactionEvent<T>(
-        Event evt,
-        SynchronizerId? synchronizerId,
-        long transactionOffset)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        switch (evt.EventCase)
-        {
-            case Event.EventOneofCase.Created:
-                {
-                    var created = evt.Created;
-                    RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
-                    var decoded = new DecodedStreamEvent<SynchronizerId>(
-                        created.Offset,
-                        GrpcMarkerMatcher<T>.MatchesProtoCreated(created),
-                        synchronizerId,
-                        UnclassifiedKind.CreatedEvent);
-                    if (!StreamEventClassifier.TryAdmit<T, SynchronizerId>(decoded, out var scope, out var unclassified))
-                    {
-                        return unclassified;
-                    }
-                    return CreatedFromProto<T>(created, scope, created.Offset);
-                }
-            case Event.EventOneofCase.Archived:
-                {
-                    var archived = evt.Archived;
-                    RequireTemplateId(archived.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archived.ContractId);
-                    var decoded = new DecodedStreamEvent<SynchronizerId>(
-                        archived.Offset,
-                        GrpcMarkerMatcher<T>.MatchesProtoArchived(archived),
-                        synchronizerId,
-                        UnclassifiedKind.ArchivedEvent);
-                    if (!StreamEventClassifier.TryAdmit<T, SynchronizerId>(decoded, out var scope, out var unclassified))
-                    {
-                        return unclassified;
-                    }
-                    return new ContractStreamEvent<T>.Archived(
-                        new ContractId<T>(archived.ContractId),
-                        LedgerOffset.At(archived.Offset),
-                        scope,
-                        LedgerWireConversions.ToPartyList(archived.WitnessParties));
-                }
-            case Event.EventOneofCase.Exercised:
-                {
-                    var exercised = evt.Exercised;
-                    RequireTemplateId(exercised.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ExercisedEvent), exercised.ContractId);
-                    var decoded = new DecodedStreamEvent<SynchronizerId>(
-                        exercised.Offset,
-                        GrpcMarkerMatcher<T>.MatchesProtoExercised(exercised),
-                        synchronizerId,
-                        UnclassifiedKind.ExercisedEvent);
-                    if (!StreamEventClassifier.TryAdmit<T, SynchronizerId>(decoded, out var scope, out var unclassified))
-                    {
-                        return unclassified;
-                    }
-                    var argument = DamlValueConverter.FromProtoValue(
-                        GrpcTransactionResultProjector.RequireChoiceArgument(exercised));
-                    var result = DamlValueConverter.FromProtoValue(
-                        GrpcTransactionResultProjector.RequireExerciseResult(exercised));
-                    return new ContractStreamEvent<T>.Exercised(
-                        new ContractId<T>(exercised.ContractId),
-                        new ChoiceName(exercised.Choice),
-                        argument,
-                        result,
-                        exercised.Consuming,
-                        LedgerOffset.At(exercised.Offset),
-                        scope,
-                        LedgerWireConversions.ToPartyList(exercised.WitnessParties));
-                }
-            default:
-                return new ContractStreamEvent<T>.Unclassified(LedgerOffset.At(transactionOffset), UnclassifiedKind.Unknown, evt.EventCase.ToString());
-        }
-    }
-
-    internal static void RequireTemplateId(ProtoIdentifier? templateId, string wireEventKind, string contractId)
-    {
-        if (templateId is null)
-        {
-            throw MalformedResponse.MissingRequiredField(
-                $"{wireEventKind} for contract '{contractId}' has no template_id");
-        }
-    }
+        where T : ITemplate, IDamlRecord<T> =>
+        GrpcProjectionCore.ProjectTransactionEvents<ContractArms<T>, ContractStreamEvent<T>, T, T>(transaction, logger);
 
     public static IEnumerable<ContractStreamEvent<T>> ProjectReassignmentEvents<T>(
         Reassignment reassignment,
         ILogger? logger = null)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        foreach (var evt in reassignment.Events)
-        {
-            ContractStreamEvent<T> projected;
-            try
-            {
-                projected = ProjectReassignmentEvent<T>(evt, reassignment.Offset);
-            }
-            catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
-            {
-                projected = StreamEventClassifier.DecodeFailure<T>(reassignment.Offset, logger, decodeFailure);
-            }
-            yield return projected;
-        }
-    }
-
-    private static ContractStreamEvent<T> ProjectReassignmentEvent<T>(
-        ReassignmentEvent evt,
-        long reassignmentOffset)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        switch (evt.EventCase)
-        {
-            case ReassignmentEvent.EventOneofCase.Assigned:
-                {
-                    var assigned = evt.Assigned;
-                    var created = assigned.CreatedEvent;
-                    if (created is null)
-                    {
-                        return new ContractStreamEvent<T>.Unclassified(LedgerOffset.At(reassignmentOffset), UnclassifiedKind.AssignedEvent);
-                    }
-                    RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
-                    var decoded = new DecodedStreamEvent<ReassignmentScope>(
-                        created.Offset,
-                        GrpcMarkerMatcher<T>.MatchesProtoCreated(created),
-                        StreamEventClassifier.ReassignmentSynchronizers(assigned.Source, assigned.Target),
-                        UnclassifiedKind.AssignedEvent);
-                    if (!StreamEventClassifier.TryAdmit<T, ReassignmentScope>(decoded, out var scope, out var unclassified))
-                    {
-                        return unclassified;
-                    }
-                    if (!TryResolveCreatedPayload<T>(created, out var payload))
-                    {
-                        var unavailableViewOffset = created.Offset > 0 ? created.Offset : reassignmentOffset;
-                        return new ContractStreamEvent<T>.Unclassified(LedgerOffset.At(unavailableViewOffset), UnclassifiedKind.InterfaceViewUnavailable);
-                    }
-                    return new ContractStreamEvent<T>.Assigned(
-                        new ContractId<T>(created.ContractId),
-                        payload,
-                        ContractKeyOf(created),
-                        LedgerOffset.At(created.Offset),
-                        scope.Source,
-                        scope.Target,
-                        assigned.ReassignmentId,
-                        (long)assigned.ReassignmentCounter,
-                        LedgerWireConversions.ToPartyList(created.WitnessParties));
-                }
-            case ReassignmentEvent.EventOneofCase.Unassigned:
-                {
-                    var unassigned = evt.Unassigned;
-                    RequireTemplateId(unassigned.TemplateId, nameof(Com.Daml.Ledger.Api.V2.UnassignedEvent), unassigned.ContractId);
-                    var decoded = new DecodedStreamEvent<ReassignmentScope>(
-                        unassigned.Offset,
-                        GrpcMarkerMatcher<T>.MatchesProtoUnassigned(unassigned),
-                        StreamEventClassifier.ReassignmentSynchronizers(unassigned.Source, unassigned.Target),
-                        UnclassifiedKind.UnassignedEvent);
-                    if (!StreamEventClassifier.TryAdmit<T, ReassignmentScope>(decoded, out var scope, out var unclassified))
-                    {
-                        return unclassified;
-                    }
-                    return new ContractStreamEvent<T>.Unassigned(
-                        new ContractId<T>(unassigned.ContractId),
-                        LedgerOffset.At(unassigned.Offset),
-                        scope.Source,
-                        scope.Target,
-                        unassigned.ReassignmentId,
-                        (long)unassigned.ReassignmentCounter,
-                        LedgerWireConversions.ToPartyList(unassigned.WitnessParties));
-                }
-            default:
-                return new ContractStreamEvent<T>.Unclassified(LedgerOffset.At(reassignmentOffset), UnclassifiedKind.Unknown, evt.EventCase.ToString());
-        }
-    }
-
-    public static ContractStreamEvent<T> CreatedFromProto<T>(
-        ProtoCreatedEvent created,
-        SynchronizerId synchronizerId,
-        long unavailableViewOffset)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        if (!TryResolveCreatedPayload<T>(created, out var payload))
-        {
-            return new ContractStreamEvent<T>.Unclassified(LedgerOffset.At(unavailableViewOffset), UnclassifiedKind.InterfaceViewUnavailable);
-        }
-        return new ContractStreamEvent<T>.Created(
-            new ContractId<T>(created.ContractId),
-            payload,
-            ContractKeyOf(created),
-            LedgerOffset.At(created.Offset),
-            synchronizerId,
-            LedgerWireConversions.ToPartyList(created.WitnessParties));
-    }
+        where T : ITemplate, IDamlRecord<T> =>
+        GrpcProjectionCore.ProjectReassignmentEvents<ContractArms<T>, ContractStreamEvent<T>, T, T>(reassignment, logger);
 
     public static CreatedContract<T> ProjectCreatedContract<T>(ProtoCreatedEvent? created)
         where T : ITemplate, IDamlRecord<T>
@@ -240,8 +45,8 @@ internal static class GrpcContractStreamProjector
             throw MalformedResponse.MissingRequiredField("the GetContract response has no created_event");
         }
 
-        RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
-        if (!GrpcMarkerMatcher<T>.MatchesProtoCreated(created) || !TryResolveCreatedPayload<T>(created, out var payload))
+        GrpcProjectionCore.RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
+        if (!GrpcMarkerMatcher<T>.MatchesProtoCreated(created) || !GrpcProjectionCore.TryResolvePayload<T, T>(created, out var payload))
         {
             throw new InvalidOperationException(
                 $"Contract '{created.ContractId}' is a {created.TemplateId.ModuleName}.{created.TemplateId.EntityName}, "
@@ -249,9 +54,9 @@ internal static class GrpcContractStreamProjector
         }
 
         return new CreatedContract<T>(
-            new ContractId<T>(created.ContractId),
+            LedgerWireConversions.ToContractId<T>(created.ContractId),
             payload,
-            ContractKeyOf(created),
+            GrpcProjectionCore.ContractKeyOf(created),
             LedgerWireConversions.ToPartyList(created.WitnessParties));
     }
 
@@ -261,8 +66,10 @@ internal static class GrpcContractStreamProjector
         ContractStreamEvent<T>.Created? created = null;
         if (response.Created is { CreatedEvent: { } createdEvent } createdEnvelope)
         {
+            GrpcProjectionCore.RequireTemplateId(createdEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), createdEvent.ContractId);
             var synchronizerId = RequireSynchronizer(createdEnvelope.SynchronizerId, createdEvent.ContractId);
-            created = CreatedFromProto<T>(createdEvent, synchronizerId, createdEvent.Offset)
+            created = GrpcProjectionCore.CreatedFromProto<ContractArms<T>, ContractStreamEvent<T>, T, T>(
+                    createdEvent, synchronizerId, createdEvent.Offset).Event
                 as ContractStreamEvent<T>.Created
                 ?? throw new InvalidOperationException(
                     $"Contract '{createdEvent.ContractId}' cannot be read as {typeof(T).Name}: its interface view is unavailable.");
@@ -271,10 +78,10 @@ internal static class GrpcContractStreamProjector
         ContractStreamEvent<T>.Archived? archived = null;
         if (response.Archived is { ArchivedEvent: { } archivedEvent } archivedEnvelope)
         {
-            RequireTemplateId(archivedEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archivedEvent.ContractId);
-            archived = new ContractStreamEvent<T>.Archived(
-                new ContractId<T>(archivedEvent.ContractId),
-                LedgerOffset.At(archivedEvent.Offset),
+            GrpcProjectionCore.RequireTemplateId(archivedEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archivedEvent.ContractId);
+            archived = (ContractStreamEvent<T>.Archived)ContractArms<T>.Archived(
+                LedgerWireConversions.ToContractId<T>(archivedEvent.ContractId),
+                LedgerWireConversions.ToLedgerOffset(archivedEvent.Offset),
                 RequireSynchronizer(archivedEnvelope.SynchronizerId, archivedEvent.ContractId),
                 LedgerWireConversions.ToPartyList(archivedEvent.WitnessParties));
         }
@@ -286,45 +93,6 @@ internal static class GrpcContractStreamProjector
         StreamEventClassifier.Synchronizer(wireSynchronizerId)
         ?? throw MalformedResponse.MissingRequiredField($"the event for contract '{contractId}' has no synchronizer_id");
 
-    internal static ContractKey? ContractKeyOf(ProtoCreatedEvent created)
-    {
-        if (created.ContractKey is null)
-        {
-            return null;
-        }
-
-        return new ContractKey(
-            GrpcValueDecoder.ToDamlValue(created.ContractKey),
-            created.TemplateId is null ? null : LedgerWireConversions.ToRuntimeIdentifier(created.TemplateId))
-        {
-            KeyHash = LedgerWireConversions.ToKeyHash(created.ContractKeyHash),
-        };
-    }
-
-    private static bool TryResolveCreatedPayload<T>(ProtoCreatedEvent created, out T payload)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        if (GrpcMarkerMatcher<T>.IsInterface)
-        {
-            if (!GrpcMarkerMatcher<T>.TryGetInterfaceViewRecord(created, out var view))
-            {
-                payload = default!;
-                return false;
-            }
-            _ = created.CreateArguments
-                ?? throw MalformedResponse.MissingRequiredField(
-                    $"CreatedEvent for contract '{created.ContractId}' has no create_arguments");
-            payload = T.FromRecord(view);
-            return true;
-        }
-
-        var createArguments = created.CreateArguments
-            ?? throw MalformedResponse.MissingRequiredField(
-                $"CreatedEvent for contract '{created.ContractId}' has no create_arguments");
-        payload = T.FromRecord(DamlValueConverter.FromProtoRecord(createArguments));
-        return true;
-    }
-
     public static bool IsTemplateMatch(ProtoIdentifier? proto, RuntimeIdentifier expected) =>
         proto is not null && MatchesModuleEntity(proto.ModuleName, proto.EntityName, expected);
 
@@ -332,8 +100,19 @@ internal static class GrpcContractStreamProjector
         string.Equals(moduleName, expected.ModuleName, StringComparison.Ordinal)
         && string.Equals(entityName, expected.EntityName, StringComparison.Ordinal);
 
-    public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response) =>
-        ActiveCreatedEvent(response) is ({ CreatedEventBlob.IsEmpty: false, TemplateId: { } templateId } created, var wireSynchronizerId)
+    public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response)
+    {
+        var (created, wireSynchronizerId) = GrpcProjectionCore.ActiveEntryOf(response);
+        return DisclosureOf(created, wireSynchronizerId);
+    }
+
+    public static RuntimeDisclosedContract? DisclosureOf(GetEventsByContractIdResponse response) =>
+        response.Archived is not null
+            ? null
+            : DisclosureOf(response.Created?.CreatedEvent, wireSynchronizerId: null);
+
+    private static RuntimeDisclosedContract? DisclosureOf(ProtoCreatedEvent? created, string? wireSynchronizerId) =>
+        created is { CreatedEventBlob.IsEmpty: false, TemplateId: { } templateId }
             ? new RuntimeDisclosedContract(
                 created.ContractId,
                 LedgerWireConversions.ToRuntimeIdentifier(templateId),
@@ -343,118 +122,11 @@ internal static class GrpcContractStreamProjector
             }
             : null;
 
-    private static (ProtoCreatedEvent? Created, string? WireSynchronizerId) ActiveCreatedEvent(GetActiveContractsResponse response) =>
-        response.ContractEntryCase switch
-        {
-            GetActiveContractsResponse.ContractEntryOneofCase.ActiveContract =>
-                (response.ActiveContract?.CreatedEvent, response.ActiveContract?.SynchronizerId),
-            GetActiveContractsResponse.ContractEntryOneofCase.IncompleteUnassigned =>
-                (response.IncompleteUnassigned?.CreatedEvent, response.IncompleteUnassigned?.UnassignedEvent?.Source),
-            GetActiveContractsResponse.ContractEntryOneofCase.IncompleteAssigned =>
-                (response.IncompleteAssigned?.AssignedEvent?.CreatedEvent, response.IncompleteAssigned?.AssignedEvent?.Target),
-            _ => (null, null),
-        };
-
     public static IEnumerable<ContractStreamEvent<T>> ProjectActiveContractEntry<T>(
         GetActiveContractsResponse response,
         ILogger? logger = null,
         LedgerOffset? snapshotOffset = null)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        var snapshotResumeOffset = (snapshotOffset ?? LedgerOffset.Begin).Value;
-        var (created, synchronizerId, entryResumeOffset) = response.ContractEntryCase switch
-        {
-            GetActiveContractsResponse.ContractEntryOneofCase.ActiveContract
-                => (response.ActiveContract?.CreatedEvent, response.ActiveContract?.SynchronizerId, snapshotResumeOffset),
-            GetActiveContractsResponse.ContractEntryOneofCase.IncompleteUnassigned
-                => (response.IncompleteUnassigned?.CreatedEvent, response.IncompleteUnassigned?.UnassignedEvent?.Source, UnassignmentOffsetOr(response.IncompleteUnassigned, snapshotResumeOffset)),
-            GetActiveContractsResponse.ContractEntryOneofCase.IncompleteAssigned
-                => (response.IncompleteAssigned?.AssignedEvent?.CreatedEvent, response.IncompleteAssigned?.AssignedEvent?.Target, snapshotResumeOffset),
-            _ => (null, null, snapshotResumeOffset),
-        };
-
-        var createdEvent = ClassifyActiveCreated<T>(response.ContractEntryCase, created, synchronizerId, entryResumeOffset, logger);
-        yield return createdEvent;
-
-        if (createdEvent is not ContractStreamEvent<T>.Created
-            || response.ContractEntryCase != GetActiveContractsResponse.ContractEntryOneofCase.IncompleteUnassigned
-            || response.IncompleteUnassigned?.UnassignedEvent is not { } unassigned)
-        {
-            yield break;
-        }
-        yield return ClassifyActiveUnassigned<T>(
-            unassigned, UnassignedOffsetOr(unassigned, snapshotResumeOffset), logger);
-    }
-
-    private static ContractStreamEvent<T> ClassifyActiveUnassigned<T>(
-        UnassignedEvent unassigned,
-        long offset,
-        ILogger? logger)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        var decoded = new DecodedStreamEvent<ReassignmentScope>(
-            offset,
-            MatchesMarker: true,
-            StreamEventClassifier.ReassignmentSynchronizers(unassigned.Source, unassigned.Target),
-            UnclassifiedKind.UnassignedEvent);
-        if (!StreamEventClassifier.TryAdmit<T, ReassignmentScope>(decoded, out var scope, out var unclassified))
-        {
-            return unclassified;
-        }
-        try
-        {
-            return new ContractStreamEvent<T>.Unassigned(
-                new ContractId<T>(unassigned.ContractId),
-                LedgerOffset.At(offset),
-                scope.Source,
-                scope.Target,
-                unassigned.ReassignmentId,
-                (long)unassigned.ReassignmentCounter,
-                LedgerWireConversions.ToPartyList(unassigned.WitnessParties));
-        }
-        catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
-        {
-            return StreamEventClassifier.DecodeFailure<T>(offset, logger, decodeFailure);
-        }
-    }
-
-    private static ContractStreamEvent<T> ClassifyActiveCreated<T>(
-        GetActiveContractsResponse.ContractEntryOneofCase entryCase,
-        ProtoCreatedEvent? created,
-        string? wireSynchronizerId,
-        long entryResumeOffset,
-        ILogger? logger)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        if (created is null)
-        {
-            return new ContractStreamEvent<T>.Unclassified(LedgerOffset.At(entryResumeOffset), UnclassifiedKind.Unknown, entryCase.ToString());
-        }
-        var resumeOffset = created.Offset > 0 ? created.Offset : entryResumeOffset;
-        var decoded = new DecodedStreamEvent<SynchronizerId>(
-            resumeOffset,
-            GrpcMarkerMatcher<T>.MatchesProtoCreated(created),
-            StreamEventClassifier.Synchronizer(wireSynchronizerId),
-            UnclassifiedKind.CreatedEvent);
-        if (!StreamEventClassifier.TryAdmit<T, SynchronizerId>(decoded, out var scope, out var unclassified))
-        {
-            return unclassified;
-        }
-        try
-        {
-            return CreatedFromProto<T>(created, scope, resumeOffset);
-        }
-        catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
-        {
-            return StreamEventClassifier.DecodeFailure<T>(resumeOffset, logger, decodeFailure);
-        }
-    }
-
-    internal static long UnassignmentOffsetOr(IncompleteUnassigned? entry, long snapshotResumeOffset) =>
-        entry?.UnassignedEvent is { } unassigned
-            ? UnassignedOffsetOr(unassigned, snapshotResumeOffset)
-            : snapshotResumeOffset;
-
-    internal static long UnassignedOffsetOr(UnassignedEvent unassigned, long snapshotResumeOffset) =>
-        unassigned.Offset > 0 ? unassigned.Offset : snapshotResumeOffset;
+        where T : ITemplate, IDamlRecord<T> =>
+        GrpcProjectionCore.ProjectActiveContractEntry<ContractArms<T>, ContractStreamEvent<T>, T, T>(
+            response, logger, snapshotOffset);
 }

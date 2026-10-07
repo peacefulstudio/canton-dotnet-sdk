@@ -62,13 +62,13 @@ internal sealed record BenchmarkReport(
         }
 
         markdown.AppendLine().AppendLine("## Throughput").AppendLine()
-            .AppendLine("| Scenario | Transport | Items | Repetitions | Median seconds | Median rate | Best rate |")
-            .AppendLine("| --- | --- | ---: | ---: | ---: | ---: | ---: |");
+            .AppendLine("| Scenario | Transport | Items | Repetitions | Median seconds | Median rate | Best rate | Allocated bytes per item |")
+            .AppendLine("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |");
         foreach (var result in Throughputs)
         {
             var summary = result.Summary;
             markdown.AppendLine(CultureInfo.InvariantCulture,
-                $"| {result.Scenario} | {result.Transport} | {summary.Items} | {summary.Repetitions} | {summary.MedianSeconds:F3} | {summary.MedianItemsPerSecond:F0} {result.Unit} | {summary.BestItemsPerSecond:F0} {result.Unit} |");
+                $"| {result.Scenario} | {result.Transport} | {summary.Items} | {summary.Repetitions} | {summary.MedianSeconds:F3} | {summary.MedianItemsPerSecond:F0} {result.Unit} | {summary.BestItemsPerSecond:F0} {result.Unit} | {AllocationCell(summary)} |");
         }
 
         if (Notes.Count > 0)
@@ -82,6 +82,9 @@ internal sealed record BenchmarkReport(
 
         return markdown.ToString();
     }
+
+    private static string AllocationCell(ThroughputSummary summary) =>
+        summary.AllocatedBytesPerItem is { } bytes ? bytes.ToString("F0", CultureInfo.InvariantCulture) : string.Empty;
 
     private static string Row(string label, string value) => $"| {label} | {value} |";
 }

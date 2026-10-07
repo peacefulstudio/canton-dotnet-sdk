@@ -27,30 +27,30 @@ public enum TransferSide
 public static class TransferSideExtensions
 {
     /// <summary>Converts to a DamlEnum value.</summary>
-    public static DamlEnum ToDamlEnum(this TransferSide value)
+    public static global::Daml.Runtime.Data.DamlEnum ToDamlEnum(this global::Splice.Api.Token.TransferEventsV2.TransferSide value)
     {
         return value switch
         {
-            TransferSide.SenderSide => DamlEnum.Create("SenderSide"),
-            TransferSide.ReceiverSide => DamlEnum.Create("ReceiverSide"),
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+            global::Splice.Api.Token.TransferEventsV2.TransferSide.SenderSide => global::Daml.Runtime.Data.DamlEnum.Create("SenderSide"),
+            global::Splice.Api.Token.TransferEventsV2.TransferSide.ReceiverSide => global::Daml.Runtime.Data.DamlEnum.Create("ReceiverSide"),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value, null)
         };
     }
 
     /// <summary>Creates an instance from a DamlEnum value.</summary>
-    public static TransferSide FromDamlEnum(DamlEnum value)
+    public static global::Splice.Api.Token.TransferEventsV2.TransferSide FromDamlEnum(global::Daml.Runtime.Data.DamlEnum value)
     {
         return value.Constructor switch
         {
-            "SenderSide" => TransferSide.SenderSide,
-            "ReceiverSide" => TransferSide.ReceiverSide,
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value.Constructor, null)
+            "SenderSide" => global::Splice.Api.Token.TransferEventsV2.TransferSide.SenderSide,
+            "ReceiverSide" => global::Splice.Api.Token.TransferEventsV2.TransferSide.ReceiverSide,
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value.Constructor, null)
         };
     }
 
     /// <summary>Decodes a Daml-LF JSON enum constructor directly into a DamlEnum, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlEnum __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context) =>
+    public static global::Daml.Runtime.Data.DamlEnum __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context) =>
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 
     private static readonly string[] ExpectedConstructors = ["SenderSide", "ReceiverSide"];

@@ -17,21 +17,21 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// </summary>
 public sealed record Calendar(
     string Id,
-    IReadOnlyList<string> Holidays
-) : IDamlRecord<Calendar>
+    global::System.Collections.Generic.IReadOnlyList<string> Holidays
+) : global::Daml.Runtime.Data.IDamlRecord<Calendar>
 {
     /// <summary>The Daml field <c>id</c>.</summary>
-    [DamlFieldAttribute("id")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("id")]
     public string Id { get; init; } = Id;
 
-    private readonly IReadOnlyList<string> _holidays = DamlFieldCollections.Copy(Holidays);
+    private readonly global::System.Collections.Generic.IReadOnlyList<string> _holidays = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Holidays);
 
     /// <summary>The Daml field <c>holidays</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("holidays")]
-    public IReadOnlyList<string> Holidays
+    [global::Daml.Runtime.Data.DamlFieldAttribute("holidays")]
+    public global::System.Collections.Generic.IReadOnlyList<string> Holidays
     {
         get => _holidays;
-        init => _holidays = DamlFieldCollections.Copy(value);
+        init => _holidays = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -39,38 +39,38 @@ public sealed record Calendar(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(Calendar? other) =>
         other is not null
-        && EqualityComparer<string>.Default.Equals(Id, other.Id)
-        && DamlFieldCollections.Equal(Holidays, other.Holidays);
+        && global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(Id, other.Id)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Holidays, other.Holidays);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Id);
-        hash.Add(DamlFieldCollections.Hash(Holidays));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Holidays));
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("id", new DamlText(Id)),
-        DamlField.Create("holidays", new DamlList(Holidays.Select(x => (DamlValue)new DamlText(x)).ToList()))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id)),
+        global::Daml.Runtime.Data.DamlField.Create("holidays", new global::Daml.Runtime.Data.DamlList(Holidays.Select(x => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(x)).ToList()))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Calendar FromRecord(DamlRecord record) => new Calendar(
-        Id: record.GetRequiredField("id").As<DamlText>().Value,
-        Holidays: (IReadOnlyList<string>)record.GetRequiredField("holidays").As<DamlList>().Values.Select(x => x.As<DamlText>().Value).ToList()
+    public static Calendar FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Calendar(
+        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Holidays: (global::System.Collections.Generic.IReadOnlyList<string>)record.GetRequiredField("holidays").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))),
-            DamlField.Create("holidays", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holidays"), context.Field("holidays"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))),
+            global::Daml.Runtime.Data.DamlField.Create("holidays", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holidays"), context.Field("holidays"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
         );
     }
 

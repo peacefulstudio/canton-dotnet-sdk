@@ -13,31 +13,31 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml record TrailingNote
 /// </summary>
 public sealed record TrailingNote(
-    [property: DamlFieldAttribute("text")] string Text,
-    [property: DamlFieldAttribute("remark")] string? Remark
-) : IDamlRecord<TrailingNote>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("text")] string Text,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("remark")] string? Remark
+) : global::Daml.Runtime.Data.IDamlRecord<TrailingNote>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("text", new DamlText(Text)),
-        DamlField.Create("remark", Remark is { } __Remark ? new DamlOptional(new DamlText(__Remark)) : DamlOptional.None)
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("text", new global::Daml.Runtime.Data.DamlText(Text)),
+        global::Daml.Runtime.Data.DamlField.Create("remark", Remark is { } __Remark ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlText(__Remark)) : global::Daml.Runtime.Data.DamlOptional.None)
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TrailingNote FromRecord(DamlRecord record) => new TrailingNote(
-        Text: record.GetRequiredField("text").As<DamlText>().Value,
-        Remark: record.GetOptionalField("remark").AsOptional().HasValue ? record.GetOptionalField("remark").AsOptional().Value!.As<DamlText>().Value : null
+    public static TrailingNote FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TrailingNote(
+        Text: record.GetRequiredField("text").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Remark: record.GetOptionalField("remark").AsOptional().HasValue ? record.GetOptionalField("remark").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("text", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "text"), context.Field("text"))),
-            DamlField.Create("remark", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "remark"), context.Field("remark"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(2);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("text", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "text"), context.Field("text"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "remark", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("remark"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

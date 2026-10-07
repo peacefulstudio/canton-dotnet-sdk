@@ -13,30 +13,30 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml record TransferFactoryView
 /// </summary>
 public sealed record TransferFactoryView(
-    [property: DamlFieldAttribute("admin")] Party Admin,
-    [property: DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : ITransferFactory, IDamlRecord<TransferFactoryView>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("admin")] global::Daml.Runtime.Data.Party Admin,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
+) : global::Splice.Api.Token.TransferInstructionV2.ITransferFactory, global::Daml.Runtime.Data.IDamlRecord<TransferFactoryView>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("admin", Admin.ToDamlValue()),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("admin", Admin.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TransferFactoryView FromRecord(DamlRecord record) => new TransferFactoryView(
-        Admin: Party.FromDamlValue(record.GetRequiredField("admin").As<DamlParty>()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static TransferFactoryView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferFactoryView(
+        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin").As<global::Daml.Runtime.Data.DamlParty>()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
+            global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
 

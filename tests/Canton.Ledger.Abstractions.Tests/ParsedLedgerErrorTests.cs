@@ -22,7 +22,7 @@ public class ParsedLedgerErrorTests
     [InlineData("9", DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
     [InlineData("10", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
     [InlineData("11", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing)]
-    [InlineData("12", DamlErrorCategory.InvalidGivenCurrentSystemStateSeekDifferentResource)]
+    [InlineData("12", DamlErrorCategory.InvalidGivenCurrentSystemStateSeekAfterEnd)]
     [InlineData("13", DamlErrorCategory.BackgroundProcessDegradationWarning)]
     [InlineData("14", DamlErrorCategory.InternalUnsupportedOperation)]
     public void MapCategory_maps_the_documented_numeric_category_ids_participants_send(
@@ -64,13 +64,13 @@ public class ParsedLedgerErrorTests
     public void ClassifiedCategory_keeps_the_category_a_Structured_error_named()
     {
         var structured = new ParsedLedgerError.Structured(
-            DamlErrorCategory.ContentionOnSharedResources,
+            DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists,
             "DUPLICATE_COMMAND",
             "already submitted",
             new Dictionary<string, string>(),
             new TransportStatus.Http(HttpStatusCode.Conflict));
 
-        structured.ClassifiedCategory.Should().Be(DamlErrorCategory.ContentionOnSharedResources);
+        structured.ClassifiedCategory.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists);
     }
 
     [Fact]

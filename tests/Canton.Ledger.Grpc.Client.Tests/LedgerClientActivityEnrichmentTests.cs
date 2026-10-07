@@ -6,6 +6,7 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Authentication;
 using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -319,7 +320,7 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
         var client = CreateClientWithStateService();
 
         var act = () => client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<RpcException>();
+        await act.Should().ThrowAsync<LedgerOperationException>();
 
         var activity = capture.Activities.Should().ContainSingle(a => a.StatusDescription == detail).Subject;
         activity.Status.Should().Be(ActivityStatusCode.Error);
@@ -386,7 +387,7 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
         var client = CreateClient();
 
         var act = () => client.SubmitAndWaitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<RpcException>();
+        await act.Should().ThrowAsync<LedgerOperationException>();
 
         var activity = capture.Activities.Should().ContainSingle(a => a.StatusDescription == detail).Subject;
         activity.Status.Should().Be(ActivityStatusCode.Error);

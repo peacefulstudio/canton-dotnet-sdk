@@ -108,8 +108,8 @@ public partial class CodeGenEdgeCaseTests
             ExpectedInConsumer:
             [
                 "using Daml.Runtime.Stdlib;",
-                "Set<Party>",
-                "Set<Party>.FromRecord("
+                "global::Daml.Runtime.Stdlib.Set<global::Daml.Runtime.Data.Party>",
+                "global::Daml.Runtime.Stdlib.Set<global::Daml.Runtime.Data.Party>.FromRecord("
             ],
             ExpectedAbsentFromConsumer: [],
             ExpectedAbsentFromProjectFile: []),
@@ -197,7 +197,7 @@ public partial class CodeGenEdgeCaseTests
 
         var files = generator.Generate(CreateMultiPackageDar(consumerPackage, stdlibPackage)).ToList();
         var consumer = files.FirstOrDefault(f =>
-            f.RelativePath.EndsWith($"{routing.ConsumerTypeName}.cs", StringComparison.Ordinal));
+            f.RelativePath.EndsWith($"{routing.ConsumerTypeName}.cs", global::System.StringComparison.Ordinal));
 
         consumer.Should().NotBeNull();
         foreach (var expected in routing.ExpectedInConsumer)
@@ -214,7 +214,7 @@ public partial class CodeGenEdgeCaseTests
             return;
         }
 
-        var projectFile = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        var projectFile = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
         projectFile.Should().NotBeNull();
         foreach (var absent in routing.ExpectedAbsentFromProjectFile)
         {

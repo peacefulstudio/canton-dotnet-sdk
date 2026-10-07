@@ -4,21 +4,27 @@
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 
 namespace Canton.Ledger.Abstractions;
 
 /// <summary>
 /// Typed accessors over <see cref="TransactionResult.ExercisedEvents"/> that deserialize a
 /// choice's <see cref="ExercisedEvent.ExerciseResult"/> into a typed return value (e.g.
-/// <c>choice GetTrailingTwap : Decimal</c>) through the existing
-/// <see cref="DamlValueExtensions.FromDamlValue{TResult}"/> machinery.
+/// <c>choice GetTrailingTwap : Decimal</c>). The result decodes through the generated choice
+/// descriptor the event's own interface id, then template id, resolves to, so variants, enums,
+/// generic types and collections decode too. When no generated binding resolves, or its result type
+/// is not assignable to the requested type, the result decodes through
+/// <see cref="DamlValueExtensions.FromDamlValue{TResult}"/> instead, and a <see cref="DamlValue"/>
+/// target receives the raw value.
 /// </summary>
 public static class TransactionResultExerciseExtensions
 {
     /// <summary>
     /// Returns the typed return value of the single exercised event whose
     /// <see cref="ExercisedEvent.ChoiceName"/> equals <paramref name="choiceName"/> (ordinal),
-    /// deserialized via <see cref="DamlValueExtensions.FromDamlValue{TResult}"/>.
+    /// decoded through the resolved generated choice descriptor, or through
+    /// <see cref="DamlValueExtensions.FromDamlValue{TResult}"/> when none resolves.
     /// </summary>
     /// <returns>
     /// The decoded return value, or <c>null</c> when the choice result legitimately decodes to
@@ -35,7 +41,7 @@ public static class TransactionResultExerciseExtensions
         var matches = MatchingExercisedEvents(result, choiceName);
         return matches.Count switch
         {
-            1 => matches[0].ExerciseResult.FromDamlValue<TReturn>(),
+            1 => ExercisedResultDecoder.Decode<TReturn>(matches[0]),
             0 => throw new InvalidOperationException(
                 $"Transaction contains no exercised event for choice '{choiceName}'."),
             _ => throw new InvalidOperationException(
@@ -77,7 +83,7 @@ public static class TransactionResultExerciseExtensions
         var results = new TReturn?[matches.Count];
         for (var i = 0; i < matches.Count; i++)
         {
-            results[i] = matches[i].ExerciseResult.FromDamlValue<TReturn>();
+            results[i] = ExercisedResultDecoder.Decode<TReturn>(matches[i]);
         }
         return results;
     }
