@@ -12,6 +12,7 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Streams;
 using Google.Protobuf;
+using Grpc.Core;
 using RuntimeCommands = Daml.Runtime.Commands;
 
 namespace Canton.Ledger.Grpc.Client;
@@ -27,6 +28,7 @@ internal sealed partial class LedgerClient
         request.QueryingParties.AddRange(SubscribeFilterPolicy.FilteredPartyIds(submitter));
 
         var created = await _invoker.InvokeTracedAsync<LedgerClient, GetContractResponse, Com.Daml.Ledger.Api.V2.CreatedEvent?>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             ContractService.Descriptor,
             "GetContract",
@@ -51,7 +53,14 @@ internal sealed partial class LedgerClient
                     $"Contract '{contractId.Value}' was served without field labels and is not visible to the event query.");
         }
 
-        return GrpcContractStreamProjector.ProjectCreatedContract<T>(created);
+        try
+        {
+            return GrpcContractStreamProjector.ProjectCreatedContract<T>(created);
+        }
+        catch (Exception decodeFailure) when (MalformedResponse.IsWireDecodeFailure(decodeFailure))
+        {
+            throw decodeFailure.ToUndecodableBodyException(LedgerCallKind.Read);
+        }
     }
 
     /// <inheritdoc />
@@ -67,6 +76,7 @@ internal sealed partial class LedgerClient
         };
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetEventsByContractIdResponse, ContractLifecycle<T>>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             EventQueryService.Descriptor,
             "GetEventsByContractId",
@@ -81,6 +91,43 @@ internal sealed partial class LedgerClient
                 activity.SetSubmitterTags(submitter, _options);
             });
     }
+
+    /// <inheritdoc />
+    public async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
+        ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : IDamlType
+    {
+        var request = new GetEventsByContractIdRequest
+        {
+            ContractId = contractId.Value,
+            EventFormat = GrpcSubscribeRequestBuilder.BuildDisclosureEventFormat(submitter),
+        };
+
+        try
+        {
+            return await _invoker.InvokeTracedAsync<LedgerClient, GetEventsByContractIdResponse, RuntimeCommands.DisclosedContract?>(
+                LedgerCallKind.Read,
+                LedgerCallInvoker.Source,
+                EventQueryService.Descriptor,
+                "GetEventsByContractId",
+                (headers, deadline, token) => _eventQueryService.GetEventsByContractIdAsync(request, headers, deadline, token),
+                GrpcContractStreamProjector.DisclosureOf,
+                cancellationToken,
+                timeout: timeout,
+                configureActivity: activity =>
+                {
+                    activity?.SetTag(LedgerActivityTagNames.DamlContractId, contractId.Value);
+                    activity.SetSubmitterTags(submitter, _options);
+                },
+                isExpectedFailure: IsNotFound).ConfigureAwait(false);
+        }
+        catch (RpcException notFound) when (IsNotFound(notFound))
+        {
+            return null;
+        }
+    }
+
+    private static bool IsNotFound(RpcException exception) => exception.StatusCode == StatusCode.NotFound;
 
     /// <inheritdoc />
     public Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
@@ -106,6 +153,7 @@ internal sealed partial class LedgerClient
         if (pageToken is not null) request.PageToken = ToWireToken(pageToken);
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetActiveContractsPageResponse, AcsPage<T>>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             StateService.Descriptor,
             "GetActiveContractsPage",
@@ -123,14 +171,14 @@ internal sealed partial class LedgerClient
     private AcsPage<T> ProjectAcsPage<T>(GetActiveContractsPageResponse response)
         where T : ITemplate, IDamlRecord<T>
     {
-        var activeAt = LedgerOffset.At(response.ActiveAtOffset);
+        var activeAt = LedgerWireConversions.ToLedgerOffset(response.ActiveAtOffset);
         var entries = new List<AcsSnapshotEntry<T>>();
         foreach (var wireEntry in response.ActiveContracts)
         {
             var disclosure = GrpcContractStreamProjector.DisclosureOf(wireEntry);
             entries.AddRange(GrpcContractStreamProjector
                 .ProjectActiveContractEntry<T>(wireEntry, _logger, activeAt)
-                .Select(projected => ToAcsSnapshotEntry(projected, disclosure)));
+                .Select(projected => ContractSnapshotEntryArms<T>.From(projected, disclosure)));
         }
 
         return new AcsPage<T>(entries, activeAt, FromWireToken(response.HasNextPageToken ? response.NextPageToken : null));
@@ -139,13 +187,14 @@ internal sealed partial class LedgerClient
     /// <inheritdoc />
     public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
         _invoker.InvokeTracedAsync<LedgerClient, GetLatestPrunedOffsetsResponse, PrunedOffsets>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             StateService.Descriptor,
             "GetLatestPrunedOffsets",
             (headers, deadline, token) => _stateService.GetLatestPrunedOffsetsAsync(new GetLatestPrunedOffsetsRequest(), headers, deadline, token),
             response => new PrunedOffsets(
-                LedgerOffset.At(response.ParticipantPrunedUpToInclusive),
-                LedgerOffset.At(response.AllDivulgedContractsPrunedUpToInclusive)),
+                LedgerWireConversions.ToLedgerOffset(response.ParticipantPrunedUpToInclusive),
+                LedgerWireConversions.ToLedgerOffset(response.AllDivulgedContractsPrunedUpToInclusive)),
             cancellationToken,
             timeout: timeout);
 
@@ -165,6 +214,7 @@ internal sealed partial class LedgerClient
         if (pageToken is not null) request.PageToken = ToWireToken(pageToken);
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetUpdatesPageResponse, UpdatesPage>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             UpdateService.Descriptor,
             "GetUpdatesPage",
@@ -180,8 +230,8 @@ internal sealed partial class LedgerClient
             response.Updates
                 .Select((update, index) => ProjectPointRead(update, $"page position {index}", GrpcTransactionResultProjector.Project))
                 .ToList(),
-            LedgerOffset.At(response.LowestPageOffsetExclusive),
-            LedgerOffset.At(response.HighestPageOffsetInclusive),
+            LedgerWireConversions.ToLedgerOffset(response.LowestPageOffsetExclusive),
+            LedgerWireConversions.ToLedgerOffset(response.HighestPageOffsetInclusive),
             FromWireToken(response.HasNextPageToken ? response.NextPageToken : null));
 
     /// <inheritdoc />

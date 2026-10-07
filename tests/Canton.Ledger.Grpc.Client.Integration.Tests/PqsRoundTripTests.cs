@@ -5,6 +5,7 @@ using System.Collections;
 using System.Diagnostics;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Pqs.Client;
+using Canton.Ledger.Rest.Client;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -100,7 +101,7 @@ public class PqsRoundTripTests
     }
 
     [Fact]
-    public async Task AddCantonLedgerInstrumentation_shares_one_trace_across_a_submit_a_stream_read_and_a_pqs_query()
+    public async Task AddCantonLedgerInstrumentation_shares_one_trace_across_a_grpc_submit_a_stream_read_a_rest_submit_and_a_pqs_query()
     {
         var pqsConnectionString = RequirePqsConnectionString();
 
@@ -125,6 +126,8 @@ public class PqsRoundTripTests
         await using var pqsServices = PqsServices(pqsConnectionString);
         var pqs = pqsServices.GetRequiredService<IPqsClient>();
 
+        await using var restServices = RestServices(fixture);
+
         ActivityTraceId sharedTraceId;
         ActivitySpanId sharedParentSpanId;
         using (var parentActivity = OpenTelemetryParentSource.StartActivity("shared-trace-parent"))
@@ -140,6 +143,10 @@ public class PqsRoundTripTests
             var created = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(createOutcome).Result;
 
             var afterOffset = await ledger.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+            var restOutcome = await restServices.GetRequiredService<ICantonLedgerClient>().TryCreateAsync(
+                new Asset(issuer, OpenTelemetryAssetAmount), cancellationToken: TestContext.Current.CancellationToken);
+            Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(restOutcome);
 
             using (await LedgerUserRightsGate.Shared.HoldStreamAsync(userId, TestContext.Current.CancellationToken))
             {
@@ -172,6 +179,15 @@ public class PqsRoundTripTests
         var subscribeSpan = Assert.Single(grpcLedgerClientSpans, a => a.DisplayName == "LedgerClient.SubscribeAsyncCore");
         Assert.Equal(sharedParentSpanId, subscribeSpan.ParentSpanId);
 
+        var restSubmitSpan = Assert.Single(
+            traceActivities,
+            a => a.Source.Name == "Canton.Ledger.Rest.Client.RestLedgerClient"
+                && a.DisplayName == "POST"
+                && a.GetTagItem("url.full") is string url
+                && url.EndsWith("/v2/commands/submit-and-wait-for-transaction", StringComparison.Ordinal));
+        Assert.Equal(sharedParentSpanId, restSubmitSpan.ParentSpanId);
+        Assert.Equal(ActivityKind.Client, restSubmitSpan.Kind);
+
         var pqsQuerySpans = traceActivities
             .Where(a => a.Source.Name == "Npgsql"
                 && a.GetTagItem("db.query.text") is
@@ -191,6 +207,12 @@ public class PqsRoundTripTests
         Assert.Equal("Canton.Ledger.Pqs.Client.PqsClient", pqsClientSpan.Source.Name);
         Assert.Equal(sharedParentSpanId, pqsClientSpan.ParentSpanId);
     }
+
+    private static ServiceProvider RestServices(LocalnetFixture fixture) =>
+        new ServiceCollection()
+            .AddSingleton<ITokenProvider>(new LocalnetTokenProvider(fixture.TokenProvider.GetAccessTokenAsync))
+            .AddRestLedgerClient(options => options.HttpAddress = fixture.Endpoints.JsonLedgerApi.ToString())
+            .BuildServiceProvider();
 
     private static ServiceProvider PqsServices(string pqsConnectionString) =>
         new ServiceCollection()

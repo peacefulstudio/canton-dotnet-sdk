@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Net;
 using System.Text.Json;
@@ -26,6 +27,13 @@ namespace Canton.Ledger.Rest.Client.Tests;
 /// </summary>
 public sealed class RestExerciseQuarantinePinTests : IDisposable
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TestTemplate>();
+        GeneratedTypeReaders.ForChoices<TestTemplate>();
+    }
+
     private static readonly Party Alice = new("party::alice");
 
     private readonly RecordingHttpHandler _transport = new();
@@ -38,7 +46,7 @@ public sealed class RestExerciseQuarantinePinTests : IDisposable
 
     public void Dispose() => _factory.Dispose();
 
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
+    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>, IHasChoices<TestTemplate>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "QuarantinePinTemplate");
         public static string PackageId => "pkg";
@@ -62,6 +70,8 @@ public sealed class RestExerciseQuarantinePinTests : IDisposable
             ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
             ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive];
     }
 
     private RestLedgerClient Client() => new(_factory, Options.Create(new RestLedgerClientOptions
@@ -99,7 +109,7 @@ public sealed class RestExerciseQuarantinePinTests : IDisposable
         """;
 
     [Fact]
-    public async Task TryExerciseAsync_requests_the_ledger_effects_shape_and_reports_CommittedUndecodable_when_the_transaction_carries_no_ExercisedEvent()
+    public async Task TryExerciseAsync_requests_the_ledger_effects_shape_and_throws_when_the_transaction_carries_no_ExercisedEvent()
     {
         _transport.WithResponse(
             HttpStatusCode.OK,
@@ -115,14 +125,11 @@ public sealed class RestExerciseQuarantinePinTests : IDisposable
             """);
         var client = Client();
 
-        var outcome = await client.TryExerciseAsync<DamlUnit>(
+        var act = () => client.TryExerciseAsync<DamlUnit>(
             ArchiveCommand(), Alice, cancellationToken: TestContext.Current.CancellationToken);
 
-        var undecodable = outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.CommittedUndecodable>().Subject;
-        undecodable.UpdateId.Should().Be("upd-1");
-        undecodable.Message.Should().Be(
-            "The command committed, but its choice result could not be read: Transaction contains no exercised event for choice 'Archive'.");
-        undecodable.SourceException.Should().BeOfType<InvalidOperationException>();
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Message.Should().StartWith(
+            "Submission succeeded but no 'Archive' exercise on contract '00marker' was recorded on transaction upd-1.");
         SubmittedTransactionShape().Should().Be("TRANSACTION_SHAPE_LEDGER_EFFECTS",
             "the exercise path asks for ledger effects so the ExercisedEvent is present at all");
     }

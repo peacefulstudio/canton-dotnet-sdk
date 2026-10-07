@@ -404,7 +404,7 @@ public sealed class LedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TryExerciseAsync_returns_CommittedUndecodable_when_the_committed_transaction_has_no_matching_event()
+    public async Task TryExerciseAsync_throws_when_the_committed_transaction_has_no_matching_event()
     {
         var transaction = new Transaction { UpdateId = "update-456", Offset = 789L };
 
@@ -416,14 +416,11 @@ public sealed class LedgerClientTests : IDisposable
 
         var client = CreateClient();
 
-        var outcome = await client.TryExerciseAsync<object>(
+        var act = () => client.TryExerciseAsync<object>(
             exerciseCommand, ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        var undecodable = outcome.Should().BeOfType<ExerciseOutcome<object>.CommittedUndecodable>().Subject;
-        undecodable.UpdateId.Should().Be("update-456");
-        undecodable.Message.Should().Be(
-            "The command committed, but its choice result could not be read: Transaction contains no exercised event for choice 'Archive'.");
-        undecodable.SourceException.Should().BeOfType<InvalidOperationException>();
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Message.Should().StartWith(
+            "Submission succeeded but no 'Archive' exercise on contract '00contract123' was recorded on transaction update-456.");
     }
 
     [Fact]
@@ -479,7 +476,7 @@ public sealed class LedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TryExerciseAsync_returns_None_when_unit_result_decodes_to_null_reference_type()
+    public async Task TryExerciseAsync_returns_One_null_when_unit_result_decodes_to_null_reference_type()
     {
         var transaction = new Transaction { UpdateId = "update-456", Offset = 789L };
         transaction.Events.Add(new Event
@@ -505,7 +502,7 @@ public sealed class LedgerClientTests : IDisposable
         var outcome = await client.TryExerciseAsync<DamlRecord>(
             exerciseCommand, ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<DamlRecord>.None>();
+        outcome.Should().BeOfType<ExerciseOutcome<DamlRecord>.One>().Subject.Result.Should().BeNull();
     }
 
     [Fact]
@@ -639,7 +636,7 @@ public sealed class LedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TryExerciseAsync_returns_CommittedUndecodable_when_the_committed_transaction_has_multiple_matching_events()
+    public async Task TryExerciseAsync_returns_One_for_the_target_contract_when_the_same_choice_also_ran_on_a_child_contract()
     {
         var transaction = new Transaction { UpdateId = "update-456", Offset = 789L };
         transaction.Events.Add(new Event
@@ -661,7 +658,7 @@ public sealed class LedgerClientTests : IDisposable
                 TemplateId = new ProtoIdentifier { PackageId = "pkg", ModuleName = "Module", EntityName = "Template" },
                 Choice = "Bump",
                 ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
-                ExerciseResult = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() }
+                ExerciseResult = new ProtoValue { Text = "child" }
             }
         });
 
@@ -676,11 +673,7 @@ public sealed class LedgerClientTests : IDisposable
         var outcome = await client.TryExerciseAsync<object>(
             exerciseCommand, ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        var undecodable = outcome.Should().BeOfType<ExerciseOutcome<object>.CommittedUndecodable>().Subject;
-        undecodable.UpdateId.Should().Be("update-456");
-        undecodable.Message.Should().Be(
-            "The command committed, but its choice result could not be read: Transaction contains 2 exercised events for choice 'Bump', expected exactly 1.");
-        undecodable.SourceException.Should().BeOfType<InvalidOperationException>();
+        outcome.Should().BeOfType<ExerciseOutcome<object>.One>().Subject.Result.Should().Be(DamlUnit.Instance);
     }
 
     [Fact]

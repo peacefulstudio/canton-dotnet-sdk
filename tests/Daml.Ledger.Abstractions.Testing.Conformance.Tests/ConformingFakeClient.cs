@@ -15,7 +15,7 @@ using Daml.Runtime.Streams;
 
 namespace Daml.Ledger.Abstractions.Testing.Conformance.Tests;
 
-internal sealed class ConformingFakeClient : NotSupportedLedgerClient
+internal class ConformingFakeClient : NotSupportedLedgerClient
 {
     private static readonly LedgerOffset LedgerEnd = LedgerOffset.At(3);
 
@@ -66,17 +66,116 @@ internal sealed class ConformingFakeClient : NotSupportedLedgerClient
         yield return new AcsSnapshotEntry<T>.Checkpoint(new StakeholderResume(effective));
     }
 
-    public override async IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
+    public override IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
+        ViewDescriptor<TInterface, TView> view,
+        SubmitterInfo submitter,
+        LedgerOffset? activeAtOffset = null,
+        bool includeDisclosure = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+
+        return InterfaceSnapshot<TInterface, TView>(activeAtOffset, cancellationToken);
+    }
+
+    private async IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> InterfaceSnapshot<TInterface, TView>(
+        LedgerOffset? activeAtOffset,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var effective = activeAtOffset ?? LedgerEnd;
+        await Task.CompletedTask;
+
+        if (_faultsMidSnapshot)
+        {
+            yield return InterfaceSnapshotRow<TInterface, TView>("c1", 1);
+            yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.StreamError(
+                new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "UNAVAILABLE: transport fault mid-snapshot");
+            yield break;
+        }
+
+        if (effective.Value >= 1)
+        {
+            yield return InterfaceSnapshotRow<TInterface, TView>("c1", 1);
+        }
+
+        if (effective.Value >= 2)
+        {
+            yield return InterfaceSnapshotRow<TInterface, TView>("c2", 2);
+        }
+
+        if (effective.Value >= 3)
+        {
+            yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
+                LedgerOffset.At(3), UnclassifiedKind.Unknown, "UNMAPPED");
+        }
+
+        yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.Checkpoint(new StakeholderResume(effective));
+    }
+
+    private static InterfaceAcsSnapshotEntry<TInterface, TView>.Created InterfaceSnapshotRow<TInterface, TView>(
+        string contractId, long offset)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView> =>
+        new(
+            new ContractId<TInterface>(contractId),
+            TView.FromRecord(new ConformanceProbeView(42.5m).ToRecord()),
+            null,
+            LedgerOffset.At(offset),
+            new SynchronizerId("sync"),
+            [new Party("alice")]);
+
+    public override IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
         SubmitterInfo submitter,
         LedgerOffset? fromOffset = null,
         LedgerOffset? toOffset = null,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Window(SeededStream<T>(), fromOffset, toOffset, cancellationToken);
+
+    public override IAsyncEnumerable<ContractStreamEvent<T>> SubscribeLedgerEffectsAsync<T>(
+        SubmitterInfo submitter,
+        LedgerOffset? fromOffset = null,
+        LedgerOffset? toOffset = null,
+        CancellationToken cancellationToken = default) =>
+        Window(SeededEffectsStream<T>(), fromOffset, toOffset, cancellationToken);
+
+    public override IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
+        ViewDescriptor<TInterface, TView> view,
+        SubmitterInfo submitter,
+        LedgerOffset? fromOffset = null,
+        LedgerOffset? toOffset = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+
+        return Window(SeededInterfaceStream<TInterface, TView>(), fromOffset, toOffset, cancellationToken);
+    }
+
+    public override IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeLedgerEffectsAsync<TInterface, TView>(
+        ViewDescriptor<TInterface, TView> view,
+        SubmitterInfo submitter,
+        LedgerOffset? fromOffset = null,
+        LedgerOffset? toOffset = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+
+        return Window(SeededInterfaceEffectsStream<TInterface, TView>(), fromOffset, toOffset, cancellationToken);
+    }
+
+    private static async IAsyncEnumerable<TEvent> Window<TEvent>(
+        IEnumerable<(long Offset, TEvent Event)> seeded,
+        LedgerOffset? fromOffset,
+        LedgerOffset? toOffset,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var lower = (fromOffset ?? LedgerOffset.Begin).Value;
         await Task.CompletedTask;
 
-        foreach (var (offset, evt) in SeededStream<T>())
+        foreach (var (offset, evt) in seeded)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (offset <= lower)
@@ -93,32 +192,39 @@ internal sealed class ConformingFakeClient : NotSupportedLedgerClient
         }
     }
 
-    public override async IAsyncEnumerable<ContractStreamEvent<T>> SubscribeLedgerEffectsAsync<T>(
-        SubmitterInfo submitter,
-        LedgerOffset? fromOffset = null,
-        LedgerOffset? toOffset = null,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private static IEnumerable<(long Offset, InterfaceStreamEvent<TInterface, TView> Event)> SeededInterfaceStream<TInterface, TView>()
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var lower = (fromOffset ?? LedgerOffset.Begin).Value;
-        await Task.CompletedTask;
-
-        foreach (var (offset, evt) in SeededEffectsStream<T>())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (offset <= lower)
-            {
-                continue;
-            }
-
-            if (toOffset is { } upper && offset > upper.Value)
-            {
-                yield break;
-            }
-
-            yield return evt;
-        }
+        yield return (1, InterfaceCreated<TInterface, TView>("c1", 1));
+        yield return (2, InterfaceCreated<TInterface, TView>("c2", 2));
+        yield return (2, new InterfaceStreamEvent<TInterface, TView>.Archived(
+            new ContractId<TInterface>("c1"), LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
+        yield return (3, new InterfaceStreamEvent<TInterface, TView>.Unclassified(
+            LedgerOffset.At(3), UnclassifiedKind.Unknown, "UNMAPPED"));
     }
+
+    private static IEnumerable<(long Offset, InterfaceStreamEvent<TInterface, TView> Event)> SeededInterfaceEffectsStream<TInterface, TView>()
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        yield return (1, InterfaceCreated<TInterface, TView>("c1", 1));
+        yield return (2, new InterfaceStreamEvent<TInterface, TView>.Exercised(
+            new ContractId<TInterface>("c1"), new ChoiceName("Archive"), DamlUnit.Instance, DamlUnit.Instance, true,
+            LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
+    }
+
+    private static InterfaceStreamEvent<TInterface, TView>.Created InterfaceCreated<TInterface, TView>(
+        string contractId, long offset)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView> =>
+        new(
+            new ContractId<TInterface>(contractId),
+            TView.FromRecord(new ConformanceProbeView(42.5m).ToRecord()),
+            null,
+            LedgerOffset.At(offset),
+            new SynchronizerId("sync"),
+            [new Party("alice")]);
 
     private static IEnumerable<(long Offset, ContractStreamEvent<T> Event)> SeededEffectsStream<T>()
         where T : ITemplate, IDamlRecord<T>

@@ -72,6 +72,53 @@ public class FakeLedgerClientTypedReadsTests
     }
 
     [Fact]
+    public async Task GetDisclosureAsync_returns_the_staged_disclosure()
+    {
+        var disclosure = new DisclosedContract("cid1", new Identifier("pkg", "Module", "DemoAsset"), new byte[] { 1, 2, 3 }) { SynchronizerId = Sync };
+        var client = FakeLedgerClient.Create().WithDisclosure(new ContractId<DemoAsset>("cid1"), disclosure).Build();
+
+        var result = await client.GetDisclosureAsync(
+            new ContractId<DemoAsset>("cid1"), (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(disclosure);
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_serves_a_staged_disclosure_through_an_interface_type_parameter()
+    {
+        var disclosure = new DisclosedContract("cid1", new Identifier("pkg", "Module", "DemoAsset"), new byte[] { 1, 2, 3 }) { SynchronizerId = Sync };
+        var client = FakeLedgerClient.Create().WithDisclosure(new ContractId<DemoAsset>("cid1"), disclosure).Build();
+
+        var result = await client.GetDisclosureAsync(
+            new ContractId<IDemoHolding>("cid1"), (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(disclosure);
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_returns_null_for_a_contract_with_no_staged_disclosure()
+    {
+        var client = FakeLedgerClient.Create().Build();
+
+        var result = await client.GetDisclosureAsync(
+            new ContractId<DemoAsset>("cid1"), (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_ignores_the_timeout_like_the_other_staged_reads()
+    {
+        var disclosure = new DisclosedContract("cid1", new Identifier("pkg", "Module", "DemoAsset"), new byte[] { 1 });
+        var client = FakeLedgerClient.Create().WithDisclosure(new ContractId<DemoAsset>("cid1"), disclosure).Build();
+
+        var result = await client.GetDisclosureAsync(
+            new ContractId<DemoAsset>("cid1"), (SubmitterInfo)Alice, TimeSpan.Zero, TestContext.Current.CancellationToken);
+
+        result.Should().Be(disclosure);
+    }
+
+    [Fact]
     public async Task GetActiveContractsPageAsync_serves_first_page_then_the_page_after_the_requested_token()
     {
         var first = new AcsPage<DemoAsset>([CreatedAt(1)], LedgerOffset.At(9), new LedgerPageToken("dG9rZW4x"));
@@ -201,4 +248,15 @@ public class FakeLedgerClientTypedReadsTests
         DeduplicationPeriod: null,
         PaidTrafficCost: 0L,
         TraceContext: null);
+
+    private sealed record IDemoHolding : IDamlInterface
+    {
+        public static Identifier InterfaceId { get; } = new("iface-pkg", "Token.Api", "IDemoHolding");
+        public static string PackageId => "iface-pkg";
+        public static string PackageName => "token-api";
+        public static Version PackageVersion { get; } = new(0, 1, 0);
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(InterfaceId, DamlTypeKind.Interface, PackageName);
+
+        public DamlRecord ToRecord() => DamlRecord.Create();
+    }
 }

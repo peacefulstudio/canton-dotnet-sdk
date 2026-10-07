@@ -7,6 +7,7 @@ using System.Text;
 using AwesomeAssertions;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
+using Daml.Ledger.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -129,6 +130,42 @@ public class RestRetryHandlerTests
     }
 
     [Fact]
+    public async Task WasRetried_is_true_for_a_request_the_pipeline_sent_a_second_time()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection refused"));
+        using var client = ClientOver(transport, Fast(3));
+        using var request = new HttpRequestMessage(HttpMethod.Post, SubmitPath);
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        RestRetryHandler.WasRetried(request).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WasRetried_is_false_for_a_request_answered_by_its_first_attempt()
+    {
+        var transport = new CountingHandler();
+        using var client = ClientOver(transport, Fast(3));
+        using var request = new HttpRequestMessage(HttpMethod.Post, SubmitPath);
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        RestRetryHandler.WasRetried(request).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task WasRetried_is_false_when_Retry_is_disabled()
+    {
+        var transport = new CountingHandler();
+        using var client = ClientOver(transport, new RetryOptions());
+        using var request = new HttpRequestMessage(HttpMethod.Post, SubmitPath);
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        RestRetryHandler.WasRetried(request).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task SendAsync_retries_a_client_side_timeout()
     {
         var transport = new CountingHandler(new TaskCanceledException("timed out", new TimeoutException()));
@@ -231,7 +268,8 @@ public class RestRetryHandlerTests
         var act = async () => await provider.GetRequiredService<RestLedgerClient>()
             .GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.InnerException.Should().BeOfType<HttpRequestException>();
         transport.Attempts.Should().Be(1);
     }
 }

@@ -163,6 +163,25 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
     }
 
     [Fact]
+    public async Task QueryActiveAsync_reports_a_mid_snapshot_fault_as_NotCommitted_with_its_category_error_id_and_transport_exception()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var transportFault = CategorisedRpcException.WithCategory(
+            StatusCode.Aborted, "STALE_STREAM_AUTHORIZATION", "the user's rights changed", "2");
+        StubGetActiveContractsFailure(transportFault, MakeActiveContractWithView("00impl", amount: 1m));
+
+        var client = CreateClient();
+        var querying = async () => await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await querying.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Category.Should().Be(DamlErrorCategory.ContentionOnSharedResources);
+        thrown.ErrorId.Should().Be("STALE_STREAM_AUTHORIZATION");
+        thrown.InnerException.Should().BeSameAs(transportFault);
+    }
+
+    [Fact]
     public async Task QueryActiveAsync_throws_LedgerOperationException_rather_than_shortening_the_list_on_an_unclassified_row()
     {
         StubGetLedgerEnd(offset: 10L);
@@ -194,7 +213,7 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
             ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
         await querying.Should().ThrowAsync<LedgerOperationException>()
-            .WithMessage($"*unclassified row ({nameof(UnclassifiedKind.DecodeFailure)})*");
+            .WithMessage("*DecodeFailure*");
     }
 
     [Fact]
@@ -210,7 +229,7 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
             ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
         await querying.Should().ThrowAsync<LedgerOperationException>()
-            .WithMessage("*unclassified row*");
+            .WithMessage("*InterfaceViewUnavailable*");
     }
 
     private static GetActiveContractsResponse MakeActiveContract(
@@ -280,9 +299,11 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
         params GetActiveContractsResponse[] responses) =>
         StubGetActiveContractsCall(new FakeStreamReader<GetActiveContractsResponse>(responses), captureRequest);
 
-    private void StubGetActiveContractsFailure(RpcException fault) =>
+    private void StubGetActiveContractsFailure(
+        RpcException fault,
+        params GetActiveContractsResponse[] responsesBeforeFault) =>
         StubGetActiveContractsCall(
-            new FakeStreamReader<GetActiveContractsResponse>([], fault),
+            new FakeStreamReader<GetActiveContractsResponse>(responsesBeforeFault, fault),
             captureRequest: null);
 
     private void StubGetActiveContractsCall(

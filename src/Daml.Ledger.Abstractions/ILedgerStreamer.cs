@@ -295,6 +295,10 @@ public interface ILedgerStreamer
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="view"/> is <c>null</c>. Thrown at the call, before the stream is enumerated,
+    /// so a missing descriptor fails fast instead of on the first <c>MoveNextAsync</c>.
+    /// </exception>
     IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
         ViewDescriptor<TInterface, TView> view,
         SubmitterInfo submitter,
@@ -393,6 +397,10 @@ public interface ILedgerStreamer
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="view"/> is <c>null</c>. Thrown at the call, before the stream is enumerated,
+    /// so a missing descriptor fails fast instead of on the first <c>MoveNextAsync</c>.
+    /// </exception>
     IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
         ViewDescriptor<TInterface, TView> view,
         SubmitterInfo submitter,
@@ -445,6 +453,10 @@ public interface ILedgerStreamer
     /// <paramref name="cancellationToken"/> was cancelled. Cancellation is surfaced as an
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="view"/> is <c>null</c>. Thrown at the call, before the stream is enumerated,
+    /// so a missing descriptor fails fast instead of on the first <c>MoveNextAsync</c>.
     /// </exception>
     IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeLedgerEffectsAsync<TInterface, TView>(
         ViewDescriptor<TInterface, TView> view,

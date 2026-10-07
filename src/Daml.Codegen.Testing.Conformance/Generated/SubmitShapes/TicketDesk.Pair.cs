@@ -15,26 +15,26 @@ public sealed partial record TicketDesk
     /// Choice argument type for Pair.
     /// </summary>
     public sealed record Pair(
-        [property: DamlFieldAttribute("withSecond")] bool WithSecond
-    ) : IDamlRecord<Pair>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("withSecond")] bool WithSecond
+    ) : global::Daml.Runtime.Data.IDamlRecord<Pair>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("withSecond", new DamlBool(WithSecond))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("withSecond", new global::Daml.Runtime.Data.DamlBool(WithSecond))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Pair FromRecord(DamlRecord record) => new Pair(
-            WithSecond: record.GetRequiredField("withSecond").As<DamlBool>().Value
+        public static Pair FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Pair(
+            WithSecond: record.GetRequiredField("withSecond").As<global::Daml.Runtime.Data.DamlBool>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("withSecond", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "withSecond"), context.Field("withSecond")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("withSecond", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "withSecond"), context.Field("withSecond")))
             );
         }
 

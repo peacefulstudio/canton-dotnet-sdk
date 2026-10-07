@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Net;
 using System.Text.Json;
@@ -19,6 +20,15 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestTransactionResultProjectorTests
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TemplateMarker>();
+        GeneratedTypeReaders.ForChoices<TemplateMarker>();
+        GeneratedTypeReaders.ForRecord<ScalarKeyedMarker>();
+        GeneratedTypeReaders.ForKey<ScalarKeyedMarker, Party>();
+    }
+
     private sealed record TransferArgument(
         [property: DamlFieldAttribute("newOwner")] Party NewOwner) : IDamlRecord<TransferArgument>
     {
@@ -34,7 +44,7 @@ public class RestTransactionResultProjectorTests
     }
 
     private sealed record TemplateMarker(
-        [property: DamlFieldAttribute("owner")] Party Owner) : ITemplate, IDamlRecord<TemplateMarker>
+        [property: DamlFieldAttribute("owner")] Party Owner) : ITemplate, IDamlRecord<TemplateMarker>, IHasChoices<TemplateMarker>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("tmpl-pkg", "Sample.Token", "ProjectedHolding");
         public static string PackageId => "tmpl-pkg";
@@ -73,6 +83,8 @@ public class RestTransactionResultProjectorTests
                 ("owner", DamlLfJsonDecoders.ReadParty));
         public static TemplateMarker FromRecord(DamlRecord record) =>
             new(Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>()));
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceTransfer];
     }
 
     private sealed record ScalarKeyedMarker(
@@ -408,7 +420,7 @@ public class RestTransactionResultProjectorTests
 
         act.Should().Throw<TemplateTypeRequiredException>().Which.Message.Should().Be(
             "No generated type is loaded for choice '' of 'tmpl-pkg:Sample.Token:ProjectedHolding'; "
-            + "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
+            + "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API. A host without a deps.json registers each generated assembly itself, once, with RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).");
     }
 
     [Fact]
@@ -493,7 +505,13 @@ public class RestTransactionResultProjectorTests
             ],
         });
 
-        var projected = RestTransactionResultProjector.ProjectChoiceResult<Party>(outcome, new ChoiceName("GetOwner"));
+        var projected = RestTransactionResultProjector.ProjectChoiceResult<Party>(
+            outcome,
+            new ExerciseCommand(
+                new RuntimeIdentifier("tmpl-pkg", "Sample.Token", "ProjectedHolding"),
+                new ContractId<TemplateMarker>("00holding"),
+                new ChoiceName("GetOwner"),
+                DamlUnit.Instance));
 
         var one = projected.Should().BeOfType<ExerciseOutcome<Party>.One>().Subject;
         one.Result.Should().Be((Party)"alice::ns1");
@@ -754,7 +772,7 @@ public class RestTransactionResultProjectorTests
     }
 
     [Fact]
-    public void Project_refuses_a_created_event_whose_template_id_no_loaded_generated_type_declares()
+    public void Project_carries_a_created_event_whose_template_id_no_loaded_generated_type_declares()
     {
         var transaction = TransactionFrom(
             """
@@ -769,6 +787,42 @@ public class RestTransactionResultProjectorTests
                       "contractId": "00unknown",
                       "nodeId": 0,
                       "templateId": {"packageId": "missing-pkg", "moduleName": "Missing.Module", "entityName": "Missing"},
+                      "createArgument": {"owner": "alice::ns1"},
+                      "contractKey": {"_1": "alice::ns1", "_2": "7"}
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+
+        var result = RestTransactionResultProjector.Project(transaction);
+
+        var created = result.CreatedContracts.Should().ContainSingle().Subject;
+        var missingId = new RuntimeIdentifier("missing-pkg", "Missing.Module", "Missing");
+        created.ContractId.Should().Be("00unknown");
+        created.TemplateId.Should().Be(missingId);
+        created.Payload.Should().Be(new DamlRecord(missingId, []));
+        created.UndecodedPayload.Should().Be(new DamlUndecodedJson("""{"owner": "alice::ns1"}"""));
+        created.ContractKey!.Value.Should().Be(new DamlUndecodedJson("""{"_1": "alice::ns1", "_2": "7"}"""));
+    }
+
+    [Fact]
+    public void Project_leaves_UndecodedPayload_null_for_a_created_event_a_loaded_generated_type_declares()
+    {
+        var transaction = TransactionFrom(
+            """
+            {
+              "transaction": {
+                "updateId": "upd-1",
+                "offset": "1",
+                "events": [
+                  {
+                    "CreatedEvent": {
+                      "offset": "1",
+                      "contractId": "00known",
+                      "nodeId": 0,
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "createArgument": {"owner": "alice::ns1"}
                     }
                   }
@@ -777,17 +831,13 @@ public class RestTransactionResultProjectorTests
             }
             """);
 
-        var act = () => RestTransactionResultProjector.Project(transaction);
+        var result = RestTransactionResultProjector.Project(transaction);
 
-        var refusal = act.Should().Throw<TemplateTypeRequiredException>().Which;
-        refusal.TypeId.Should().Be("missing-pkg:Missing.Module:Missing");
-        refusal.ChoiceName.Should().BeNull();
-        refusal.Message.Should().Be(
-            "No generated type is loaded for 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
+        result.CreatedContracts.Should().ContainSingle().Which.UndecodedPayload.Should().BeNull();
     }
 
     [Fact]
-    public void Project_refuses_an_exercised_event_whose_choice_the_loaded_template_declares_no_descriptor_for()
+    public void Project_carries_an_exercised_event_whose_choice_the_loaded_template_declares_no_descriptor_for()
     {
         var transaction = TransactionFrom(
             """
@@ -802,11 +852,11 @@ public class RestTransactionResultProjectorTests
                       "contractId": "00holding",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "Burn",
-                      "choiceArgument": {},
+                      "choiceArgument": {"amount": "2.5"},
                       "actingParties": ["alice::ns1"],
                       "consuming": true,
                       "witnessParties": ["alice::ns1"],
-                      "exerciseResult": {}
+                      "exerciseResult": {"burned": "2.5"}
                     }
                   }
                 ]
@@ -814,15 +864,16 @@ public class RestTransactionResultProjectorTests
             }
             """);
 
-        var act = () => RestTransactionResultProjector.Project(transaction);
+        var result = RestTransactionResultProjector.Project(transaction);
 
-        var refusal = act.Should().Throw<TemplateTypeRequiredException>().Which;
-        refusal.TypeId.Should().Be("tmpl-pkg:Sample.Token:ProjectedHolding");
-        refusal.ChoiceName.Should().Be("Burn");
+        var exercised = result.ExercisedEvents.Should().ContainSingle().Subject;
+        exercised.ChoiceName.Should().Be(new ChoiceName("Burn"));
+        exercised.ChoiceArgument.Should().Be(new DamlUndecodedJson("""{"amount": "2.5"}"""));
+        exercised.ExerciseResult.Should().Be(new DamlUndecodedJson("""{"burned": "2.5"}"""));
     }
 
     [Fact]
-    public void Project_refuses_an_interface_choice_exercise_naming_the_interface_and_the_choice()
+    public void Project_carries_an_interface_choice_exercise_whose_interface_no_loaded_generated_type_declares()
     {
         var transaction = TransactionFrom(
             """
@@ -850,13 +901,80 @@ public class RestTransactionResultProjectorTests
             }
             """);
 
-        var act = () => RestTransactionResultProjector.Project(transaction);
+        var result = RestTransactionResultProjector.Project(transaction);
 
-        var refusal = act.Should().Throw<TemplateTypeRequiredException>().Which;
-        refusal.TypeId.Should().Be("iface-pkg:Token.Api:IHolding");
-        refusal.ChoiceName.Should().Be("Lock");
-        refusal.Message.Should().Be(
-            "No generated type is loaded for choice 'Lock' of 'iface-pkg:Token.Api:IHolding'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
+        var exercised = result.ExercisedEvents.Should().ContainSingle().Subject;
+        exercised.InterfaceId.Should().Be(new RuntimeIdentifier("iface-pkg", "Token.Api", "IHolding"));
+        exercised.ChoiceArgument.Should().Be(new DamlUndecodedJson("""{"reason": "audit"}"""));
+        exercised.ExerciseResult.Should().Be(new DamlUndecodedJson("{}"));
+    }
+
+    [Fact]
+    public void Project_decodes_the_target_exercise_beside_nested_nodes_with_no_generated_type()
+    {
+        var transaction = TransactionFrom(
+            """
+            {
+              "transaction": {
+                "updateId": "upd-nested",
+                "offset": "5",
+                "events": [
+                  {
+                    "ExercisedEvent": {
+                      "offset": "5",
+                      "nodeId": 0,
+                      "contractId": "00holding",
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
+                      "choice": "Transfer",
+                      "choiceArgument": {"newOwner": "bob::ns1"},
+                      "actingParties": ["alice::ns1"],
+                      "consuming": true,
+                      "witnessParties": ["alice::ns1"],
+                      "exerciseResult": "bob::ns1",
+                      "lastDescendantNodeId": 2
+                    }
+                  },
+                  {
+                    "CreatedEvent": {
+                      "offset": "5",
+                      "nodeId": 1,
+                      "contractId": "00amulet",
+                      "templateId": {"packageId": "amulet-pkg", "moduleName": "Splice.Amulet", "entityName": "Amulet"},
+                      "createArgument": {"owner": "bob::ns1", "amount": {"initialAmount": "12.5"}}
+                    }
+                  },
+                  {
+                    "ExercisedEvent": {
+                      "offset": "5",
+                      "nodeId": 2,
+                      "contractId": "00old",
+                      "templateId": {"packageId": "amulet-pkg", "moduleName": "Splice.Amulet", "entityName": "Amulet"},
+                      "choice": "Archive",
+                      "choiceArgument": {},
+                      "actingParties": ["alice::ns1"],
+                      "consuming": true,
+                      "witnessParties": ["alice::ns1"],
+                      "exerciseResult": {}
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+        var result = RestTransactionResultProjector.Project(transaction);
+
+        var projected = RestTransactionResultProjector.ProjectChoiceResult<Party>(
+            new ExerciseOutcome<TransactionResult>.One(result),
+            new ExerciseCommand(
+                new RuntimeIdentifier("tmpl-pkg", "Sample.Token", "ProjectedHolding"),
+                new ContractId<TemplateMarker>("00holding"),
+                new ChoiceName("Transfer"),
+                DamlUnit.Instance));
+
+        projected.Should().BeOfType<ExerciseOutcome<Party>.One>().Which.Result.Should().Be((Party)"bob::ns1");
+        result.CreatedContracts.Should().ContainSingle().Which.UndecodedPayload.Should().Be(
+            new DamlUndecodedJson("""{"owner": "bob::ns1", "amount": {"initialAmount": "12.5"}}"""));
+        result.ExercisedEvents.Should().HaveCount(2);
     }
 
     [Theory]

@@ -19,7 +19,7 @@ public sealed partial class FakeLedgerClient
     public Task<CreatedContract<T>> GetContractAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T> =>
-        Task.FromResult(TypedReads.Contracts.TryGetValue((typeof(T), contractId.Value), out var contract)
+        Answering(() => TypedReads.Contracts.TryGetValue((typeof(T), contractId.Value), out var contract)
             ? (CreatedContract<T>)contract
             : throw StagingMissing($"contract '{contractId.Value}'", nameof(GetContractAsync), $"WithContract<{typeof(T).Name}>"));
 
@@ -27,10 +27,16 @@ public sealed partial class FakeLedgerClient
     public Task<ContractLifecycle<T>> GetEventsByContractIdAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T> =>
-        Task.FromResult(TypedReads.ContractLifecycles.TryGetValue((typeof(T), contractId.Value), out var lifecycle)
+        Answering(() => TypedReads.ContractLifecycles.TryGetValue((typeof(T), contractId.Value), out var lifecycle)
             ? (ContractLifecycle<T>)lifecycle
             : throw StagingMissing(
                 $"events for contract '{contractId.Value}'", nameof(GetEventsByContractIdAsync), $"WithContractLifecycle<{typeof(T).Name}>"));
+
+    /// <inheritdoc />
+    public Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
+        ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : IDamlType =>
+        Answering(() => TypedReads.Disclosures.GetValueOrDefault(contractId.Value));
 
     /// <inheritdoc />
     public Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
@@ -38,21 +44,24 @@ public sealed partial class FakeLedgerClient
         bool includeDisclosure = false, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
-        if (activeAtOffset == LedgerOffset.Begin)
+        return Answering(() =>
         {
-            return Task.FromResult(new AcsPage<T>([], LedgerOffset.Begin, null));
-        }
+            if (activeAtOffset == LedgerOffset.Begin)
+            {
+                return new AcsPage<T>([], LedgerOffset.Begin, null);
+            }
 
-        var pages = TypedReads.ActiveContractsPages.TryGetValue(typeof(T), out var staged)
-            ? (AcsPage<T>[])staged
-            : throw StagingMissing(
-                "active-contracts pages", nameof(GetActiveContractsPageAsync), $"WithActiveContractsPages<{typeof(T).Name}>");
-        return Task.FromResult(PageAfter(pages, page => page.NextPageToken, pageToken, nameof(GetActiveContractsPageAsync)));
+            var pages = TypedReads.ActiveContractsPages.TryGetValue(typeof(T), out var staged)
+                ? (AcsPage<T>[])staged
+                : throw StagingMissing(
+                    "active-contracts pages", nameof(GetActiveContractsPageAsync), $"WithActiveContractsPages<{typeof(T).Name}>");
+            return PageAfter(pages, page => page.NextPageToken, pageToken, nameof(GetActiveContractsPageAsync));
+        });
     }
 
     /// <inheritdoc />
     public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
-        Task.FromResult(TypedReads.PrunedOffsets ?? throw StagingMissing(
+        Answering(() => TypedReads.PrunedOffsets ?? throw StagingMissing(
             "pruned offsets", nameof(GetLatestPrunedOffsetsAsync), "WithPrunedOffsets"));
 
     /// <inheritdoc />
@@ -60,9 +69,12 @@ public sealed partial class FakeLedgerClient
         RuntimeCommands.SubmitterInfo submitter, LedgerOffset? beginExclusive = null, LedgerOffset? endInclusive = null, int? maxPageSize = null,
         bool descendingOrder = false, LedgerPageToken? pageToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        var pages = TypedReads.UpdatesPages ?? throw StagingMissing(
-            "updates pages", nameof(GetUpdatesPageAsync), "WithUpdatesPages");
-        return Task.FromResult(PageAfter(pages, page => page.NextPageToken, pageToken, nameof(GetUpdatesPageAsync)));
+        return Answering(() =>
+        {
+            var pages = TypedReads.UpdatesPages ?? throw StagingMissing(
+                "updates pages", nameof(GetUpdatesPageAsync), "WithUpdatesPages");
+            return PageAfter(pages, page => page.NextPageToken, pageToken, nameof(GetUpdatesPageAsync));
+        });
     }
 
     /// <inheritdoc />
@@ -100,6 +112,7 @@ internal sealed record FakeTypedReads(
     IReadOnlyDictionary<(Type Template, string ContractId), object> Contracts,
     IReadOnlyDictionary<(Type Template, string ContractId), object> ContractLifecycles,
     IReadOnlyDictionary<Type, object> ActiveContractsPages,
+    IReadOnlyDictionary<string, RuntimeCommands.DisclosedContract> Disclosures,
     IReadOnlyList<UpdatesPage>? UpdatesPages,
     PrunedOffsets? PrunedOffsets)
 {
@@ -107,6 +120,7 @@ internal sealed record FakeTypedReads(
         new Dictionary<(Type Template, string ContractId), object>(),
         new Dictionary<(Type Template, string ContractId), object>(),
         new Dictionary<Type, object>(),
+        new Dictionary<string, RuntimeCommands.DisclosedContract>(),
         null,
         null);
 }

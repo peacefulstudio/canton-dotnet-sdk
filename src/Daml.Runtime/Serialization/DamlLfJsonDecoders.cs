@@ -49,8 +49,6 @@ public static class DamlLfJsonDecoders
 
     private static readonly string[] StdlibTupleFieldLabels = ["_1", "_2", "_3"];
     private static readonly string[] EitherConstructors = ["Left", "Right"];
-    private static readonly JsonElement OmittedFlatOptional = ParseConstant("null");
-    private static readonly JsonElement OmittedOptionalChain = ParseConstant("[]");
 
     /// <summary>Decodes a Daml <c>Int64</c> leaf value.</summary>
     /// <exception cref="JsonException">The JSON is not a canonical Daml Int64 wire string.</exception>
@@ -147,40 +145,65 @@ public static class DamlLfJsonDecoders
             : throw MissingRecordField($"{context.Path}.{field}");
 
     /// <summary>
-    /// Reads the flat-<c>Optional</c> field named <paramref name="field"/> from the JSON object
-    /// <paramref name="json"/>, which the caller has already guarded as an object. An omitted field
-    /// reads as JSON <c>null</c>, the wire form of <c>None</c>: the JSON Ledger API leaves a record's
-    /// trailing <c>None</c> fields out, and a payload written before a Daml upgrade added a trailing
-    /// <c>Optional</c> field carries no key for it.
+    /// Adds the field named <paramref name="field"/> to <paramref name="fields"/> when the JSON object
+    /// <paramref name="json"/>, which the caller has already guarded as an object, carries that
+    /// property, decoding its value with <paramref name="read"/>; adds nothing when the property is
+    /// absent. Called once per declared <c>Optional</c> field by generated <c>__ReadDamlLfJson</c>
+    /// methods: the JSON Ledger API leaves out a record's trailing <c>None</c> fields, and a payload
+    /// written before a Daml upgrade added a trailing <c>Optional</c> field carries no key for it, so
+    /// the record keeps only the fields the payload sent, as the gRPC converter's does.
     /// </summary>
+    /// <param name="fields">The fields collected so far, in declaration order.</param>
+    /// <param name="json">The JSON object that holds the record.</param>
+    /// <param name="field">The field label.</param>
+    /// <param name="read">Decodes the property's value when it is present.</param>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public static JsonElement OptionalField(JsonElement json, string field) =>
-        json.TryGetProperty(field, out var value) ? value : OmittedFlatOptional;
-
-    /// <summary>
-    /// Reads the nested-<c>Optional</c> field named <paramref name="field"/> — one decoded by
-    /// <see cref="ReadOptionalChain(JsonElement, DamlLfJsonDecodeContext, DamlLfElementReader)"/> — from
-    /// the JSON object <paramref name="json"/>, which the caller has already guarded as an object. An
-    /// omitted field reads as <c>[]</c>, the chain's wire form of <c>None</c>; an explicit
-    /// <c>null</c> is returned unchanged, so the chain reader still rejects it.
-    /// </summary>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static JsonElement OptionalChainField(JsonElement json, string field) =>
-        json.TryGetProperty(field, out var value) ? value : OmittedOptionalChain;
-
-    /// <summary>
-    /// Decodes the field named <paramref name="field"/>, whose Daml type is a type parameter, from the
-    /// JSON object <paramref name="json"/> with the instantiation's <paramref name="reader"/>. An
-    /// omitted field decodes as the <c>None</c> the Ledger API left out at a flat or a nested
-    /// <c>Optional</c> instantiation, and is reported missing at any other instantiation.
-    /// </summary>
-    /// <exception cref="JsonException">The field is malformed, or is omitted at an instantiation that is not an <c>Optional</c>.</exception>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static DamlValue ReadTypeParameterField(
-        JsonElement json, DamlLfJsonDecodeContext context, string field, DamlLfElementReader reader)
+    public static void AddFieldIfPresent(
+        List<DamlField> fields, JsonElement json, string field, Func<JsonElement, DamlValue> read)
     {
-        var fieldContext = context.Field(field);
-        return ReadOmissibleField(json, field, fieldContext.Path, (element, _) => reader(element, fieldContext));
+        if (json.TryGetProperty(field, out var value))
+        {
+            fields.Add(DamlField.Create(field, read(value)));
+        }
+    }
+
+    /// <summary>
+    /// Adds the field named <paramref name="field"/>, whose Daml type is a type parameter, to
+    /// <paramref name="fields"/>, decoding a present property with the instantiation's
+    /// <paramref name="reader"/>. An omitted property adds no field when the call site gives an
+    /// <paramref name="absentReadsAs"/>, which it does when the instantiation is a flat or a nested
+    /// <c>Optional</c>: the Ledger API leaves out a field whose value is a trailing <c>None</c>, and the
+    /// record keeps only the fields the payload sent, as the gRPC converter's does. An omitted property
+    /// at any other instantiation is required, and the reader is not called. Called by generated
+    /// <c>__ReadDamlLfJson</c> methods of generic records.
+    /// </summary>
+    /// <param name="fields">The fields collected so far, in declaration order.</param>
+    /// <param name="json">The JSON object that holds the record, which the caller has already guarded as an object.</param>
+    /// <param name="context">The decode context of the record.</param>
+    /// <param name="field">The field label.</param>
+    /// <param name="reader">The instantiation's reader.</param>
+    /// <param name="absentReadsAs">
+    /// What an omitted field reads as: <see cref="DamlOptional.None"/> when the instantiation is an
+    /// <c>Optional</c>, or <see langword="null"/> when the field is required.
+    /// </param>
+    /// <exception cref="JsonException">The field is malformed, or is omitted and <paramref name="absentReadsAs"/> is <see langword="null"/>.</exception>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static void AddTypeParameterField(
+        List<DamlField> fields,
+        JsonElement json,
+        DamlLfJsonDecodeContext context,
+        string field,
+        DamlLfElementReader reader,
+        DamlValue? absentReadsAs)
+    {
+        if (json.TryGetProperty(field, out var value))
+        {
+            fields.Add(DamlField.Create(field, reader(value, context.Field(field))));
+        }
+        else if (absentReadsAs is null)
+        {
+            throw MissingRecordField($"{context.Path}.{field}");
+        }
     }
 
     /// <summary>Guards that <paramref name="json"/> is a JSON object, then decodes its variant tag.</summary>
@@ -318,32 +341,64 @@ public static class DamlLfJsonDecoders
             context.Limits,
             context.Path);
 
-    /// <summary>Decodes a stdlib <c>Tuple2</c>, applying a reader to each of its two components.</summary>
-    /// <exception cref="JsonException">The JSON does not match a Tuple2's wire shape.</exception>
+    /// <summary>
+    /// Decodes a stdlib <c>Tuple2</c>, applying a reader to each of its two components. A component the
+    /// payload omits adds no field when its <c>absentReadsAs</c> is given, which the call site does when
+    /// the component is a flat or a nested <c>Optional</c>, and is required when it is
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <param name="json">The JSON object that holds the tuple.</param>
+    /// <param name="context">The decode context of the tuple.</param>
+    /// <param name="reader1">Decodes the first component.</param>
+    /// <param name="absentReadsAs1">What an omitted first component reads as: <see cref="DamlOptional.None"/> for an <c>Optional</c>, <see langword="null"/> for a required component.</param>
+    /// <param name="reader2">Decodes the second component.</param>
+    /// <param name="absentReadsAs2">What an omitted second component reads as, by the same convention.</param>
+    /// <exception cref="JsonException">The JSON does not match a Tuple2's wire shape, or omits a required component.</exception>
     public static DamlRecord ReadTuple2(
-        JsonElement json, DamlLfJsonDecodeContext context, DamlLfElementReader reader1, DamlLfElementReader reader2) =>
+        JsonElement json,
+        DamlLfJsonDecodeContext context,
+        DamlLfElementReader reader1,
+        DamlValue? absentReadsAs1,
+        DamlLfElementReader reader2,
+        DamlValue? absentReadsAs2) =>
         ReadTuple(
             json,
             [
-                (element, path) => reader1(element, context.Nested(path)),
-                (element, path) => reader2(element, context.Nested(path))
+                ((element, path) => reader1(element, context.Nested(path)), absentReadsAs1),
+                ((element, path) => reader2(element, context.Nested(path)), absentReadsAs2)
             ],
             context.Path);
 
-    /// <summary>Decodes a stdlib <c>Tuple3</c>, applying a reader to each of its three components.</summary>
-    /// <exception cref="JsonException">The JSON does not match a Tuple3's wire shape.</exception>
+    /// <summary>
+    /// Decodes a stdlib <c>Tuple3</c>, applying a reader to each of its three components. A component
+    /// the payload omits adds no field when its <c>absentReadsAs</c> is given, which the call site does
+    /// when the component is a flat or a nested <c>Optional</c>, and is required when it is
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <param name="json">The JSON object that holds the tuple.</param>
+    /// <param name="context">The decode context of the tuple.</param>
+    /// <param name="reader1">Decodes the first component.</param>
+    /// <param name="absentReadsAs1">What an omitted first component reads as: <see cref="DamlOptional.None"/> for an <c>Optional</c>, <see langword="null"/> for a required component.</param>
+    /// <param name="reader2">Decodes the second component.</param>
+    /// <param name="absentReadsAs2">What an omitted second component reads as, by the same convention.</param>
+    /// <param name="reader3">Decodes the third component.</param>
+    /// <param name="absentReadsAs3">What an omitted third component reads as, by the same convention.</param>
+    /// <exception cref="JsonException">The JSON does not match a Tuple3's wire shape, or omits a required component.</exception>
     public static DamlRecord ReadTuple3(
         JsonElement json,
         DamlLfJsonDecodeContext context,
         DamlLfElementReader reader1,
+        DamlValue? absentReadsAs1,
         DamlLfElementReader reader2,
-        DamlLfElementReader reader3) =>
+        DamlValue? absentReadsAs2,
+        DamlLfElementReader reader3,
+        DamlValue? absentReadsAs3) =>
         ReadTuple(
             json,
             [
-                (element, path) => reader1(element, context.Nested(path)),
-                (element, path) => reader2(element, context.Nested(path)),
-                (element, path) => reader3(element, context.Nested(path))
+                ((element, path) => reader1(element, context.Nested(path)), absentReadsAs1),
+                ((element, path) => reader2(element, context.Nested(path)), absentReadsAs2),
+                ((element, path) => reader3(element, context.Nested(path)), absentReadsAs3)
             ],
             context.Path);
 
@@ -586,53 +641,30 @@ public static class DamlLfJsonDecoders
     }
 
     internal static DamlRecord ReadTuple(
-        JsonElement json, IReadOnlyList<Func<JsonElement, string, DamlValue>> componentReaders, string path)
+        JsonElement json,
+        IReadOnlyList<(Func<JsonElement, string, DamlValue> Read, DamlValue? AbsentReadsAs)> components,
+        string path)
     {
         if (json.ValueKind != JsonValueKind.Object)
         {
             throw ShapeMismatch(path, JsonValueKind.Object, json.ValueKind);
         }
 
-        var fields = new List<DamlField>(componentReaders.Count);
-        for (var component = 0; component < componentReaders.Count; component++)
+        var fields = new List<DamlField>(components.Count);
+        for (var component = 0; component < components.Count; component++)
         {
             var label = StdlibTupleFieldLabels[component];
-            fields.Add(new DamlField(label, ReadOmissibleField(json, label, $"{path}.{label}", componentReaders[component])));
+            var fieldPath = $"{path}.{label}";
+            if (json.TryGetProperty(label, out var value))
+            {
+                fields.Add(new DamlField(label, components[component].Read(value, fieldPath)));
+            }
+            else if (components[component].AbsentReadsAs is null)
+            {
+                throw MissingRecordField(fieldPath);
+            }
         }
         return new DamlRecord(null, fields);
-    }
-
-    private static DamlValue ReadOmissibleField(
-        JsonElement record, string field, string fieldPath, Func<JsonElement, string, DamlValue> read)
-    {
-        if (record.TryGetProperty(field, out var value))
-        {
-            return read(value, fieldPath);
-        }
-
-        if (TryReadOmitted(read, OmittedFlatOptional, fieldPath) is { } flatNone)
-        {
-            return flatNone;
-        }
-
-        if (TryReadOmitted(read, OmittedOptionalChain, fieldPath) is DamlOptionalChain chainNone)
-        {
-            return chainNone;
-        }
-
-        throw MissingRecordField(fieldPath);
-    }
-
-    private static DamlValue? TryReadOmitted(Func<JsonElement, string, DamlValue> read, JsonElement omittedNone, string fieldPath)
-    {
-        try
-        {
-            return read(omittedNone, fieldPath);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 
     internal static DamlVariant ReadEither(
@@ -660,12 +692,6 @@ public static class DamlLfJsonDecoders
         var payloadPath = $"{path}.{VariantValueKey}";
         var readPayload = component == 0 ? readLeft : readRight;
         return DamlVariant.Create(tag, readPayload(valueElement, payloadPath));
-    }
-
-    private static JsonElement ParseConstant(string json)
-    {
-        using var document = JsonDocument.Parse(json);
-        return document.RootElement.Clone();
     }
 
     internal static JsonException ShapeMismatch(string path, JsonValueKind expected, JsonValueKind actual) =>

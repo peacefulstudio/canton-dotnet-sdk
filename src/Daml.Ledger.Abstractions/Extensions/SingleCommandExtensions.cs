@@ -181,7 +181,7 @@ public static class SingleCommandExtensions
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return CreateByExercise.RemapExerciseOutcome(outcome, CreateByExercise.ProjectSingleCreated<TTemplate>);
+        return outcome.ProjectCommitted(CreateByExercise.ProjectSingleCreated<TTemplate>);
     }
 
     private static CommandsSubmission ApplyConfigure(

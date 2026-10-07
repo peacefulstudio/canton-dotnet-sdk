@@ -270,6 +270,20 @@ internal static class Identifiers
         EscapeKeyword(Disambiguate(ToPascalCase(SanitizeBare(damlFieldName)), enclosingTypeName));
 
     /// <summary>
+    /// As <see cref="MemberName(string, string)"/>, and a name that equals one of
+    /// <paramref name="reservedMemberNames"/> (a member the enclosing generated type declares
+    /// itself) gains one trailing <c>_</c>, and a further one when the suffixed name is the
+    /// enclosing type's own (a type renamed to <c>ToRecord_</c> beside a field that PascalCases to
+    /// <c>ToRecord</c>). <see cref="ToPascalCase"/> drops underscores, so the suffixed name cannot
+    /// equal another field's.
+    /// </summary>
+    internal static string MemberName(string damlFieldName, string enclosingTypeName, IReadOnlySet<string> reservedMemberNames)
+    {
+        var name = MemberName(damlFieldName, enclosingTypeName);
+        return reservedMemberNames.Contains(name) ? EscapeKeyword(Disambiguate(name + "_", enclosingTypeName)) : name;
+    }
+
+    /// <summary>
     /// Builds the C# marker-interface name for a Daml interface: the sanitised
     /// interface name prefixed with <c>I</c> (e.g. Daml <c>Holding</c> →
     /// <c>IHolding</c>), appending a trailing <c>_</c> until the result is absent
@@ -289,14 +303,14 @@ internal static class Identifiers
     /// and the type resolver so a reference to an interface names the same marker on
     /// the field-type path as on the choice-exercise path — callers must pass the
     /// declaring package's widened top-level type-name set
-    /// (<see cref="PackageEmitContext.LocalReservedTypeNames"/>) for every reference
+    /// (<see cref="PackageNameTable.ReservedTopLevelTypeNames"/>) for every reference
     /// to a given interface.
     /// </summary>
     /// <param name="interfaceName">The Daml interface's simple name, before sanitisation.</param>
     /// <param name="reservedTypeNames">
     /// The declaring package's sanitised top-level type names — every template plus
     /// every record/enum/variant, excluding interface-placeholder and choice-argument
-    /// records (see <see cref="PackageEmitContext.LocalReservedTypeNames"/>) — that the
+    /// records (see <see cref="PackageNameTable.ReservedTopLevelTypeNames"/>) — that the
     /// returned marker must not collide with.
     /// </param>
     internal static string InterfaceMarkerName(string interfaceName, IReadOnlySet<string> reservedTypeNames)

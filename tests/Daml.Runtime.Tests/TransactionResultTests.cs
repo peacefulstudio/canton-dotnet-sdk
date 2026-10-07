@@ -415,7 +415,10 @@ public class TransactionResultTests
     public void CreatedContract_mirrors_TreeEvent_Created_in_its_init_only_slots_too()
     {
         var mirror = InitOnlySlotsOutsideTheConstructor(typeof(CreatedContract));
-        var source = InitOnlySlotsOutsideTheConstructor(typeof(TreeEvent.Created));
+        var source = InitOnlySlotsOutsideTheConstructor(typeof(TreeEvent.Created))
+            .Select(slot => slot.Name == "UndecodedCreateArguments" ? ("UndecodedPayload", slot.Type) : slot)
+            .OrderBy(slot => slot.Item1, StringComparer.Ordinal)
+            .ToList();
 
         mirror.Should().NotBeEmpty(
             "both sides emptying out would make the comparison below pass vacuously");

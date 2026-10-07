@@ -91,12 +91,13 @@ internal static class RestTransactionTreeProjector
             ?? throw MalformedResponse.MissingRequiredField(
                 $"CreatedEvent for contract '{created.ContractId}' has no templateId");
         var runtimeTemplateId = RestWireConversions.ToRuntimeIdentifier(templateId);
+        var payload = RestPayloadDecoder.CreatePayloadOf(created, runtimeTemplateId);
 
         return new TreeEvent.Created(
             TreeShape.EventIdOf(nodeId),
             created.ContractId,
             runtimeTemplateId,
-            RestPayloadDecoder.CreateArgumentOf(created, runtimeTemplateId),
+            payload.Arguments,
             RestWireConversions.ToPartyList(created.WitnessParties),
             RestWireConversions.ToPartyList(created.Signatories),
             RestWireConversions.ToPartyList(created.Observers),
@@ -104,6 +105,7 @@ internal static class RestTransactionTreeProjector
             created.CreatedAt)
         {
             InterfaceIds = ToInterfaceIds(created),
+            UndecodedCreateArguments = payload.Undecoded,
         };
     }
 

@@ -8,24 +8,19 @@ namespace Daml.Codegen.CSharp.CodeGen;
 internal sealed partial class ChoiceEmitter
 {
     /// <summary>
-    /// Returns <c>true</c> when <paramref name="template"/> has at least one choice that
-    /// (a) creates contracts (<see cref="ChoiceCreatedSlots.Extract"/> yields a non-empty list).
+    /// Returns <c>true</c> when <paramref name="template"/> has at least one choice whose return
+    /// type names contract ids (see <see cref="ReturnsContractIds(DamlType)"/>).
     /// </summary>
-    private bool TemplateHasEmittableAsyncExercisers(
-        DamlTemplate template,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes)
-    {
-        foreach (var choice in template.Choices)
-        {
-            var slots = ChoiceCreatedSlots.Extract(context, resolver, mapper, choice.ReturnType);
-            if (slots.Count == 0)
-            {
-                continue;
-            }
-            return true;
-        }
-        return false;
-    }
+    private static bool TemplateHasEmittableAsyncExercisers(DamlTemplate template) =>
+        template.Choices.Any(choice => ReturnsContractIds(choice.ReturnType));
+
+    /// <summary>
+    /// Whether a choice's return type names contract ids: a bare <c>ContractId</c>, or one reached
+    /// through <c>Optional</c>, a list or a <c>DA.Types</c> tuple. A record, variant or primitive
+    /// that merely contains a contract id does not count.
+    /// </summary>
+    internal static bool ReturnsContractIds(DamlType returnType) =>
+        returnType.Accept(ContractIdBearingTypeVisitor.Instance);
 
     /// <summary>
     /// Emits the static <c>&lt;TemplateName&gt;Extensions</c> class containing one
@@ -53,17 +48,17 @@ internal sealed partial class ChoiceEmitter
     internal void WriteChoiceAsyncExercisersClass(
         IndentWriter indent,
         DamlTemplate template,
-        string templateClassName,
-        IReadOnlyList<DamlFieldDefinition> fields,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes)
+        string emittedTemplateName,
+        IReadOnlyList<DamlFieldDefinition> fields)
     {
-        if (!TemplateHasEmittableAsyncExercisers(template, dataTypes))
+        if (!TemplateHasEmittableAsyncExercisers(template))
         {
             return;
         }
 
         EmittedUsings.RequireAsyncExerciserNamespaces(indent);
 
+        var templateClassName = context.QualifyInModule(emittedTemplateName);
         var partyFields = fields
             .Where(f => f.Type is DamlPrimitiveType { Primitive: DamlPrimitive.Party })
             .ToDictionary(f => f.Name, f => f, StringComparer.Ordinal);
@@ -80,15 +75,14 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine("/// and projects success from the choice's own exercise result.");
             indent.AppendLine("/// </summary>");
         }
-        indent.AppendLine($"public static class {templateClassName}Extensions");
+        indent.AppendLine($"public static class {emittedTemplateName}Extensions");
         indent.AppendLine("{");
         indent.Indent();
 
         var first = true;
         foreach (var choice in template.Choices)
         {
-            var slots = ChoiceCreatedSlots.Extract(context, resolver, mapper, choice.ReturnType);
-            if (slots.Count == 0)
+            if (!ReturnsContractIds(choice.ReturnType))
             {
                 continue;
             }
@@ -100,28 +94,28 @@ internal sealed partial class ChoiceEmitter
             var controllers = party.ValidatePayloadParties(choice.Controllers, partyFields);
             var choiceObservers = party.ValidatePayloadParties(choice.Observers, partyFields);
             var effectiveReadAs = party.UnionStaticParties(templateObservers, choiceObservers);
-            WriteChoiceCommandBuilder(indent, choice, templateClassName, dataTypes);
+            WriteChoiceCommandBuilder(indent, choice, templateClassName);
             indent.AppendLine();
             WriteSingleChoiceAsyncExerciser(
-                indent, choice, templateClassName, dataTypes, controllers, effectiveReadAs);
+                indent, choice, templateClassName, controllers, effectiveReadAs);
 
             if (controllers.Source == DamlPartySource.Static && controllers.Parties.Count > 0)
             {
                 indent.AppendLine();
                 WriteSubmitterInfoChoiceAsyncExerciser(
-                    indent, choice, templateClassName, dataTypes);
+                    indent, choice, templateClassName);
 
                 indent.AppendLine();
                 WriteSingleContractChoiceAsyncExerciser(
-                    indent, choice, templateClassName, dataTypes, controllers, effectiveReadAs);
+                    indent, choice, templateClassName, controllers, effectiveReadAs, emittedTemplateName, context.TemplateFieldReservedNames(template));
 
                 indent.AppendLine();
                 WriteSubmitterInfoContractChoiceAsyncExerciser(
-                    indent, choice, templateClassName, dataTypes);
+                    indent, choice, templateClassName);
             }
 
             indent.AppendLine();
-            WriteContractIdResultProjector(indent, choice, templateClassName, slots);
+            WriteExerciseProjector(indent, choice, templateClassName);
             first = false;
         }
 
@@ -140,13 +134,12 @@ internal sealed partial class ChoiceEmitter
         IndentWriter indent,
         DamlChoice choice,
         string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes,
         DamlPartyAnalysis controllers,
         DamlPartyAnalysis observers)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var resultName = $"{choiceName}Result";
-        var argument = GetChoiceArgumentInfo(choice, dataTypes);
+        var returnTypeName = RequireAndMapReturnType(indent, choice);
+        var argument = GetChoiceArgumentInfo(choice);
         var hasArg = argument.HasArgument;
 
         var staticControllers = controllers.Source == DamlPartySource.Static
@@ -159,7 +152,7 @@ internal sealed partial class ChoiceEmitter
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Exercises the {choice.Name} choice and projects the choice's exercise result to a typed <see cref=\"{resultName}\"/>.");
+            indent.AppendLine($"/// Exercises the {choice.Name} choice and lifts the choice's exercise result to <see cref=\"ExerciseOutcome{{T}}\"/> over <c>{EmitterHelpers.EscapeXmlText(returnTypeName)}</c>.");
             if (staticControllers && readAsParams.Count > 0)
             {
                 indent.AppendLine("/// One <c>Party</c> parameter is emitted per Daml controller (declaration order),");
@@ -207,10 +200,10 @@ internal sealed partial class ChoiceEmitter
         }
 
         var asyncModifier = staticControllers ? string.Empty : "async ";
-        indent.AppendLine($"public static {asyncModifier}Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> Try{choiceName}Async(");
+        indent.AppendLine($"public static {asyncModifier}global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> Try{choiceName}Async(");
         indent.Indent();
-        indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
+        indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         if (hasArg)
         {
             indent.AppendLine($"{argument.ParameterType(templateClassName)} argument,");
@@ -220,46 +213,46 @@ internal sealed partial class ChoiceEmitter
         {
             foreach (var paramName in controllerParams)
             {
-                indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.Party)} {paramName},");
+                indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)} {paramName},");
             }
             foreach (var paramName in readAsParams)
             {
-                indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.Party)} {paramName},");
+                indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)} {paramName},");
             }
         }
         else
         {
-            indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
+            indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
         }
         WriteSubmissionParametersAndCloseSignature(indent);
         indent.Dedent();
         indent.AppendLine("{");
         indent.Indent();
 
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(client);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(client);");
 
         if (staticControllers)
         {
             indent.AppendLine();
             if (controllerParams.Count == 1 && readAsParams.Count == 0)
             {
-                indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter = {controllerParams[0]};");
+                indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter = {controllerParams[0]};");
             }
             else if (readAsParams.Count == 0)
             {
                 indent.Require("System.Collections.Generic");
                 indent.AppendLine("// SubmitterInfo's actAs unions every named controller.");
-                indent.AppendLine($"var submitter = new {context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)}(new {context.Qualifier.Qualify("HashSet")}<{context.Qualifier.Qualify(RuntimeTypeNames.Party)}> {{ {string.Join(", ", controllerParams)} }});");
+                indent.AppendLine($"var submitter = new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)}(new {TypeReferenceQualifier.Qualify("HashSet")}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)}> {{ {string.Join(", ", controllerParams)} }});");
             }
             else
             {
                 indent.Require("System.Collections.Generic");
                 indent.AppendLine("// actAs unions every named controller; readAs unions every observer that is");
                 indent.AppendLine("// not also a controller, so the wire format reflects Daml's stakeholder model.");
-                indent.AppendLine($"var submitter = new {context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)}(");
+                indent.AppendLine($"var submitter = new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)}(");
                 indent.Indent();
-                indent.AppendLine($"actAs: new {context.Qualifier.Qualify("HashSet")}<{context.Qualifier.Qualify(RuntimeTypeNames.Party)}> {{ {string.Join(", ", controllerParams)} }},");
-                indent.AppendLine($"readAs: new {context.Qualifier.Qualify("HashSet")}<{context.Qualifier.Qualify(RuntimeTypeNames.Party)}> {{ {string.Join(", ", readAsParams)} }});");
+                indent.AppendLine($"actAs: new {TypeReferenceQualifier.Qualify("HashSet")}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)}> {{ {string.Join(", ", controllerParams)} }},");
+                indent.AppendLine($"readAs: new {TypeReferenceQualifier.Qualify("HashSet")}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Party)}> {{ {string.Join(", ", readAsParams)} }});");
                 indent.Dedent();
             }
 
@@ -281,7 +274,7 @@ internal sealed partial class ChoiceEmitter
         }
         else
         {
-            WriteExerciserCommandDispatchAndProject(indent, choice, templateClassName, dataTypes);
+            WriteExerciserCommandDispatchAndProject(indent, choice, templateClassName);
         }
 
         indent.Dedent();

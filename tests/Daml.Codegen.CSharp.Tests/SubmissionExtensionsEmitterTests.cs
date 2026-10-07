@@ -66,10 +66,10 @@ public class SubmissionExtensionsEmitterTests
     private string Emit(TemplateFixture fixture, CodeGenOptions? options = null)
     {
         var context = Context(fixture.Template);
-        var emitter = new SubmissionExtensionsEmitter(context, options ?? new CodeGenOptions(), _party);
+        var emitter = new SubmissionExtensionsEmitter(options ?? new CodeGenOptions(), _party);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb);
-        emitter.TryWriteSubmissionExtensions(indent, fixture.Template, fixture.Fields);
+        emitter.TryWriteSubmissionExtensions(indent, fixture.Template, context.EmittedTypeName(context.Module.Name, fixture.Template.Name), context.TemplateFieldReservedNames(fixture.Template), fixture.Fields);
         return sb.ToString();
     }
 
@@ -110,7 +110,7 @@ public class SubmissionExtensionsEmitterTests
         var output = Emit(template);
 
         output.Should().Contain("SubmitterInfo submitter = payload.Owner;");
-        output.Should().NotContain("SubmitterInfo submitter,");
+        output.Should().NotContain("global::Daml.Runtime.Commands.SubmitterInfo submitter,");
     }
 
     [Fact]
@@ -123,10 +123,10 @@ public class SubmissionExtensionsEmitterTests
 
         var output = Emit(template);
 
-        output.Should().Contain("var submitter = new SubmitterInfo(new HashSet<Party>");
+        output.Should().Contain("var submitter = new global::Daml.Runtime.Commands.SubmitterInfo(new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party>");
         output.Should().Contain("payload.Buyer,");
         output.Should().Contain("payload.Seller");
-        output.Should().NotContain("SubmitterInfo submitter,");
+        output.Should().NotContain("global::Daml.Runtime.Commands.SubmitterInfo submitter,");
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class SubmissionExtensionsEmitterTests
 
         var output = Emit(template);
 
-        output.Should().Contain("public static IReadOnlyList<Party> Observers(Note payload)");
+        output.Should().Contain("public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers(Note payload)");
         output.Should().Contain("payload.Reader");
     }
 
@@ -211,7 +211,7 @@ public class SubmissionExtensionsEmitterTests
 
         var output = Emit(template);
 
-        output.Should().MatchRegex(@"Asset payload,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        output.Should().MatchRegex(@"Asset payload,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
         output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Asset>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
     }
 
@@ -225,7 +225,7 @@ public class SubmissionExtensionsEmitterTests
 
         var output = Emit(template);
 
-        output.Should().MatchRegex(@"SubmitterInfo submitter,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)");
+        output.Should().MatchRegex(@"SubmitterInfo submitter,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
         output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
     }
 

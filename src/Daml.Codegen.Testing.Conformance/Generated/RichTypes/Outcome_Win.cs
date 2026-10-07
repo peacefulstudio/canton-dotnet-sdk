@@ -13,30 +13,30 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml record Outcome.Win
 /// </summary>
 public sealed record Outcome_Win(
-    [property: DamlFieldAttribute("prize")] decimal Prize,
-    [property: DamlFieldAttribute("tier")] string Tier
-) : IDamlRecord<Outcome_Win>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("prize")] decimal Prize,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("tier")] string Tier
+) : global::Daml.Runtime.Data.IDamlRecord<Outcome_Win>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("prize", new DamlNumeric(Prize)),
-        DamlField.Create("tier", new DamlText(Tier))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("prize", new global::Daml.Runtime.Data.DamlNumeric(Prize)),
+        global::Daml.Runtime.Data.DamlField.Create("tier", new global::Daml.Runtime.Data.DamlText(Tier))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Outcome_Win FromRecord(DamlRecord record) => new Outcome_Win(
-        Prize: record.GetRequiredField("prize").As<DamlNumeric>().Value,
-        Tier: record.GetRequiredField("tier").As<DamlText>().Value
+    public static Outcome_Win FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Outcome_Win(
+        Prize: record.GetRequiredField("prize").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        Tier: record.GetRequiredField("tier").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("prize", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "prize"), context.Field("prize"))),
-            DamlField.Create("tier", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "tier"), context.Field("tier")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("prize", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "prize"), context.Field("prize"))),
+            global::Daml.Runtime.Data.DamlField.Create("tier", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "tier"), context.Field("tier")))
         );
     }
 

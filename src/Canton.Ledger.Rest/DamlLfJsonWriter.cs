@@ -84,7 +84,6 @@ internal static class DamlLfJsonWriter
         if (value.ContractId is not null) { writer.WriteStringValue(value.ContractId); return; }
         if (value.Date is { } days) { writer.WriteStringValue(FormatDate(days)); return; }
         if (value.Timestamp is not null) { writer.WriteStringValue(FormatTimestamp(value.Timestamp)); return; }
-        if (value.AdditionalProperties.ContainsKey(WireValueNames.Unit)) { WriteUnit(writer); return; }
         if (value.Optional is not null) { WriteOptional(writer, value.Optional); return; }
         if (value.List is not null) { WriteList(writer, value.List); return; }
         if (value.TextMap is not null) { WriteTextMap(writer, value.TextMap); return; }
@@ -104,20 +103,8 @@ internal static class DamlLfJsonWriter
         return readLfJson.Length > 0;
     }
 
-    private static void WriteUnit(Utf8JsonWriter writer)
-    {
-        writer.WriteStartObject();
-        writer.WriteEndObject();
-    }
-
     private static void WriteOptional(Utf8JsonWriter writer, WireOptional optional)
     {
-        if (optional.AdditionalProperties.ContainsKey(WireValueNames.OptionalChain))
-        {
-            WriteOptionalChainLevel(writer, optional);
-            return;
-        }
-
         var inner = optional.Value;
         if (inner is null)
         {
@@ -131,15 +118,6 @@ internal static class DamlLfJsonWriter
                 + "Optional chain as an array, so each level has to be a DamlOptionalChain.");
 
         WriteValue(writer, inner);
-    }
-
-    private static void WriteOptionalChainLevel(Utf8JsonWriter writer, WireOptional level)
-    {
-        writer.WriteStartArray();
-        if (level.Value is not null)
-            WriteValue(writer, level.Value);
-
-        writer.WriteEndArray();
     }
 
     private static void WriteList(Utf8JsonWriter writer, WireList list)

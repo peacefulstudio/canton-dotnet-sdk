@@ -124,7 +124,7 @@ internal sealed partial class RestLedgerClient
         return _calls.TrySendAsync<Raw.SubmitAndWaitForReassignmentResponse, ContractStreamEvent<T>>(
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitForReassignmentPath, request,
-                MissingReassignmentMessage, MalformedReassignmentBodyPrefix),
+                MissingReassignmentMessage, MalformedReassignmentBodyPrefix, LedgerCallKind.EffectAppliedWrite),
             ProjectReassignmentOutcome<T>,
             body => NonEmptyOrNull(body.Reassignment?.UpdateId),
             timeout,
@@ -186,9 +186,10 @@ internal sealed partial class RestLedgerClient
     /// client cannot read — malformed JSON, or a completion whose wire fields will not decode — ends
     /// the enumeration the same way, with <see cref="TransportStatus.UndecodableBody"/> because the
     /// transport itself reported no failure, as does a window whose entries carry no offset the next window could
-    /// resume from, since following it would re-read what was just delivered. A transport failure
-    /// that never reaches the participant still throws, since the opt-in retry pipeline classifies
-    /// exceptions. A caller cancelling via <paramref name="cancellationToken"/> gets an
+    /// resume from, since following it would re-read what was just delivered. A window whose request
+    /// gets no answer, a connection failure or a timeout the caller did not cause, ends the
+    /// enumeration with <see cref="TransportStatus.NoResponse"/> on the first window as on any later
+    /// one. A caller cancelling via <paramref name="cancellationToken"/> gets an
     /// <see cref="OperationCanceledException"/>, never a
     /// <see cref="CompletionStreamEvent.StreamError"/>.
     /// </para>
@@ -302,53 +303,39 @@ internal sealed partial class RestLedgerClient
     private static partial void LogReassignmentUndecodable(ILogger logger, Exception exception);
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ConnectedSynchronizer>> GetConnectedSynchronizersAsync(
+    public Task<IReadOnlyList<ConnectedSynchronizer>> GetConnectedSynchronizersAsync(
         Party? party = null,
         string? participantId = null,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
-    {
-        var client = _calls.CreateClient();
+        CancellationToken cancellationToken = default) =>
+        _calls.SendAsync<Raw.GetConnectedSynchronizersResponse, IReadOnlyList<ConnectedSynchronizer>>(
+            new RestCall(
+                HttpMethod.Get, BuildConnectedSynchronizersPath(party, participantId), Body: null,
+                MissingBody("connected synchronizers"), MalformedBody("connected synchronizers"),
+                LedgerCallKind.Read),
+            ProjectConnectedSynchronizers,
+            timeout,
+            cancellationToken);
 
-        using var timeoutSource = RestCallEnvelope.CreateTimeoutSource(timeout, cancellationToken);
-        var requestToken = timeoutSource?.Token ?? cancellationToken;
-
-        using var response = await client
-            .GetAsync(BuildConnectedSynchronizersPath(party, participantId), requestToken)
-            .ConfigureAwait(false);
-        await RestCallEnvelope.EnsureSuccessAsync(response, requestToken).ConfigureAwait(false);
-
-        var body = await response.Content
-            .ReadFromJsonAsync<Raw.GetConnectedSynchronizersResponse>(RestRefitSettings.SerializerOptions, requestToken)
-            .ConfigureAwait(false);
-
-        var synchronizers = body?.ConnectedSynchronizers ?? [];
-        return synchronizers
+    private static IReadOnlyList<ConnectedSynchronizer> ProjectConnectedSynchronizers(
+        Raw.GetConnectedSynchronizersResponse body) =>
+        (body.ConnectedSynchronizers ?? [])
             .Select(s => new ConnectedSynchronizer(s.SynchronizerAlias, s.SynchronizerId, MapPermission(s.Permission)))
             .ToList();
-    }
 
     /// <inheritdoc />
-    public async Task<string> GetLedgerApiVersionAsync(
+    public Task<string> GetLedgerApiVersionAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
-    {
-        var client = _calls.CreateClient();
-
-        using var timeoutSource = RestCallEnvelope.CreateTimeoutSource(timeout, cancellationToken);
-        var requestToken = timeoutSource?.Token ?? cancellationToken;
-
-        using var response = await client.GetAsync(LedgerApiVersionPath, requestToken).ConfigureAwait(false);
-        await RestCallEnvelope.EnsureSuccessAsync(response, requestToken).ConfigureAwait(false);
-
-        var body = await response.Content
-            .ReadFromJsonAsync<Raw.GetLedgerApiVersionResponse>(RestRefitSettings.SerializerOptions, requestToken)
-            .ConfigureAwait(false);
-
-        return body?.Version
-            ?? throw new LedgerOperationException(
-                "Server returned a successful response but no version was present for the Ledger API version query.");
-    }
+        CancellationToken cancellationToken = default) =>
+        _calls.SendAsync<Raw.GetLedgerApiVersionResponse, string>(
+            new RestCall(
+                HttpMethod.Get, LedgerApiVersionPath, Body: null,
+                MissingBody("Ledger API version"), MalformedBody("Ledger API version"),
+                LedgerCallKind.Read),
+            body => body.Version
+                ?? throw new JsonException("no version was present for the Ledger API version query."),
+            timeout,
+            cancellationToken);
 
     /// <inheritdoc />
     public Task<TransactionResult> GetUpdateByOffsetAsync(
@@ -390,37 +377,22 @@ internal sealed partial class RestLedgerClient
             timeout, cancellationToken);
     }
 
-    private async Task<TProjection> GetUpdateAsync<TProjection>(
+    private Task<TProjection> GetUpdateAsync<TProjection>(
         string path,
         object request,
         string lookupDescription,
         Func<Raw.Transaction, TProjection> project,
         TimeSpan? timeout,
-        CancellationToken cancellationToken)
-    {
-        var client = _calls.CreateClient();
-
-        using var timeoutSource = RestCallEnvelope.CreateTimeoutSource(timeout, cancellationToken);
-        var requestToken = timeoutSource?.Token ?? cancellationToken;
-
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
-        {
-            Content = JsonContent.Create(request, options: RestRefitSettings.SerializerOptions),
-        };
-        using var response = await client.SendAsync(httpRequest, requestToken).ConfigureAwait(false);
-        await RestCallEnvelope.EnsureSuccessAsync(response, requestToken).ConfigureAwait(false);
-
-        var body = await response.Content
-            .ReadFromJsonAsync<Raw.GetUpdateResponse>(RestRefitSettings.SerializerOptions, requestToken)
-            .ConfigureAwait(false);
-        if (body is null)
-        {
-            throw new InvalidOperationException(
-                $"Server returned a successful response but no update was present for {lookupDescription}.");
-        }
-
-        return ProjectPointRead(body, lookupDescription, project);
-    }
+        CancellationToken cancellationToken) =>
+        _calls.SendAsync<Raw.GetUpdateResponse, TProjection>(
+            new RestCall(
+                HttpMethod.Post, path, request,
+                $"Server returned a successful response but no update was present for {lookupDescription}.",
+                MalformedBody("update"),
+                LedgerCallKind.Read),
+            body => ProjectPointRead(body, lookupDescription, project),
+            timeout,
+            cancellationToken);
 
     internal static TProjection ProjectPointRead<TProjection>(
         Raw.GetUpdateResponse response,
@@ -448,33 +420,14 @@ internal sealed partial class RestLedgerClient
         }
     }
 
-    private async Task FireAsync(string path, object body, TimeSpan? timeout, CancellationToken cancellationToken)
-    {
-        var client = _calls.CreateClient();
-
-        using var timeoutSource = RestCallEnvelope.CreateTimeoutSource(timeout, cancellationToken);
-        var requestToken = timeoutSource?.Token ?? cancellationToken;
-
-        HttpResponseMessage response;
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Post, path)
-            {
-                Content = JsonContent.Create(body, options: RestRefitSettings.SerializerOptions),
-            };
-            response = await client.SendAsync(request, requestToken).ConfigureAwait(false);
-        }
-        catch (HttpRequestException transportFailure)
-        {
-            throw new LedgerOperationException(
-                transportFailure.Message, new TransportStatus.NoResponse(), innerException: transportFailure);
-        }
-
-        using (response)
-        {
-            await RestCallEnvelope.EnsureSuccessAsync(response, requestToken).ConfigureAwait(false);
-        }
-    }
+    private Task FireAsync(string path, object body, TimeSpan? timeout, CancellationToken cancellationToken) =>
+        _calls.SendAsync(
+            new RestCall(
+                HttpMethod.Post, path, body, MissingBody("submission"), MalformedBody("submission"),
+                LedgerCallKind.AcceptedOnlyWrite),
+            IgnoreBodyAsync,
+            timeout,
+            cancellationToken);
 
     private static string BuildConnectedSynchronizersPath(Party? party, string? participantId)
     {

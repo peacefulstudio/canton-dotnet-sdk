@@ -21,7 +21,7 @@ namespace Daml.Ledger.Abstractions.Tests;
 /// projection consumers would otherwise hand-roll, and the incomplete-snapshot shapes it
 /// must refuse to hand back as a short list.
 /// </summary>
-public sealed class StreamerSnapshotTests
+public sealed partial class StreamerSnapshotTests
 {
     private static readonly SubmitterInfo Alice = new(new Party("alice"));
 
@@ -255,7 +255,7 @@ public sealed class StreamerSnapshotTests
 
         await snapshot.Should().ThrowAsync<LedgerOperationException>()
             .WithMessage(
-                "*with no ledger offset*",
+                "*at an unreported offset*",
                 "interpolating a null offset would render an empty position and read as 'at offset , so the returned' — the row's absent ledger position has to be said, not blanked");
     }
 

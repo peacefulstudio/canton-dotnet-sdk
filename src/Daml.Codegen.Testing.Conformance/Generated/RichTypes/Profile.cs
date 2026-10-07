@@ -13,30 +13,30 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml record Profile
 /// </summary>
 public sealed record Profile(
-    [property: DamlFieldAttribute("nickname")] string Nickname,
-    [property: DamlFieldAttribute("level")] long Level
-) : IDamlRecord<Profile>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("nickname")] string Nickname,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("level")] long Level
+) : global::Daml.Runtime.Data.IDamlRecord<Profile>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("nickname", new DamlText(Nickname)),
-        DamlField.Create("level", new DamlInt64(Level))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("nickname", new global::Daml.Runtime.Data.DamlText(Nickname)),
+        global::Daml.Runtime.Data.DamlField.Create("level", new global::Daml.Runtime.Data.DamlInt64(Level))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Profile FromRecord(DamlRecord record) => new Profile(
-        Nickname: record.GetRequiredField("nickname").As<DamlText>().Value,
-        Level: record.GetRequiredField("level").As<DamlInt64>().Value
+    public static Profile FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Profile(
+        Nickname: record.GetRequiredField("nickname").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Level: record.GetRequiredField("level").As<global::Daml.Runtime.Data.DamlInt64>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("nickname", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "nickname"), context.Field("nickname"))),
-            DamlField.Create("level", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "level"), context.Field("level")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("nickname", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "nickname"), context.Field("nickname"))),
+            global::Daml.Runtime.Data.DamlField.Create("level", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "level"), context.Field("level")))
         );
     }
 

@@ -41,14 +41,14 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var dateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("DateRecord.cs", StringComparison.Ordinal));
+        var dateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("DateRecord.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         dateFile.Should().NotBeNull();
         var code = dateFile!.Content;
 
-        code.Should().Contain("new DamlDate(StartDate)");
-        code.Should().Contain("As<DamlDate>().Value");
+        code.Should().Contain("new global::Daml.Runtime.Data.DamlDate(StartDate)");
+        code.Should().Contain("As<global::Daml.Runtime.Data.DamlDate>().Value");
     }
 
     [Fact]
@@ -78,14 +78,14 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var timestampFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("TimestampRecord.cs", StringComparison.Ordinal));
+        var timestampFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("TimestampRecord.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         timestampFile.Should().NotBeNull();
         var code = timestampFile!.Content;
 
-        code.Should().Contain("new DamlTimestamp(CreatedAt)");
-        code.Should().Contain("As<DamlTimestamp>().Value");
+        code.Should().Contain("new global::Daml.Runtime.Data.DamlTimestamp(CreatedAt)");
+        code.Should().Contain("As<global::Daml.Runtime.Data.DamlTimestamp>().Value");
     }
 
     [Fact]
@@ -117,14 +117,14 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var refFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Reference.cs", StringComparison.Ordinal));
+        var refFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Reference.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         refFile.Should().NotBeNull();
         var code = refFile!.Content;
 
         code.Should().Contain("Target.ToDamlValue()");
-        code.Should().Contain("new ContractId<Asset>(");
+        code.Should().Contain("new global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Asset>(");
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var outerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Outer.cs", StringComparison.Ordinal));
+        var outerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Outer.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         outerFile.Should().NotBeNull();
@@ -200,14 +200,14 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var emptyFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("EmptyRecord.cs", StringComparison.Ordinal));
+        var emptyFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("EmptyRecord.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         emptyFile.Should().NotBeNull();
         var code = emptyFile!.Content;
 
         // Record with no primary constructor parameters
-        code.Should().Contain("public sealed record EmptyRecord : IDamlRecord<EmptyRecord>");
+        code.Should().Contain("public sealed record EmptyRecord : global::Daml.Runtime.Data.IDamlRecord<EmptyRecord>");
         code.Should().Contain("DamlRecord.Create(");
     }
 
@@ -273,8 +273,8 @@ public partial class CodeGenEdgeCaseTests
         // Assert
         files.Count.Should().BeGreaterThanOrEqualTo(2);
 
-        var type1File = files.FirstOrDefault(f => f.RelativePath.EndsWith("Type1.cs", StringComparison.Ordinal));
-        var type2File = files.FirstOrDefault(f => f.RelativePath.EndsWith("Type2.cs", StringComparison.Ordinal));
+        var type1File = files.FirstOrDefault(f => f.RelativePath.EndsWith("Type1.cs", global::System.StringComparison.Ordinal));
+        var type2File = files.FirstOrDefault(f => f.RelativePath.EndsWith("Type2.cs", global::System.StringComparison.Ordinal));
 
         type1File.Should().NotBeNull();
         type2File.Should().NotBeNull();

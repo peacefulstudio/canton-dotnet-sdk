@@ -13,26 +13,26 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml record Split
 /// </summary>
 public sealed record Split(
-    [property: DamlFieldAttribute("pieces")] long Pieces
-) : IDamlRecord<Split>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("pieces")] long Pieces
+) : global::Daml.Runtime.Data.IDamlRecord<Split>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("pieces", new DamlInt64(Pieces))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("pieces", new global::Daml.Runtime.Data.DamlInt64(Pieces))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Split FromRecord(DamlRecord record) => new Split(
-        Pieces: record.GetRequiredField("pieces").As<DamlInt64>().Value
+    public static Split FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Split(
+        Pieces: record.GetRequiredField("pieces").As<global::Daml.Runtime.Data.DamlInt64>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("pieces", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "pieces"), context.Field("pieces")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("pieces", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "pieces"), context.Field("pieces")))
         );
     }
 

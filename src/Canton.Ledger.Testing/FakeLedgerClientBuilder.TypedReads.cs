@@ -6,6 +6,7 @@ using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Streams;
+using RuntimeCommands = Daml.Runtime.Commands;
 
 namespace Canton.Ledger.Testing;
 
@@ -14,6 +15,7 @@ public sealed partial class FakeLedgerClientBuilder
     private readonly Dictionary<(Type Template, string ContractId), object> _contracts = [];
     private readonly Dictionary<(Type Template, string ContractId), object> _contractLifecycles = [];
     private readonly Dictionary<Type, object> _activeContractsPages = [];
+    private readonly Dictionary<string, RuntimeCommands.DisclosedContract> _disclosures = [];
     private UpdatesPage[]? _updatesPages;
     private PrunedOffsets? _prunedOffsets;
 
@@ -43,6 +45,22 @@ public sealed partial class FakeLedgerClientBuilder
     {
         ArgumentNullException.ThrowIfNull(lifecycle);
         _contractLifecycles[(typeof(T), contractId.Value)] = lifecycle;
+        return this;
+    }
+
+    /// <summary>
+    /// Stages the disclosure <see cref="FakeLedgerClient.GetDisclosureAsync{T}"/> returns for
+    /// <paramref name="contractId"/>, whether the id is typed as a template or an interface. A contract with
+    /// no staged disclosure reads as not visible or archived, and the call returns <see langword="null"/>.
+    /// </summary>
+    /// <param name="contractId">The contract the disclosure belongs to.</param>
+    /// <param name="disclosure">The disclosure to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithDisclosure<T>(ContractId<T> contractId, RuntimeCommands.DisclosedContract disclosure)
+        where T : IDamlType
+    {
+        ArgumentNullException.ThrowIfNull(disclosure);
+        _disclosures[contractId.Value] = disclosure;
         return this;
     }
 
@@ -92,6 +110,7 @@ public sealed partial class FakeLedgerClientBuilder
         new Dictionary<(Type Template, string ContractId), object>(_contracts),
         new Dictionary<(Type Template, string ContractId), object>(_contractLifecycles),
         new Dictionary<Type, object>(_activeContractsPages),
+        new Dictionary<string, RuntimeCommands.DisclosedContract>(_disclosures),
         _updatesPages?.ToArray(),
         _prunedOffsets);
 }

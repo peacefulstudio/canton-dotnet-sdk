@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
@@ -50,8 +51,9 @@ internal sealed partial class RestLedgerClient
     /// The participant reports the hierarchy implicitly, as node ids on the events of the ordinary
     /// ledger-effects response, so the tree is rebuilt from the same response the flat point read
     /// decodes rather than from a second request. Node ids that cannot describe a tree surface as a
-    /// <see cref="MalformedTransactionTreeException"/> carried in
-    /// <see cref="Exception.InnerException"/>.
+    /// <see cref="LedgerOperationException"/> with <see cref="TransportStatus.UndecodableBody"/>,
+    /// whose <see cref="Exception.InnerException"/> is a <see cref="MalformedResponseException"/>
+    /// carrying the <see cref="MalformedTransactionTreeException"/>.
     /// </remarks>
     public Task<TransactionTree> GetUpdateTreeByOffsetAsync(
         LedgerOffset offset,

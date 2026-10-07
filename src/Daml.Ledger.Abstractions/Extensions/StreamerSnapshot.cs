@@ -96,7 +96,7 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<Contract<T>>(rows.Count);
@@ -167,7 +167,7 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<ActiveContract<Contract<T>>>(rows.Count);
@@ -230,7 +230,7 @@ public static class StreamerSnapshot
         ArgumentNullException.ThrowIfNull(key);
         _ = key; // type-inference carrier only; decode uses T.Key per IHasKey
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<Contract<T, TKey>>(rows.Count);
@@ -298,7 +298,7 @@ public static class StreamerSnapshot
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
 
-        var rows = await DrainAsync<T>(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
             .ConfigureAwait(false);
 
         var contracts = new List<ActiveContract<Contract<T, TKey>>>(rows.Count);
@@ -327,68 +327,4 @@ public static class StreamerSnapshot
                 + "when the transport does not supply keys.");
         return created.ToContract<T, TKey>();
     }
-
-    private static async Task<List<AcsSnapshotEntry<T>.Created>> DrainAsync<T>(
-        ILedgerStreamer streamer,
-        SubmitterInfo submitter,
-        LedgerOffset? activeAtOffset,
-        bool includeDisclosure,
-        CancellationToken cancellationToken)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        var rows = new List<AcsSnapshotEntry<T>.Created>();
-        var reachedCheckpoint = false;
-
-        await foreach (var entry in streamer
-            .SubscribeActiveAsync<T>(submitter, activeAtOffset, includeDisclosure, cancellationToken)
-            .ConfigureAwait(false))
-        {
-            switch (entry)
-            {
-                case AcsSnapshotEntry<T>.Created created:
-                    rows.Add(created);
-                    break;
-                case AcsSnapshotEntry<T>.Checkpoint:
-                    reachedCheckpoint = true;
-                    goto done;
-                case AcsSnapshotEntry<T>.StreamError error:
-                    cancellationToken.ThrowIfCancellationRequested();
-                    throw LedgerOperationException.FromStreamFault(
-                        $"The active-contract-set snapshot for {typeof(T).Name} faulted after {rows.Count} "
-                        + $"contract(s): {error.Message}. Use SubscribeActiveAsync for value-shaped fault handling.",
-                        error.Status,
-                        error.Category,
-                        error.SourceException,
-                        error.ErrorId);
-                case AcsSnapshotEntry<T>.Unclassified unclassified:
-                    throw new LedgerOperationException(
-                        $"The active-contract-set snapshot for {typeof(T).Name} carried an unclassified row "
-                        + $"({DescribeKind(unclassified)}) {DescribePosition(unclassified.Offset)}, so the returned "
-                        + "contracts would be incomplete. Use SubscribeActiveAsync to handle it as a value.");
-                default:
-                    throw new LedgerOperationException(
-                        $"Unexpected snapshot entry {entry.GetType().Name} for {typeof(T).Name}.");
-            }
-        }
-        done:
-
-        if (!reachedCheckpoint)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            throw new LedgerOperationException(
-                $"The active-contract-set snapshot for {typeof(T).Name} ended after {rows.Count} contract(s) "
-                + "without its terminal checkpoint, so the returned contracts would be incomplete.");
-        }
-
-        return rows;
-    }
-
-    private static string DescribeKind<T>(AcsSnapshotEntry<T>.Unclassified unclassified)
-        where T : ITemplate, IDamlRecord<T> =>
-        unclassified.RawKind is null
-            ? unclassified.Kind.ToString()
-            : $"{unclassified.Kind}: '{unclassified.RawKind}'";
-
-    private static string DescribePosition(LedgerOffset? offset) =>
-        offset is { } at ? $"at offset {at}" : "with no ledger offset";
 }

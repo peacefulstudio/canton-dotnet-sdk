@@ -193,7 +193,7 @@ public class GeneratedDecoderCompositionTests
         var context = DamlLfJsonDecodeContext.Root("ReturnTuple");
 
         var decoded = DamlLfJsonDecoders.ReadTuple2(
-            document.RootElement, context, DamlLfJsonDecoders.ReadText, DamlLfJsonDecoders.ReadInt64);
+            document.RootElement, context, DamlLfJsonDecoders.ReadText, null, DamlLfJsonDecoders.ReadInt64, null);
         var result = GenericResults.ChoiceReturnTuple.ResultDecoder(decoded);
 
         result.Should().Be(new Tuple2<string, long>("gold", 42));
@@ -375,7 +375,7 @@ public class GeneratedDecoderCompositionTests
         var context = DamlLfJsonDecodeContext.Root("Membership.Key");
 
         var decoded = DamlLfJsonDecoders.ReadTuple2(
-            document.RootElement, context, DamlLfJsonDecoders.ReadParty, DamlLfJsonDecoders.ReadText);
+            document.RootElement, context, DamlLfJsonDecoders.ReadParty, null, DamlLfJsonDecoders.ReadText, null);
         var result = Membership.Key.KeyDecoder(decoded);
 
         result.Should().Be(new Tuple2<Party, string>(new Party("alice::1220ab"), "savings"));
@@ -391,7 +391,9 @@ public class GeneratedDecoderCompositionTests
             document.RootElement,
             context,
             DamlLfJsonDecoders.ReadParty,
-            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText));
+            null,
+            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText),
+            DamlOptional.None);
         var result = Enrollment.Key.KeyDecoder(decoded);
 
         result.Should().Be(new Tuple2<Party, Optional<string>>(new Party("alice::1220ab"), new Optional<string>.Some("secondary")));
@@ -407,7 +409,9 @@ public class GeneratedDecoderCompositionTests
             document.RootElement,
             context,
             DamlLfJsonDecoders.ReadParty,
-            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText));
+            null,
+            (element, elementContext) => DamlLfJsonDecoders.ReadOptional(element, elementContext, DamlLfJsonDecoders.ReadText),
+            DamlOptional.None);
         var result = Enrollment.Key.KeyDecoder(decoded);
 
         result.Should().Be(new Tuple2<Party, Optional<string>>(new Party("alice::1220ab"), new Optional<string>.None()));

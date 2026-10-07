@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.DamlModelBuilder;
@@ -15,15 +16,6 @@ public class RecordEmitterTests
 {
     private const string LocalPackageId = "pkg-id";
     private const string ModuleName = "Test.Module";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => typeRef.Name;
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(params DamlDataType[] dataTypes) =>
         new()
@@ -51,8 +43,9 @@ public class RecordEmitterTests
     private static string Emit(string targetName, DamlDataType[] packageTypes, bool generateXmlDocs = true)
     {
         var options = Options(generateXmlDocs);
-        var context = PackageEmitContext.ForPackage(Package(packageTypes), options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(Package(packageTypes), options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var serialization = new RecordSerializationEmitter(context, resolver, options, mapper);
         var emitter = new RecordEmitter(context, options, serialization);
@@ -97,7 +90,7 @@ public class RecordEmitterTests
         output.Should().Contain("string Name");
         output.Should().Contain("long Age");
         output.Should().Contain("bool Active");
-        output.Should().Contain(": IDamlRecord<PersonInfo>");
+        output.Should().Contain(": global::Daml.Runtime.Data.IDamlRecord<PersonInfo>");
     }
 
     [Fact]
@@ -105,7 +98,7 @@ public class RecordEmitterTests
     {
         var output = EmitRecord(Record("Profile", Field("nickname", DamlPrimitive.Text)));
 
-        output.Should().Contain(": IDamlRecord<Profile>");
+        output.Should().Contain(": global::Daml.Runtime.Data.IDamlRecord<Profile>");
     }
 
     private static DamlInterface ViewingInterface(string name, string viewRecordName) =>
@@ -135,8 +128,9 @@ public class RecordEmitterTests
             Modules = [module],
             DependencyReferences = [],
         };
-        var context = PackageEmitContext.ForPackage(package, options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var serialization = new RecordSerializationEmitter(context, resolver, options, mapper);
         var emitter = new RecordEmitter(context, options, serialization);
@@ -154,7 +148,7 @@ public class RecordEmitterTests
             [Record("AssetView", Field("owner", DamlPrimitive.Party))],
             [ViewingInterface("Asset", "AssetView")]);
 
-        output.Should().Contain(": IAsset, IDamlRecord<AssetView>");
+        output.Should().Contain(": global::Test.Package.Test.Module.IAsset, global::Daml.Runtime.Data.IDamlRecord<AssetView>");
     }
 
     [Fact]
@@ -165,7 +159,7 @@ public class RecordEmitterTests
             [Record("SharedView", Field("owner", DamlPrimitive.Party))],
             [ViewingInterface("Bond", "SharedView"), ViewingInterface("Asset", "SharedView")]);
 
-        output.Should().Contain(": IDamlRecord<SharedView>");
+        output.Should().Contain(": global::Daml.Runtime.Data.IDamlRecord<SharedView>");
         output.Should().NotContain("IAsset");
         output.Should().NotContain("IBond");
     }
@@ -233,9 +227,38 @@ public class RecordEmitterTests
 
         output.Should().Contain(
             "MaybeText: record.GetOptionalField(\"maybeText\").AsOptional().HasValue"
-            + " ? record.GetOptionalField(\"maybeText\").AsOptional().Value!.As<DamlText>().Value : null",
+            + " ? record.GetOptionalField(\"maybeText\").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null",
             "FromRecord must normalize through AsOptional so JSON-decoded records, which flatten Some to the bare value, still decode");
-        output.Should().NotContain(".As<DamlOptional>()");
+        output.Should().NotContain(".As<global::Daml.Runtime.Data.DamlOptional>()");
+    }
+
+    [Fact]
+    public void RecordEmitter_reads_an_optional_field_from_JSON_only_when_its_key_is_present()
+    {
+        var output = EmitRecord(Record(
+            "OptionalData",
+            Field("label", DamlPrimitive.Text),
+            new DamlFieldDefinition("maybeText", new DamlTypeApp(
+                new DamlPrimitiveType(DamlPrimitive.Optional),
+                [new DamlPrimitiveType(DamlPrimitive.Text)])),
+            Field("count", DamlPrimitive.Int64)));
+
+        output.Should().Contain("var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(3);");
+        output.Should().Contain("fields.Add(global::Daml.Runtime.Data.DamlField.Create(\"label\", ");
+        output.Should().Contain(
+            "global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, \"maybeText\", present => ");
+        output.Should().Contain("fields.Add(global::Daml.Runtime.Data.DamlField.Create(\"count\", ");
+        output.Should().Contain("return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());");
+        output.Should().NotContain("RequireField(json, context, \"maybeText\")");
+    }
+
+    [Fact]
+    public void RecordEmitter_keeps_the_fixed_arity_JSON_read_for_a_record_without_an_optional_field()
+    {
+        var output = EmitRecord(Record("PersonInfo", Field("name", DamlPrimitive.Text)));
+
+        output.Should().Contain("return global::Daml.Runtime.Data.DamlRecord.Create(");
+        output.Should().NotContain("AddFieldIfPresent");
     }
 
     [Fact]
@@ -275,7 +298,7 @@ public class RecordEmitterTests
                 new DamlPrimitiveType(DamlPrimitive.ContractId),
                 [new DamlTypeRef("", ModuleName, "Asset")]))));
 
-        output.Should().Contain("ContractId<Asset> AssetRef");
+        output.Should().Contain("ContractId<global::Test.Package.Test.Module.Asset> AssetRef");
     }
 
     [Fact]
@@ -283,9 +306,9 @@ public class RecordEmitterTests
     {
         var output = EmitRecord(Record("Simple", Field("value", DamlPrimitive.Text)));
 
-        output.Should().Contain("public DamlRecord ToRecord()");
+        output.Should().Contain("public global::Daml.Runtime.Data.DamlRecord ToRecord()");
         output.Should().Contain("DamlRecord.Create(");
-        output.Should().Contain("DamlField.Create(\"value\", new DamlText(Value))");
+        output.Should().Contain("global::Daml.Runtime.Data.DamlField.Create(\"value\", new global::Daml.Runtime.Data.DamlText(Value))");
     }
 
     [Fact]
@@ -293,7 +316,7 @@ public class RecordEmitterTests
     {
         var output = EmitRecord(Record("Simple", Field("value", DamlPrimitive.Text)));
 
-        output.Should().Contain("public static Simple FromRecord(DamlRecord record)");
+        output.Should().Contain("public static Simple FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
         output.Should().Contain("record.GetRequiredField(\"value\")");
     }
 
@@ -338,10 +361,10 @@ public class RecordEmitterTests
         };
 
         var files = CreateGenerator().Generate(CreateTestDar(module));
-        var code = files.First(f => f.RelativePath.EndsWith("Holder.cs", StringComparison.Ordinal)).Content;
+        var code = files.First(f => f.RelativePath.EndsWith("Holder.cs", global::System.StringComparison.Ordinal)).Content;
 
         code.Should().Contain("DamlField.Create(\"pick\", Pick.ToVariant())");
-        code.Should().Contain("Pick: Choice.FromVariant(record.GetRequiredField(\"pick\").As<DamlVariant>())");
+        code.Should().Contain("Pick: global::Test.Module.Choice.FromVariant(record.GetRequiredField(\"pick\").As<global::Daml.Runtime.Data.DamlVariant>())");
     }
 
     [Fact]
@@ -444,7 +467,7 @@ public class RecordEmitterTests
         output.Should().NotContain("Creates an instance from a DamlRecord");
 
         output.Should().Contain("public sealed record Simple(");
-        output.Should().Contain("public DamlRecord ToRecord()");
-        output.Should().Contain("public static Simple FromRecord(DamlRecord record)");
+        output.Should().Contain("public global::Daml.Runtime.Data.DamlRecord ToRecord()");
+        output.Should().Contain("public static Simple FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
     }
 }

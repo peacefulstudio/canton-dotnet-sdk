@@ -73,6 +73,44 @@ public partial class DamlLfJsonReaderWireSamplesTests
         { "acs_interface_view_holding.json", "response/0/contractEntry/JsActiveContract/createdEvent/interfaceViews/0/viewValue", nameof(HoldingView), [("amount", typeof(DamlNumeric))] },
     };
 
+    internal const string NestedOptionalProbe = "probe_nested_optional_matrix.json";
+
+    public static TheoryData<string, string, string> DecodedWireSamplePayloads
+    {
+        get
+        {
+            var payloads = new TheoryData<string, string, string>();
+            foreach (ITheoryDataRow row in SupportedWireSamplePayloads)
+            {
+                var data = row.GetData();
+                payloads.Add((string)data[0]!, (string)data[1]!, (string)data[2]!);
+            }
+            return payloads;
+        }
+    }
+
+    public static TheoryData<string> AcceptedNestedOptionalCandidates
+    {
+        get
+        {
+            using var document = LoadWireSample(NestedOptionalProbe);
+            var candidates = new TheoryData<string>();
+            foreach (var candidate in document.RootElement.GetProperty("response").EnumerateObject())
+            {
+                if (candidate.Value.GetProperty("accepted").GetBoolean())
+                    candidates.Add(candidate.Name);
+            }
+            return candidates;
+        }
+    }
+
+    internal static DamlOptionalChain ReadOptionalOptionalText(JsonElement json) =>
+        DamlLfJsonDecoders.ReadOptionalChain(
+            json,
+            DamlLfJsonDecodeContext.Root("nestedNote"),
+            (outer, outerContext) => DamlLfJsonDecoders.ReadOptionalChain(
+                outer, outerContext, (inner, innerContext) => DamlLfJsonDecoders.ReadText(inner, innerContext)));
+
     internal static readonly IReadOnlyDictionary<string, Func<JsonElement, DamlRecord>> DeclaredShapes =
         new Dictionary<string, Func<JsonElement, DamlRecord>>
         {
@@ -207,7 +245,7 @@ public partial class DamlLfJsonReaderWireSamplesTests
             return DamlRecord.Create(
                 DamlField.Create("key", DamlLfJsonDecoders.ReadTuple2(
                     DamlLfJsonDecoders.RequireField(json, context, "key"), context.Field("key"),
-                    DamlLfJsonDecoders.ReadParty, DamlLfJsonDecoders.ReadText)));
+                    DamlLfJsonDecoders.ReadParty, null, DamlLfJsonDecoders.ReadText, null)));
         }
     }
 

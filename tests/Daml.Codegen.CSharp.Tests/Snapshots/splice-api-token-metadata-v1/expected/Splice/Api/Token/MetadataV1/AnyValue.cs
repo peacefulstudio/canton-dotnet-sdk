@@ -18,50 +18,50 @@ namespace Splice.Api.Token.MetadataV1;
 /// Generated from Daml variant AnyValue
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record AnyValue : IDamlVariant<AnyValue>
+public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValue>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs an AnyValue by dispatching on the DamlVariant constructor tag.</summary>
-    public static AnyValue FromVariant(DamlVariant variant) =>
+    public static AnyValue FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
-            "AV_Text" => new AV_Text(variant.Value.As<DamlText>().Value),
-            "AV_Int" => new AV_Int(variant.Value.As<DamlInt64>().Value),
-            "AV_Decimal" => new AV_Decimal(variant.Value.As<DamlNumeric>().Value),
-            "AV_Bool" => new AV_Bool(variant.Value.As<DamlBool>().Value),
-            "AV_Date" => new AV_Date(variant.Value.As<DamlDate>().Value),
-            "AV_Time" => new AV_Time(variant.Value.As<DamlTimestamp>().Value),
-            "AV_RelTime" => new AV_RelTime(RelTime.FromRecord(variant.Value.As<DamlRecord>())),
-            "AV_Party" => new AV_Party(Party.FromDamlValue(variant.Value.As<DamlParty>())),
-            "AV_ContractId" => new AV_ContractId(new ContractId<IAnyContract>(variant.Value.As<DamlContractId>().Value)),
-            "AV_List" => new AV_List((IReadOnlyList<AnyValue>)variant.Value.As<DamlList>().Values.Select(x => AnyValue.FromVariant(x.As<DamlVariant>())).ToList()),
-            "AV_Map" => new AV_Map((IReadOnlyDictionary<string, AnyValue>)variant.Value.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => AnyValue.FromVariant(kv.Value.As<DamlVariant>()))),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AnyValue constructor")
+            "AV_Text" => new AV_Text(variant.Value.As<global::Daml.Runtime.Data.DamlText>().Value),
+            "AV_Int" => new AV_Int(variant.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+            "AV_Decimal" => new AV_Decimal(variant.Value.As<global::Daml.Runtime.Data.DamlNumeric>().Value),
+            "AV_Bool" => new AV_Bool(variant.Value.As<global::Daml.Runtime.Data.DamlBool>().Value),
+            "AV_Date" => new AV_Date(variant.Value.As<global::Daml.Runtime.Data.DamlDate>().Value),
+            "AV_Time" => new AV_Time(variant.Value.As<global::Daml.Runtime.Data.DamlTimestamp>().Value),
+            "AV_RelTime" => new AV_RelTime(global::Daml.Runtime.Stdlib.RelTime.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
+            "AV_Party" => new AV_Party(global::Daml.Runtime.Data.Party.FromDamlValue(variant.Value.As<global::Daml.Runtime.Data.DamlParty>())),
+            "AV_ContractId" => new AV_ContractId(new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(variant.Value.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)),
+            "AV_List" => new AV_List((global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.MetadataV1.AnyValue>)variant.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.MetadataV1.AnyValue.FromVariant(x.As<global::Daml.Runtime.Data.DamlVariant>())).ToList()),
+            "AV_Map" => new AV_Map((global::System.Collections.Generic.IReadOnlyDictionary<string, global::Splice.Api.Token.MetadataV1.AnyValue>)variant.Value.As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => global::Splice.Api.Token.MetadataV1.AnyValue.FromVariant(kv.Value.As<global::Daml.Runtime.Data.DamlVariant>()))),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AnyValue constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "AV_Text" => DamlVariant.Create("AV_Text", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_Int" => DamlVariant.Create("AV_Int", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_Decimal" => DamlVariant.Create("AV_Decimal", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_Bool" => DamlVariant.Create("AV_Bool", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_Date" => DamlVariant.Create("AV_Date", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadDate(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_Time" => DamlVariant.Create("AV_Time", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_RelTime" => DamlVariant.Create("AV_RelTime", RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_Party" => DamlVariant.Create("AV_Party", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_ContractId" => DamlVariant.Create("AV_ContractId", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "AV_List" => DamlVariant.Create("AV_List", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"), (__json0, __ctx0) => AnyValue.__ReadDamlLfJson(__json0, __ctx0))),
-            "AV_Map" => DamlVariant.Create("AV_Map", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"), (__json0, __ctx0) => AnyValue.__ReadDamlLfJson(__json0, __ctx0))),
+            "AV_Text" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Text", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_Int" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Int", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_Decimal" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Decimal", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_Bool" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Bool", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_Date" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Date", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadDate(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_Time" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Time", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_RelTime" => global::Daml.Runtime.Data.DamlVariant.Create("AV_RelTime", global::Daml.Runtime.Stdlib.RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_Party" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Party", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_ContractId" => global::Daml.Runtime.Data.DamlVariant.Create("AV_ContractId", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "AV_List" => global::Daml.Runtime.Data.DamlVariant.Create("AV_List", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"), (__json0, __ctx0) => global::Splice.Api.Token.MetadataV1.AnyValue.__ReadDamlLfJson(__json0, __ctx0))),
+            "AV_Map" => global::Daml.Runtime.Data.DamlVariant.Create("AV_Map", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"), (__json0, __ctx0) => global::Splice.Api.Token.MetadataV1.AnyValue.__ReadDamlLfJson(__json0, __ctx0))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -75,7 +75,7 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public override string Tag => "AV_Text";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Text", new DamlText(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Text", new global::Daml.Runtime.Data.DamlText(Value));
     }
 
     /// <summary>AV_Int constructor.</summary>
@@ -85,7 +85,7 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public override string Tag => "AV_Int";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Int", new DamlInt64(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Int", new global::Daml.Runtime.Data.DamlInt64(Value));
     }
 
     /// <summary>AV_Decimal constructor.</summary>
@@ -95,7 +95,7 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public override string Tag => "AV_Decimal";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Decimal", new DamlNumeric(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Decimal", new global::Daml.Runtime.Data.DamlNumeric(Value));
     }
 
     /// <summary>AV_Bool constructor.</summary>
@@ -105,69 +105,69 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public override string Tag => "AV_Bool";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Bool", new DamlBool(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Bool", new global::Daml.Runtime.Data.DamlBool(Value));
     }
 
     /// <summary>AV_Date constructor.</summary>
-    public sealed record AV_Date(DateOnly Value) : AnyValue
+    public sealed record AV_Date(global::System.DateOnly Value) : AnyValue
     {
         /// <inheritdoc />
         public override string Tag => "AV_Date";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Date", new DamlDate(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Date", new global::Daml.Runtime.Data.DamlDate(Value));
     }
 
     /// <summary>AV_Time constructor.</summary>
-    public sealed record AV_Time(DateTimeOffset Value) : AnyValue
+    public sealed record AV_Time(global::System.DateTimeOffset Value) : AnyValue
     {
         /// <inheritdoc />
         public override string Tag => "AV_Time";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Time", new DamlTimestamp(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Time", new global::Daml.Runtime.Data.DamlTimestamp(Value));
     }
 
     /// <summary>AV_RelTime constructor.</summary>
-    public sealed record AV_RelTime(RelTime Value) : AnyValue
+    public sealed record AV_RelTime(global::Daml.Runtime.Stdlib.RelTime Value) : AnyValue
     {
         /// <inheritdoc />
         public override string Tag => "AV_RelTime";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_RelTime", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_RelTime", Value.ToRecord());
     }
 
     /// <summary>AV_Party constructor.</summary>
-    public sealed record AV_Party(Party Value) : AnyValue
+    public sealed record AV_Party(global::Daml.Runtime.Data.Party Value) : AnyValue
     {
         /// <inheritdoc />
         public override string Tag => "AV_Party";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Party", Value.ToDamlValue());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Party", Value.ToDamlValue());
     }
 
     /// <summary>AV_ContractId constructor.</summary>
-    public sealed record AV_ContractId(ContractId<IAnyContract> Value) : AnyValue
+    public sealed record AV_ContractId(global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract> Value) : AnyValue
     {
         /// <inheritdoc />
         public override string Tag => "AV_ContractId";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_ContractId", Value.ToDamlValue());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_ContractId", Value.ToDamlValue());
     }
 
     /// <summary>AV_List constructor.</summary>
-    public sealed record AV_List(IReadOnlyList<AnyValue> Value) : AnyValue
+    public sealed record AV_List(global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.MetadataV1.AnyValue> Value) : AnyValue
     {
-        private readonly IReadOnlyList<AnyValue> _value = DamlFieldCollections.Copy(Value);
+        private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.MetadataV1.AnyValue> _value = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Value);
 
         /// <summary>The payload the AV_List constructor carries. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-        public IReadOnlyList<AnyValue> Value
+        public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.MetadataV1.AnyValue> Value
         {
             get => _value;
-            init => _value = DamlFieldCollections.Copy(value);
+            init => _value = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
         }
 
         /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -176,14 +176,14 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public bool Equals(AV_List? other) =>
             other is not null
             && base.Equals(other)
-            && DamlFieldCollections.Equal(Value, other.Value);
+            && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Value, other.Value);
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            var hash = new HashCode();
+            var hash = new global::System.HashCode();
             hash.Add(base.GetHashCode());
-            hash.Add(DamlFieldCollections.Hash(Value));
+            hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Value));
             return hash.ToHashCode();
         }
 
@@ -191,19 +191,19 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public override string Tag => "AV_List";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_List", new DamlList(Value.Select(x => (DamlValue)x.ToVariant()).ToList()));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_List", new global::Daml.Runtime.Data.DamlList(Value.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToVariant()).ToList()));
     }
 
     /// <summary>AV_Map constructor.</summary>
-    public sealed record AV_Map(IReadOnlyDictionary<string, AnyValue> Value) : AnyValue
+    public sealed record AV_Map(global::System.Collections.Generic.IReadOnlyDictionary<string, global::Splice.Api.Token.MetadataV1.AnyValue> Value) : AnyValue
     {
-        private readonly IReadOnlyDictionary<string, AnyValue> _value = DamlFieldCollections.Copy(Value);
+        private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::Splice.Api.Token.MetadataV1.AnyValue> _value = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Value);
 
         /// <summary>The payload the AV_Map constructor carries. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-        public IReadOnlyDictionary<string, AnyValue> Value
+        public global::System.Collections.Generic.IReadOnlyDictionary<string, global::Splice.Api.Token.MetadataV1.AnyValue> Value
         {
             get => _value;
-            init => _value = DamlFieldCollections.Copy(value);
+            init => _value = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
         }
 
         /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -212,14 +212,14 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public bool Equals(AV_Map? other) =>
             other is not null
             && base.Equals(other)
-            && DamlFieldCollections.Equal(Value, other.Value);
+            && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Value, other.Value);
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            var hash = new HashCode();
+            var hash = new global::System.HashCode();
             hash.Add(base.GetHashCode());
-            hash.Add(DamlFieldCollections.Hash(Value));
+            hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Value));
             return hash.ToHashCode();
         }
 
@@ -227,7 +227,7 @@ public abstract record AnyValue : IDamlVariant<AnyValue>
         public override string Tag => "AV_Map";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("AV_Map", new DamlTextMap(Value.ToDictionary(kv => kv.Key, kv => (DamlValue)kv.Value.ToVariant())));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Map", new global::Daml.Runtime.Data.DamlTextMap(Value.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)kv.Value.ToVariant())));
     }
 
 }

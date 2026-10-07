@@ -50,7 +50,7 @@ public sealed class GrpcTraceparentPropagationTests
         {
             await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
         }
-        catch (RpcException)
+        catch (LedgerOperationException)
         {
         }
     }

@@ -1,7 +1,11 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Daml.Runtime.Contracts;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Outcomes;
 
@@ -40,7 +44,17 @@ namespace Daml.Runtime.Outcomes;
 ///   response could not be decoded into <typeparamref name="T"/>; do not resubmit, and read the
 ///   transaction by <see cref="CommittedUndecodable.UpdateId"/> instead.</item>
 /// </list>
+/// <para>
+/// Through <see cref="System.Text.Json"/> it travels as its own concrete arm's object with a
+/// <c>"$case"</c> discriminator, e.g. <c>{"$case":"One","Result":42}</c>, mirroring
+/// <see cref="Streams.ContractStreamEvent{T}"/>'s shape (a CLR round-trip contract, not
+/// the Daml-LF wire encoding). It names <see cref="ExerciseOutcomeJsonConverterFactory"/> in a
+/// <see cref="JsonConverterAttribute"/>, so it converts on bare <see cref="JsonSerializerOptions"/>
+/// with no registration. <typeparamref name="T"/> itself must round-trip through
+/// <see cref="System.Text.Json"/> for <see cref="One"/> to.
+/// </para>
 /// </remarks>
+[JsonConverter(typeof(ExerciseOutcomeJsonConverterFactory))]
 public abstract record ExerciseOutcome<T>
 {
     /// <summary>Sealed; new variants live alongside the existing ones.</summary>
@@ -195,12 +209,42 @@ public abstract record ExerciseOutcome<T>
     /// <param name="Message">Status detail / message from the participant or transport.</param>
     /// <param name="Category">Classification of the transport failure when the transport could determine
     /// one without a structured Canton error attached; <c>null</c> when the failure was not classified.</param>
-    /// <param name="SourceException">Transport exception that caused the infrastructure failure, when available.</param>
+    /// <param name="SourceException">Transport exception that caused the infrastructure failure,
+    /// when available. Carries <see cref="JsonIgnoreAttribute"/> and is excluded from the
+    /// <see cref="System.Text.Json"/> round trip, as on
+    /// <see cref="Streams.ContractStreamEvent{T}.StreamError"/>: a read restores it as
+    /// <see langword="null"/>.
+    /// A diagnostic only: excluded from <see cref="Equals(InfraError)"/> and <see cref="GetHashCode"/>.</param>
     public sealed record InfraError(
         TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
-        Exception? SourceException = null) : ExerciseOutcome<T>;
+        [property: JsonIgnore] Exception? SourceException = null) : ExerciseOutcome<T>
+    {
+        /// <summary>
+        /// Compares two infrastructure failures by <see cref="Status"/>, <see cref="Message"/> and <see cref="Category"/>, ignoring <see cref="SourceException"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
+        /// it does not travel through <see cref="System.Text.Json"/>, so a value read back from JSON
+        /// must equal the value that was written, and two failures with the same content are the same
+        /// failure whichever exception each one caught. It is excluded from <see cref="GetHashCode"/> likewise.
+        /// </remarks>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
+        public bool Equals(InfraError? other) =>
+            other is not null
+            && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
+            && Message == other.Message
+            && Category == other.Category;
+
+        /// <summary>
+        /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
+        /// <see cref="Equals(InfraError)"/>.
+        /// </summary>
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/> and <see cref="Category"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(Status, Message, Category);
+    }
 
     /// <summary>
     /// The command committed, but the participant's response could not be decoded into
@@ -212,9 +256,109 @@ public abstract record ExerciseOutcome<T>
     /// decoded far enough to read one before decoding failed; <c>null</c> when the decode
     /// failure happened before the id was read.</param>
     /// <param name="Message">Description of the decode failure.</param>
-    /// <param name="SourceException">The exception the decode failure raised.</param>
+    /// <param name="SourceException">The exception the decode failure raised, when available.
+    /// Carries <see cref="JsonIgnoreAttribute"/> and is excluded from the
+    /// <see cref="System.Text.Json"/> round trip, as on
+    /// <see cref="Streams.ContractStreamEvent{T}.StreamError"/>: a read restores it as
+    /// <see langword="null"/>.
+    /// A diagnostic only: excluded from <see cref="Equals(CommittedUndecodable)"/> and <see cref="GetHashCode"/>.</param>
     public sealed record CommittedUndecodable(
         string? UpdateId,
         string Message,
-        Exception SourceException) : ExerciseOutcome<T>;
+        [property: JsonIgnore] Exception? SourceException = null) : ExerciseOutcome<T>
+    {
+        /// <summary>
+        /// Compares two committed-but-undecodable outcomes by <see cref="UpdateId"/> and <see cref="Message"/>, ignoring <see cref="SourceException"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
+        /// it does not travel through <see cref="System.Text.Json"/>, so a value read back from JSON
+        /// must equal the value that was written, and two failures with the same content are the same
+        /// failure whichever exception each one caught. It is excluded from <see cref="GetHashCode"/> likewise.
+        /// </remarks>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
+        public bool Equals(CommittedUndecodable? other) =>
+            other is not null
+            && UpdateId == other.UpdateId
+            && Message == other.Message;
+
+        /// <summary>
+        /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
+        /// <see cref="Equals(CommittedUndecodable)"/>.
+        /// </summary>
+        /// <returns>A hash code over <see cref="UpdateId"/> and <see cref="Message"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(UpdateId, Message);
+    }
+}
+
+/// <summary>
+/// Supplies the <see cref="System.Text.Json"/> converter for any closed
+/// <see cref="ExerciseOutcome{T}"/>, including its six arms. Without it the declared-abstract
+/// type writes an empty object for every arm and refuses to read any of them back — see
+/// <see cref="ExerciseOutcome{T}"/>'s remarks.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="CanConvert"/> also matches the arm types directly, so that a caller whose variable is
+/// statically typed as a concrete arm — e.g. <c>ExerciseOutcome&lt;T&gt;.One</c>, not
+/// <c>ExerciseOutcome&lt;T&gt;</c> — still gets the discriminated shape once this factory is
+/// registered, e.g. via <see cref="DamlJsonConverters.AddDamlConverters"/>. That registration is
+/// required for the arm case specifically: <see cref="JsonConverterAttribute"/> is not inherited by
+/// <see cref="System.Text.Json"/>'s converter resolution, so the <see cref="JsonConverterAttribute"/>
+/// on <see cref="ExerciseOutcome{T}"/> alone leaves an arm-typed lookup on the default
+/// reflection-based contract. See <see cref="DiscriminatedUnionJson.Write{TUnion}"/>'s remarks for
+/// why an arm can carry this converter only through <see cref="JsonSerializerOptions.Converters"/>,
+/// never its own attribute.
+/// </para>
+/// <para>
+/// <b>AOT / trimming incompatibility:</b> <see cref="CreateConverter"/> uses
+/// <see cref="Activator.CreateInstance(Type)"/> and <see cref="Type.MakeGenericType"/> to
+/// instantiate the closed converter at runtime — the same cost
+/// <see cref="Daml.Runtime.Stdlib.SetJsonConverterFactory"/> already carries, accepted so the
+/// attribute reaches a consumer who never registers the converters.
+/// </para>
+/// </remarks>
+[RequiresUnreferencedCode("ExerciseOutcomeJsonConverterFactory uses MakeGenericType and Activator.CreateInstance, which are not trimming-safe.")]
+[RequiresDynamicCode("ExerciseOutcomeJsonConverterFactory uses MakeGenericType at runtime, which requires dynamic code generation.")]
+internal sealed class ExerciseOutcomeJsonConverterFactory : JsonConverterFactory, IDiscriminatedUnionJsonConverterFactory
+{
+    public override bool CanConvert(Type typeToConvert) =>
+        IsClosedExerciseOutcome(typeToConvert) || IsArmOfClosedExerciseOutcome(typeToConvert);
+
+    private static bool IsClosedExerciseOutcome(Type type) =>
+        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
+        && type.GetGenericTypeDefinition() == typeof(ExerciseOutcome<>);
+
+    private static bool IsArmOfClosedExerciseOutcome(Type type) =>
+        type.BaseType is { } baseType && IsClosedExerciseOutcome(baseType);
+
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        var closedOutcomeType = IsClosedExerciseOutcome(typeToConvert) ? typeToConvert : typeToConvert.BaseType!;
+        return (JsonConverter)Activator.CreateInstance(
+            typeof(ExerciseOutcomeJsonConverter<>).MakeGenericType(closedOutcomeType.GetGenericArguments()[0]))!;
+    }
+}
+
+internal sealed class ExerciseOutcomeJsonConverter<T> : JsonConverter<ExerciseOutcome<T>>
+{
+    private static readonly string TypeName =
+        $"{nameof(ExerciseOutcome<T>)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
+
+    private static readonly IReadOnlyDictionary<string, Type> Cases = new Dictionary<string, Type>
+    {
+        [nameof(ExerciseOutcome<T>.One)] = typeof(ExerciseOutcome<T>.One),
+        [nameof(ExerciseOutcome<T>.None)] = typeof(ExerciseOutcome<T>.None),
+        [nameof(ExerciseOutcome<T>.Many)] = typeof(ExerciseOutcome<T>.Many),
+        [nameof(ExerciseOutcome<T>.DamlError)] = typeof(ExerciseOutcome<T>.DamlError),
+        [nameof(ExerciseOutcome<T>.InfraError)] = typeof(ExerciseOutcome<T>.InfraError),
+        [nameof(ExerciseOutcome<T>.CommittedUndecodable)] = typeof(ExerciseOutcome<T>.CommittedUndecodable),
+    };
+
+    public override ExerciseOutcome<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        DiscriminatedUnionJson.Read<ExerciseOutcome<T>>(ref reader, options, Cases, TypeName);
+
+    public override void Write(Utf8JsonWriter writer, ExerciseOutcome<T> value, JsonSerializerOptions options) =>
+        DiscriminatedUnionJson.Write(writer, value, options, TypeName);
 }

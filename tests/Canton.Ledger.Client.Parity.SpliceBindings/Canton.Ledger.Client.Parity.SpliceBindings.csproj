@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <UseMicrosoftTestingPlatformRunner>false</UseMicrosoftTestingPlatformRunner>
+    <IsPackable>false</IsPackable>
+    <SpliceBindingsIntermediate>$(MSBuildThisFileDirectory)Fixtures\splice-wallet-0.1.24.binpb</SpliceBindingsIntermediate>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Remove="xunit.v3.mtp-v2" />
+    <PackageReference Remove="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Remove="AwesomeAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.CSharp.Cli\Daml.Codegen.CSharp.Cli.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
+  <Target Name="ResolveSpliceBindingsEmitter" AfterTargets="ResolveProjectReferences">
+    <MSBuild Projects="..\..\src\Daml.Codegen.CSharp.Cli\Daml.Codegen.CSharp.Cli.csproj" Targets="GetTargetPath">
+      <Output TaskParameter="TargetOutputs" ItemName="_EmitterCliDll" />
+    </MSBuild>
+
+    <PropertyGroup>
+      <_EmitterCliPath>@(_EmitterCliDll->'%(FullPath)')</_EmitterCliPath>
+      <_EmitterCliDirectory>@(_EmitterCliDll->'%(RootDir)%(Directory)')</_EmitterCliDirectory>
+      <_SpliceBindingsDirectory>$(IntermediateOutputPath)SpliceBindings/</_SpliceBindingsDirectory>
+      <_SpliceBindingsMarker>$(IntermediateOutputPath)SpliceBindings.generated</_SpliceBindingsMarker>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_EmitterBinary Include="$(_EmitterCliDirectory)Daml.Codegen.*.dll" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GenerateSpliceBindings"
+          DependsOnTargets="ResolveSpliceBindingsEmitter"
+          Inputs="$(SpliceBindingsIntermediate);@(_EmitterBinary)"
+          Outputs="$(_SpliceBindingsMarker)">
+    <Delete Files="$(_SpliceBindingsMarker)" Condition="Exists('$(_SpliceBindingsMarker)')" />
+    <RemoveDir Directories="$(_SpliceBindingsDirectory)" />
+    <Exec Command="dotnet &quot;$(_EmitterCliPath)&quot; --intermediate &quot;$(SpliceBindingsIntermediate)&quot; -o &quot;$(_SpliceBindingsDirectory.TrimEnd('\/'))&quot; --include-dependencies true --nullable true --verbosity 1" />
+    <Touch Files="$(_SpliceBindingsMarker)" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="IncludeSpliceBindings"
+          DependsOnTargets="GenerateSpliceBindings"
+          BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Compile Include="$(_SpliceBindingsDirectory)**/*.cs" />
+      <FileWrites Include="$(_SpliceBindingsDirectory)**/*" />
+      <FileWrites Include="$(_SpliceBindingsMarker)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -104,18 +104,14 @@ public class LedgerExerciseByKeyParityTests
         var overRest = SingleByKeyOverRest(submission);
 
         var grpcKeyField = overGrpc.ContractKey.Record.Fields.Should().ContainSingle().Subject;
-        var restKeyField = overRest.ContractKey.Record.Fields.Should().ContainSingle().Subject;
         grpcKeyField.Label.Should().Be("owner");
         grpcKeyField.Value.Party.Should().Be(Alice.Value);
-        restKeyField.Label.Should().Be("owner");
-        restKeyField.Value.Party.Should().Be(Alice.Value);
+        Idiomatic(overRest.ContractKey).Should().Be("""{"owner":"party::alice"}""");
 
         var grpcArgumentField = overGrpc.ChoiceArgument.Record.Fields.Should().ContainSingle().Subject;
-        var restArgumentField = overRest.ChoiceArgument.Record.Fields.Should().ContainSingle().Subject;
         grpcArgumentField.Label.Should().Be("newOwner");
         grpcArgumentField.Value.Party.Should().Be("party::bob");
-        restArgumentField.Label.Should().Be("newOwner");
-        restArgumentField.Value.Party.Should().Be("party::bob");
+        Idiomatic(overRest.ChoiceArgument).Should().Be("""{"newOwner":"party::bob"}""");
     }
 
     [Fact]
@@ -128,8 +124,7 @@ public class LedgerExerciseByKeyParityTests
 
         overGrpc.ContractKey.Party.Should().Be("party::steward");
         overGrpc.ContractKey.Record.Should().BeNull();
-        overRest.ContractKey.Party.Should().Be("party::steward");
-        overRest.ContractKey.Record.Should().BeNull();
+        Idiomatic(overRest.ContractKey).Should().Be("\"party::steward\"");
     }
 
     private static RuntimeCommands.CreateAndExerciseCommand CreateAndExercise() =>
@@ -193,17 +188,17 @@ public class LedgerExerciseByKeyParityTests
         var overRest = SingleCreateAndExerciseOverRest(submission);
 
         var grpcCreateArgumentField = overGrpc.CreateArguments.Fields.Should().ContainSingle().Subject;
-        var restCreateArgumentField = overRest.CreateArguments.Fields.Should().ContainSingle().Subject;
         grpcCreateArgumentField.Label.Should().Be("owner");
         grpcCreateArgumentField.Value.Party.Should().Be(Alice.Value);
-        restCreateArgumentField.Label.Should().Be("owner");
-        restCreateArgumentField.Value.Party.Should().Be(Alice.Value);
+        Idiomatic(overRest.CreateArguments).Should().Be("""{"owner":"party::alice"}""");
 
         var grpcChoiceArgumentField = overGrpc.ChoiceArgument.Record.Fields.Should().ContainSingle().Subject;
-        var restChoiceArgumentField = overRest.ChoiceArgument.Record.Fields.Should().ContainSingle().Subject;
         grpcChoiceArgumentField.Label.Should().Be("newOwner");
         grpcChoiceArgumentField.Value.Party.Should().Be("party::bob");
-        restChoiceArgumentField.Label.Should().Be("newOwner");
-        restChoiceArgumentField.Value.Party.Should().Be("party::bob");
+        Idiomatic(overRest.ChoiceArgument).Should().Be("""{"newOwner":"party::bob"}""");
     }
+
+    private static string Idiomatic(Rest.Client.Raw.Value value) => (string)value.AdditionalProperties["idiomatic"];
+
+    private static string Idiomatic(Rest.Client.Raw.Record record) => (string)record.AdditionalProperties["idiomatic"];
 }

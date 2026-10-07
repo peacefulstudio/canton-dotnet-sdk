@@ -127,7 +127,9 @@ public class StdlibTests
         var recovered = Tuple2<long, string>.FromRecord(
             record,
             v => v.As<DamlInt64>().Value,
-            v => v.As<DamlText>().Value);
+            null,
+            v => v.As<DamlText>().Value,
+            null);
 
         recovered.Should().Be(original);
     }
@@ -154,9 +156,26 @@ public class StdlibTests
         var act = () => Tuple2<long, long>.FromRecord(
             emptyRecord,
             v => v.As<DamlInt64>().Value,
-            v => v.As<DamlInt64>().Value);
+            null,
+            v => v.As<DamlInt64>().Value,
+            null);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*_1*");
+    }
+
+    [Fact]
+    public void Tuple2_FromRecord_should_report_an_omitted_required_component_without_calling_its_converter()
+    {
+        var record = DamlRecord.Create(DamlField.Create("_2", new DamlText("note")));
+
+        var act = () => Tuple2<string, Optional<string>>.FromRecord(
+            record,
+            _ => throw new Xunit.Sdk.XunitException("the converter must not be called"),
+            null,
+            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value),
+            DamlOptional.None);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Required field '_1' not found in record.");
     }
 
     [Fact]
@@ -167,7 +186,9 @@ public class StdlibTests
         var tuple = Tuple2<string, Optional<string>>.FromRecord(
             record,
             v => v.As<DamlParty>().Value,
-            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value));
+            null,
+            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value),
+            DamlOptional.None);
 
         tuple.Should().Be(new Tuple2<string, Optional<string>>("alice", new Optional<string>.None()));
     }
@@ -182,8 +203,11 @@ public class StdlibTests
         var tuple = Tuple3<string, long, Optional<string>>.FromRecord(
             record,
             v => v.As<DamlText>().Value,
+            null,
             v => v.As<DamlInt64>().Value,
-            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value));
+            null,
+            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value),
+            DamlOptional.None);
 
         tuple.Should().Be(new Tuple3<string, long, Optional<string>>("a", 2, new Optional<string>.None()));
     }
@@ -200,7 +224,9 @@ public class StdlibTests
         var recovered = Tuple2<Party, long>.FromRecord(
             record,
             v => Party.FromDamlValue(v.As<DamlParty>()),
-            v => v.As<DamlInt64>().Value);
+            null,
+            v => v.As<DamlInt64>().Value,
+            null);
 
         recovered.Should().Be(original);
     }
@@ -221,8 +247,11 @@ public class StdlibTests
         var recovered = Tuple3<long, string, bool>.FromRecord(
             record,
             v => v.As<DamlInt64>().Value,
+            null,
             v => v.As<DamlText>().Value,
-            v => v.As<DamlBool>().Value);
+            null,
+            v => v.As<DamlBool>().Value,
+            null);
 
         recovered.Should().Be(original);
     }
@@ -248,10 +277,32 @@ public class StdlibTests
         var act = () => Tuple3<long, long, long>.FromRecord(
             emptyRecord,
             v => v.As<DamlInt64>().Value,
+            null,
             v => v.As<DamlInt64>().Value,
-            v => v.As<DamlInt64>().Value);
+            null,
+            v => v.As<DamlInt64>().Value,
+            null);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*_1*");
+    }
+
+    [Fact]
+    public void Tuple3_FromRecord_should_report_an_omitted_required_component_without_calling_its_converter()
+    {
+        var record = DamlRecord.Create(
+            DamlField.Create("_1", new DamlText("a")),
+            DamlField.Create("_3", new DamlText("note")));
+
+        var act = () => Tuple3<string, long, Optional<string>>.FromRecord(
+            record,
+            v => v.As<DamlText>().Value,
+            null,
+            _ => throw new Xunit.Sdk.XunitException("the converter must not be called"),
+            null,
+            v => Optional<string>.FromValue(v, text => text.As<DamlText>().Value),
+            DamlOptional.None);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Required field '_2' not found in record.");
     }
 
     #endregion

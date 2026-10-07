@@ -4,7 +4,9 @@
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Authentication;
 using Com.Daml.Ledger.Api.V2;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using AwesomeAssertions;
@@ -366,9 +368,13 @@ public sealed class LedgerClientD1SurfaceTests : IDisposable
         var client = CreateClient();
         var act = () => client.GetUpdateTreeByOffsetAsync(LedgerOffset.At(42), ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
-        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
-        thrown.Which.Message.Should().Match("Malformed response from ledger*offset 42*");
-        thrown.Which.InnerException.Should().BeOfType<MalformedTransactionTreeException>();
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Match("Malformed response from ledger*offset 42*");
+        var malformed = thrown.InnerException.Should().BeOfType<MalformedResponseException>().Which;
+        malformed.Detail.Should().StartWith("the transaction at offset 42 could not be decoded: ");
+        malformed.InnerException.Should().BeOfType<MalformedTransactionTreeException>();
     }
 
     private static Transaction TreeTransaction(params Event[] events)

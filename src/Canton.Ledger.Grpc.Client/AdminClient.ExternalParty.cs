@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2.Admin;
 using Daml.Runtime.Data;
 using Google.Protobuf;
@@ -31,18 +32,19 @@ internal sealed partial class AdminClient
         wireRequest.OtherConfirmingParticipantUids.AddRange(request.OtherConfirmingParticipantUids ?? []);
         wireRequest.ObservingParticipantUids.AddRange(request.ObservingParticipantUids ?? []);
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GenerateExternalPartyTopologyResponse, ExternalPartyTopology>(
+        return _invoker.InvokeTracedAsync<AdminClient, GenerateExternalPartyTopologyResponse, ExternalPartyTopology>(
+            LedgerCallKind.Read,
             ActivitySource,
             PartyManagementService.Descriptor,
             "GenerateExternalPartyTopology",
             (headers, deadline, token) => _partyService.GenerateExternalPartyTopologyAsync(wireRequest, headers, deadline, token),
-            response => new ExternalPartyTopology(
-                new Party(response.PartyId),
-                response.PublicKeyFingerprint,
-                response.TopologyTransactions.Select(transaction => transaction.Memory).ToList(),
-                response.MultiHash.Memory),
+            response => MalformedResponse.Decoding(response, generated => new ExternalPartyTopology(
+                new Party(generated.PartyId),
+                generated.PublicKeyFingerprint,
+                generated.TopologyTransactions.Select(transaction => transaction.Memory).ToList(),
+                generated.MultiHash.Memory)),
             cancellationToken,
-            configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, request.PartyIdHint)));
+            configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, request.PartyIdHint));
     }
 
     /// <inheritdoc />
@@ -65,14 +67,15 @@ internal sealed partial class AdminClient
         wireRequest.OnboardingTransactions.AddRange(allocation.OnboardingTransactions.Select(ToWireSignedTransaction));
         wireRequest.MultiHashSignatures.AddRange(allocation.MultiHashSignatures.Select(GrpcExternalSigningMapper.ToWire));
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, AllocateExternalPartyResponse, Party>(
+        return _invoker.InvokeTracedAsync<AdminClient, AllocateExternalPartyResponse, Party>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             PartyManagementService.Descriptor,
             "AllocateExternalParty",
             (headers, deadline, token) => _partyService.AllocateExternalPartyAsync(wireRequest, headers, deadline, token),
-            response => new Party(response.PartyId),
+            response => MalformedResponse.Decoding(response, allocated => new Party(allocated.PartyId)),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     private static AllocateExternalPartyRequest.Types.SignedTransaction ToWireSignedTransaction(

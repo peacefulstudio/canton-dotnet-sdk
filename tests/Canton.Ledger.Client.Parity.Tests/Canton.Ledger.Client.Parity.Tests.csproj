@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Peaceful.Canton.Localnet.Testing" />
-    <PackageReference Include="Splice.Amulet" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,11 +21,14 @@
     <ProjectReference Include="..\..\src\Canton.Ledger.Grpc.Client\Canton.Ledger.Grpc.Client.csproj" />
     <ProjectReference Include="..\..\src\Canton.Ledger.Pqs.Client\Canton.Ledger.Pqs.Client.csproj" />
     <ProjectReference Include="..\Canton.Ledger.Testing.Localnet\Canton.Ledger.Testing.Localnet.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Client.Parity.SpliceBindings\Canton.Ledger.Client.Parity.SpliceBindings.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\Canton.Ledger.Grpc.Client.Integration.Tests\RichTypesDar.cs"
              Link="Shared\RichTypesDar.cs" />
+    <Compile Include="..\Canton.Ledger.Grpc.Client.Integration.Tests\LocalnetLedgerServices.cs"
+             Link="Shared\LocalnetLedgerServices.cs" />
   </ItemGroup>
 
   <ItemGroup>

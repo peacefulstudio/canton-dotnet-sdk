@@ -14,20 +14,20 @@ public sealed partial record GenericResults
     /// <summary>
     /// Choice argument type for ReturnGenMap.
     /// </summary>
-    public sealed record ReturnGenMap : IDamlRecord<ReturnGenMap>
+    public sealed record ReturnGenMap : global::Daml.Runtime.Data.IDamlRecord<ReturnGenMap>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create();
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create();
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static ReturnGenMap FromRecord(DamlRecord record) => new ReturnGenMap();
+        public static ReturnGenMap FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ReturnGenMap();
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         }
 
     }

@@ -5,14 +5,14 @@ High-level gRPC client for the Canton Ledger API with integration to `Daml.Runti
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0-preview.4
 ```
 
 ## Key Types
 
 | Type | Purpose |
 |------|---------|
-| `ICantonLedgerClient` (from `Canton.Ledger.Abstractions`) | **The type to resolve from the container.** Everything on `ILedgerClient` plus the Canton-only participant operations: `SubmitAsync`, `SubmitReassignmentAsync`, `TrySubmitAndWaitForReassignmentAsync`, `TrySubmitAndWaitForTransactionTreeAsync`, `CompletionStreamAsync`, `GetConnectedSynchronizersAsync`, `GetLedgerApiVersionAsync`, `GetUpdateByOffsetAsync`, `GetUpdateByIdAsync`, `EstimateTrafficCostAsync`, and typed interface-view queries via `QueryActiveAsync<TInterface, TView>` |
+| `ICantonLedgerClient` (from `Canton.Ledger.Abstractions`) | **The type to resolve from the container.** Everything on `ILedgerClient` plus the Canton-only participant operations: `SubmitAsync`, `SubmitReassignmentAsync`, `TrySubmitAndWaitForReassignmentAsync`, `TrySubmitAndWaitForTransactionTreeAsync`, `CompletionStreamAsync`, `GetConnectedSynchronizersAsync`, `GetLedgerApiVersionAsync`, `GetUpdateByOffsetAsync`, `GetUpdateByIdAsync`, `GetDisclosureAsync<T>`, `EstimateTrafficCostAsync`, and typed interface-view queries via `QueryActiveAsync<TInterface, TView>` |
 | `ILedgerClient` (from `Daml.Ledger.Abstractions`) | Command operations: `TryCreateAsync`, `TryExerciseAsync`, `SubmitAndWaitAsync`, `TrySubmitAndWaitForTransactionAsync`, `SubscribeAsync`, `SubscribeActiveAsync`, `GetLedgerEndAsync` |
 | `Daml.Ledger.Abstractions.Extensions` | Convenience extension methods on the client interfaces: `ThrowingExercise.ExerciseAsync` (wraps `TryExerciseAsync`, throws on non-`One` outcomes), `CreateByExercise` (`TryCreateOneByExerciseAsync`, `TryCreateManyByExerciseAsync` and their throwing forms), `SingleCommandExtensions.TrySubmitSingleAsync`, `StreamerSnapshot.SnapshotAsync` |
 | `LedgerClient` (concrete, gRPC) | The implementation `AddLedgerClient` registers behind `ICantonLedgerClient` — resolve the interface rather than naming this type. Its raw-stub escape hatch is reached through `IGrpcCallInvokerFactory`, and its `ActivitySource` name through `LedgerActivitySourceNames.GrpcLedgerClient` |
@@ -100,6 +100,43 @@ await ledgerClient.ExerciseAsync(
     command,
     submitter: new Party("Alice::1234..."));
 ```
+
+### Handling Failures
+
+Every call reports failure through one contract, the same on the gRPC and JSON Ledger API transports:
+
+- A throwing call (`SubmitAndWaitAsync`, `GetLedgerEndAsync`, the point and typed reads, interactive submission, `IAdminClient`) raises `LedgerOperationException`, never `Grpc.Core.RpcException`. `Status` is `TransportStatus.Grpc(code)` (a deadline overrun is `Grpc(DeadlineExceeded)`), `Category`, `ErrorId` and `Metadata` carry the participant's structured error, and `InnerException` is the original `RpcException`. A response the participant sent but this client cannot decode is `Status` `UndecodableBody` with a `MalformedResponseException` as `InnerException`.
+- A `Try*` call returns an `ExerciseOutcome<T>` instead of throwing.
+- A stream ends with a terminal `StreamError` event instead of throwing.
+- Only your own `CancellationToken` surfaces as `OperationCanceledException`. A null argument or a value that cannot be encoded still throws synchronously with its own type.
+
+`CommitState` follows the kind of call: a failed read is always `NotCommitted`, a write the participant may have received without answering is `Unknown`, and a write it rejected reports from its error (`DUPLICATE_COMMAND` is `Committed` unless its `accepted` metadata is `"false"`, and `SUBMISSION_ALREADY_IN_FLIGHT` is `Unknown`). Branch on `Category` and `CommitState` rather than on the transport status:
+
+```csharp
+try
+{
+    await ledgerClient.ExerciseAsync(command, submitter: new Party("Alice::1234..."));
+}
+catch (LedgerOperationException ex) when (ex.CommitState == CommitState.NotCommitted)
+{
+    Console.WriteLine($"Not committed ({ex.Category}); safe to retry");
+}
+```
+
+### Reading a Disclosure
+
+`GetDisclosureAsync<T>` reads, by contract id, the data needed to disclose a contract explicitly to another submitter. `T` may be a template or an interface, so a holding reached through `ContractId<IHolding>` works like any template. It returns `null` when the contract is not visible to the submitter, does not exist or is archived:
+
+```csharp
+var disclosure = await ledgerClient.GetDisclosureAsync(holdingId, submitter);
+
+if (disclosure is not null)
+{
+    var submission = baseSubmission.WithDisclosedContracts(disclosure);
+}
+```
+
+The disclosure leaves the synchronizer id unset, so the participant's synchronizer router selects the synchronizer; pin it with `CommandsSubmission.WithSynchronizerId` when the current assignment matters.
 
 ### Async Submission + Completions
 

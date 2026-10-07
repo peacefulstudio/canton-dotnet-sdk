@@ -60,7 +60,7 @@ public class NewFeaturesCodeGenTests
         var code = EmitKeyed("AssetWithKey", new DamlPrimitiveType(DamlPrimitive.Text));
 
         code.Should().Contain("IHasKey<AssetWithKey, string>");
-        code.Should().Contain("KeyDecoder = value => value.As<DamlText>().Value,");
+        code.Should().Contain("KeyDecoder = value => value.As<global::Daml.Runtime.Data.DamlText>().Value,");
     }
 
     [Fact]
@@ -68,8 +68,8 @@ public class NewFeaturesCodeGenTests
     {
         var code = EmitKeyed("UserProfile", new DamlPrimitiveType(DamlPrimitive.Party));
 
-        code.Should().Contain("IHasKey<UserProfile, Party>");
-        code.Should().Contain("KeyDecoder = value => Party.FromDamlValue(value.As<DamlParty>()),");
+        code.Should().Contain("global::Daml.Runtime.Contracts.IHasKey<UserProfile, global::Daml.Runtime.Data.Party>");
+        code.Should().Contain("KeyDecoder = value => global::Daml.Runtime.Data.Party.FromDamlValue(value.As<global::Daml.Runtime.Data.DamlParty>()),");
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class NewFeaturesCodeGenTests
             ]);
 
         code.Should().Contain("IHasKey<CompositeKeyTemplate, global::Test.Module.AssetKey>");
-        code.Should().Contain("KeyDecoder = value => global::Test.Module.AssetKey.FromRecord(value.As<DamlRecord>()),");
+        code.Should().Contain("KeyDecoder = value => global::Test.Module.AssetKey.FromRecord(value.As<global::Daml.Runtime.Data.DamlRecord>()),");
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class NewFeaturesCodeGenTests
                 new DamlPrimitiveType(DamlPrimitive.List),
                 [new DamlPrimitiveType(DamlPrimitive.Text)]));
 
-        code.Should().Contain("IHasKey<ListKeyTemplate, IReadOnlyList<string>>");
+        code.Should().Contain("global::Daml.Runtime.Contracts.IHasKey<ListKeyTemplate, global::System.Collections.Generic.IReadOnlyList<string>>");
         code.Should().NotMatchRegex(@"cref=""[^""]*<[^""]*""",
             "a cref must render angle brackets as {{ }}, or a consumer building with GenerateDocumentationFile and TreatWarningsAsErrors fails on malformed XML");
     }
@@ -638,7 +638,7 @@ public class NewFeaturesCodeGenTests
         // Template should exist with key and upgrade support
         var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
         assetFile.Should().NotBeNull();
-        assetFile!.Content.Should().Contain("IHasKey<Asset, Party>");
+        assetFile!.Content.Should().Contain("global::Daml.Runtime.Contracts.IHasKey<Asset, global::Daml.Runtime.Data.Party>");
         assetFile.Content.Should().Contain("IUpgradeable");
 
         // Generic data type should exist

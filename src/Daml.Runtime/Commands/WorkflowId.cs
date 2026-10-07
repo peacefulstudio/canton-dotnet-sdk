@@ -59,8 +59,7 @@ public readonly record struct WorkflowId
 /// System.Text.Json converter for <see cref="WorkflowId"/>. Serializes as a plain JSON string,
 /// the shape the Ledger API's <c>workflow_id</c> field carries, so a <see cref="WorkflowId"/>
 /// member reads back with the id it correlates on. A whole <see cref="CommandsSubmission"/>
-/// reads back only while its command list is empty — <see cref="ICommand"/> carries no
-/// <c>[JsonDerivedType]</c>.
+/// is written, never read back — see <see cref="ICommand"/>.
 /// </summary>
 internal sealed class WorkflowIdJsonConverter : OpaqueStringIdJsonConverter<WorkflowId>
 {

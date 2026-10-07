@@ -17,11 +17,22 @@ internal static class RestValueDecoder
         where TRecord : IDamlRecord<TRecord> =>
         ToDamlRecord(record, TRecord.__ReadDamlLfJson, typeof(TRecord).Name);
 
-    public static DamlRecord ToDamlRecord(WireRecord record, DamlLfRecordReader reader, string rootPath) =>
-        MalformedResponse.Decoding(record, wireRecord => Decode(wireRecord.AdditionalProperties, reader.Invoke, rootPath));
+    public static DamlRecord ToDamlRecord(WireRecord record, DamlLfElementReader reader, string rootPath) =>
+        MalformedResponse.Decoding(
+            record,
+            wireRecord => Decode(
+                wireRecord.AdditionalProperties,
+                (json, context) => reader(json, context).As<DamlRecord>(),
+                rootPath));
 
     public static DamlValue ToDamlValue(WireValue value, DamlLfElementReader reader, string rootPath) =>
         MalformedResponse.Decoding(value, wireValue => Decode(wireValue.AdditionalProperties, reader.Invoke, rootPath));
+
+    public static DamlUndecodedJson ToUndecodedJson(WireRecord record) =>
+        MalformedResponse.Decoding(record, wireRecord => new DamlUndecodedJson(DamlLfJsonTextOf(wireRecord.AdditionalProperties)));
+
+    public static DamlUndecodedJson ToUndecodedJson(WireValue value) =>
+        MalformedResponse.Decoding(value, wireValue => new DamlUndecodedJson(DamlLfJsonTextOf(wireValue.AdditionalProperties)));
 
     private static TDecoded Decode<TDecoded>(
         IDictionary<string, object> readFields,

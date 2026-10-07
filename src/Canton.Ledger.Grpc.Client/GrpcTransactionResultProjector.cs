@@ -10,6 +10,7 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using ChoiceName = Daml.Runtime.Commands.ChoiceName;
+using RuntimeExerciseCommand = Daml.Runtime.Commands.ExerciseCommand;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
 using ProtoExercisedEvent = Com.Daml.Ledger.Api.V2.ExercisedEvent;
 using RuntimeExercisedEvent = Daml.Runtime.Contracts.ExercisedEvent;
@@ -106,10 +107,10 @@ internal static class GrpcTransactionResultProjector
             result => TransactionResultFolds.ToCreatedContractId<TMarker>(result, GrpcMarkerMatcher<TMarker>.Matches));
 
     public static ExerciseOutcome<TResult> ProjectChoiceResult<TResult>(
-        ExerciseOutcome<TransactionResult> outcome, ChoiceName choice) =>
+        ExerciseOutcome<TransactionResult> outcome, RuntimeExerciseCommand command) =>
         TransactionResultFolds.Project(
             outcome,
-            result => TransactionResultFolds.ToChoiceResult<TResult>(result, choice));
+            result => TransactionResultFolds.ToChoiceResult<TResult>(result, command));
 
     private static EquatableArray<RuntimeIdentifier> ToInterfaceIds(ProtoCreatedEvent created)
     {

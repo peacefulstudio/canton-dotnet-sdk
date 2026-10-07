@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -13,20 +14,6 @@ public class ChoiceEmitterInterfaceDescriptorTests
 {
     private const string LocalPackageId = "pkg-id";
     private const string StdlibPackageId = "stdlib-pkg";
-
-    private sealed class StubResolver(
-        string resolvedName = "Resolved",
-        IReadOnlyDictionary<string, DamlPackage>? packages = null) : ICrossPackageResolver
-    {
-        private readonly IReadOnlyDictionary<string, DamlPackage> _packages = packages ?? new Dictionary<string, DamlPackage>();
-
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => resolvedName;
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) =>
-            _packages.TryGetValue(packageId, out var package) ? package : null;
-    }
 
     private static DamlPackage Package(params DamlInterface[] interfaces) =>
         new()
@@ -59,17 +46,17 @@ public class ChoiceEmitterInterfaceDescriptorTests
             DependencyReferences = [],
         };
 
-    private static PackageEmitContext Context(DamlPackage package) =>
-        PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+    private static CodeGenOptions Options => new() { NamespacePrefix = "Test.Package" };
 
-    private static ChoiceEmitter Emitter(PackageEmitContext context, StubResolver resolver) =>
-        new(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
-
-    private static string EmitDescriptors(DamlInterface iface, string interfaceName, DamlPackage package, StubResolver? resolver = null)
+    private static ChoiceEmitter Emitter(DamlPackage package, params DamlPackage[] dependencies)
     {
-        var context = Context(package);
-        var actualResolver = resolver ?? new StubResolver();
-        var emitter = Emitter(context, actualResolver);
+        var resolution = RealResolution.Of(package, Options, dependencies);
+        return new ChoiceEmitter(resolution.Context, resolution.Resolver, Options, new DamlTypeMapper(resolution.Context, resolution.Resolver), new PartyAnalysis());
+    }
+
+    private static string EmitDescriptors(DamlInterface iface, string interfaceName, DamlPackage package, params DamlPackage[] dependencies)
+    {
+        var emitter = Emitter(package, dependencies);
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = interfaceName };
         emitter.WriteInterfaceChoiceDescriptors(indent, iface, interfaceName);
@@ -97,12 +84,12 @@ public class ChoiceEmitterInterfaceDescriptorTests
 
         var output = EmitDescriptors(Interface("IAsset", choice), "IAsset", Package());
 
-        output.Should().Contain("public static Choice<IAsset, DamlUnit, DamlUnit> ChoiceAccept { get; } = new()");
-        output.Should().Contain("Name = new ChoiceName(\"Accept\"),");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<IAsset, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceAccept { get; } = new()");
+        output.Should().Contain("Name = new global::Daml.Runtime.Commands.ChoiceName(\"Accept\"),");
         output.Should().Contain("Consuming = true,");
-        output.Should().Contain("ArgumentEncoder = _ => DamlUnit.Instance,");
-        output.Should().Contain("ArgumentDecoder = val => val is DamlUnit u ? u : throw new global::System.InvalidOperationException(\"Choice 'Accept' argument must decode to DamlUnit.\"),");
-        output.Should().Contain("ResultDecoder = _ => DamlUnit.Instance");
+        output.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,");
+        output.Should().Contain("ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlUnit u ? u : throw new global::System.InvalidOperationException(\"Choice 'Accept' argument must decode to DamlUnit.\"),");
+        output.Should().Contain("ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
         output.Should().Contain("ArgumentJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),");
     }
 
@@ -110,8 +97,7 @@ public class ChoiceEmitterInterfaceDescriptorTests
     public void ChoiceEmitterInterfaceDescriptor_requires_the_namespace_for_a_bare_primitive_argument_type_not_only_the_return_type()
     {
         var choice = Choice("SetDate", new DamlPrimitiveType(DamlPrimitive.Date), new DamlPrimitiveType(DamlPrimitive.Unit));
-        var context = Context(Package());
-        var emitter = Emitter(context, new StubResolver());
+        var emitter = Emitter(Package());
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = "IAsset" };
 
@@ -127,28 +113,27 @@ public class ChoiceEmitterInterfaceDescriptorTests
 
         var output = EmitDescriptors(Interface("IAsset", choice), "IAsset", Package());
 
-        output.Should().Contain("public static Choice<IAsset, Resolved, DamlUnit> ChoiceTransfer { get; } = new()");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<IAsset, global::Test.Package.Main.TransferArg, global::Daml.Runtime.Data.DamlUnit> ChoiceTransfer { get; } = new()");
         output.Should().Contain("ArgumentEncoder = arg => arg.ToRecord(),");
-        output.Should().Contain("ArgumentDecoder = val => global::Test.Package.Main.Resolved.FromRecord(val.As<DamlRecord>()),");
+        output.Should().Contain("ArgumentDecoder = val => global::Test.Package.Main.TransferArg.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),");
     }
 
     [Fact]
     public void ChoiceEmitterInterfaceDescriptor_encodes_synthetic_stdlib_interface_archive_argument_as_empty_record()
     {
         var choice = Choice("Archive", new DamlTypeRef(StdlibPackageId, "DA.Internal.Template", "Archive"), new DamlPrimitiveType(DamlPrimitive.Unit));
-        var resolver = new StubResolver(packages: new Dictionary<string, DamlPackage> { [StdlibPackageId] = StdlibPackage() });
 
-        var output = EmitDescriptors(Interface("IArchivable", choice), "IArchivable", Package(), resolver);
+        var output = EmitDescriptors(Interface("IArchivable", choice), "IArchivable", Package(), StdlibPackage());
 
-        output.Should().Contain("public static Choice<IArchivable, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()");
-        output.Should().Contain("ArgumentEncoder = _ => DamlRecord.Create(),");
-        output.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance,");
-        output.Should().Contain("ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException(\"Choice 'Archive' argument must decode to an empty record.\"),");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<IArchivable, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()");
+        output.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),");
+        output.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,");
+        output.Should().Contain("ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException(\"Choice 'Archive' argument must decode to an empty record.\"),");
         output.Should().Contain(
             "ArgumentJsonReader = (json, context) =>\n"
             + "    {\n"
             + "        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);\n"
-            + "        return DamlRecord.Create();\n"
+            + "        return global::Daml.Runtime.Data.DamlRecord.Create();\n"
             + "    },");
     }
 
@@ -171,8 +156,8 @@ public class ChoiceEmitterInterfaceDescriptorTests
 
         var output = EmitDescriptors(Interface("IHolding", choice), "IHolding", Package());
 
-        output.Should().Contain("public static Choice<IHolding, Party, DamlUnit> ChoiceTransfer { get; } = new()");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<IHolding, global::Daml.Runtime.Data.Party, global::Daml.Runtime.Data.DamlUnit> ChoiceTransfer { get; } = new()");
         output.Should().Contain("ArgumentEncoder = arg => arg.ToDamlValue(),");
-        output.Should().Contain("ArgumentDecoder = val => Party.FromDamlValue(val.As<DamlParty>()),");
+        output.Should().Contain("ArgumentDecoder = val => global::Daml.Runtime.Data.Party.FromDamlValue(val.As<global::Daml.Runtime.Data.DamlParty>()),");
     }
 }

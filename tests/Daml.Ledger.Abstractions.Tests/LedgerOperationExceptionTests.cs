@@ -180,6 +180,75 @@ public class LedgerOperationExceptionTests
         exception.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
+    [Theory]
+    [InlineData(null, CommitState.Committed)]
+    [InlineData("true", CommitState.Committed)]
+    [InlineData("false", CommitState.Unknown)]
+    public void LedgerOperationException_daml_error_constructor_maps_DUPLICATE_COMMAND_by_its_accepted_metadata(
+        string? accepted, CommitState expected)
+    {
+        var metadata = accepted is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string> { ["accepted"] = accepted };
+
+        var exception = new LedgerOperationException(
+            "duplicate",
+            DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists,
+            "DUPLICATE_COMMAND",
+            metadata);
+
+        exception.CommitState.Should().Be(expected);
+    }
+
+    [Fact]
+    public void LedgerOperationException_daml_error_constructor_maps_DUPLICATE_COMMAND_to_Committed_whatever_its_category()
+    {
+        var exception = new LedgerOperationException(
+            "duplicate",
+            DamlErrorCategory.ContentionOnSharedResources,
+            "DUPLICATE_COMMAND",
+            new Dictionary<string, string>());
+
+        exception.CommitState.Should().Be(CommitState.Committed);
+    }
+
+    [Fact]
+    public void LedgerOperationException_daml_error_constructor_keeps_DUPLICATE_COMMAND_update_id_null_and_offset_in_metadata()
+    {
+        var exception = new LedgerOperationException(
+            "duplicate",
+            DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists,
+            "DUPLICATE_COMMAND",
+            new Dictionary<string, string> { ["accepted"] = "true", ["completion_offset"] = "9663" });
+
+        exception.UpdateId.Should().BeNull();
+        exception.Metadata.Should().ContainKey("completion_offset").WhoseValue.Should().Be("9663");
+    }
+
+    [Fact]
+    public void LedgerOperationException_daml_error_constructor_keeps_DUPLICATE_CONTRACT_KEY_NotCommitted_in_the_same_category()
+    {
+        var exception = new LedgerOperationException(
+            "duplicate key",
+            DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists,
+            "DUPLICATE_CONTRACT_KEY",
+            new Dictionary<string, string>());
+
+        exception.CommitState.Should().Be(CommitState.NotCommitted);
+    }
+
+    [Theory]
+    [InlineData(DamlErrorCategory.ContentionOnSharedResources)]
+    [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
+    public void LedgerOperationException_daml_error_constructor_maps_SUBMISSION_ALREADY_IN_FLIGHT_to_Unknown(
+        DamlErrorCategory category)
+    {
+        var exception = new LedgerOperationException(
+            "in flight", category, "SUBMISSION_ALREADY_IN_FLIGHT", new Dictionary<string, string>());
+
+        exception.CommitState.Should().Be(CommitState.Unknown);
+    }
+
     [Fact]
     public void LedgerOperationException_daml_error_constructor_sets_CommitState_Unknown_for_DeadlineExceededRequestStateUnknown()
     {
@@ -209,5 +278,81 @@ public class LedgerOperationExceptionTests
             "DamlErrorCategory.Unknown means the transport trailer was missing or unparseable, so the "
             + "hidden category could have been DeadlineExceededRequestStateUnknown — treating it as "
             + "NotCommitted would risk resubmitting a command that may have already committed");
+    }
+
+    [Fact]
+    public void LedgerOperationException_status_and_commit_state_constructor_sets_every_field_it_is_given()
+    {
+        var inner = new TimeoutException("transport gave up");
+        var metadata = new Dictionary<string, string> { ["key"] = "value" };
+
+        var exception = new LedgerOperationException(
+            "read failed",
+            new TransportStatus.Http(HttpStatusCode.BadGateway),
+            CommitState.NotCommitted,
+            DamlErrorCategory.TransientServerFailure,
+            "SERVICE_NOT_RUNNING",
+            metadata,
+            inner);
+
+        exception.Message.Should().Be("read failed");
+        exception.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.BadGateway));
+        exception.CommitState.Should().Be(CommitState.NotCommitted);
+        exception.Category.Should().Be(DamlErrorCategory.TransientServerFailure);
+        exception.ErrorId.Should().Be("SERVICE_NOT_RUNNING");
+        exception.Metadata.Should().BeSameAs(metadata);
+        exception.InnerException.Should().BeSameAs(inner);
+        exception.UpdateId.Should().BeNull();
+    }
+
+    [Fact]
+    public void LedgerOperationException_status_and_commit_state_constructor_leaves_the_optional_fields_null_when_omitted()
+    {
+        var exception = new LedgerOperationException(
+            "read got no answer", new TransportStatus.NoResponse(), CommitState.NotCommitted);
+
+        exception.Status.Should().Be(new TransportStatus.NoResponse());
+        exception.CommitState.Should().Be(CommitState.NotCommitted);
+        exception.Category.Should().BeNull();
+        exception.ErrorId.Should().BeNull();
+        exception.Metadata.Should().BeNull();
+        exception.InnerException.Should().BeNull();
+        exception.UpdateId.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(CommitState.NotCommitted)]
+    [InlineData(CommitState.Unknown)]
+    [InlineData(CommitState.Committed)]
+    public void LedgerOperationException_status_and_commit_state_constructor_keeps_the_commit_state_it_is_given(
+        CommitState commitState)
+    {
+        var exception = new LedgerOperationException(
+            "failed", new TransportStatus.Grpc(GrpcStatusCode.Unavailable), commitState);
+
+        exception.CommitState.Should().Be(commitState);
+    }
+
+    [Fact]
+    public void LedgerOperationException_infra_error_constructor_still_binds_when_the_category_is_a_null_literal()
+    {
+        var exception = new LedgerOperationException(
+            "transport failed", new TransportStatus.Grpc(GrpcStatusCode.Unavailable), null);
+
+        exception.CommitState.Should().Be(CommitState.Unknown);
+        exception.Category.Should().BeNull();
+    }
+
+    [Fact]
+    public void LedgerOperationException_infra_error_constructor_still_binds_when_given_only_named_optional_arguments()
+    {
+        var exception = new LedgerOperationException(
+            "transport failed",
+            new TransportStatus.Grpc(GrpcStatusCode.Unavailable),
+            errorId: "SOME_ERROR_ID",
+            innerException: null);
+
+        exception.CommitState.Should().Be(CommitState.Unknown);
+        exception.ErrorId.Should().Be("SOME_ERROR_ID");
     }
 }

@@ -187,7 +187,7 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
 
         var asset = files.First(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
         asset.Content.Should().Contain(
-            "global::System.Collections.Generic.IReadOnlyList<IChoice> Choices { get; } = [ChoiceTouch];",
+            "global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceTouch];",
             "the Choices witness's IReadOnlyList head must be global::-qualified when the surrounding namespace tail is `IReadOnlyList`, even though its IChoice type argument has no such collision here");
 
         var diagnostics = CompileEmittedFiles(files);
@@ -260,8 +260,8 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             " Choice<",
             "no bare Choice<> head should survive in the shadowing namespace");
         asset.Content.Should().Contain(
-            "IContract<ContractId<Asset>, Asset>",
-            "IContract<> is routed through the qualifier; with no .IContract namespace collision it stays bare (collision-aware no-op)");
+            "global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Acme.Choice.Asset>, global::Acme.Choice.Asset>",
+            "IContract<> is routed through the qualifier; the extension class roots the template type like every other runtime reference");
 
         var diagnostics = CompileEmittedFiles(files);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -878,11 +878,8 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
 
         var iOracle = files.First(f => f.RelativePath.EndsWith("IOracle.cs", StringComparison.Ordinal));
         iOracle.Content.Should().Contain(
-            "catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)",
-            "the projector's catch clause must be global::-qualified when Daml records named Exception/OperationCanceledException share the emitted namespace");
-        iOracle.Content.Should().Contain(
-            "throw new global::System.InvalidOperationException(",
-            "the projector's no-matching-event diagnostic throw must be global::-qualified when a Daml record named InvalidOperationException shares the emitted namespace");
+            "tx.ProjectChoiceResult(IOracle.ChoiceGetCount, contractId);",
+            "the projector hands the descriptor to the runtime, so no System exception type is named in the emitted namespace");
 
         var diagnostics = CompileEmittedFiles(files);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -892,7 +889,7 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
     }
 
     [Fact]
-    public void Emitted_interface_choice_projector_string_comparison_is_global_qualified_when_a_daml_record_shadows_it()
+    public void Emitted_interface_choice_projector_names_no_string_comparison_a_daml_record_could_shadow()
     {
         var module = new DamlModule
         {
@@ -937,18 +934,9 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
             "the test only guards the shadowing bug if the emitted interface actually shares a namespace with the colliding Daml record");
 
         var iOracle = files.First(f => f.RelativePath.EndsWith("IOracle.cs", StringComparison.Ordinal));
-        iOracle.Content.Should().Contain(
-            "string.Equals(exercised.ContractId, contractId, global::System.StringComparison.Ordinal)",
-            "the projector's contract-id comparison must be global::-qualified when a Daml record named StringComparison shares the emitted namespace");
-        iOracle.Content.Should().Contain(
-            "string.Equals(interfaceId.ModuleName, IOracle.InterfaceId.ModuleName, global::System.StringComparison.Ordinal)",
-            "the projector's module-name comparison must be global::-qualified when a Daml record named StringComparison shares the emitted namespace");
-        iOracle.Content.Should().Contain(
-            "string.Equals(interfaceId.EntityName, IOracle.InterfaceId.EntityName, global::System.StringComparison.Ordinal)",
-            "the projector's entity-name comparison must be global::-qualified when a Daml record named StringComparison shares the emitted namespace");
-        iOracle.Content.Should().Contain(
-            "string.Equals(exercised.ChoiceName.Value, \"GetCount\", global::System.StringComparison.Ordinal))",
-            "the projector's choice-name comparison must be global::-qualified when a Daml record named StringComparison shares the emitted namespace");
+        iOracle.Content.Should().NotContain(
+            "StringComparison",
+            "the projector hands the descriptor to the runtime, so no comparison is emitted that a Daml record named StringComparison could shadow");
 
         var diagnostics = CompileEmittedFiles(files);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();

@@ -67,6 +67,15 @@ public sealed record ReassignmentEventScenario
     /// </summary>
     public bool OmitEventOffset { get; init; }
 
+    /// <summary>
+    /// The interface view the created event of an <see cref="ReassignmentEventShape.Assigned"/>
+    /// carries — the lever the interface-marker lane turns.
+    /// </summary>
+    public InterfaceViewRendering InterfaceView { get; init; } = InterfaceViewRendering.None;
+
+    /// <summary>Renders the created event of an assigned event with no create arguments, whatever view it carries.</summary>
+    public bool OmitCreateArguments { get; init; }
+
     /// <summary>Appends a well-formed matching unassigned event after the scenario's own event.</summary>
     public bool FollowedByMatchingUnassigned { get; init; }
 }

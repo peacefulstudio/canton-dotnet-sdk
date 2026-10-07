@@ -17,17 +17,17 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml record TransferInstructionResult_Output.TransferInstructionResult_Completed
 /// </summary>
 public sealed record TransferInstructionResult_Output_TransferInstructionResult_Completed(
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> ReceiverHoldingCids
-) : IDamlRecord<TransferInstructionResult_Output_TransferInstructionResult_Completed>
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> ReceiverHoldingCids
+) : global::Daml.Runtime.Data.IDamlRecord<TransferInstructionResult_Output_TransferInstructionResult_Completed>
 {
-    private readonly IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _receiverHoldingCids = DamlFieldCollections.Copy(ReceiverHoldingCids);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _receiverHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(ReceiverHoldingCids);
 
     /// <summary>The Daml field <c>receiverHoldingCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("receiverHoldingCids")]
-    public IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> ReceiverHoldingCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("receiverHoldingCids")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> ReceiverHoldingCids
     {
         get => _receiverHoldingCids;
-        init => _receiverHoldingCids = DamlFieldCollections.Copy(value);
+        init => _receiverHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -35,33 +35,33 @@ public sealed record TransferInstructionResult_Output_TransferInstructionResult_
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(TransferInstructionResult_Output_TransferInstructionResult_Completed? other) =>
         other is not null
-        && DamlFieldCollections.Equal(ReceiverHoldingCids, other.ReceiverHoldingCids);
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(ReceiverHoldingCids, other.ReceiverHoldingCids);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(ReceiverHoldingCids));
+        var hash = new global::System.HashCode();
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(ReceiverHoldingCids));
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("receiverHoldingCids", new DamlList(ReceiverHoldingCids.Select(x => (DamlValue)x.ToDamlValue()).ToList()))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("receiverHoldingCids", new global::Daml.Runtime.Data.DamlList(ReceiverHoldingCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList()))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TransferInstructionResult_Output_TransferInstructionResult_Completed FromRecord(DamlRecord record) => new TransferInstructionResult_Output_TransferInstructionResult_Completed(
-        ReceiverHoldingCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("receiverHoldingCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList()
+    public static TransferInstructionResult_Output_TransferInstructionResult_Completed FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferInstructionResult_Output_TransferInstructionResult_Completed(
+        ReceiverHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("receiverHoldingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("receiverHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiverHoldingCids"), context.Field("receiverHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("receiverHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiverHoldingCids"), context.Field("receiverHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
         );
     }
 

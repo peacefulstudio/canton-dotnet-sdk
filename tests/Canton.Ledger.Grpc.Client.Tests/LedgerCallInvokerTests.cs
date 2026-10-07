@@ -5,8 +5,11 @@ using System.Diagnostics;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Authentication;
 using Canton.Ledger.Kernel.Resilience;
+using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using AwesomeAssertions;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime.Outcomes;
 using Grpc.Core;
 using NSubstitute;
 using Xunit;
@@ -147,6 +150,7 @@ public class LedgerCallInvokerTests
         using var cts = new CancellationTokenSource();
 
         var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.Read,
             source,
             StateService.Descriptor,
             "GetLedgerEnd",
@@ -176,6 +180,7 @@ public class LedgerCallInvokerTests
         ActivitySource.AddActivityListener(listener);
 
         var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.Read,
             source,
             StateService.Descriptor,
             "GetLedgerEnd",
@@ -188,6 +193,223 @@ public class LedgerCallInvokerTests
         stopped.Should().ContainSingle().Which.Status.Should().Be(
             ActivityStatusCode.Unset,
             "an expected failure is left for the caller to translate and is not recorded as a span error");
+    }
+
+    [Fact]
+    public async Task InvokeTracedAsync_records_the_failure_on_the_span_and_raises_it_as_a_ledger_operation_exception()
+    {
+        var invoker = new LedgerCallInvoker(Options(), _tokenProvider);
+        using var source = new ActivitySource("LedgerCallInvokerTests.TranslatedFailure");
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = candidate => candidate == source,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stopped.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+        var unavailable = new RpcException(new Status(StatusCode.Unavailable, "down"));
+
+        var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.AcceptedOnlyWrite,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) => Faulted<GetLedgerEndResponse>(unavailable),
+            response => response.Offset,
+            TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.InnerException.Should().BeSameAs(unavailable);
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        stopped.Should().ContainSingle().Which.Status.Should().Be(ActivityStatusCode.Error);
+    }
+
+    [Theory]
+    [InlineData("Read", CommitState.NotCommitted)]
+    [InlineData("AcceptedOnlyWrite", CommitState.Unknown)]
+    [InlineData("EffectAppliedWrite", CommitState.Committed)]
+    public async Task InvokeTracedAsync_raises_an_undecodable_response_as_a_ledger_operation_exception_with_the_commit_state_of_its_kind(
+        string kindName, CommitState expected)
+    {
+        var invoker = new LedgerCallInvoker(Options(), _tokenProvider);
+        using var source = new ActivitySource("LedgerCallInvokerTests.UndecodableByKind");
+        var malformed = new MalformedResponseException("the response has no offset");
+
+        var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            System.Enum.Parse<LedgerCallKind>(kindName),
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) => Ok(new GetLedgerEndResponse()),
+            _ => throw malformed,
+            TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.InnerException.Should().BeSameAs(malformed);
+        thrown.Message.Should().Be("Malformed response from ledger: the response has no offset");
+        thrown.CommitState.Should().Be(expected);
+        thrown.Category.Should().BeNull();
+        thrown.ErrorId.Should().BeNull();
+        thrown.Metadata.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task InvokeTracedAsync_wraps_a_wire_format_failure_in_a_malformed_response_inner_exception()
+    {
+        var invoker = new LedgerCallInvoker(Options(), _tokenProvider);
+        using var source = new ActivitySource("LedgerCallInvokerTests.UndecodableFormat");
+        var format = new FormatException("Cannot parse wire Int64 value 'x' as a 64-bit integer.");
+
+        var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.Read,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) => Ok(new GetLedgerEndResponse()),
+            _ => throw format,
+            TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        var inner = thrown.InnerException.Should().BeOfType<MalformedResponseException>().Which;
+        inner.Detail.Should().Be("Cannot parse wire Int64 value 'x' as a 64-bit integer.");
+        inner.InnerException.Should().BeSameAs(format);
+    }
+
+    [Fact]
+    public async Task InvokeTracedAsync_leaves_a_failure_that_is_not_a_wire_decode_failure_untouched()
+    {
+        var invoker = new LedgerCallInvoker(Options(), _tokenProvider);
+        using var source = new ActivitySource("LedgerCallInvokerTests.UnrelatedProjectionFailure");
+        var ours = new InvalidOperationException("a bug of ours");
+
+        var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.EffectAppliedWrite,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) => Ok(new GetLedgerEndResponse()),
+            _ => throw ours,
+            TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(ours);
+    }
+
+    [Fact]
+    public async Task InvokeTracedAsync_records_an_undecodable_response_on_the_span_and_does_not_retry_it()
+    {
+        var invoker = new LedgerCallInvoker(
+            Options(retry: new RetryOptions { Enabled = true, MaxRetryAttempts = 3, Delay = TimeSpan.FromMilliseconds(1) }),
+            _tokenProvider);
+        using var source = new ActivitySource("LedgerCallInvokerTests.UndecodableRecorded");
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = candidate => candidate == source,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stopped.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+        var attempts = 0;
+
+        var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.Read,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) =>
+            {
+                attempts++;
+                return Ok(new GetLedgerEndResponse());
+            },
+            _ => throw new MalformedResponseException("the response has no offset"),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<LedgerOperationException>();
+        attempts.Should().Be(1);
+        var span = stopped.Should().ContainSingle().Which;
+        span.Status.Should().Be(ActivityStatusCode.Error);
+        span.GetTagItem(ActivityHelper.ErrorType).Should().Be("UndecodableBody");
+    }
+
+    [Fact]
+    public async Task A_call_made_after_the_outer_response_arrived_does_not_inherit_the_outer_response_received_state()
+    {
+        var format = new FormatException("the token is not valid base64");
+        var outer = new LedgerCallInvoker(Options(), _tokenProvider);
+        var child = new LedgerCallInvoker(Options(), FailingTokenProvider(format));
+        using var source = new ActivitySource("LedgerCallInvokerTests.NestedPreSend");
+
+        var escaped = await outer.ExecuteTracedAsync<LedgerClient, Exception?>(
+            LedgerCallKind.Read,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            async (_, token) =>
+            {
+                await outer.InvokeAsync((_, _, _) => Ok(new GetLedgerEndResponse()), token);
+                return await CaptureFailure(() => ChildCall(child, source, token));
+            },
+            TestContext.Current.CancellationToken);
+
+        escaped.Should().BeSameAs(format);
+    }
+
+    [Fact]
+    public async Task Concurrent_calls_made_after_the_outer_response_arrived_do_not_inherit_the_outer_response_received_state()
+    {
+        var format = new FormatException("the token is not valid base64");
+        var outer = new LedgerCallInvoker(Options(), _tokenProvider);
+        var child = new LedgerCallInvoker(Options(), FailingTokenProvider(format));
+        using var source = new ActivitySource("LedgerCallInvokerTests.ConcurrentPreSend");
+
+        var escaped = await outer.ExecuteTracedAsync<LedgerClient, Exception?[]>(
+            LedgerCallKind.Read,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            async (_, token) =>
+            {
+                await outer.InvokeAsync((_, _, _) => Ok(new GetLedgerEndResponse()), token);
+                return await Task.WhenAll(
+                    CaptureFailure(() => ChildCall(child, source, token)),
+                    CaptureFailure(() => ChildCall(child, source, token)));
+            },
+            TestContext.Current.CancellationToken);
+
+        escaped.Should().HaveCount(2).And.AllSatisfy(failure => failure.Should().BeSameAs(format));
+    }
+
+    private static ITokenProvider FailingTokenProvider(Exception failure)
+    {
+        var tokenProvider = Substitute.For<ITokenProvider>();
+        tokenProvider.GetTokenAsync(Arg.Any<CancellationToken>()).Returns<string>(_ => throw failure);
+        return tokenProvider;
+    }
+
+    private static Task<long> ChildCall(LedgerCallInvoker child, ActivitySource source, CancellationToken token) =>
+        child.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.Read,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) => Ok(new GetLedgerEndResponse()),
+            _ => 0L,
+            token);
+
+    private static async Task<Exception?> CaptureFailure(Func<Task> call)
+    {
+        try
+        {
+            await call();
+            return null;
+        }
+        catch (Exception failure)
+        {
+            return failure;
+        }
     }
 
     private static AsyncUnaryCall<T> Ok<T>(T value) =>

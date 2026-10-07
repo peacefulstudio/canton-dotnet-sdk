@@ -405,6 +405,57 @@ public class PqsFilterTranslationTests
     }
 
     [Fact]
+    public void Where_compares_an_Optional_enum_field_for_equality()
+    {
+        var (sql, parameters) = Render(Filter.Where<NullableFields>(n => n.MaybeSuit == Suit.Hearts));
+
+        sql.Should().Be("payload->>'maybeSuit' = @p0");
+        parameters.Should().Equal(("@p0", (object)"Hearts"));
+    }
+
+    [Fact]
+    public void Where_compares_an_Optional_enum_field_for_inequality_keeping_an_absent_value()
+    {
+        var (sql, parameters) = Render(Filter.Where<NullableFields>(n => n.MaybeSuit != Suit.Hearts));
+
+        sql.Should().Be("payload->>'maybeSuit' IS DISTINCT FROM @p0");
+        parameters.Should().Equal(("@p0", (object)"Hearts"));
+    }
+
+    [Fact]
+    public void Where_compares_an_Optional_enum_field_with_a_captured_enum()
+    {
+        var wanted = Suit.Spades;
+
+        var (sql, parameters) = Render(Filter.Where<NullableFields>(n => n.MaybeSuit == wanted));
+
+        sql.Should().Be("payload->>'maybeSuit' = @p0");
+        parameters.Should().Equal(("@p0", (object)"Spades"));
+    }
+
+    [Fact]
+    public void Where_compares_an_Optional_enum_field_with_a_captured_Optional_enum()
+    {
+        Suit? wanted = Suit.Diamonds;
+
+        var (sql, parameters) = Render(Filter.Where<NullableFields>(n => n.MaybeSuit == wanted));
+
+        sql.Should().Be("payload->>'maybeSuit' = @p0");
+        parameters.Should().Equal(("@p0", (object)"Diamonds"));
+    }
+
+    [Fact]
+    public void Where_tests_an_Optional_enum_field_against_a_captured_absent_value()
+    {
+        Suit? absent = null;
+
+        var (sql, parameters) = Render(Filter.Where<NullableFields>(n => n.MaybeSuit == absent));
+
+        sql.Should().Be("COALESCE(jsonb_typeof(payload->'maybeSuit'), 'null') = 'null'");
+        parameters.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Where_rejects_ordering_against_null()
     {
         long? missing = null;

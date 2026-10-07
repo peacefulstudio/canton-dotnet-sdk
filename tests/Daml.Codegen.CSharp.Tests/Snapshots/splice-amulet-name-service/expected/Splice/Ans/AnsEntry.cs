@@ -23,16 +23,16 @@ namespace Splice.Ans;
 /// Generated from Daml template Splice.Ans:AnsEntry
 /// </summary>
 public sealed partial record AnsEntry(
-    [property: DamlFieldAttribute("user")] Party User,
-    [property: DamlFieldAttribute("dso")] Party Dso,
-    [property: DamlFieldAttribute("name")] string Name,
-    [property: DamlFieldAttribute("url")] string Url,
-    [property: DamlFieldAttribute("description")] string Description,
-    [property: DamlFieldAttribute("expiresAt")] DateTimeOffset ExpiresAt
-) : ITemplate, IHasChoices<AnsEntry>, IDamlRecord<AnsEntry>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("user")] global::Daml.Runtime.Data.Party User,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("dso")] global::Daml.Runtime.Data.Party Dso,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("name")] string Name,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("url")] string Url,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("description")] string Description,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("expiresAt")] global::System.DateTimeOffset ExpiresAt
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<AnsEntry>, global::Daml.Runtime.Data.IDamlRecord<AnsEntry>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1", "Splice.Ans", "AnsEntry");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1", "Splice.Ans", "AnsEntry");
 
     /// <summary>Gets the package ID.</summary>
     public static string PackageId => "cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1";
@@ -41,43 +41,43 @@ public sealed partial record AnsEntry(
     public static string PackageName => "splice-amulet-name-service";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 1, 24);
+    public static global::System.Version PackageVersion { get; } = new(0, 1, 24);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("user", User.ToDamlValue()),
-        DamlField.Create("dso", Dso.ToDamlValue()),
-        DamlField.Create("name", new DamlText(Name)),
-        DamlField.Create("url", new DamlText(Url)),
-        DamlField.Create("description", new DamlText(Description)),
-        DamlField.Create("expiresAt", new DamlTimestamp(ExpiresAt))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("user", User.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("dso", Dso.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("name", new global::Daml.Runtime.Data.DamlText(Name)),
+        global::Daml.Runtime.Data.DamlField.Create("url", new global::Daml.Runtime.Data.DamlText(Url)),
+        global::Daml.Runtime.Data.DamlField.Create("description", new global::Daml.Runtime.Data.DamlText(Description)),
+        global::Daml.Runtime.Data.DamlField.Create("expiresAt", new global::Daml.Runtime.Data.DamlTimestamp(ExpiresAt))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnsEntry FromRecord(DamlRecord record) => new AnsEntry(
-        User: Party.FromDamlValue(record.GetRequiredField("user").As<DamlParty>()),
-        Dso: Party.FromDamlValue(record.GetRequiredField("dso").As<DamlParty>()),
-        Name: record.GetRequiredField("name").As<DamlText>().Value,
-        Url: record.GetRequiredField("url").As<DamlText>().Value,
-        Description: record.GetRequiredField("description").As<DamlText>().Value,
-        ExpiresAt: record.GetRequiredField("expiresAt").As<DamlTimestamp>().Value
+    public static AnsEntry FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntry(
+        User: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("user").As<global::Daml.Runtime.Data.DamlParty>()),
+        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso").As<global::Daml.Runtime.Data.DamlParty>()),
+        Name: record.GetRequiredField("name").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Url: record.GetRequiredField("url").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Description: record.GetRequiredField("description").As<global::Daml.Runtime.Data.DamlText>().Value,
+        ExpiresAt: record.GetRequiredField("expiresAt").As<global::Daml.Runtime.Data.DamlTimestamp>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user"))),
-            DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
-            DamlField.Create("name", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "name"), context.Field("name"))),
-            DamlField.Create("url", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "url"), context.Field("url"))),
-            DamlField.Create("description", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "description"), context.Field("description"))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "expiresAt"), context.Field("expiresAt")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user"))),
+            global::Daml.Runtime.Data.DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
+            global::Daml.Runtime.Data.DamlField.Create("name", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "name"), context.Field("name"))),
+            global::Daml.Runtime.Data.DamlField.Create("url", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "url"), context.Field("url"))),
+            global::Daml.Runtime.Data.DamlField.Create("description", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "description"), context.Field("description"))),
+            global::Daml.Runtime.Data.DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "expiresAt"), context.Field("expiresAt")))
         );
     }
 
@@ -85,53 +85,53 @@ public sealed partial record AnsEntry(
     /// Exercise the AnsEntry_Expire choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<AnsEntry, AnsEntry_Expire, AnsEntry_ExpireResult> ChoiceAnsEntry_Expire { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<AnsEntry, AnsEntry_Expire, global::Splice.Ans.AnsEntry_ExpireResult> ChoiceAnsEntry_Expire { get; } = new()
     {
-        Name = new ChoiceName("AnsEntry_Expire"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("AnsEntry_Expire"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => AnsEntry_Expire.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => AnsEntry_ExpireResult.FromRecord(val.As<DamlRecord>()),
-        ArgumentJsonReader = (json, context) => AnsEntry.AnsEntry_Expire.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => AnsEntry_ExpireResult.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => AnsEntry_Expire.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Ans.AnsEntry_ExpireResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ArgumentJsonReader = (json, context) => global::Splice.Ans.AnsEntry.AnsEntry_Expire.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Splice.Ans.AnsEntry_ExpireResult.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>
     /// Exercise the AnsEntry_Renew choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<AnsEntry, AnsEntry_Renew, AnsEntry_RenewResult> ChoiceAnsEntry_Renew { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<AnsEntry, AnsEntry_Renew, global::Splice.Ans.AnsEntry_RenewResult> ChoiceAnsEntry_Renew { get; } = new()
     {
-        Name = new ChoiceName("AnsEntry_Renew"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("AnsEntry_Renew"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => AnsEntry_Renew.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => AnsEntry_RenewResult.FromRecord(val.As<DamlRecord>()),
-        ArgumentJsonReader = (json, context) => AnsEntry.AnsEntry_Renew.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => AnsEntry_RenewResult.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => AnsEntry_Renew.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Ans.AnsEntry_RenewResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ArgumentJsonReader = (json, context) => global::Splice.Ans.AnsEntry.AnsEntry_Renew.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Splice.Ans.AnsEntry_RenewResult.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<AnsEntry, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<AnsEntry, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceAnsEntry_Expire, ChoiceAnsEntry_Renew, ChoiceArchive];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceAnsEntry_Expire, ChoiceAnsEntry_Renew, ChoiceArchive];
 
 }
 
@@ -160,22 +160,22 @@ public static class AnsEntrySubmissionExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<AnsEntry>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<AnsEntry>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         AnsEntry payload,
-        SubmitterInfo submitter,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<AnsEntry>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="AnsEntry"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Splice.Ans.AnsEntry"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -188,22 +188,22 @@ public static class AnsEntryNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand AnsEntry_ExpireCommand(
-        this ContractId<AnsEntry> contractId,
-        AnsEntry.AnsEntry_Expire argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand AnsEntry_ExpireCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> contractId,
+        global::Splice.Ans.AnsEntry.AnsEntry_Expire argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            AnsEntry.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Splice.Ans.AnsEntry.TemplateId,
             contractId,
-            new ChoiceName("AnsEntry_Expire"),
+            new global::Daml.Runtime.Commands.ChoiceName("AnsEntry_Expire"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the AnsEntry_Expire choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>AnsEntry_ExpireResult</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Splice.Ans.AnsEntry_ExpireResult</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -215,18 +215,18 @@ public static class AnsEntryNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<AnsEntry_ExpireResult>> TryAnsEntry_ExpireAsync(
-        this ContractId<AnsEntry> contractId,
-        ILedgerWriter client,
-        AnsEntry.AnsEntry_Expire argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AnsEntry_ExpireResult>> TryAnsEntry_ExpireAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Ans.AnsEntry.AnsEntry_Expire argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AnsEntry_ExpireCommand(argument);
 
@@ -240,22 +240,22 @@ public static class AnsEntryNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand AnsEntry_RenewCommand(
-        this ContractId<AnsEntry> contractId,
-        AnsEntry.AnsEntry_Renew argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand AnsEntry_RenewCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> contractId,
+        global::Splice.Ans.AnsEntry.AnsEntry_Renew argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            AnsEntry.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Splice.Ans.AnsEntry.TemplateId,
             contractId,
-            new ChoiceName("AnsEntry_Renew"),
+            new global::Daml.Runtime.Commands.ChoiceName("AnsEntry_Renew"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the AnsEntry_Renew choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>AnsEntry_RenewResult</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Splice.Ans.AnsEntry_RenewResult</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -267,18 +267,18 @@ public static class AnsEntryNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<AnsEntry_RenewResult>> TryAnsEntry_RenewAsync(
-        this ContractId<AnsEntry> contractId,
-        ILedgerWriter client,
-        AnsEntry.AnsEntry_Renew argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AnsEntry_RenewResult>> TryAnsEntry_RenewAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Ans.AnsEntry.AnsEntry_Renew argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AnsEntry_RenewCommand(argument);
 
@@ -291,20 +291,20 @@ public static class AnsEntryNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<AnsEntry> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            AnsEntry.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Splice.Ans.AnsEntry.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -315,17 +315,17 @@ public static class AnsEntryNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<AnsEntry> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -334,90 +334,12 @@ public static class AnsEntryNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<AnsEntry_ExpireResult> ProjectAnsEntry_ExpireResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, AnsEntry.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, AnsEntry.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "AnsEntry_Expire", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = AnsEntry.ChoiceAnsEntry_Expire.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<AnsEntry_ExpireResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<AnsEntry_ExpireResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AnsEntry_ExpireResult> ProjectAnsEntry_ExpireResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Splice.Ans.AnsEntry.ChoiceAnsEntry_Expire, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'AnsEntry_Expire' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AnsEntry_RenewResult> ProjectAnsEntry_RenewResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Splice.Ans.AnsEntry.ChoiceAnsEntry_Renew, contractId);
 
-    private static ExerciseOutcome<AnsEntry_RenewResult> ProjectAnsEntry_RenewResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, AnsEntry.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, AnsEntry.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "AnsEntry_Renew", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = AnsEntry.ChoiceAnsEntry_Renew.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<AnsEntry_RenewResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<AnsEntry_RenewResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'AnsEntry_Renew' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, AnsEntry.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, AnsEntry.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = AnsEntry.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Splice.Ans.AnsEntry.ChoiceArchive, contractId);
 }

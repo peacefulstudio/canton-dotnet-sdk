@@ -14,30 +14,30 @@ namespace Splice.Ans;
 /// Generated from Daml record AnsRules_RequestEntryResult
 /// </summary>
 public sealed record AnsRules_RequestEntryResult(
-    [property: DamlFieldAttribute("entryCid")] ContractId<AnsEntryContext> EntryCid,
-    [property: DamlFieldAttribute("requestCid")] ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest> RequestCid
-) : IDamlRecord<AnsRules_RequestEntryResult>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("entryCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntryContext> EntryCid,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("requestCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest> RequestCid
+) : global::Daml.Runtime.Data.IDamlRecord<AnsRules_RequestEntryResult>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("entryCid", EntryCid.ToDamlValue()),
-        DamlField.Create("requestCid", RequestCid.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("entryCid", EntryCid.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("requestCid", RequestCid.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnsRules_RequestEntryResult FromRecord(DamlRecord record) => new AnsRules_RequestEntryResult(
-        EntryCid: new ContractId<AnsEntryContext>(record.GetRequiredField("entryCid").As<DamlContractId>().Value),
-        RequestCid: new ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest>(record.GetRequiredField("requestCid").As<DamlContractId>().Value)
+    public static AnsRules_RequestEntryResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRules_RequestEntryResult(
+        EntryCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntryContext>(record.GetRequiredField("entryCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        RequestCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionRequest>(record.GetRequiredField("requestCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("entryCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryCid"), context.Field("entryCid"))),
-            DamlField.Create("requestCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "requestCid"), context.Field("requestCid")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("entryCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryCid"), context.Field("entryCid"))),
+            global::Daml.Runtime.Data.DamlField.Create("requestCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "requestCid"), context.Field("requestCid")))
         );
     }
 

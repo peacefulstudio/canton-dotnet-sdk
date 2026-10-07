@@ -103,12 +103,12 @@ public class NamedSubmitterTests
         ]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Public surface: extension class, payload-only TryCreateAsync.
         content.Should().Contain("public static class AgreementSubmissionExtensions");
-        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Agreement>>> TryCreateAsync(");
-        content.Should().Contain("this ILedgerWriter client,");
+        content.Should().Contain("public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Agreement>>> TryCreateAsync(");
+        content.Should().Contain("this global::Daml.Ledger.Abstractions.ILedgerWriter client,");
         content.Should().Contain("Agreement payload,");
         // No explicit actAs parameter — the payload is sufficient.
         content.Should().NotContain("string actAs,");
@@ -125,13 +125,13 @@ public class NamedSubmitterTests
         ]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Each payload-derived party becomes a payload-property reference inside
         // the SubmitterInfo's HashSet<Party>. We assert on the property names
         // (PascalCased) rather than the surrounding HashSet boilerplate, which
         // could be polished later without breaking consumers.
-        content.Should().Contain("new SubmitterInfo(new HashSet<Party>");
+        content.Should().Contain("new global::Daml.Runtime.Commands.SubmitterInfo(new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party>");
         content.Should().Contain("payload.Platform");
         content.Should().Contain("payload.Initiator");
         content.Should().Contain("payload.Counterparty");
@@ -150,11 +150,11 @@ public class NamedSubmitterTests
         ]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Single-party fast-path: SubmitterInfo submitter = payload.Platform;
         content.Should().Contain("SubmitterInfo submitter = payload.Platform;");
-        content.Should().NotContain("new HashSet<Party>");
+        content.Should().NotContain("new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party>");
     }
 
     [Fact]
@@ -167,9 +167,9 @@ public class NamedSubmitterTests
         var module = MakeAgreementModule(DamlPartyAnalysis.Dynamic);
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Agreement>>> TryCreateAsync(");
+        content.Should().Contain("public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Agreement>>> TryCreateAsync(");
         content.Should().Contain("SubmitterInfo submitter,");
         // No payload-derived `var submitter = ...` line.
         content.Should().NotContain("payload.Platform,");
@@ -187,7 +187,7 @@ public class NamedSubmitterTests
         ]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Demoted to dynamic — explicit submitter parameter, no bogus field.
         content.Should().Contain("SubmitterInfo submitter,");
@@ -203,11 +203,11 @@ public class NamedSubmitterTests
         ]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // The wrapper is an extension method on ILedgerWriter — the call site
         // reads `client.TryCreateAsync(payload)`.
-        content.Should().Contain("this ILedgerWriter client");
+        content.Should().Contain("this global::Daml.Ledger.Abstractions.ILedgerWriter client");
     }
 
     #endregion
@@ -218,7 +218,7 @@ public class NamedSubmitterTests
     public void TryChoiceAsync_with_single_payload_derived_controller_emits_one_party_parameter()
     {
         // The typed-controller <Choice>Async surface is emitted on the
-        // sibling <TemplateName>Extensions class (CSharpCodeGenerator.ChoiceResults.cs)
+        // sibling <TemplateName>Extensions class (ChoiceEmitter.ContractIdExercisers.cs)
         // — its method takes one named Party parameter per declared
         // controller. Accept's controller list is `[counterparty]`, so the
         // wrapper signature carries a single `Party counterparty` parameter
@@ -273,13 +273,13 @@ public class NamedSubmitterTests
         };
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var offer = files.First(f => f.RelativePath.EndsWith("Offer.cs", StringComparison.Ordinal)).Content;
+        var offer = files.First(f => f.RelativePath.EndsWith("Offer.cs", global::System.StringComparison.Ordinal)).Content;
 
         // The choice has a single Party-typed controller (counterparty). The
         // ergonomic wrapper carries one named Party parameter — no string actAs.
         // A readAs-capable SubmitterInfo overload is emitted alongside it, so a
         // submitter that must read contracts it does not act as stays expressible.
-        offer.Should().Contain("public static async Task<ExerciseOutcome<AcceptResult>> TryAcceptAsync(");
+        offer.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>>> TryAcceptAsync(");
         offer.Should().Contain("Party counterparty,");
         offer.Should().NotContain("string actAs,");
         offer.Should().Contain("SubmitterInfo submitter,");
@@ -347,17 +347,17 @@ public class NamedSubmitterTests
         };
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Both controllers surface as named parameters in declaration order.
         content.Should().Contain("Party initiator,");
         content.Should().Contain("Party counterparty,");
         // Order: initiator must appear before counterparty in the signature.
-        var idxInit = content.IndexOf("Party initiator,", StringComparison.Ordinal);
-        var idxCp = content.IndexOf("Party counterparty,", StringComparison.Ordinal);
+        var idxInit = content.IndexOf("Party initiator,", global::System.StringComparison.Ordinal);
+        var idxCp = content.IndexOf("Party counterparty,", global::System.StringComparison.Ordinal);
         idxInit.Should().BeLessThan(idxCp);
         // SubmitterInfo unions both controllers in actAs.
-        content.Should().Contain("new SubmitterInfo(new HashSet<Party> { initiator, counterparty });");
+        content.Should().Contain("new global::Daml.Runtime.Commands.SubmitterInfo(new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party> { initiator, counterparty });");
     }
 
     [Fact]
@@ -401,7 +401,7 @@ public class NamedSubmitterTests
         };
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Holding.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Holding.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Both surfaces fall back to the explicit submitter shape.
         content.Should().Contain("SubmitterInfo submitter,");
@@ -448,10 +448,10 @@ public class NamedSubmitterTests
         };
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal)).Content;
 
         content.Should().Contain("public static class AssetSubmissionExtensions");
-        content.Should().Contain("public static Task<ExerciseOutcome<ContractId<Asset>>> TryCreateAsync(");
+        content.Should().Contain("public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Asset>>> TryCreateAsync(");
         content.Should().Contain("public static class AssetNonContractExtensions");
         content.Should().Contain("TryArchiveAsync(");
         content.Should().Contain("DamlRecord.Create()");
@@ -471,17 +471,17 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([new DamlPartyPayloadField("issuer")]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("this ContractId<Agreement> contractId,");
-        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        content.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement> contractId,");
+        content.Should().Contain("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>, global::Acme.Agreements.Agreement> contract,");
         content.Should().Contain("return contract.Id.TryRenewAsync(");
-        content.Should().Contain("ArgumentNullException.ThrowIfNull(client);");
+        content.Should().Contain("global::System.ArgumentNullException.ThrowIfNull(client);");
         content.Should().Contain("contract.Data.Platform,");
         content.Should().Contain("contract.Data.Holder,");
         content.Should().Contain("contract.Data.Issuer,");
-        var idxController = content.IndexOf("contract.Data.Platform,", StringComparison.Ordinal);
-        var idxObserver = content.IndexOf("contract.Data.Holder,", StringComparison.Ordinal);
+        var idxController = content.IndexOf("contract.Data.Platform,", global::System.StringComparison.Ordinal);
+        var idxObserver = content.IndexOf("contract.Data.Holder,", global::System.StringComparison.Ordinal);
         idxController.Should().BeLessThan(idxObserver);
     }
 
@@ -495,17 +495,17 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([new DamlPartyPayloadField("issuer")]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("this IContract<ContractId<Agreement>, Agreement> contract,");
-        var idxContractParam = content.IndexOf("this IContract<ContractId<Agreement>, Agreement> contract,", StringComparison.Ordinal);
-        var idxDelegate = content.IndexOf("return contract.Id.TryRenewAsync(", StringComparison.Ordinal);
+        content.Should().Contain("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>, global::Acme.Agreements.Agreement> contract,");
+        var idxContractParam = content.IndexOf("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>, global::Acme.Agreements.Agreement> contract,", global::System.StringComparison.Ordinal);
+        var idxDelegate = content.IndexOf("return contract.Id.TryRenewAsync(", global::System.StringComparison.Ordinal);
         idxDelegate.Should().BeGreaterThan(0);
         content[idxContractParam..idxDelegate].Should().Contain("CommandId? commandId = null,");
         var delegateBody = content[idxDelegate..];
-        var idxWorkflowId = delegateBody.IndexOf("workflowId,", StringComparison.Ordinal);
-        var idxCommandId = delegateBody.IndexOf("commandId,", StringComparison.Ordinal);
-        var idxCancellationToken = delegateBody.IndexOf("cancellationToken);", StringComparison.Ordinal);
+        var idxWorkflowId = delegateBody.IndexOf("workflowId,", global::System.StringComparison.Ordinal);
+        var idxCommandId = delegateBody.IndexOf("commandId,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = delegateBody.IndexOf("cancellationToken);", global::System.StringComparison.Ordinal);
         idxWorkflowId.Should().BeLessThan(idxCommandId);
         idxCommandId.Should().BeLessThan(idxCancellationToken);
     }
@@ -520,10 +520,10 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Dynamic);
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("this ContractId<Agreement> contractId,");
-        content.Should().NotContain("this IContract<ContractId<Agreement>, Agreement> contract,");
+        content.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement> contractId,");
+        content.Should().NotContain("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>, global::Acme.Agreements.Agreement> contract,");
     }
 
     [Fact]
@@ -577,12 +577,12 @@ public class NamedSubmitterTests
         };
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Offer.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Offer.cs", global::System.StringComparison.Ordinal)).Content;
 
-        content.Should().Contain("this IContract<ContractId<Offer>, Offer> contract,");
+        content.Should().Contain("this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Offer>, global::Acme.Agreements.Offer> contract,");
         content.Should().Contain("Offer.Accept argument,");
-        content.Should().Contain("ArgumentNullException.ThrowIfNull(argument);");
-        var idxArg = content.IndexOf("return contract.Id.TryAcceptAsync(", StringComparison.Ordinal);
+        content.Should().Contain("global::System.ArgumentNullException.ThrowIfNull(argument);");
+        var idxArg = content.IndexOf("return contract.Id.TryAcceptAsync(", global::System.StringComparison.Ordinal);
         idxArg.Should().BeGreaterThan(0);
         var delegateBody = content[idxArg..];
         delegateBody.Should().Contain("argument,");
@@ -600,7 +600,7 @@ public class NamedSubmitterTests
             [new DamlPartyPayloadField("platform")]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         content.Should().Contain("using Daml.Ledger.Abstractions;");
         content.Should().NotContain(".Grpc.Client;");
@@ -681,14 +681,14 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Dynamic);
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Helper signature plus payload-derived body — declaration order preserved.
-        content.Should().Contain("public static IReadOnlyList<Party> Observers(Agreement payload)");
+        content.Should().Contain("public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers(Agreement payload)");
         content.Should().Contain("payload.Holder");
         content.Should().Contain("payload.Issuer");
         // Helper returns a Party[] literal, not a SubmitterInfo.
-        content.Should().Contain("return new Party[]");
+        content.Should().Contain("return new global::Daml.Runtime.Data.Party[]");
     }
 
     [Fact]
@@ -704,7 +704,7 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Dynamic);
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // No documentation helper — caller is on the hook for figuring out
         // the observer set themselves, just as they are for the actAs set
@@ -725,7 +725,7 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Dynamic);
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         content.Should().NotContain("Observers(Agreement payload)");
     }
@@ -746,7 +746,7 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Method signature carries the controller and both observer parties.
         content.Should().Contain("Party platform,");
@@ -754,8 +754,8 @@ public class NamedSubmitterTests
         content.Should().Contain("Party issuer,");
         // Body builds a SubmitterInfo that routes platform into actAs and
         // holder/issuer into readAs.
-        content.Should().Contain("actAs: new HashSet<Party> { platform }");
-        content.Should().Contain("readAs: new HashSet<Party> { holder, issuer }");
+        content.Should().Contain("actAs: new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party> { platform }");
+        content.Should().Contain("readAs: new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party> { holder, issuer }");
         content.Should().Contain("client." + TrySubmitSingleArgumentOrder);
     }
 
@@ -774,11 +774,11 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([new DamlPartyPayloadField("issuer")]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Both observer-only parties surface as readAs entries (declaration order:
         // template-level first, then choice-level).
-        content.Should().Contain("readAs: new HashSet<Party> { holder, issuer }");
+        content.Should().Contain("readAs: new global::System.Collections.Generic.HashSet<global::Daml.Runtime.Data.Party> { holder, issuer }");
     }
 
     [Fact]
@@ -795,7 +795,7 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // Single-controller fast-path: SubmitterInfo derived directly from
         // the named Party param (no HashSet allocation, no readAs argument).
@@ -820,18 +820,18 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         content.Should().Contain("Party platform,");
         content.Should().Contain("SubmitterInfo submitter,");
         content.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
         var contractIdOverloads = content
-            .Split("TryRenewAsync(\n        this ContractId<Agreement> contractId,")
+            .Split("TryRenewAsync(\n        this global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement> contractId,")
             .Length - 1;
         contractIdOverloads.Should().Be(2);
-        content.Should().Contain("public static Task<ExerciseOutcome<RenewResult>> TryRenewAsync(");
-        content.Should().Contain("public static async Task<ExerciseOutcome<RenewResult>> TryRenewAsync(");
+        content.Should().Contain("public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>>> TryRenewAsync(");
+        content.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Acme.Agreements.Agreement>>> TryRenewAsync(");
     }
 
     [Fact]
@@ -848,7 +848,7 @@ public class NamedSubmitterTests
             choiceObservers: DamlPartyAnalysis.Static([]));
 
         var files = CreateGenerator().Generate(CreateDar(module));
-        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", StringComparison.Ordinal)).Content;
+        var content = files.First(f => f.RelativePath.EndsWith("Agreement.cs", global::System.StringComparison.Ordinal)).Content;
 
         // platform is already in actAs as the controller — no separate
         // readAs param, no readAs entry, the single-controller fast-path

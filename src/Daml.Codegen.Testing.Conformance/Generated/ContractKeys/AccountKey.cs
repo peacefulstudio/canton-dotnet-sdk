@@ -13,30 +13,30 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// Generated from Daml record AccountKey
 /// </summary>
 public sealed record AccountKey(
-    [property: DamlFieldAttribute("custodian")] Party Custodian,
-    [property: DamlFieldAttribute("label")] string Label
-) : IDamlRecord<AccountKey>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("custodian")] global::Daml.Runtime.Data.Party Custodian,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("label")] string Label
+) : global::Daml.Runtime.Data.IDamlRecord<AccountKey>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("custodian", Custodian.ToDamlValue()),
-        DamlField.Create("label", new DamlText(Label))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("custodian", Custodian.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("label", new global::Daml.Runtime.Data.DamlText(Label))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AccountKey FromRecord(DamlRecord record) => new AccountKey(
-        Custodian: Party.FromDamlValue(record.GetRequiredField("custodian").As<DamlParty>()),
-        Label: record.GetRequiredField("label").As<DamlText>().Value
+    public static AccountKey FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AccountKey(
+        Custodian: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("custodian").As<global::Daml.Runtime.Data.DamlParty>()),
+        Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))),
-            DamlField.Create("label", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "label"), context.Field("label")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))),
+            global::Daml.Runtime.Data.DamlField.Create("label", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "label"), context.Field("label")))
         );
     }
 

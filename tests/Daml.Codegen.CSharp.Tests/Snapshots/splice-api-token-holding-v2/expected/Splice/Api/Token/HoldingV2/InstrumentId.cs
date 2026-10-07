@@ -13,30 +13,30 @@ namespace Splice.Api.Token.HoldingV2;
 /// Generated from Daml record InstrumentId
 /// </summary>
 public sealed record InstrumentId(
-    [property: DamlFieldAttribute("admin")] Party Admin,
-    [property: DamlFieldAttribute("id")] string Id
-) : IDamlRecord<InstrumentId>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("admin")] global::Daml.Runtime.Data.Party Admin,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
+) : global::Daml.Runtime.Data.IDamlRecord<InstrumentId>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("admin", Admin.ToDamlValue()),
-        DamlField.Create("id", new DamlText(Id))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("admin", Admin.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static InstrumentId FromRecord(DamlRecord record) => new InstrumentId(
-        Admin: Party.FromDamlValue(record.GetRequiredField("admin").As<DamlParty>()),
-        Id: record.GetRequiredField("id").As<DamlText>().Value
+    public static InstrumentId FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new InstrumentId(
+        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin").As<global::Daml.Runtime.Data.DamlParty>()),
+        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
-            DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("admin", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "admin"), context.Field("admin"))),
+            global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
         );
     }
 

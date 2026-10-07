@@ -1,9 +1,11 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json;
 using Canton.Ledger.Abstractions;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Serialization;
 
 namespace Canton.Ledger.Testing;
 
@@ -14,18 +16,25 @@ namespace Canton.Ledger.Testing;
 /// mocking framework.
 /// </summary>
 /// <remarks>
-/// The filtered overloads (<see cref="QueryAsync{T}(PqsFilter, CancellationToken)"/> and
-/// <see cref="QueryOneAsync{T}"/>) ignore the filter's content and return the first staged
-/// result(s) regardless of what the filter would actually match against a live PQS:
-/// <see cref="PqsFilter"/>'s SQL-translation internals (<c>ToSqlClause</c>) are <c>internal</c> to
-/// <c>Canton.Ledger.Abstractions</c> and not visible here, and re-implementing filter evaluation
-/// in-memory is out of scope for this fake — stage the exact result set your test expects for the
-/// filter you exercise instead. This is more surprising for <see cref="QueryOneAsync{T}"/> than for
-/// the bulk overload: the real contract promises <c>null</c> when nothing matches, but this fake
-/// always returns the first staged contract as long as one was staged, even if a live PQS query with
-/// that filter would have matched none of them. Any Daml type or interface that was not staged throws
-/// a descriptive <see cref="NotSupportedException"/> naming the missing setup, so a test never
-/// silently exercises unconfigured behaviour. Construct instances through <see cref="Create"/>.
+/// The filtered overloads (<see cref="QueryAsync{T}(PqsFilter, CancellationToken)"/>,
+/// <see cref="QueryAsync{T}(PqsFilter, PqsPage, CancellationToken)"/> and <see cref="QueryOneAsync{T}"/>)
+/// evaluate the filter in memory against each staged contract's payload, with the same semantics as
+/// the SQL a live PQS runs: a contract is returned only when the filter is definitely true for it, and
+/// <see cref="QueryOneAsync{T}"/> returns <c>null</c> when no staged contract matches. A staged
+/// contract whose field holds a value PQS would fail to cast (for example a non-numeric text compared as
+/// <c>Int64</c>) makes the query throw <see cref="InvalidOperationException"/> naming the contract and
+/// field. Any Daml type or interface that was not staged throws a descriptive
+/// <see cref="NotSupportedException"/> naming the missing setup, so a test never silently exercises
+/// unconfigured behaviour. Construct instances through <see cref="Create"/>.
+/// <para>
+/// The paged overloads order contracts by contract id before slicing, as <see cref="IPqsClient"/>
+/// promises, using an ordinal comparison. A live PQS orders <c>contract_id</c> by its database
+/// collation (<c>en_US.utf8</c> on the LocalNet PQS), so the two agree for real contract ids, which
+/// are lowercase hex, but may disagree for made-up staged ids that mix letters, digits and
+/// punctuation, such as <c>cid-2</c>, <c>cid10</c> and <c>cid2</c>. Stage hex-like ids when a test
+/// depends on which contracts land on which page. The unpaged overloads return contracts in staging
+/// order.
+/// </para>
 /// </remarks>
 public sealed class FakePqsClient : IPqsClient
 {
@@ -50,15 +59,16 @@ public sealed class FakePqsClient : IPqsClient
         Task.FromResult(StagedContracts<T>());
 
     /// <summary>
-    /// Returns the slice of the staged contracts selected by <paramref name="page"/>. The slice is
-    /// taken over the staged set in staging order — unlike the real client, the fake does not
-    /// re-sort by contract id — so stage contracts in the order pages should surface them.
+    /// Returns the slice of the staged contracts selected by <paramref name="page"/>. Like the real
+    /// client's <c>ORDER BY contract_id</c>, the staged set is ordered by contract id before the slice
+    /// is taken, whatever order the contracts were staged in. The fake compares ids with
+    /// <see cref="StringComparer.Ordinal"/>; see the class remarks for how that differs from a live PQS.
     /// </summary>
     public Task<IReadOnlyList<Contract<T>>> QueryAsync<T>(PqsPage page, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(page);
-        return Task.FromResult(Slice(StagedContracts<T>(), page));
+        return Task.FromResult(Slice(StagedContracts<T>(), contract => contract.Id.Value, page));
     }
 
     /// <inheritdoc />
@@ -70,8 +80,10 @@ public sealed class FakePqsClient : IPqsClient
 
     /// <summary>
     /// Returns the slice of the staged interface contracts selected by <paramref name="page"/>.
-    /// The slice is taken over the staged set in staging order — unlike the real client, the fake
-    /// does not re-sort by contract id — so stage contracts in the order pages should surface them.
+    /// Like the real client's <c>ORDER BY contract_id</c>, the staged set is ordered by contract id
+    /// before the slice is taken, whatever order the contracts were staged in. The fake compares ids
+    /// with <see cref="StringComparer.Ordinal"/>; see the class remarks for how that differs from a
+    /// live PQS.
     /// </summary>
     public Task<IReadOnlyList<InterfaceContract<TInterface, TView>>> QueryAsync<TInterface, TView>(
         PqsPage page,
@@ -80,7 +92,7 @@ public sealed class FakePqsClient : IPqsClient
         where TView : IDamlRecord<TView>
     {
         ArgumentNullException.ThrowIfNull(page);
-        return Task.FromResult(Slice(StagedInterfaceContracts<TInterface, TView>(), page));
+        return Task.FromResult(Slice(StagedInterfaceContracts<TInterface, TView>(), contract => contract.Id.Value, page));
     }
 
     /// <inheritdoc />
@@ -88,13 +100,15 @@ public sealed class FakePqsClient : IPqsClient
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(filter);
-        return Task.FromResult(StagedContracts<T>());
+        return Task.FromResult(MatchingContracts<T>(filter));
     }
 
     /// <summary>
-    /// Returns the slice of the staged contracts selected by <paramref name="page"/>, ignoring the
-    /// filter's content like the unpaged filtered overload does. The slice is taken over the staged
-    /// set in staging order — unlike the real client, the fake does not re-sort by contract id.
+    /// Returns the slice selected by <paramref name="page"/> of the staged contracts that match
+    /// <paramref name="filter"/>. The filter is applied first, then, like the real client's
+    /// <c>ORDER BY contract_id</c>, the matches are ordered by contract id before the slice is taken,
+    /// whatever order the contracts were staged in. The fake compares ids with
+    /// <see cref="StringComparer.Ordinal"/>; see the class remarks for how that differs from a live PQS.
     /// </summary>
     public Task<IReadOnlyList<Contract<T>>> QueryAsync<T>(
         PqsFilter filter,
@@ -104,7 +118,7 @@ public sealed class FakePqsClient : IPqsClient
     {
         ArgumentNullException.ThrowIfNull(filter);
         ArgumentNullException.ThrowIfNull(page);
-        return Task.FromResult(Slice(StagedContracts<T>(), page));
+        return Task.FromResult(Slice(MatchingContracts<T>(filter), contract => contract.Id.Value, page));
     }
 
     /// <inheritdoc />
@@ -112,8 +126,8 @@ public sealed class FakePqsClient : IPqsClient
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(filter);
-        var staged = StagedContracts<T>();
-        return Task.FromResult(staged.Count > 0 ? staged[0] : null);
+        var matches = MatchingContracts<T>(filter);
+        return Task.FromResult(matches.Count > 0 ? matches[0] : null);
     }
 
     /// <inheritdoc />
@@ -156,6 +170,17 @@ public sealed class FakePqsClient : IPqsClient
             $"FakePqsClient.Create().WithQueryResults<{typeof(T).Name}>(...).Build() before exercising this path.");
     }
 
+    private IReadOnlyList<Contract<T>> MatchingContracts<T>(PqsFilter filter)
+        where T : ITemplate, IDamlRecord<T> =>
+        [.. StagedContracts<T>().Where(contract => Matches(filter, contract))];
+
+    private static bool Matches<T>(PqsFilter filter, Contract<T> contract)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        using var payload = JsonDocument.Parse(DamlJsonSerializer.Serialize(contract.Data.ToRecord()));
+        return PqsFilterEvaluator.Matches(filter, contract.Id.Value, payload.RootElement);
+    }
+
     private IReadOnlyList<InterfaceContract<TInterface, TView>> StagedInterfaceContracts<TInterface, TView>()
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
@@ -171,6 +196,7 @@ public sealed class FakePqsClient : IPqsClient
             $"{typeof(TView).Name}>(...).Build() before exercising this path.");
     }
 
-    private static IReadOnlyList<TItem> Slice<TItem>(IReadOnlyList<TItem> items, PqsPage page) =>
-        [.. items.Skip(page.Offset).Take(page.Limit)];
+    private static IReadOnlyList<TItem> Slice<TItem>(
+        IReadOnlyList<TItem> items, Func<TItem, string> contractIdOf, PqsPage page) =>
+        [.. items.OrderBy(contractIdOf, StringComparer.Ordinal).Skip(page.Offset).Take(page.Limit)];
 }

@@ -183,6 +183,6 @@ public class TemplateCodeGenTests
         var code = templateFile!.Content;
 
         code.Should().Contain("public sealed partial record SimpleTemplate");
-        code.Should().Contain(": ITemplate");
+        code.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate");
     }
 }

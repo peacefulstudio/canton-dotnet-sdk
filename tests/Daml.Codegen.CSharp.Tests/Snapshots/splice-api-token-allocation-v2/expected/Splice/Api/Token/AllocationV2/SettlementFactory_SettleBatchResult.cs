@@ -16,22 +16,22 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record SettlementFactory_SettleBatchResult
 /// </summary>
 public sealed record SettlementFactory_SettleBatchResult(
-    IReadOnlyList<AllocationResult> AllocationSettleResults,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.AllocationResult> AllocationSettleResults,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<SettlementFactory_SettleBatchResult>
+) : global::Daml.Runtime.Data.IDamlRecord<SettlementFactory_SettleBatchResult>
 {
-    private readonly IReadOnlyList<AllocationResult> _allocationSettleResults = DamlFieldCollections.Copy(AllocationSettleResults);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.AllocationResult> _allocationSettleResults = global::Daml.Runtime.Data.DamlFieldCollections.Copy(AllocationSettleResults);
 
     /// <summary>The Daml field <c>allocationSettleResults</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("allocationSettleResults")]
-    public IReadOnlyList<AllocationResult> AllocationSettleResults
+    [global::Daml.Runtime.Data.DamlFieldAttribute("allocationSettleResults")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.AllocationResult> AllocationSettleResults
     {
         get => _allocationSettleResults;
-        init => _allocationSettleResults = DamlFieldCollections.Copy(value);
+        init => _allocationSettleResults = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -39,38 +39,38 @@ public sealed record SettlementFactory_SettleBatchResult(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(SettlementFactory_SettleBatchResult? other) =>
         other is not null
-        && DamlFieldCollections.Equal(AllocationSettleResults, other.AllocationSettleResults)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(AllocationSettleResults, other.AllocationSettleResults)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(AllocationSettleResults));
+        var hash = new global::System.HashCode();
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(AllocationSettleResults));
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("allocationSettleResults", new DamlList(AllocationSettleResults.Select(x => (DamlValue)x.ToRecord()).ToList())),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("allocationSettleResults", new global::Daml.Runtime.Data.DamlList(AllocationSettleResults.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static SettlementFactory_SettleBatchResult FromRecord(DamlRecord record) => new SettlementFactory_SettleBatchResult(
-        AllocationSettleResults: (IReadOnlyList<AllocationResult>)record.GetRequiredField("allocationSettleResults").As<DamlList>().Values.Select(x => AllocationResult.FromRecord(x.As<DamlRecord>())).ToList(),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static SettlementFactory_SettleBatchResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SettlementFactory_SettleBatchResult(
+        AllocationSettleResults: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.AllocationResult>)record.GetRequiredField("allocationSettleResults").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.AllocationResult.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("allocationSettleResults", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocationSettleResults"), context.Field("allocationSettleResults"), (__json0, __ctx0) => AllocationResult.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("allocationSettleResults", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocationSettleResults"), context.Field("allocationSettleResults"), (__json0, __ctx0) => global::Splice.Api.Token.AllocationV2.AllocationResult.__ReadDamlLfJson(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
 

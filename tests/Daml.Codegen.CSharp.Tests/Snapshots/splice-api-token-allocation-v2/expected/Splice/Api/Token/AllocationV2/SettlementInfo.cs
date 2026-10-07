@@ -17,32 +17,32 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record SettlementInfo
 /// </summary>
 public sealed record SettlementInfo(
-    IReadOnlyList<Party> Executors,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Executors,
     string Id,
-    ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>? Cid,
+    global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>? Cid,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<SettlementInfo>
+) : global::Daml.Runtime.Data.IDamlRecord<SettlementInfo>
 {
-    private readonly IReadOnlyList<Party> _executors = DamlFieldCollections.Copy(Executors);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> _executors = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Executors);
 
     /// <summary>The Daml field <c>executors</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("executors")]
-    public IReadOnlyList<Party> Executors
+    [global::Daml.Runtime.Data.DamlFieldAttribute("executors")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Executors
     {
         get => _executors;
-        init => _executors = DamlFieldCollections.Copy(value);
+        init => _executors = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>id</c>.</summary>
-    [DamlFieldAttribute("id")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("id")]
     public string Id { get; init; } = Id;
 
     /// <summary>The Daml field <c>cid</c>.</summary>
-    [DamlFieldAttribute("cid")]
-    public ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>? Cid { get; init; } = Cid;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("cid")]
+    public global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>? Cid { get; init; } = Cid;
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -50,16 +50,16 @@ public sealed record SettlementInfo(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(SettlementInfo? other) =>
         other is not null
-        && DamlFieldCollections.Equal(Executors, other.Executors)
-        && EqualityComparer<string>.Default.Equals(Id, other.Id)
-        && EqualityComparer<ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>?>.Default.Equals(Cid, other.Cid)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Executors, other.Executors)
+        && global::System.Collections.Generic.EqualityComparer<string>.Default.Equals(Id, other.Id)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>?>.Default.Equals(Cid, other.Cid)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(Executors));
+        var hash = new global::System.HashCode();
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Executors));
         hash.Add(Id);
         hash.Add(Cid);
         hash.Add(Meta);
@@ -67,32 +67,32 @@ public sealed record SettlementInfo(
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("executors", new DamlList(Executors.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("id", new DamlText(Id)),
-        DamlField.Create("cid", Cid is { } __Cid ? new DamlOptional(__Cid.ToDamlValue()) : DamlOptional.None),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("executors", new global::Daml.Runtime.Data.DamlList(Executors.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id)),
+        global::Daml.Runtime.Data.DamlField.Create("cid", Cid is { } __Cid ? new global::Daml.Runtime.Data.DamlOptional(__Cid.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static SettlementInfo FromRecord(DamlRecord record) => new SettlementInfo(
-        Executors: (IReadOnlyList<Party>)record.GetRequiredField("executors").As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList(),
-        Id: record.GetRequiredField("id").As<DamlText>().Value,
-        Cid: record.GetOptionalField("cid").AsOptional().HasValue ? new ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(record.GetOptionalField("cid").AsOptional().Value!.As<DamlContractId>().Value) : null,
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static SettlementInfo FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SettlementInfo(
+        Executors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("executors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Cid: record.GetOptionalField("cid").AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(record.GetOptionalField("cid").AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null,
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("executors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "executors"), context.Field("executors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))),
-            DamlField.Create("cid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "cid"), context.Field("cid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(4);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("executors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "executors"), context.Field("executors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "cid", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("cid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

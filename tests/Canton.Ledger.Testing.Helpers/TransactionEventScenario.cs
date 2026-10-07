@@ -41,6 +41,12 @@ public sealed record TransactionEventScenario
     /// <summary>The choice name an exercised event reports.</summary>
     public const string ChoiceName = "Transfer";
 
+    /// <summary>The argument an exercised event reports, distinct from <see cref="ExerciseResultValue"/>.</summary>
+    public const string ChoiceArgumentValue = "choice-argument-value";
+
+    /// <summary>The result an exercised event reports, distinct from <see cref="ChoiceArgumentValue"/>.</summary>
+    public const string ExerciseResultValue = "exercise-result-value";
+
     /// <summary>Which event shape to render.</summary>
     public required TransactionEventShape Event { get; init; }
 
@@ -60,6 +66,26 @@ public sealed record TransactionEventScenario
     /// </summary>
     public bool OmitEventOffset { get; init; }
 
-    /// <summary>Appends a well-formed matching created event after the scenario's own event.</summary>
+    /// <summary>
+    /// Appends a well-formed matching created event after the scenario's own event. It carries the
+    /// same <see cref="InterfaceView"/> as the scenario's own created event, so it matches an
+    /// interface marker exactly when the scenario asks for a view.
+    /// </summary>
     public bool FollowedByMatchingCreated { get; init; }
+
+    /// <summary>
+    /// The interface view a created event carries — the lever the interface-marker lane turns on
+    /// <see cref="TransactionEventShape.Created"/>.
+    /// </summary>
+    public InterfaceViewRendering InterfaceView { get; init; } = InterfaceViewRendering.None;
+
+    /// <summary>
+    /// Renders an archived or exercised event as implementing the subscribed interface — the lever
+    /// the interface-marker lane turns on <see cref="TransactionEventShape.Archived"/> and
+    /// <see cref="TransactionEventShape.Exercised"/>, which carry no view of their own.
+    /// </summary>
+    public bool ImplementsSubscribedInterface { get; init; }
+
+    /// <summary>Renders a created event with no create arguments, whatever view it carries.</summary>
+    public bool OmitCreateArguments { get; init; }
 }

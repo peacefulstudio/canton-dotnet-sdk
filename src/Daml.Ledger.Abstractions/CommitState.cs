@@ -8,7 +8,7 @@ namespace Daml.Ledger.Abstractions;
 /// <summary>
 /// Whether a failed <see cref="LedgerOperationException"/> operation's command committed to
 /// the ledger. See <see cref="LedgerOperationException.CommitState"/> for the mapping from
-/// each <see cref="ExerciseOutcome{T}"/> case.
+/// each kind of call and each <see cref="ExerciseOutcome{T}"/> case.
 /// </summary>
 public enum CommitState
 {
@@ -24,7 +24,7 @@ public enum CommitState
 
     /// <summary>
     /// Whether the command committed could not be determined — a transport failure occurred
-    /// after the command was sent (a timeout, a dropped connection, or an <c>RpcException</c>),
+    /// after the command was sent (a timeout or a dropped connection),
     /// or the ledger reported <see cref="DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>.
     /// Retry only with the same command id: command-id deduplication resolves the duplicate if
     /// the original request did commit.

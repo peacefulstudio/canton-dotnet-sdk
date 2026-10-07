@@ -15,11 +15,12 @@ transport, no `Canton.Ledger.Kernel`, no PostgreSQL driver.
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Testing --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.Testing --version 0.6.0-preview.4
 ```
 
 Every fake replays canned data staged ahead of time — none of them is a semantic ledger/PQS
-simulator (no contract-key uniqueness, consuming-choice archival, or in-memory filter evaluation).
+simulator (no contract-key uniqueness or consuming-choice archival). `FakePqsClient` does evaluate the
+`PqsFilter` it is given against the staged contracts, with the semantics of the SQL a live PQS runs.
 The one exception is `FakeLedgerClient`'s ledger end: it starts at the offset staged through
 `WithLedgerEnd` and advances by one offset per committed write, so a test can read the end, write,
 read it again, and get a bounded `(fromOffset, toOffset]` window that actually contains the write. The Canton participant surface (`ICantonLedgerClient` — fire-and-forget
@@ -35,14 +36,14 @@ when omitted).
 | Type | Purpose |
 |------|---------|
 | `FakeLedgerClient` | Configurable in-memory `ICantonLedgerClient` (and thus `ILedgerClient`). Build it with the fluent builder from `FakeLedgerClient.Create()`. Any member, Daml type, or Canton read you did not stage throws a descriptive `NotSupportedException`. |
-| `FakeLedgerClientBuilder` | `WithLedgerEnd` (the ledger end *before* any write — stage an event for a bounded window opened around the `n`th write at that offset plus `n`), `WithActiveContracts<T>` (the staged snapshot must end on a single terminal `Checkpoint` or `StreamError`, as a participant's does — `WithMalformedActiveContracts<T>` stages one that deliberately does not), `WithContractEvents<T>`, `WithLedgerEffects<T>`, `WithExerciseResult<TResult>`, `WithCreateResult<TTemplate>`, `WithSubmissionOutcome`, `WithTransactionTree`, `WithReassignmentResult<T>`, `WithCompletionEvents`, `WithConnectedSynchronizers`, `WithLedgerApiVersion`, `WithTrafficCostEstimate` (staging `null` replays a participant that served no estimation), `WithPreparedSubmission`, `WithExecutedSubmission`, `WithExecutedTransaction`, `WithPreferredPackages`, `WithPackagePreference` (staging `null` replays no satisfying package), `WithUpdateByOffset`, `WithUpdateById`, then `Build()`. |
+| `FakeLedgerClientBuilder` | `WithLedgerEnd` (the ledger end *before* any write — stage an event for a bounded window opened around the `n`th write at that offset plus `n`), `WithActiveContracts<T>` (the staged snapshot must end on a single terminal `Checkpoint` or `StreamError`, as a participant's does — `WithMalformedActiveContracts<T>` stages one that deliberately does not), `WithContractEvents<T>`, `WithLedgerEffects<T>`, `WithExerciseResult<TResult>`, `WithCreateResult<TTemplate>`, `WithSubmissionOutcome`, `WithTransactionTree`, `WithReassignmentResult<T>`, `WithCompletionEvents`, `WithConnectedSynchronizers`, `WithLedgerApiVersion`, `WithTrafficCostEstimate` (staging `null` replays a participant that served no estimation), `WithPreparedSubmission`, `WithExecutedSubmission`, `WithExecutedTransaction`, `WithPreferredPackages`, `WithPackagePreference` (staging `null` replays no satisfying package), `WithUpdateByOffset`, `WithUpdateById`, `WithUpdateTreeByOffset`, `WithContract<T>`, `WithContractLifecycle<T>`, `WithDisclosure<T>` (the answer `GetDisclosureAsync<T>` returns for a contract id typed as a template or an interface; an id with no staged disclosure reads as `null`), `WithActiveContractsPages<T>`, `WithUpdatesPages`, `WithPrunedOffsets`, the interface counterparts `WithActiveInterfaceContracts<TInterface, TView>`, `WithInterfaceEvents<TInterface, TView>` and `WithInterfaceLedgerEffects<TInterface, TView>`, `WithThrowingCallFailure` (stage a `LedgerOperationException` that every *throwing* member raises from its task, as that same instance; `Try*` members and streams keep returning what you staged for them. The fake raises the instance as staged and does not derive its `CommitState` from the member called, so build it with the `LedgerOperationException(message, status, commitState, category, errorId, metadata, innerException)` constructor to carry a `Status` and the `CommitState` suited to the members under test: a failed read is `NotCommitted`), then `Build()`. |
 | `LedgerEvents` | Factories for `AcsSnapshotEntry<T>` variants, all constrained `where T : ITemplate, IDamlRecord<T>`: `Created` (typed `T` payload plus a `ContractKey? key`), `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message), `Unclassified` (a nullable `LedgerOffset?` and an `UnclassifiedKind`). |
 | `ContractEvents` | Factories for `ContractStreamEvent<T>` variants, all constrained `where T : ITemplate, IDamlRecord<T>`: `Created` and `Assigned` (typed `T` payload plus a `ContractKey? key`), `Archived`, `Unassigned`, `Exercised`, `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message), `Unclassified` (an `UnclassifiedKind`). |
 | `LedgerOutcomes` | Factories for `ExerciseOutcome<T>` variants: `One`, `None`, `Many`, `DamlError`, `InfraError` (an optional `DamlErrorCategory?` before the source `Exception?`), `CommittedUndecodable` (the command committed but its response could not be decoded; carries the update id when one was read). |
 | `LedgerResults` | Factories for `TransactionResult`, `SubmitAndWaitResult`, `Contract<T>`. |
 | `FakeAdminClient` | Configurable in-memory `IAdminClient`. Build it with `FakeAdminClient.Create()`. Query-style members you did not stage throw `NotSupportedException`; the void command members (`GrantUserRightsAsync`, `RevokeUserRightsAsync`, `UploadDarAsync`, `ValidateDarAsync`) always succeed. |
 | `FakeAdminClientBuilder` | `WithParticipantId`, `WithAllocatedParty`, `WithParties`, `WithUser`, `WithUsers`, `WithUserRights`, `WithKnownPackages`, `WithPackage`, `WithVettedPackages`, `WithExternalPartyTopology`, `WithAllocatedExternalParty`, then `Build()`. |
-| `FakePqsClient` | Configurable in-memory `IPqsClient`. Build it with `FakePqsClient.Create()`. Query results are staged per Daml type; an unstaged type throws `NotSupportedException`. |
+| `FakePqsClient` | Configurable in-memory `IPqsClient`. Build it with `FakePqsClient.Create()`. Query results are staged per Daml type; an unstaged type throws `NotSupportedException`. Filtered queries return only the staged contracts the filter matches, and `QueryOneAsync` returns `null` when none do. Paged queries order the staged contracts by contract id (ordinal comparison) before slicing, as `PqsClient` does, whatever order you staged them in; stage hex-like ids when a test depends on which contracts land on which page. Unpaged queries return contracts in staging order. |
 | `FakePqsClientBuilder` | `WithQueryResults<T>`, `WithInterfaceQueryResults<TInterface, TView>`, then `Build()`. |
 | `FakeTokenProvider` | In-memory `ITokenProvider`. `FakeTokenProvider.WithToken(token)` for the happy path, `FakeTokenProvider.WithFailure(exception)` to exercise auth-failure paths. No builder — both factories fully configure the fake. |
 
@@ -194,6 +195,31 @@ using Canton.Ledger.Testing;
 
 ITokenProvider ok = FakeTokenProvider.WithToken("test-bearer-token");
 ITokenProvider failing = FakeTokenProvider.WithFailure(new InvalidOperationException("token endpoint unreachable"));
+```
+
+Stage a failed throwing call to test your failure handling. Both transports report a failed
+call as a `LedgerOperationException`, so one staged failure covers either; build it with the
+constructor that takes a `TransportStatus` and a `CommitState` when the test branches on them:
+
+```csharp
+using Canton.Ledger.Testing;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime.Outcomes;
+
+var noAnswer = new LedgerOperationException(
+    "read got no answer",
+    new TransportStatus.NoResponse(),
+    CommitState.NotCommitted,
+    DamlErrorCategory.TransientServerFailure,
+    errorId: null,
+    metadata: null,
+    innerException: new TimeoutException("no response"));
+
+ILedgerClient failing = FakeLedgerClient.Create()
+    .WithThrowingCallFailure(noAnswer)
+    .Build();
+
+var act = () => failing.GetLedgerEndAsync(); // throws noAnswer from its task
 ```
 
 ## Zero mocking-framework dependency

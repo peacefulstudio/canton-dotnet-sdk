@@ -21,18 +21,17 @@ internal sealed partial class ChoiceEmitter
     private void WriteSubmitterInfoChoiceAsyncExerciser(
         IndentWriter indent,
         DamlChoice choice,
-        string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes)
+        string templateClassName)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var resultName = $"{choiceName}Result";
-        var argument = GetChoiceArgumentInfo(choice, dataTypes);
+        var returnTypeName = RequireAndMapReturnType(indent, choice);
+        var argument = GetChoiceArgumentInfo(choice);
         var hasArg = argument.HasArgument;
 
         if (options.GenerateXmlDocs)
         {
             indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Exercises the {choice.Name} choice with an explicit <see cref=\"SubmitterInfo\"/> and projects the choice's exercise result to a typed <see cref=\"{resultName}\"/>.");
+            indent.AppendLine($"/// Exercises the {choice.Name} choice with an explicit <see cref=\"SubmitterInfo\"/> and lifts the choice's exercise result to <see cref=\"ExerciseOutcome{{T}}\"/> over <c>{EmitterHelpers.EscapeXmlText(returnTypeName)}</c>.");
             indent.AppendLine("/// Companion to the named-<c>Party</c> overload for the case where the submitter must");
             indent.AppendLine("/// read contracts it does not act as — the choice's created contracts are visible to an");
             indent.AppendLine("/// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.");
@@ -47,23 +46,23 @@ internal sealed partial class ChoiceEmitter
             WriteSubmissionParameterDocs(indent);
         }
 
-        indent.AppendLine($"public static async Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> Try{choiceName}Async(");
+        indent.AppendLine($"public static async global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> Try{choiceName}Async(");
         indent.Indent();
-        indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
+        indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         if (hasArg)
         {
             indent.AppendLine($"{argument.ParameterType(templateClassName)} argument,");
         }
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
         WriteSubmissionParametersAndCloseSignature(indent);
         indent.Dedent();
         indent.AppendLine("{");
         indent.Indent();
 
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(client);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(client);");
 
-        WriteExerciserCommandDispatchAndProject(indent, choice, templateClassName, dataTypes);
+        WriteExerciserCommandDispatchAndProject(indent, choice, templateClassName);
 
         indent.Dedent();
         indent.AppendLine("}");
@@ -80,13 +79,11 @@ internal sealed partial class ChoiceEmitter
     private void WriteSubmitterInfoContractChoiceAsyncExerciser(
         IndentWriter indent,
         DamlChoice choice,
-        string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes) =>
+        string templateClassName) =>
         WriteContractChoiceAsyncExerciser(
             indent,
             choice,
             templateClassName,
-            dataTypes,
             [
                 $"/// Exercises the {choice.Name} choice on a fetched <see cref=\"{templateClassName}\"/> contract with an",
                 "/// explicit <see cref=\"SubmitterInfo\"/>. Companion to the payload-derived overload for",
@@ -100,11 +97,10 @@ internal sealed partial class ChoiceEmitter
     private void WriteExerciserCommandDispatchAndProject(
         IndentWriter indent,
         DamlChoice choice,
-        string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes)
+        string templateClassName)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var hasArg = GetChoiceArgumentInfo(choice, dataTypes).HasArgument;
+        var hasArg = GetChoiceArgumentInfo(choice).HasArgument;
 
         indent.AppendLine();
         indent.AppendLine(hasArg
@@ -135,9 +131,10 @@ internal sealed partial class ChoiceEmitter
         IndentWriter indent,
         DamlChoice choice,
         string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes,
         DamlPartyAnalysis controllers,
-        DamlPartyAnalysis observers)
+        DamlPartyAnalysis observers,
+        string emittedTemplateName,
+        IReadOnlySet<string> reservedFieldNames)
     {
         var (controllerFieldNames, readAsFieldNames) =
             party.PartitionControllerAndObserverFieldNames(controllers, observers);
@@ -146,7 +143,6 @@ internal sealed partial class ChoiceEmitter
             indent,
             choice,
             templateClassName,
-            dataTypes,
             [
                 $"/// Exercises the {choice.Name} choice on a fetched <see cref=\"{templateClassName}\"/> contract,",
                 "/// reading every controller and observer party off the contract payload so the",
@@ -156,21 +152,20 @@ internal sealed partial class ChoiceEmitter
             declaresSubmitterInfoParameter: false,
             [.. controllerFieldNames
                 .Concat(readAsFieldNames)
-                .Select(fieldName => $"contract.Data.{MemberName(fieldName, templateClassName)}")]);
+                .Select(fieldName => $"contract.Data.{MemberName(fieldName, emittedTemplateName, reservedFieldNames)}")]);
     }
 
     private void WriteContractChoiceAsyncExerciser(
         IndentWriter indent,
         DamlChoice choice,
         string templateClassName,
-        IReadOnlyDictionary<string, DamlDataType> dataTypes,
         IReadOnlyList<string> summaryLines,
         bool declaresSubmitterInfoParameter,
         IReadOnlyList<string> forwardedSubmitterArguments)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
-        var resultName = $"{choiceName}Result";
-        var argument = GetChoiceArgumentInfo(choice, dataTypes);
+        var returnTypeName = RequireAndMapReturnType(indent, choice);
+        var argument = GetChoiceArgumentInfo(choice);
         var hasArg = argument.HasArgument;
 
         if (options.GenerateXmlDocs)
@@ -194,28 +189,28 @@ internal sealed partial class ChoiceEmitter
             WriteSubmissionParameterDocs(indent);
         }
 
-        indent.AppendLine($"public static Task<{context.Qualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{resultName}>> Try{choiceName}Async(");
+        indent.AppendLine($"public static global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}>> Try{choiceName}Async(");
         indent.Indent();
-        indent.AppendLine($"this {context.Qualifier.Qualify(RuntimeTypeNames.IContract)}<{context.Qualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}>, {templateClassName}> contract,");
-        indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
+        indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.IContract)}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}>, {templateClassName}> contract,");
+        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
         if (hasArg)
         {
             indent.AppendLine($"{argument.ParameterType(templateClassName)} argument,");
         }
         if (declaresSubmitterInfoParameter)
         {
-            indent.AppendLine($"{context.Qualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
+            indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
         }
         WriteSubmissionParametersAndCloseSignature(indent);
         indent.Dedent();
         indent.AppendLine("{");
         indent.Indent();
 
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(contract);");
-        indent.AppendLine("ArgumentNullException.ThrowIfNull(client);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(contract);");
+        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(client);");
         if (hasArg)
         {
-            indent.AppendLine("ArgumentNullException.ThrowIfNull(argument);");
+            indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(argument);");
         }
 
         indent.AppendLine();

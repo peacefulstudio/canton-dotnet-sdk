@@ -77,36 +77,32 @@ public sealed record DamlRecord(
         GetField(name) ?? DamlOptionalChain.None;
 
     /// <summary>
-    /// Gets and converts a field whose Daml type is a type parameter. An omitted field is handed
-    /// to <paramref name="convert"/> as <see cref="DamlOptional.None"/>, so it reads as <c>None</c>
-    /// when the instantiation is a flat or a nested <c>Optional</c>, for the reasons
-    /// <see cref="GetOptionalField"/> gives: both read a flat level and a chain level alike.
-    /// Called by generated <c>FromRecord</c> methods and the stdlib tuples.
+    /// Gets and converts a field whose Daml type is a type parameter. A present field is converted by
+    /// <paramref name="convert"/>. An omitted field is handed to <paramref name="convert"/> as
+    /// <paramref name="absentReadsAs"/> when the call site gives one, which it does when the
+    /// instantiation is an <c>Optional</c>, flat or nested: the Ledger API leaves out a field whose
+    /// value is a trailing <c>None</c>, and <see cref="DamlOptional.None"/> reads as <c>None</c> at
+    /// either level. An omitted field at an instantiation that is not an <c>Optional</c> is
+    /// required, and the converter is not called. Called by generated <c>FromRecord</c> methods and
+    /// the stdlib tuples.
     /// </summary>
     /// <typeparam name="T">The instantiation's C# type.</typeparam>
     /// <param name="name">The field label.</param>
     /// <param name="convert">The instantiation's converter.</param>
+    /// <param name="absentReadsAs">
+    /// What an omitted field reads as: <see cref="DamlOptional.None"/> when the instantiation is an
+    /// <c>Optional</c>, or <see langword="null"/> when the field is required.
+    /// </param>
     /// <returns>The converted field value.</returns>
     /// <exception cref="InvalidOperationException">
-    /// The field is omitted and the instantiation is not an <c>Optional</c>.
+    /// The field is omitted and <paramref name="absentReadsAs"/> is <see langword="null"/>.
     /// </exception>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public T GetTypeParameterField<T>(string name, Func<DamlValue, T> convert)
+    public T GetTypeParameterField<T>(string name, Func<DamlValue, T> convert, DamlValue? absentReadsAs)
     {
         ArgumentNullException.ThrowIfNull(convert);
-        if (GetField(name) is { } value)
-        {
-            return convert(value);
-        }
-
-        try
-        {
-            return convert(DamlOptional.None);
-        }
-        catch (InvalidCastException)
-        {
-            throw MissingField(name);
-        }
+        var value = GetField(name) ?? absentReadsAs ?? throw MissingField(name);
+        return convert(value);
     }
 
     private static InvalidOperationException MissingField(string name) =>

@@ -15,26 +15,26 @@ public sealed partial record AmuletConversionRateFeed
     /// Choice argument type for AmuletConversionRateFeed_ArchiveAsDso.
     /// </summary>
     public sealed record AmuletConversionRateFeed_ArchiveAsDso(
-        [property: DamlFieldAttribute("reason")] string Reason
-    ) : IDamlRecord<AmuletConversionRateFeed_ArchiveAsDso>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("reason")] string Reason
+    ) : global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed_ArchiveAsDso>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("reason", new DamlText(Reason))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("reason", new global::Daml.Runtime.Data.DamlText(Reason))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static AmuletConversionRateFeed_ArchiveAsDso FromRecord(DamlRecord record) => new AmuletConversionRateFeed_ArchiveAsDso(
-            Reason: record.GetRequiredField("reason").As<DamlText>().Value
+        public static AmuletConversionRateFeed_ArchiveAsDso FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed_ArchiveAsDso(
+            Reason: record.GetRequiredField("reason").As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("reason", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reason"), context.Field("reason")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("reason", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reason"), context.Field("reason")))
             );
         }
 

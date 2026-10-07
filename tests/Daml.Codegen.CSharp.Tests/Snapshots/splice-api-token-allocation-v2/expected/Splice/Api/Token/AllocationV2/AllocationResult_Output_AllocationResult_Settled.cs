@@ -14,27 +14,27 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record AllocationResult_Output.AllocationResult_Settled
 /// </summary>
 public sealed record AllocationResult_Output_AllocationResult_Settled(
-    [property: DamlFieldAttribute("nextIterationAllocationCid")] ContractId<IAllocation>? NextIterationAllocationCid
-) : IDamlRecord<AllocationResult_Output_AllocationResult_Settled>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("nextIterationAllocationCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>? NextIterationAllocationCid
+) : global::Daml.Runtime.Data.IDamlRecord<AllocationResult_Output_AllocationResult_Settled>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("nextIterationAllocationCid", NextIterationAllocationCid is { } __NextIterationAllocationCid ? new DamlOptional(__NextIterationAllocationCid.ToDamlValue()) : DamlOptional.None)
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("nextIterationAllocationCid", NextIterationAllocationCid is { } __NextIterationAllocationCid ? new global::Daml.Runtime.Data.DamlOptional(__NextIterationAllocationCid.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None)
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AllocationResult_Output_AllocationResult_Settled FromRecord(DamlRecord record) => new AllocationResult_Output_AllocationResult_Settled(
-        NextIterationAllocationCid: record.GetOptionalField("nextIterationAllocationCid").AsOptional().HasValue ? new ContractId<IAllocation>(record.GetOptionalField("nextIterationAllocationCid").AsOptional().Value!.As<DamlContractId>().Value) : null
+    public static AllocationResult_Output_AllocationResult_Settled FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationResult_Output_AllocationResult_Settled(
+        NextIterationAllocationCid: record.GetOptionalField("nextIterationAllocationCid").AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetOptionalField("nextIterationAllocationCid").AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("nextIterationAllocationCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextIterationAllocationCid"), context.Field("nextIterationAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(1);
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nextIterationAllocationCid", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nextIterationAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

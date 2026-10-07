@@ -56,9 +56,8 @@ public readonly record struct ChoiceName
 /// <summary>
 /// System.Text.Json converter for <see cref="ChoiceName"/>. Serializes as a plain JSON string,
 /// the shape the Ledger API's <c>choice</c> field carries, so a <see cref="ChoiceName"/> member
-/// reads back with the choice it named. A whole <see cref="ExerciseCommand"/> still does not
-/// round-trip — it holds an abstract <c>ContractId</c> and <c>DamlValue</c>, and
-/// <see cref="ICommand"/> carries no <c>[JsonDerivedType]</c>.
+/// reads back with the choice it named. A whole <see cref="ExerciseCommand"/> is
+/// written, never read back — see <see cref="ICommand"/>.
 /// </summary>
 internal sealed class ChoiceNameJsonConverter : OpaqueStringIdJsonConverter<ChoiceName>
 {

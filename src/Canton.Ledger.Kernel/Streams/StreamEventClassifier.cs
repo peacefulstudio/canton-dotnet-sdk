@@ -1,9 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Diagnostics.CodeAnalysis;
 using Daml.Runtime;
-using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
@@ -36,23 +34,6 @@ internal static partial class StreamEventClassifier
         return true;
     }
 
-    public static bool TryAdmit<T, TSynchronizerScope>(
-        in DecodedStreamEvent<TSynchronizerScope> decoded,
-        out TSynchronizerScope synchronizerScope,
-        [NotNullWhen(false)] out ContractStreamEvent<T>.Unclassified? unclassified)
-        where T : ITemplate, IDamlRecord<T>
-        where TSynchronizerScope : struct
-    {
-        if (TryAdmit(decoded, out synchronizerScope, out var refusal))
-        {
-            unclassified = null;
-            return true;
-        }
-
-        unclassified = new ContractStreamEvent<T>.Unclassified(refusal.Offset, refusal.Kind);
-        return false;
-    }
-
     public static SynchronizerId? Synchronizer(string? wireSynchronizerId) =>
         string.IsNullOrWhiteSpace(wireSynchronizerId) ? null : new SynchronizerId(wireSynchronizerId);
 
@@ -81,14 +62,6 @@ internal static partial class StreamEventClassifier
     {
         LogEventDecodeFailed(logger ?? NullLogger.Instance, markerName, offset, cause);
         return new StreamEntryRefusal(LedgerOffset.At(offset), UnclassifiedKind.DecodeFailure);
-    }
-
-    /// <inheritdoc cref="DecodeFailure(string, long, ILogger?, Exception)"/>
-    public static ContractStreamEvent<T>.Unclassified DecodeFailure<T>(long offset, ILogger? logger, Exception cause)
-        where T : ITemplate, IDamlRecord<T>
-    {
-        var refusal = DecodeFailure(typeof(T).Name, offset, logger, cause);
-        return new ContractStreamEvent<T>.Unclassified(refusal.Offset, refusal.Kind);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not decode event at offset {Offset} on the {TemplateType} stream — surfaced as Unclassified (decode-failure)")]

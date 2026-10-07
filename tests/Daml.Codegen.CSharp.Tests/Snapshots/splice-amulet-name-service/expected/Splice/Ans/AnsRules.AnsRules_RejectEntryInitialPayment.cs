@@ -16,30 +16,30 @@ public sealed partial record AnsRules
     /// Choice argument type for AnsRules_RejectEntryInitialPayment.
     /// </summary>
     public sealed record AnsRules_RejectEntryInitialPayment(
-        [property: DamlFieldAttribute("paymentCid")] ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment> PaymentCid,
-        [property: DamlFieldAttribute("transferContext")] global::Splice.AmuletRules.AppTransferContext TransferContext
-    ) : IDamlRecord<AnsRules_RejectEntryInitialPayment>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("paymentCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment> PaymentCid,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("transferContext")] global::Splice.AmuletRules.AppTransferContext TransferContext
+    ) : global::Daml.Runtime.Data.IDamlRecord<AnsRules_RejectEntryInitialPayment>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("paymentCid", PaymentCid.ToDamlValue()),
-            DamlField.Create("transferContext", TransferContext.ToRecord())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("paymentCid", PaymentCid.ToDamlValue()),
+            global::Daml.Runtime.Data.DamlField.Create("transferContext", TransferContext.ToRecord())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static AnsRules_RejectEntryInitialPayment FromRecord(DamlRecord record) => new AnsRules_RejectEntryInitialPayment(
-            PaymentCid: new ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment>(record.GetRequiredField("paymentCid").As<DamlContractId>().Value),
-            TransferContext: global::Splice.AmuletRules.AppTransferContext.FromRecord(record.GetRequiredField("transferContext").As<DamlRecord>())
+        public static AnsRules_RejectEntryInitialPayment FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRules_RejectEntryInitialPayment(
+            PaymentCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment>(record.GetRequiredField("paymentCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+            TransferContext: global::Splice.AmuletRules.AppTransferContext.FromRecord(record.GetRequiredField("transferContext").As<global::Daml.Runtime.Data.DamlRecord>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("paymentCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "paymentCid"), context.Field("paymentCid"))),
-                DamlField.Create("transferContext", global::Splice.AmuletRules.AppTransferContext.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferContext"), context.Field("transferContext")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("paymentCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "paymentCid"), context.Field("paymentCid"))),
+                global::Daml.Runtime.Data.DamlField.Create("transferContext", global::Splice.AmuletRules.AppTransferContext.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferContext"), context.Field("transferContext")))
             );
         }
 

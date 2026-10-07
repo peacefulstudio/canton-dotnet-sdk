@@ -20,7 +20,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Task.FromResult(EffectiveCommandId(submission.CommandId));
+        return Answering(() => EffectiveCommandId(submission.CommandId));
     }
 
     /// <inheritdoc />
@@ -30,7 +30,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Task.FromResult(EffectiveCommandId(submission.CommandId));
+        return Answering(() => EffectiveCommandId(submission.CommandId));
     }
 
     /// <inheritdoc />
@@ -76,14 +76,14 @@ public sealed partial class FakeLedgerClient
         string? participantId = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult(_canton.ConnectedSynchronizers ?? throw StagingMissing(
+        Answering(() => _canton.ConnectedSynchronizers ?? throw StagingMissing(
             "connected synchronizers", nameof(GetConnectedSynchronizersAsync), "WithConnectedSynchronizers"));
 
     /// <inheritdoc />
     public Task<string> GetLedgerApiVersionAsync(
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult(_canton.LedgerApiVersion ?? throw StagingMissing(
+        Answering(() => _canton.LedgerApiVersion ?? throw StagingMissing(
             "Ledger API version", nameof(GetLedgerApiVersionAsync), "WithLedgerApiVersion"));
 
     /// <inheritdoc />
@@ -94,7 +94,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
-        return Task.FromResult(_canton.UpdatesByOffset.TryGetValue(offset, out var result)
+        return Answering(() => _canton.UpdatesByOffset.TryGetValue(offset, out var result)
             ? result
             : throw StagingMissing($"update at offset {offset.Value}", nameof(GetUpdateByOffsetAsync), "WithUpdateByOffset"));
     }
@@ -107,7 +107,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(updateId);
-        return Task.FromResult(_canton.UpdatesById.TryGetValue(updateId, out var result)
+        return Answering(() => _canton.UpdatesById.TryGetValue(updateId, out var result)
             ? result
             : throw StagingMissing($"update with id '{updateId}'", nameof(GetUpdateByIdAsync), "WithUpdateById"));
     }
@@ -120,7 +120,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
-        return Task.FromResult(_canton.UpdateTreesByOffset.TryGetValue(offset, out var tree)
+        return Answering(() => _canton.UpdateTreesByOffset.TryGetValue(offset, out var tree)
             ? tree
             : throw StagingMissing(
                 $"transaction tree at offset {offset.Value}",
@@ -135,7 +135,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Task.FromResult(_canton.TrafficCostEstimate is { } staged
+        return Answering(() => _canton.TrafficCostEstimate is { } staged
             ? staged.Estimate
             : throw StagingMissing(
                 "traffic-cost estimate", nameof(EstimateTrafficCostAsync), "WithTrafficCostEstimate"));

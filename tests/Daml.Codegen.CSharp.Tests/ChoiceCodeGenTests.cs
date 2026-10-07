@@ -90,9 +90,9 @@ public class ChoiceCodeGenTests
         var code = assetFile!.Content;
 
         // Should reference the Transfer data type, not generate a nested TransferArgument
-        code.Should().Contain("Choice<Asset, Transfer, Transfer_Result>");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Asset, Transfer, global::Test.Module.Transfer_Result>");
         code.Should().Contain("ArgumentEncoder = arg => arg.ToRecord()");
-        code.Should().Contain("ResultDecoder = val => Transfer_Result.FromRecord(val.As<DamlRecord>())");
+        code.Should().Contain("ResultDecoder = val => global::Test.Module.Transfer_Result.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>())");
 
         // Should NOT contain a nested argument class
         code.Should().NotContain("public sealed record TransferArgument");
@@ -111,7 +111,7 @@ public class ChoiceCodeGenTests
 
         nestedFile.Should().NotBeNull("the choice argument record is emitted as a nested type in a partial template file");
         nestedFile!.Content.Should().Contain(
-            "\n    public sealed record Transfer(\n        [property: DamlFieldAttribute(\"newOwner\")] Party NewOwner,\n        [property: DamlFieldAttribute(\"amount\")] decimal Amount\n    ) : IDamlRecord",
+            "\n    public sealed record Transfer(\n        [property: global::Daml.Runtime.Data.DamlFieldAttribute(\"newOwner\")] global::Daml.Runtime.Data.Party NewOwner,\n        [property: global::Daml.Runtime.Data.DamlFieldAttribute(\"amount\")] decimal Amount\n    ) : global::Daml.Runtime.Data.IDamlRecord",
             "the nested record signature must be indented one level, carry one parameter per line indented one level further, and close on its own line with the base list");
     }
 
@@ -263,9 +263,9 @@ public class ChoiceCodeGenTests
         contractFile.Should().NotBeNull();
         var code = contractFile!.Content;
 
-        code.Should().Contain("Choice<MyTemplate, DamlUnit, DamlUnit>");
-        code.Should().Contain("ArgumentEncoder = _ => DamlUnit.Instance");
-        code.Should().Contain("ResultDecoder = _ => DamlUnit.Instance");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<MyTemplate, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit>");
+        code.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
+        code.Should().Contain("ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
     }
 
     [Fact]
@@ -314,9 +314,9 @@ public class ChoiceCodeGenTests
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
-        code.Should().Contain("Choice<MyTemplate, DamlUnit, DamlUnit>");
-        code.Should().Contain("ArgumentEncoder = _ => DamlRecord.Create()");
-        code.Should().NotContain("ArgumentEncoder = _ => DamlUnit.Instance");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<MyTemplate, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit>");
+        code.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create()");
+        code.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
     }
 
     [Fact]
@@ -377,8 +377,8 @@ public class ChoiceCodeGenTests
         factoryFile.Should().NotBeNull();
         var code = factoryFile!.Content;
 
-        code.Should().Contain("Choice<Factory, Create, ContractId<Product>>");
-        code.Should().Contain("ResultDecoder = val => new ContractId<Product>(val.As<DamlContractId>().Value)");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Factory, Create, global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Product>>");
+        code.Should().Contain("ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Product>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)");
     }
 
     [Fact]
@@ -442,14 +442,14 @@ public class ChoiceCodeGenTests
         var code = counterFile!.Content;
 
         // Check primitive result decoders
-        code.Should().Contain("Choice<Counter, DamlUnit, long> ChoiceGetCount");
-        code.Should().Contain("ResultDecoder = val => val.As<DamlInt64>().Value");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Counter, global::Daml.Runtime.Data.DamlUnit, long> ChoiceGetCount");
+        code.Should().Contain("ResultDecoder = val => val.As<global::Daml.Runtime.Data.DamlInt64>().Value");
 
-        code.Should().Contain("Choice<Counter, DamlUnit, string> ChoiceGetName");
-        code.Should().Contain("ResultDecoder = val => val.As<DamlText>().Value");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Counter, global::Daml.Runtime.Data.DamlUnit, string> ChoiceGetName");
+        code.Should().Contain("ResultDecoder = val => val.As<global::Daml.Runtime.Data.DamlText>().Value");
 
-        code.Should().Contain("Choice<Counter, DamlUnit, bool> ChoiceIsValid");
-        code.Should().Contain("ResultDecoder = val => val.As<DamlBool>().Value");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Counter, global::Daml.Runtime.Data.DamlUnit, bool> ChoiceIsValid");
+        code.Should().Contain("ResultDecoder = val => val.As<global::Daml.Runtime.Data.DamlBool>().Value");
     }
 
     [Fact]
@@ -526,14 +526,14 @@ public class ChoiceCodeGenTests
         var code = holdingFile!.Content;
 
         // Split - uses local data type
-        code.Should().Contain("Choice<Holding, Split, Split_Result> ChoiceSplit");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, Split, global::Test.Module.Split_Result> ChoiceSplit");
         code.Should().Contain("ArgumentEncoder = arg => arg.ToRecord(),");
 
         // GetBalance - uses Unit argument
-        code.Should().Contain("Choice<Holding, DamlUnit, decimal> ChoiceGetBalance");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, global::Daml.Runtime.Data.DamlUnit, decimal> ChoiceGetBalance");
 
         // Archive - DamlUnit type parameters, but the wire argument encodes as an empty DamlRecord
-        code.Should().Contain("Choice<Holding, DamlUnit, DamlUnit> ChoiceArchive");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive");
     }
 
     [Fact]
@@ -557,11 +557,11 @@ public class ChoiceCodeGenTests
 
         agreementExpire.Should().NotBeNull();
         agreementExpire!.Content.Should().Contain(
-            "public sealed record Expire(\n        [property: DamlFieldAttribute(\"actor\")] Party Actor\n    ) : IDamlRecord",
+            "public sealed record Expire(\n        [property: global::Daml.Runtime.Data.DamlFieldAttribute(\"actor\")] global::Daml.Runtime.Data.Party Actor\n    ) : global::Daml.Runtime.Data.IDamlRecord",
             "the Agreement module's Expire argument record must keep its own fields instead of the Offer module's");
         offerExpire.Should().NotBeNull();
         offerExpire!.Content.Should().Contain(
-            "public sealed record Expire : IDamlRecord",
+            "public sealed record Expire : global::Daml.Runtime.Data.IDamlRecord",
             "the Offer module's Expire argument record is genuinely field-less");
         offerExpire.Content.Should().NotContain("Actor");
     }

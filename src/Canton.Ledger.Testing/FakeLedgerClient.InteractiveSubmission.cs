@@ -17,7 +17,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Task.FromResult(_interactive.PreparedSubmission ?? throw StagingMissing(
+        return Answering(() => _interactive.PreparedSubmission ?? throw StagingMissing(
             "prepared submission", nameof(PrepareSubmissionAsync), "WithPreparedSubmission"));
     }
 
@@ -28,7 +28,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ValidateSigned(submission);
-        return Task.CompletedTask;
+        return ThrowingCallFailure is { } failure ? Task.FromException(failure) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -38,10 +38,13 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ValidateSigned(submission);
-        var executed = _interactive.ExecutedSubmission ?? throw StagingMissing(
-            "executed submission", nameof(ExecuteSubmissionAndWaitAsync), "WithExecutedSubmission");
-        Interlocked.Increment(ref _committedWrites);
-        return Task.FromResult(executed);
+        return Answering(() =>
+        {
+            var executed = _interactive.ExecutedSubmission ?? throw StagingMissing(
+                "executed submission", nameof(ExecuteSubmissionAndWaitAsync), "WithExecutedSubmission");
+            Interlocked.Increment(ref _committedWrites);
+            return executed;
+        });
     }
 
     /// <inheritdoc />
@@ -52,10 +55,13 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ValidateSigned(submission);
-        var transaction = _interactive.ExecutedTransaction ?? throw StagingMissing(
-            "executed transaction", nameof(ExecuteSubmissionAndWaitForTransactionAsync), "WithExecutedTransaction");
-        Interlocked.Increment(ref _committedWrites);
-        return Task.FromResult(transaction);
+        return Answering(() =>
+        {
+            var transaction = _interactive.ExecutedTransaction ?? throw StagingMissing(
+                "executed transaction", nameof(ExecuteSubmissionAndWaitForTransactionAsync), "WithExecutedTransaction");
+            Interlocked.Increment(ref _committedWrites);
+            return transaction;
+        });
     }
 
     /// <inheritdoc />
@@ -67,7 +73,7 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(requirements);
-        return Task.FromResult(_interactive.PreferredPackages ?? throw StagingMissing(
+        return Answering(() => _interactive.PreferredPackages ?? throw StagingMissing(
             "preferred packages", nameof(GetPreferredPackagesAsync), "WithPreferredPackages"));
     }
 
@@ -82,7 +88,7 @@ public sealed partial class FakeLedgerClient
     {
         ArgumentNullException.ThrowIfNull(parties);
         ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
-        return Task.FromResult(_interactive.PackagePreference is { } staged
+        return Answering(() => _interactive.PackagePreference is { } staged
             ? staged.Preference
             : throw StagingMissing(
                 "package preference", nameof(GetPreferredPackageVersionAsync), "WithPackagePreference"));

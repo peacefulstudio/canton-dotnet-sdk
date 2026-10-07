@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Runtime.CompilerServices;
+using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime;
@@ -157,41 +158,10 @@ internal sealed partial class LedgerClient
 
             if (!step.Moved) yield break;
 
-            foreach (var projected in ProjectInterfaceUpdate<TInterface, TView>(stream.Current))
+            foreach (var projected in GrpcInterfaceStreamProjector.ProjectUpdate<TInterface, TView>(stream.Current, _logger))
             {
                 yield return projected;
             }
-        }
-    }
-
-    private IEnumerable<InterfaceStreamEvent<TInterface, TView>> ProjectInterfaceUpdate<TInterface, TView>(
-        GetUpdatesResponse response)
-        where TInterface : IDamlInterface, IHasView<TView>
-        where TView : IDamlRecord<TView>
-    {
-        switch (response.UpdateCase)
-        {
-            case GetUpdatesResponse.UpdateOneofCase.Transaction:
-                foreach (var projected in GrpcInterfaceStreamProjector.ProjectTransactionEvents<TInterface, TView>(
-                    response.Transaction, _logger))
-                {
-                    yield return projected;
-                }
-                break;
-            case GetUpdatesResponse.UpdateOneofCase.OffsetCheckpoint:
-                yield return new InterfaceStreamEvent<TInterface, TView>.Checkpoint(
-                    LedgerOffset.At(response.OffsetCheckpoint.Offset));
-                break;
-            case GetUpdatesResponse.UpdateOneofCase.Reassignment:
-                foreach (var projected in GrpcInterfaceStreamProjector.ProjectReassignmentEvents<TInterface, TView>(
-                    response.Reassignment, _logger))
-                {
-                    yield return projected;
-                }
-                break;
-            default:
-                LogStreamVariantSkipped(_logger, typeof(TInterface).Name, response.UpdateCase);
-                break;
         }
     }
 
@@ -257,37 +227,10 @@ internal sealed partial class LedgerClient
                         unclassified.Kind,
                         unclassified.Offset?.Value);
                 }
-                yield return ToInterfaceAcsSnapshotEntry(projected, disclosure);
+                yield return InterfaceSnapshotEntryArms<TInterface, TView>.From(projected, disclosure);
             }
         }
     }
-
-    private static InterfaceAcsSnapshotEntry<TInterface, TView> ToInterfaceAcsSnapshotEntry<TInterface, TView>(
-        InterfaceStreamEvent<TInterface, TView> entry,
-        RuntimeCommands.DisclosedContract? disclosure)
-        where TInterface : IDamlInterface, IHasView<TView>
-        where TView : IDamlRecord<TView> => entry switch
-    {
-        InterfaceStreamEvent<TInterface, TView>.Created created =>
-            new InterfaceAcsSnapshotEntry<TInterface, TView>.Created(
-                created.ContractId,
-                created.Payload,
-                created.Key,
-                created.Offset,
-                created.SynchronizerId,
-                created.WitnessParties)
-            {
-                Disclosure = disclosure,
-            },
-        InterfaceStreamEvent<TInterface, TView>.Unassigned unassigned =>
-            new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
-                unassigned.Offset, UnclassifiedKind.UnassignedEvent),
-        InterfaceStreamEvent<TInterface, TView>.Unclassified unclassified =>
-            new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
-                unclassified.Offset, unclassified.Kind, unclassified.RawKind),
-        _ => throw new InvalidOperationException(
-            $"Active-contract snapshot produced an unexpected entry variant: {entry.GetType().Name}"),
-    };
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Active contracts snapshot for interface {InterfaceType} could not classify entry {ContractEntryCase} — surfaced as Unclassified ({Kind}) carrying offset {Offset}")]
     private static partial void LogInterfaceEntryUnclassified(ILogger logger, string interfaceType, GetActiveContractsResponse.ContractEntryOneofCase contractEntryCase, UnclassifiedKind kind, long? offset);

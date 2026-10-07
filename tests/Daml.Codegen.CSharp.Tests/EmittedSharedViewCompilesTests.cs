@@ -62,8 +62,8 @@ public class EmittedSharedViewCompilesTests
 
         var files = CreateGenerator(options).Generate(CreateTestDar(module));
 
-        files.Should().Contain(f => f.Content.Contains("ViewDescriptor<IAsset, SharedView> View", StringComparison.Ordinal));
-        files.Should().Contain(f => f.Content.Contains("ViewDescriptor<IBond, SharedView> View", StringComparison.Ordinal));
+        files.Should().Contain(f => f.Content.Contains("global::Daml.Runtime.Contracts.ViewDescriptor<IAsset, global::Test.Module.SharedView> View", StringComparison.Ordinal));
+        files.Should().Contain(f => f.Content.Contains("global::Daml.Runtime.Contracts.ViewDescriptor<IBond, global::Test.Module.SharedView> View", StringComparison.Ordinal));
         var errors = CompileEmittedFiles(files).Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(
             "a view record shared by two interfaces must stay un-stamped rather than inherit two identity implementations, but got: {0}",

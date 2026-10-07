@@ -54,19 +54,30 @@ public sealed record Tuple2<T1, T2>(T1 _1, T2 _2)
 
     /// <summary>
     /// Reconstructs a tuple from its Ledger API record representation. The supplied
-    /// delegates decode each component from its <see cref="DamlValue"/> form.
+    /// delegates decode each component from its <see cref="DamlValue"/> form. A component the record
+    /// omits is handed to its converter as its <c>absentReadsAs</c>, which the call site gives when the
+    /// component is a flat or a nested <c>Optional</c>, and is required when it is
+    /// <see langword="null"/>.
     /// </summary>
+    /// <param name="record">The record to read.</param>
+    /// <param name="convert1">Decodes the first component.</param>
+    /// <param name="absentReadsAs1">What an omitted first component reads as: <see cref="DamlOptional.None"/> for an <c>Optional</c>, <see langword="null"/> for a required component.</param>
+    /// <param name="convert2">Decodes the second component.</param>
+    /// <param name="absentReadsAs2">What an omitted second component reads as, by the same convention.</param>
+    /// <exception cref="InvalidOperationException">The record omits a required component.</exception>
     public static Tuple2<T1, T2> FromRecord(
         DamlRecord record,
         Func<DamlValue, T1> convert1,
-        Func<DamlValue, T2> convert2)
+        DamlValue? absentReadsAs1,
+        Func<DamlValue, T2> convert2,
+        DamlValue? absentReadsAs2)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(convert1);
         ArgumentNullException.ThrowIfNull(convert2);
         return new Tuple2<T1, T2>(
-            record.GetTypeParameterField("_1", convert1),
-            record.GetTypeParameterField("_2", convert2));
+            record.GetTypeParameterField("_1", convert1, absentReadsAs1),
+            record.GetTypeParameterField("_2", convert2, absentReadsAs2));
     }
 }
 
@@ -112,21 +123,35 @@ public sealed record Tuple3<T1, T2, T3>(T1 _1, T2 _2, T3 _3)
     }
 
     /// <summary>
-    /// Reconstructs a tuple from its Ledger API record representation.
+    /// Reconstructs a tuple from its Ledger API record representation. A component the record omits is
+    /// handed to its converter as its <c>absentReadsAs</c>, which the call site gives when the
+    /// component is a flat or a nested <c>Optional</c>, and is required when it is
+    /// <see langword="null"/>.
     /// </summary>
+    /// <param name="record">The record to read.</param>
+    /// <param name="convert1">Decodes the first component.</param>
+    /// <param name="absentReadsAs1">What an omitted first component reads as: <see cref="DamlOptional.None"/> for an <c>Optional</c>, <see langword="null"/> for a required component.</param>
+    /// <param name="convert2">Decodes the second component.</param>
+    /// <param name="absentReadsAs2">What an omitted second component reads as, by the same convention.</param>
+    /// <param name="convert3">Decodes the third component.</param>
+    /// <param name="absentReadsAs3">What an omitted third component reads as, by the same convention.</param>
+    /// <exception cref="InvalidOperationException">The record omits a required component.</exception>
     public static Tuple3<T1, T2, T3> FromRecord(
         DamlRecord record,
         Func<DamlValue, T1> convert1,
+        DamlValue? absentReadsAs1,
         Func<DamlValue, T2> convert2,
-        Func<DamlValue, T3> convert3)
+        DamlValue? absentReadsAs2,
+        Func<DamlValue, T3> convert3,
+        DamlValue? absentReadsAs3)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(convert1);
         ArgumentNullException.ThrowIfNull(convert2);
         ArgumentNullException.ThrowIfNull(convert3);
         return new Tuple3<T1, T2, T3>(
-            record.GetTypeParameterField("_1", convert1),
-            record.GetTypeParameterField("_2", convert2),
-            record.GetTypeParameterField("_3", convert3));
+            record.GetTypeParameterField("_1", convert1, absentReadsAs1),
+            record.GetTypeParameterField("_2", convert2, absentReadsAs2),
+            record.GetTypeParameterField("_3", convert3, absentReadsAs3));
     }
 }

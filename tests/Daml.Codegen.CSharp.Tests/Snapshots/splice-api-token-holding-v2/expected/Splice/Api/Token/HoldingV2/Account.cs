@@ -13,35 +13,35 @@ namespace Splice.Api.Token.HoldingV2;
 /// Generated from Daml record Account
 /// </summary>
 public sealed record Account(
-    [property: DamlFieldAttribute("owner")] Party? Owner,
-    [property: DamlFieldAttribute("provider")] Party? Provider,
-    [property: DamlFieldAttribute("id")] string Id
-) : IDamlRecord<Account>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party? Owner,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("provider")] global::Daml.Runtime.Data.Party? Provider,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
+) : global::Daml.Runtime.Data.IDamlRecord<Account>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("owner", Owner is { } __Owner ? new DamlOptional(__Owner.ToDamlValue()) : DamlOptional.None),
-        DamlField.Create("provider", Provider is { } __Provider ? new DamlOptional(__Provider.ToDamlValue()) : DamlOptional.None),
-        DamlField.Create("id", new DamlText(Id))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner is { } __Owner ? new global::Daml.Runtime.Data.DamlOptional(__Owner.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("provider", Provider is { } __Provider ? new global::Daml.Runtime.Data.DamlOptional(__Provider.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Account FromRecord(DamlRecord record) => new Account(
-        Owner: record.GetOptionalField("owner").AsOptional().HasValue ? Party.FromDamlValue(record.GetOptionalField("owner").AsOptional().Value!.As<DamlParty>()) : null,
-        Provider: record.GetOptionalField("provider").AsOptional().HasValue ? Party.FromDamlValue(record.GetOptionalField("provider").AsOptional().Value!.As<DamlParty>()) : null,
-        Id: record.GetRequiredField("id").As<DamlText>().Value
+    public static Account FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Account(
+        Owner: record.GetOptionalField("owner").AsOptional().HasValue ? global::Daml.Runtime.Data.Party.FromDamlValue(record.GetOptionalField("owner").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlParty>()) : null,
+        Provider: record.GetOptionalField("provider").AsOptional().HasValue ? global::Daml.Runtime.Data.Party.FromDamlValue(record.GetOptionalField("provider").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlParty>()) : null,
+        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "owner"), context.Field("owner"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("provider", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "provider"), context.Field("provider"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0))),
-            DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(3);
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "owner", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("owner"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "provider", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("provider"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

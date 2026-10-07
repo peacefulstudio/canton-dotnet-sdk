@@ -25,12 +25,12 @@ public partial class CodeGenEdgeCaseTests
     [InlineData(
         "App.Records",
         true,
-        """Token.FromRecord(record.GetRequiredField("t").As<DamlRecord>())""",
+        """global::App.Records.Token.FromRecord(record.GetRequiredField("t").As<global::Daml.Runtime.Data.DamlRecord>())""",
         "TokenExtensions.FromDamlEnum")]
     [InlineData(
         "App.Config",
         true,
-        """TokenExtensions.FromDamlEnum(record.GetRequiredField("t").As<DamlEnum>())""",
+        """global::App.Config.TokenExtensions.FromDamlEnum(record.GetRequiredField("t").As<global::Daml.Runtime.Data.DamlEnum>())""",
         null)]
     [InlineData(
         "App.Config",
@@ -98,7 +98,7 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar).ToList();
-        var holder = files.FirstOrDefault(f => f.RelativePath.EndsWith("Holder.cs", StringComparison.Ordinal));
+        var holder = files.FirstOrDefault(f => f.RelativePath.EndsWith("Holder.cs", global::System.StringComparison.Ordinal));
 
         holder.Should().NotBeNull();
         holder!.Content.Should().Contain(expectedFragment);
@@ -139,7 +139,7 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var locked = files.FirstOrDefault(f => f.RelativePath.EndsWith("Locked.cs", StringComparison.Ordinal));
+        var locked = files.FirstOrDefault(f => f.RelativePath.EndsWith("Locked.cs", global::System.StringComparison.Ordinal));
 
         locked.Should().NotBeNull();
         locked!.Content.Should().Contain(
@@ -197,18 +197,18 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var shape = files.FirstOrDefault(f => f.RelativePath.EndsWith("Shape.cs", StringComparison.Ordinal));
+        var shape = files.FirstOrDefault(f => f.RelativePath.EndsWith("Shape.cs", global::System.StringComparison.Ordinal));
 
         // Assert — no throwing path survives.
         shape.Should().NotBeNull();
         shape!.Content.Should().NotContain("NotImplementedException");
 
         // The record-payload case carries the record under the variant tag.
-        shape.Content.Should().Contain("public sealed record Rect(Rectangle Value) : Shape");
-        shape.Content.Should().Contain("public override DamlVariant ToVariant() => DamlVariant.Create(\"Rect\", Value.ToRecord());");
+        shape.Content.Should().Contain("public sealed record Rect(global::App.Module.Rectangle Value) : Shape");
+        shape.Content.Should().Contain("public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create(\"Rect\", Value.ToRecord());");
 
         // FromVariant decodes the payload back through the record's FromRecord.
-        shape.Content.Should().Contain("\"Rect\" => new Rect(Rectangle.FromRecord(variant.Value.As<DamlRecord>())),");
+        shape.Content.Should().Contain("\"Rect\" => new Rect(global::App.Module.Rectangle.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),");
         shape.Content.Should().Contain("\"Point\" => new Point(),");
     }
 
@@ -249,13 +249,13 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var bag = files.FirstOrDefault(f => f.RelativePath.EndsWith("Bag.cs", StringComparison.Ordinal));
+        var bag = files.FirstOrDefault(f => f.RelativePath.EndsWith("Bag.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         bag.Should().NotBeNull();
         bag!.Content.Should().Contain("IReadOnlyDictionary<string, long> Counts");
-        bag.Content.Should().Contain("new DamlGenMap(Counts.Select(kv => ((DamlValue)new DamlText(kv.Key), (DamlValue)new DamlInt64(kv.Value))).ToList())");
-        bag.Content.Should().Contain("record.GetRequiredField(\"counts\").As<DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<DamlText>().Value, kv => kv.Value.As<DamlInt64>().Value)");
+        bag.Content.Should().Contain("new global::Daml.Runtime.Data.DamlGenMap(Counts.Select(kv => ((global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(kv.Key), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlInt64(kv.Value))).ToList())");
+        bag.Content.Should().Contain("record.GetRequiredField(\"counts\").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value)");
     }
 
     #endregion
@@ -293,14 +293,14 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var bucketsFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Buckets.cs", StringComparison.Ordinal));
+        var bucketsFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Buckets.cs", global::System.StringComparison.Ordinal));
 
         bucketsFile.Should().NotBeNull();
         var code = bucketsFile!.Content;
 
-        code.Should().Contain("IReadOnlyDictionary<string, IReadOnlyList<string>> Items");
-        code.Should().Contain("(IReadOnlyList<string>)");
-        code.Should().NotContain("ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlList>().Values.Select(x => x.As<DamlText>().Value).ToList())");
+        code.Should().Contain("global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<string>> Items");
+        code.Should().Contain("(global::System.Collections.Generic.IReadOnlyList<string>)");
+        code.Should().NotContain("ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList())");
     }
 
     [Fact]
@@ -335,14 +335,14 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var ledgerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Ledger.cs", StringComparison.Ordinal));
+        var ledgerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Ledger.cs", global::System.StringComparison.Ordinal));
 
         ledgerFile.Should().NotBeNull();
         var code = ledgerFile!.Content;
 
-        code.Should().Contain("IReadOnlyDictionary<string, IReadOnlyList<long>> Entries");
-        code.Should().Contain("(IReadOnlyList<long>)");
-        code.Should().NotContain("Entries.ToDictionary(kv => kv.Key.As<DamlText>().Value, kv => kv.Value.As<DamlList>().Values.Select(x => x.As<DamlInt64>().Value).ToList())");
+        code.Should().Contain("global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<long>> Entries");
+        code.Should().Contain("(global::System.Collections.Generic.IReadOnlyList<long>)");
+        code.Should().NotContain("Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlInt64>().Value).ToList())");
     }
 
     #endregion

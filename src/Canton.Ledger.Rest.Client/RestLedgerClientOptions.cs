@@ -35,15 +35,17 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// resubmission idempotent — the pipeline itself confers no idempotency.
     /// </summary>
     /// <remarks>
-    /// Two asymmetries against the gRPC pipeline are deliberate and consumer-visible. A participant
+    /// Retry differs from the gRPC pipeline in one deliberate, consumer-visible way. A participant
     /// that answers with a status code — 429, 503, a gateway 5xx — is <em>not</em> retried: on HTTP
     /// that is a response rather than an exception, and the kernel's transient-failure predicate
-    /// classifies exceptions only. And where the gRPC client maps a retried
-    /// <c>DUPLICATE_COMMAND</c> rejection back to success by point-reading the committed
-    /// transaction from the rejection's <c>completion_offset</c>, the JSON API does not serve that
-    /// metadata, so a first attempt that commits while its response is lost surfaces the
-    /// resubmission's <c>DUPLICATE_COMMAND</c> to the caller even though the ledger change
-    /// succeeded.
+    /// classifies exceptions only.
+    /// <para>
+    /// As in the gRPC client, a retried submission rejected as <c>DUPLICATE_COMMAND</c> because its
+    /// first attempt already committed is resolved to success by reading the committed transaction
+    /// at the rejection's <c>completion_offset</c>. When the rejection carries no usable
+    /// <c>completion_offset</c>, reports <c>accepted</c> as <c>false</c>, or the read fails, the
+    /// <c>DUPLICATE_COMMAND</c> error is surfaced unchanged.
+    /// </para>
     /// <para>
     /// Enabling retries also makes each request body buffered in memory before the first attempt,
     /// so it can be replayed on the next one. Command submissions are small enough for this to be

@@ -23,45 +23,45 @@ namespace Daml.Codegen.Testing.Conformance.SubmitShapes;
 /// Generated from Daml template SubmitShapes:TicketDesk
 /// </summary>
 public sealed partial record TicketDesk(
-    [property: DamlFieldAttribute("issuer")] Party Issuer,
-    [property: DamlFieldAttribute("patron")] Party Patron
-) : ITemplate, IHasChoices<TicketDesk>, IDamlRecord<TicketDesk>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("issuer")] global::Daml.Runtime.Data.Party Issuer,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("patron")] global::Daml.Runtime.Data.Party Patron
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<TicketDesk>, global::Daml.Runtime.Data.IDamlRecord<TicketDesk>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "SubmitShapes", "TicketDesk");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "SubmitShapes", "TicketDesk");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    public static string PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hecd531570c32";
+    public static string PackageName => "richtypes-hf9ffaa5ee2ff";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("issuer", Issuer.ToDamlValue()),
-        DamlField.Create("patron", Patron.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("issuer", Issuer.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("patron", Patron.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TicketDesk FromRecord(DamlRecord record) => new TicketDesk(
-        Issuer: Party.FromDamlValue(record.GetRequiredField("issuer").As<DamlParty>()),
-        Patron: Party.FromDamlValue(record.GetRequiredField("patron").As<DamlParty>())
+    public static TicketDesk FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TicketDesk(
+        Issuer: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("issuer").As<global::Daml.Runtime.Data.DamlParty>()),
+        Patron: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("patron").As<global::Daml.Runtime.Data.DamlParty>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("issuer", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "issuer"), context.Field("issuer"))),
-            DamlField.Create("patron", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "patron"), context.Field("patron")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("issuer", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "issuer"), context.Field("issuer"))),
+            global::Daml.Runtime.Data.DamlField.Create("patron", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "patron"), context.Field("patron")))
         );
     }
 
@@ -69,17 +69,17 @@ public sealed partial record TicketDesk(
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<TicketDesk, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TicketDesk, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -87,272 +87,67 @@ public sealed partial record TicketDesk(
     /// <summary>
     /// Exercise the Issue choice.
     /// </summary>
-    public static Choice<TicketDesk, Issue, ContractId<Ticket>> ChoiceIssue { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TicketDesk, Issue, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>> ChoiceIssue { get; } = new()
     {
-        Name = new ChoiceName("Issue"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Issue"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Issue.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<Ticket>(val.As<DamlContractId>().Value),
-        ArgumentJsonReader = (json, context) => TicketDesk.Issue.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Issue.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Issue.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
 
     /// <summary>
     /// Exercise the Pair choice.
     /// </summary>
-    public static Choice<TicketDesk, Pair, Tuple2<ContractId<Ticket>, Optional<ContractId<Ephemeral>>>> ChoicePair { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TicketDesk, Pair, global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>> ChoicePair { get; } = new()
     {
-        Name = new ChoiceName("Pair"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Pair"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Pair.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => Tuple2<ContractId<Ticket>, Optional<ContractId<Ephemeral>>>.FromRecord(val.As<DamlRecord>(), __v0 => new ContractId<Ticket>(__v0.As<DamlContractId>().Value), __v1 => Optional<ContractId<Ephemeral>>.FromValue(__v1, __optional1 => new ContractId<Ephemeral>(__optional1.As<DamlContractId>().Value))),
-        ArgumentJsonReader = (json, context) => TicketDesk.Pair.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json1, __ctx1))),
+        ArgumentDecoder = val => Pair.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(__v0.As<global::Daml.Runtime.Contracts.DamlContractId>().Value), null, __v1 => global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>.FromValue(__v1, __optional1 => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>(__optional1.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)), global::Daml.Runtime.Data.DamlOptional.None),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Pair.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0), null, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json1, __ctx1)), global::Daml.Runtime.Data.DamlOptional.None),
     };
 
     /// <summary>
     /// Exercise the Reserve choice.
     /// </summary>
-    public static Choice<TicketDesk, Reserve, ContractId<Ticket>> ChoiceReserve { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TicketDesk, Reserve, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>> ChoiceReserve { get; } = new()
     {
-        Name = new ChoiceName("Reserve"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Reserve"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Reserve.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<Ticket>(val.As<DamlContractId>().Value),
-        ArgumentJsonReader = (json, context) => TicketDesk.Reserve.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Reserve.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Reserve.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
 
     /// <summary>
     /// Exercise the Retire choice.
     /// </summary>
-    public static Choice<TicketDesk, Retire, DamlUnit> ChoiceRetire { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<TicketDesk, Retire, global::Daml.Runtime.Data.DamlUnit> ChoiceRetire { get; } = new()
     {
-        Name = new ChoiceName("Retire"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Retire"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Retire.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = _ => DamlUnit.Instance,
-        ArgumentJsonReader = (json, context) => TicketDesk.Retire.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Retire.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Retire.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceIssue, ChoicePair, ChoiceReserve, ChoiceRetire];
-
-}
-
-/// <summary>
-/// Typed projection of the contracts created by the Issue choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record IssueResult(
-    ContractId<Ticket> Ticket
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="IssueResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<IssueResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<IssueResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<IssueResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<IssueResult>.One(new IssueResult(
-            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0])
-        ));
-    }
-
-}
-
-/// <summary>
-/// Typed projection of the contracts created by the Pair choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record PairResult(
-    ContractId<Ticket> Ticket,
-    ContractId<Ephemeral>? Ephemeral
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="PairResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<PairResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        var templateMatches1 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-            else if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches1.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var matches1 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        var templateMatchIndex1 = 0;
-        if (templateMatchIndex1 < templateMatches1.Count)
-        {
-            matches1.Add(templateMatches1[templateMatchIndex1]);
-            templateMatchIndex1++;
-        }
-        while (templateMatchIndex1 < templateMatches1.Count)
-        {
-            matches1.Add(templateMatches1[templateMatchIndex1]);
-            templateMatchIndex1++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<PairResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        if (matches1.Count > 1)
-        {
-            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches1));
-        }
-
-        return new ExerciseOutcome<PairResult>.One(new PairResult(
-            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0]),
-            Ephemeral: matches1.Count == 1 ? new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>(matches1[0]) : null
-        ));
-    }
-
-}
-
-/// <summary>
-/// Typed projection of the contracts created by the Reserve choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record ReserveResult(
-    ContractId<Ticket> Ticket
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="ReserveResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<ReserveResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ReserveResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ReserveResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ReserveResult>.One(new ReserveResult(
-            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0])
-        ));
-    }
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceIssue, ChoicePair, ChoiceReserve, ChoiceRetire];
 
 }
 
 
 /// <summary>
-/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="TicketDesk"/>.
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
 /// and projects success from the choice's own exercise result.
@@ -364,21 +159,21 @@ public static class TicketDeskExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand IssueCommand(
-        this ContractId<TicketDesk> contractId,
-        TicketDesk.Issue argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand IssueCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Issue argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            TicketDesk.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.TemplateId,
             contractId,
-            new ChoiceName("Issue"),
+            new global::Daml.Runtime.Commands.ChoiceName("Issue"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Issue choice and projects the choice's exercise result to a typed <see cref="IssueResult"/>.
+    /// Exercises the Issue choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -392,20 +187,20 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<IssueResult>> TryIssueAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Issue argument,
-        Party patron,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryIssueAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Issue argument,
+        global::Daml.Runtime.Data.Party patron,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = patron;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = patron;
 
         return contractId.TryIssueAsync(
             client,
@@ -419,7 +214,7 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Issue choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="IssueResult"/>.
+    /// Exercises the Issue choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -433,18 +228,18 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<IssueResult>> TryIssueAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Issue argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryIssueAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Issue argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.IssueCommand(argument);
 
@@ -454,10 +249,10 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Issue choice on a fetched <see cref="TicketDesk"/> contract,
+    /// Exercises the Issue choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -467,19 +262,19 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<IssueResult>> TryIssueAsync(
-        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
-        ILedgerWriter client,
-        TicketDesk.Issue argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryIssueAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk>, global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Issue argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryIssueAsync(
             client,
@@ -493,11 +288,11 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Issue choice on a fetched <see cref="TicketDesk"/> contract with an
+    /// Exercises the Issue choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -508,20 +303,20 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<IssueResult>> TryIssueAsync(
-        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
-        ILedgerWriter client,
-        TicketDesk.Issue argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryIssueAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk>, global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Issue argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryIssueAsync(
             client,
@@ -534,74 +329,29 @@ public static class TicketDeskExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<IssueResult> ProjectIssueResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = IssueResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<IssueResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TicketDesk.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TicketDesk.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Issue", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeIssueResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<IssueResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<IssueResult> DecodeIssueResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlContractId>().Value);
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<IssueResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<IssueResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<IssueResult>.One(new IssueResult(
-            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0])
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>> ProjectIssueResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.ChoiceIssue, contractId);
 
     /// <summary>
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Pair choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand PairCommand(
-        this ContractId<TicketDesk> contractId,
-        TicketDesk.Pair argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand PairCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Pair argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            TicketDesk.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.TemplateId,
             contractId,
-            new ChoiceName("Pair"),
+            new global::Daml.Runtime.Commands.ChoiceName("Pair"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Pair choice and projects the choice's exercise result to a typed <see cref="PairResult"/>.
+    /// Exercises the Pair choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.Tuple2&lt;global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket&gt;, global::Daml.Runtime.Stdlib.Optional&lt;global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral&gt;&gt;&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -615,20 +365,20 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<PairResult>> TryPairAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Pair argument,
-        Party patron,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>>> TryPairAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Pair argument,
+        global::Daml.Runtime.Data.Party patron,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = patron;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = patron;
 
         return contractId.TryPairAsync(
             client,
@@ -642,7 +392,7 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Pair choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="PairResult"/>.
+    /// Exercises the Pair choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.Tuple2&lt;global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket&gt;, global::Daml.Runtime.Stdlib.Optional&lt;global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral&gt;&gt;&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -656,18 +406,18 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<PairResult>> TryPairAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Pair argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>>> TryPairAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Pair argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.PairCommand(argument);
 
@@ -677,10 +427,10 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Pair choice on a fetched <see cref="TicketDesk"/> contract,
+    /// Exercises the Pair choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -690,19 +440,19 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<PairResult>> TryPairAsync(
-        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
-        ILedgerWriter client,
-        TicketDesk.Pair argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>>> TryPairAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk>, global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Pair argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryPairAsync(
             client,
@@ -716,11 +466,11 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Pair choice on a fetched <see cref="TicketDesk"/> contract with an
+    /// Exercises the Pair choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -731,20 +481,20 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<PairResult>> TryPairAsync(
-        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
-        ILedgerWriter client,
-        TicketDesk.Pair argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>>> TryPairAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk>, global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Pair argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryPairAsync(
             client,
@@ -757,94 +507,29 @@ public static class TicketDeskExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<PairResult> ProjectPairResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = PairResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<PairResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TicketDesk.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TicketDesk.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Pair", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodePairResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<PairResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<PairResult> DecodePairResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        var matches1 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlRecord>().Fields[0].Value.As<DamlContractId>().Value);
-        var fields1_0 = exerciseResult.As<DamlRecord>().Fields;
-        if (fields1_0.Count > 1)
-        {
-            if (fields1_0[1].Value switch
-            {
-                DamlOptional optional => optional.Value,
-                DamlOptionalChain chain => chain.Value,
-                var bare => bare,
-            } is { } present1_1)
-            {
-                matches1.Add(present1_1.As<DamlContractId>().Value);
-            }
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<PairResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        if (matches1.Count > 1)
-        {
-            return new ExerciseOutcome<PairResult>.Many(EquatableArray.Create(matches1));
-        }
-
-        return new ExerciseOutcome<PairResult>.One(new PairResult(
-            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0]),
-            Ephemeral: matches1.Count == 1 ? new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>(matches1[0]) : null
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>> ProjectPairResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.ChoicePair, contractId);
 
     /// <summary>
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Reserve choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReserveCommand(
-        this ContractId<TicketDesk> contractId,
-        TicketDesk.Reserve argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReserveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Reserve argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            TicketDesk.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.TemplateId,
             contractId,
-            new ChoiceName("Reserve"),
+            new global::Daml.Runtime.Commands.ChoiceName("Reserve"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Reserve choice and projects the choice's exercise result to a typed <see cref="ReserveResult"/>.
+    /// Exercises the Reserve choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -858,20 +543,20 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReserveResult>> TryReserveAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Reserve argument,
-        Party patron,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryReserveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Reserve argument,
+        global::Daml.Runtime.Data.Party patron,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = patron;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = patron;
 
         return contractId.TryReserveAsync(
             client,
@@ -885,7 +570,7 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Reserve choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ReserveResult"/>.
+    /// Exercises the Reserve choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -899,18 +584,18 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<ReserveResult>> TryReserveAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Reserve argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryReserveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Reserve argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReserveCommand(argument);
 
@@ -920,10 +605,10 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Reserve choice on a fetched <see cref="TicketDesk"/> contract,
+    /// Exercises the Reserve choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -933,19 +618,19 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReserveResult>> TryReserveAsync(
-        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
-        ILedgerWriter client,
-        TicketDesk.Reserve argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryReserveAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk>, global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Reserve argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryReserveAsync(
             client,
@@ -959,11 +644,11 @@ public static class TicketDeskExtensions
     }
 
     /// <summary>
-    /// Exercises the Reserve choice on a fetched <see cref="TicketDesk"/> contract with an
+    /// Exercises the Reserve choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;TicketDesk&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -974,20 +659,20 @@ public static class TicketDeskExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReserveResult>> TryReserveAsync(
-        this IContract<ContractId<TicketDesk>, TicketDesk> contract,
-        ILedgerWriter client,
-        TicketDesk.Reserve argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>> TryReserveAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk>, global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Reserve argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryReserveAsync(
             client,
@@ -1000,53 +685,8 @@ public static class TicketDeskExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<ReserveResult> ProjectReserveResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = ReserveResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<ReserveResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TicketDesk.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TicketDesk.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Reserve", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeReserveResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<ReserveResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<ReserveResult> DecodeReserveResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlContractId>().Value);
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ReserveResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ReserveResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ReserveResult>.One(new ReserveResult(
-            Ticket: new ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(matches0[0])
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>> ProjectReserveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.ChoiceReserve, contractId);
 }
 
 /// <summary>
@@ -1070,16 +710,16 @@ public static class TicketDeskSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<TicketDesk>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<TicketDesk>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         TicketDesk payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Issuer;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Issuer;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<TicketDesk>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
@@ -1092,10 +732,10 @@ public static class TicketDeskSubmissionExtensions
     /// choice.
     /// </summary>
     /// <param name="payload">The contract payload.</param>
-    public static IReadOnlyList<Party> Observers(TicketDesk payload)
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers(TicketDesk payload)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        return new Party[]
+        global::System.ArgumentNullException.ThrowIfNull(payload);
+        return new global::Daml.Runtime.Data.Party[]
         {
             payload.Patron
         };
@@ -1103,7 +743,7 @@ public static class TicketDeskSubmissionExtensions
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="TicketDesk"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -1115,20 +755,20 @@ public static class TicketDeskNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<TicketDesk> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            TicketDesk.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -1139,17 +779,17 @@ public static class TicketDeskNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -1163,22 +803,22 @@ public static class TicketDeskNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand RetireCommand(
-        this ContractId<TicketDesk> contractId,
-        TicketDesk.Retire argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand RetireCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Retire argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            TicketDesk.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.TemplateId,
             contractId,
-            new ChoiceName("Retire"),
+            new global::Daml.Runtime.Commands.ChoiceName("Retire"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the Retire choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -1190,18 +830,18 @@ public static class TicketDeskNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryRetireAsync(
-        this ContractId<TicketDesk> contractId,
-        ILedgerWriter client,
-        TicketDesk.Retire argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryRetireAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.Retire argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.RetireCommand(argument);
 
@@ -1210,61 +850,9 @@ public static class TicketDeskNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectRetireResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TicketDesk.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TicketDesk.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = TicketDesk.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.ChoiceArchive, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<DamlUnit> ProjectRetireResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, TicketDesk.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, TicketDesk.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Retire", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = TicketDesk.ChoiceRetire.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Retire' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectRetireResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.SubmitShapes.TicketDesk.ChoiceRetire, contractId);
 }

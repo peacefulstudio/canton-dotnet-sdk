@@ -90,6 +90,7 @@ public static class TransactionTreeExtensions
                         created.CreatedAt)
                     {
                         InterfaceIds = created.InterfaceIds,
+                        UndecodedPayload = created.UndecodedCreateArguments,
                     });
                     break;
                 case TreeEvent.Exercised exercised:

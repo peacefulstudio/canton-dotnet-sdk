@@ -15,30 +15,30 @@ public sealed partial record GenericResults
     /// Choice argument type for ReturnNestedOptional.
     /// </summary>
     public sealed record ReturnNestedOptional(
-        [property: DamlFieldAttribute("outer")] bool Outer,
-        [property: DamlFieldAttribute("inner")] bool Inner
-    ) : IDamlRecord<ReturnNestedOptional>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("outer")] bool Outer,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("inner")] bool Inner
+    ) : global::Daml.Runtime.Data.IDamlRecord<ReturnNestedOptional>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("outer", new DamlBool(Outer)),
-            DamlField.Create("inner", new DamlBool(Inner))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("outer", new global::Daml.Runtime.Data.DamlBool(Outer)),
+            global::Daml.Runtime.Data.DamlField.Create("inner", new global::Daml.Runtime.Data.DamlBool(Inner))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static ReturnNestedOptional FromRecord(DamlRecord record) => new ReturnNestedOptional(
-            Outer: record.GetRequiredField("outer").As<DamlBool>().Value,
-            Inner: record.GetRequiredField("inner").As<DamlBool>().Value
+        public static ReturnNestedOptional FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ReturnNestedOptional(
+            Outer: record.GetRequiredField("outer").As<global::Daml.Runtime.Data.DamlBool>().Value,
+            Inner: record.GetRequiredField("inner").As<global::Daml.Runtime.Data.DamlBool>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("outer", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "outer"), context.Field("outer"))),
-                DamlField.Create("inner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inner"), context.Field("inner")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("outer", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "outer"), context.Field("outer"))),
+                global::Daml.Runtime.Data.DamlField.Create("inner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inner"), context.Field("inner")))
             );
         }
 

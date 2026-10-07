@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 using static Daml.Codegen.CSharp.Tests.TestHelpers.EmittedSubmissionShape;
@@ -14,15 +15,6 @@ namespace Daml.Codegen.CSharp.Tests;
 public class ChoiceEmitterContractIdExerciserTests
 {
     private const string LocalPackageId = "pkg-id";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => Identifiers.Sanitize(typeRef.Name);
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(DamlTemplate template) =>
         new()
@@ -74,54 +66,66 @@ public class ChoiceEmitterContractIdExerciserTests
     private static DamlTypeApp ContractIdOf(string templateName) =>
         new(new DamlPrimitiveType(DamlPrimitive.ContractId), [new DamlTypeRef(LocalPackageId, "Main", templateName)]);
 
-    private static (string ResultStructs, string Exercisers) Emit(TemplateFixture fixture)
+    private static string Emit(TemplateFixture fixture, params DamlPackage[] dependencies)
     {
         var template = fixture.Template;
         var package = Package(template);
-        var context = PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, dependencies);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
-
-        var structsSb = new StringBuilder();
-        var structsIndent = new IndentWriter(structsSb) { CurrentTypeName = template.Name };
-        emitter.WriteChoiceResultStructs(structsIndent, template);
 
         var exerciserSb = new StringBuilder();
         var exerciserIndent = new IndentWriter(exerciserSb) { CurrentTypeName = template.Name };
-        emitter.WriteChoiceAsyncExercisersClass(exerciserIndent, template, template.Name, fixture.Fields, context.DataTypes);
+        emitter.WriteChoiceAsyncExercisersClass(exerciserIndent, template, template.Name, fixture.Fields);
 
-        return (structsSb.ToString(), exerciserSb.ToString());
+        return exerciserSb.ToString();
     }
 
     [Fact]
-    public void ChoiceEmitterContractIdExerciser_single_contract_id_choice_emits_a_single_cardinality_slot_property()
+    public void ChoiceEmitterContractIdExerciser_single_contract_id_choice_returns_the_contract_id_through_the_descriptor_projection()
     {
         var template = Template([], Choice("Spawn", ContractIdOf("Token")));
 
-        var (structs, _) = Emit(template);
+        var exercisers = Emit(template);
 
-        structs.Should().Contain("public sealed record SpawnResult(\n    ContractId<Token> Token\n)");
-        structs.Should().Contain("public static ExerciseOutcome<SpawnResult> FromCreatedContracts");
+        exercisers.Should().Contain("Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>>> TrySpawnAsync(");
+        exercisers.Should().Contain("private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>> ProjectSpawnResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>\n        tx.ProjectChoiceResult(global::Test.Package.Main.Vault.ChoiceSpawn, contractId);");
+        exercisers.Should().NotContain("SpawnResult.FromCreatedContracts");
+        exercisers.Should().NotContain("DecodeSpawnResult");
     }
 
     [Fact]
-    public void ChoiceEmitterContractIdExerciser_optional_contract_id_choice_emits_a_nullable_slot_property()
+    public void ChoiceEmitterContractIdExerciser_optional_contract_id_choice_returns_a_nullable_contract_id()
     {
         var template = Template([], Choice("Spawn", new DamlTypeApp(new DamlPrimitiveType(DamlPrimitive.Optional), [ContractIdOf("Token")])));
 
-        var (structs, _) = Emit(template);
+        var exercisers = Emit(template);
 
-        structs.Should().Contain("public sealed record SpawnResult(\n    ContractId<Token>? Token\n)");
+        exercisers.Should().Contain("ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>?>> TrySpawnAsync(");
     }
 
     [Fact]
-    public void ChoiceEmitterContractIdExerciser_list_contract_id_choice_emits_a_list_slot_property()
+    public void ChoiceEmitterContractIdExerciser_list_contract_id_choice_returns_the_read_only_list()
     {
         var template = Template([], Choice("Spawn", new DamlTypeApp(new DamlPrimitiveType(DamlPrimitive.List), [ContractIdOf("Token")])));
 
-        var (structs, _) = Emit(template);
+        var exercisers = Emit(template);
 
-        structs.Should().Contain("public sealed record SpawnResult(\n    IReadOnlyList<ContractId<Token>> Token\n)");
+        exercisers.Should().Contain("ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>>>> TrySpawnAsync(");
+    }
+
+    [Fact]
+    public void ChoiceEmitterContractIdExerciser_tuple_contract_id_choice_returns_the_stdlib_tuple()
+    {
+        var tuple = new DamlTypeApp(
+            new DamlTypeRef("daml-prim", "DA.Types", "Tuple2"),
+            [ContractIdOf("Token"), new DamlPrimitiveType(DamlPrimitive.Int64)]);
+        var template = Template([], Choice("Spawn", tuple));
+
+        var exercisers = Emit(template, TestPackages.DamlPrim());
+
+        exercisers.Should().Contain("ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>, long>>> TrySpawnAsync(");
     }
 
     [Fact]
@@ -131,12 +135,12 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
         exercisers.Should().Contain("public static class VaultExtensions");
-        exercisers.Should().Contain("public static async Task<ExerciseOutcome<SpawnResult>> TrySpawnAsync(");
-        exercisers.Should().Contain("public static Task<ExerciseOutcome<SpawnResult>> TrySpawnAsync(");
-        exercisers.Should().Contain("this ContractId<Vault> contractId,");
+        exercisers.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>>> TrySpawnAsync(");
+        exercisers.Should().Contain("public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Token>>> TrySpawnAsync(");
+        exercisers.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Vault> contractId,");
     }
 
     [Fact]
@@ -144,9 +148,8 @@ public class ChoiceEmitterContractIdExerciserTests
     {
         var template = Template([], Choice("Touch", new DamlPrimitiveType(DamlPrimitive.Unit)));
 
-        var (structs, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
-        structs.Should().BeEmpty();
         exercisers.Should().BeEmpty();
     }
 
@@ -157,14 +160,14 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
         exercisers.Should().Contain("CommandId? commandId = null,");
         exercisers.Should().Contain(TrySubmitSingleArgumentOrder);
 
-        var idxWorkflowId = exercisers.IndexOf("string? workflowId = null,", StringComparison.Ordinal);
-        var idxCommandId = exercisers.IndexOf("CommandId? commandId = null,", StringComparison.Ordinal);
-        var idxCancellationToken = exercisers.IndexOf("CancellationToken cancellationToken = default)", StringComparison.Ordinal);
+        var idxWorkflowId = exercisers.IndexOf("string? workflowId = null,", global::System.StringComparison.Ordinal);
+        var idxCommandId = exercisers.IndexOf("CommandId? commandId = null,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = exercisers.IndexOf("global::System.Threading.CancellationToken cancellationToken = default)", global::System.StringComparison.Ordinal);
         idxWorkflowId.Should().BeLessThan(idxCommandId);
         idxCommandId.Should().BeLessThan(idxCancellationToken);
     }
@@ -176,14 +179,14 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
-        exercisers.Should().Contain("TimeSpan? timeout = null,");
+        exercisers.Should().Contain("global::System.TimeSpan? timeout = null,");
         exercisers.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
-        var idxCommandId = exercisers.IndexOf("CommandId? commandId = null,", StringComparison.Ordinal);
-        var idxTimeout = exercisers.IndexOf("TimeSpan? timeout = null,", StringComparison.Ordinal);
-        var idxCancellationToken = exercisers.IndexOf("CancellationToken cancellationToken = default)", StringComparison.Ordinal);
+        var idxCommandId = exercisers.IndexOf("CommandId? commandId = null,", global::System.StringComparison.Ordinal);
+        var idxTimeout = exercisers.IndexOf("global::System.TimeSpan? timeout = null,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = exercisers.IndexOf("global::System.Threading.CancellationToken cancellationToken = default)", global::System.StringComparison.Ordinal);
         idxCommandId.Should().BeLessThan(idxTimeout);
         idxTimeout.Should().BeLessThan(idxCancellationToken);
     }
@@ -195,12 +198,12 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
-        exercisers.Should().Contain("public static ExerciseCommand SpawnCommand(");
-        exercisers.Should().Contain("this ContractId<Vault> contractId)");
+        exercisers.Should().Contain("public static global::Daml.Runtime.Commands.ExerciseCommand SpawnCommand(");
+        exercisers.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Package.Main.Vault> contractId)");
 
-        const string commandConstructionMarker = "new ExerciseCommand(";
+        const string commandConstructionMarker = "new global::Daml.Runtime.Commands.ExerciseCommand(";
         var firstConstruction = exercisers.IndexOf(commandConstructionMarker, StringComparison.Ordinal);
         firstConstruction.Should().BeGreaterThanOrEqualTo(0);
         exercisers.IndexOf(commandConstructionMarker, firstConstruction + 1, StringComparison.Ordinal).Should().Be(-1);
@@ -221,15 +224,15 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
-        var delegationStart = exercisers.IndexOf("return contract.Id.TrySpawnAsync(", StringComparison.Ordinal);
+        var delegationStart = exercisers.IndexOf("return contract.Id.TrySpawnAsync(", global::System.StringComparison.Ordinal);
         delegationStart.Should().BeGreaterThanOrEqualTo(0);
         var delegation = exercisers.Substring(delegationStart);
 
-        var idxCommandId = delegation.IndexOf("commandId,", StringComparison.Ordinal);
-        var idxTimeout = delegation.IndexOf("timeout,", StringComparison.Ordinal);
-        var idxCancellationToken = delegation.IndexOf("cancellationToken);", StringComparison.Ordinal);
+        var idxCommandId = delegation.IndexOf("commandId,", global::System.StringComparison.Ordinal);
+        var idxTimeout = delegation.IndexOf("timeout,", global::System.StringComparison.Ordinal);
+        var idxCancellationToken = delegation.IndexOf("cancellationToken);", global::System.StringComparison.Ordinal);
         idxCommandId.Should().BeGreaterThanOrEqualTo(0);
         idxTimeout.Should().BeGreaterThan(idxCommandId);
         idxCancellationToken.Should().BeGreaterThan(idxTimeout);
@@ -242,11 +245,11 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
-        Regex.Matches(exercisers, @"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)")
+        Regex.Matches(exercisers, @"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)")
             .Should().HaveCount(4);
-        Regex.Matches(exercisers, "CancellationToken cancellationToken = default\\)").Should().HaveCount(4);
+        Regex.Matches(exercisers, "global::System.Threading.CancellationToken cancellationToken = default\\)").Should().HaveCount(4);
     }
 
     [Fact]
@@ -256,10 +259,10 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
         exercisers.Should().Contain("SubmitterInfo submitter,");
-        Regex.Matches(exercisers, @"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*CancellationToken cancellationToken = default\)")
+        Regex.Matches(exercisers, @"TimeSpan\? timeout = null,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)")
             .Should().HaveCount(1);
     }
 
@@ -270,7 +273,7 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
         exercisers.Should().MatchRegex(@"return contractId\.TrySpawnAsync\(\s*client,\s*submitter,\s*workflowId,\s*commandId,\s*timeout,\s*configure,\s*cancellationToken\);");
     }
@@ -282,7 +285,7 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
         exercisers.Should().MatchRegex(@"return contract\.Id\.TrySpawnAsync\(\s*client,[^;]*timeout,\s*configure,\s*cancellationToken\);");
     }
@@ -294,7 +297,7 @@ public class ChoiceEmitterContractIdExerciserTests
             [new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))],
             Choice("Spawn", ContractIdOf("Token"), controllers: StaticParties("owner")));
 
-        var (_, exercisers) = Emit(template);
+        var exercisers = Emit(template);
 
         exercisers.Should().Contain("/// <param name=\"configure\">");
         exercisers.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");

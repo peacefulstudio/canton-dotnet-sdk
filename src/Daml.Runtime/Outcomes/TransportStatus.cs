@@ -10,16 +10,18 @@ namespace Daml.Runtime.Outcomes;
 
 /// <summary>
 /// What the transport said about a failed ledger call or stream. Discriminated union: callers
-/// <c>switch</c> on the concrete subtype, so a gRPC status, an HTTP status, a call that got no
-/// response and a response whose body could not be decoded are four distinct values and never
+/// <c>switch</c> on the concrete subtype, so a gRPC status, an HTTP status, a REST call that got
+/// no answer and a response whose body could not be decoded are four distinct values and never
 /// one integer read four ways.
 /// </summary>
 /// <remarks>
 /// <list type="bullet">
 ///   <item><see cref="Grpc"/> — the gRPC transport's own status for the call.</item>
 ///   <item><see cref="Http"/> — the HTTP status the participant actually answered with.</item>
-///   <item><see cref="NoResponse"/> — the call never got a complete response: the connection
-///   failed, or the deadline expired, before the participant finished answering.</item>
+///   <item><see cref="NoResponse"/> — the REST transport's "no answer": the connection failed,
+///   or the deadline expired, before the participant finished answering. A gRPC call never
+///   reports it: every gRPC failure, a deadline overrun included, reports
+///   <see cref="Grpc"/> with the status code.</item>
 ///   <item><see cref="UndecodableBody"/> — the participant answered, but the client could not
 ///   decode what it sent.</item>
 /// </list>
@@ -41,9 +43,12 @@ public abstract record TransportStatus
     public sealed record Http(HttpStatusCode StatusCode) : TransportStatus;
 
     /// <summary>
-    /// The call got no complete response to report a status from: the connection failed, or the
-    /// deadline expired, before the participant finished answering — including partway through
-    /// reading the response body.
+    /// The REST transport's "no answer": the call got no complete response to report a status
+    /// from, because the connection failed, or the deadline expired, before the participant
+    /// finished answering — including partway through reading the response body. The gRPC
+    /// transport never reports it: a gRPC failure, a deadline overrun included, is
+    /// <see cref="Grpc"/> with the status code, so branch on the error category and the commit
+    /// state for an answer that holds on both transports.
     /// </summary>
     public sealed record NoResponse : TransportStatus;
 

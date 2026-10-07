@@ -110,6 +110,15 @@ public abstract record TreeEvent
         /// <see cref="TransactionTreeExtensions.ToTransactionResult"/>.
         /// </summary>
         public EquatableArray<Identifier> InterfaceIds { get; init; }
+
+        /// <summary>
+        /// The create arguments as the Daml-LF JSON the participant sent, when the transport could not decode
+        /// them because the process holds no generated type for <see cref="TemplateId"/> (or holds more than
+        /// one) — <see langword="null"/> when <see cref="CreateArguments"/> was decoded. In that case
+        /// <see cref="CreateArguments"/> is an empty record. Flattened through to
+        /// <see cref="CreatedContract.UndecodedPayload"/> by <see cref="TransactionTreeExtensions.ToTransactionResult"/>.
+        /// </summary>
+        public DamlUndecodedJson? UndecodedCreateArguments { get; init; }
     }
 
     /// <summary>

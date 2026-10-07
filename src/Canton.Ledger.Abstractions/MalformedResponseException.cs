@@ -4,14 +4,19 @@
 namespace Canton.Ledger.Abstractions;
 
 /// <summary>
-/// Thrown when a participant's response body cannot be read as the Ledger API describes it — a field
-/// the API marks as required is absent, or a value on the wire does not decode into the type it claims.
+/// Describes why a participant's response body could not be read as the Ledger API describes it — a
+/// field the API marks as required is absent, or a value on the wire does not decode into the type it
+/// claims. A throwing gRPC call raises it as the <see cref="Exception.InnerException"/> of a
+/// <c>LedgerOperationException</c> whose <c>Status</c> is <c>UndecodableBody</c>; a stream reports it as
+/// the source of a terminal <c>StreamError</c>.
 /// </summary>
 /// <remarks>
 /// This says the fault is the participant's, not the caller's: the request was accepted, a body came
-/// back, and the body is the part that does not hold up. Both transports throw this one type, so a
-/// consumer catches it once regardless of whether the body arrived over gRPC or over the JSON Ledger
-/// API, and both build the message the same way — a fixed marker, then <see cref="Detail"/>.
+/// back, and the body is the part that does not hold up. Both transports build the message the same
+/// way — a fixed marker, then <see cref="Detail"/>. Catch the <c>LedgerOperationException</c> and read this
+/// from its <c>InnerException</c>. The JSON Ledger API client reports an unreadable body with the same
+/// <c>Status</c>, but its <c>InnerException</c> is whichever failure the read raised, so it can be a
+/// <c>JsonException</c> rather than this type.
 /// </remarks>
 public sealed class MalformedResponseException : InvalidOperationException
 {

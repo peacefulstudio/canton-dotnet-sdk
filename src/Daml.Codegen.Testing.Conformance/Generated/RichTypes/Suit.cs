@@ -31,34 +31,34 @@ public enum Suit
 public static class SuitExtensions
 {
     /// <summary>Converts to a DamlEnum value.</summary>
-    public static DamlEnum ToDamlEnum(this Suit value)
+    public static global::Daml.Runtime.Data.DamlEnum ToDamlEnum(this global::Daml.Codegen.Testing.Conformance.RichTypes.Suit value)
     {
         return value switch
         {
-            Suit.Clubs => DamlEnum.Create("Clubs"),
-            Suit.Diamonds => DamlEnum.Create("Diamonds"),
-            Suit.Hearts => DamlEnum.Create("Hearts"),
-            Suit.Spades => DamlEnum.Create("Spades"),
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+            global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Clubs => global::Daml.Runtime.Data.DamlEnum.Create("Clubs"),
+            global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Diamonds => global::Daml.Runtime.Data.DamlEnum.Create("Diamonds"),
+            global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Hearts => global::Daml.Runtime.Data.DamlEnum.Create("Hearts"),
+            global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Spades => global::Daml.Runtime.Data.DamlEnum.Create("Spades"),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value, null)
         };
     }
 
     /// <summary>Creates an instance from a DamlEnum value.</summary>
-    public static Suit FromDamlEnum(DamlEnum value)
+    public static global::Daml.Codegen.Testing.Conformance.RichTypes.Suit FromDamlEnum(global::Daml.Runtime.Data.DamlEnum value)
     {
         return value.Constructor switch
         {
-            "Clubs" => Suit.Clubs,
-            "Diamonds" => Suit.Diamonds,
-            "Hearts" => Suit.Hearts,
-            "Spades" => Suit.Spades,
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value.Constructor, null)
+            "Clubs" => global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Clubs,
+            "Diamonds" => global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Diamonds,
+            "Hearts" => global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Hearts,
+            "Spades" => global::Daml.Codegen.Testing.Conformance.RichTypes.Suit.Spades,
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value.Constructor, null)
         };
     }
 
     /// <summary>Decodes a Daml-LF JSON enum constructor directly into a DamlEnum, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlEnum __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context) =>
+    public static global::Daml.Runtime.Data.DamlEnum __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context) =>
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 
     private static readonly string[] ExpectedConstructors = ["Clubs", "Diamonds", "Hearts", "Spades"];

@@ -176,8 +176,7 @@ public class RichTypesRoundTripTests
             new RichRecord.Relabel(NewLabel: "renamed"),
             owner,
             cancellationToken: TestContext.Current.CancellationToken);
-        var relabelResult = Assert.IsType<ExerciseOutcome<RelabelResult>.One>(relabelOutcome).Result;
-        var relabelledCid = relabelResult.RichRecord;
+        var relabelledCid = Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(relabelOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(relabelledCid.Value), "relabelled ContractId is empty");
         Assert.NotEqual(createdCid.Value, relabelledCid.Value);
 

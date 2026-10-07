@@ -21,48 +21,48 @@ public sealed record Transfer(
     global::Splice.Api.Token.HoldingV2.Account Receiver,
     decimal Amount,
     global::Splice.Api.Token.HoldingV2.InstrumentId InstrumentId,
-    DateTimeOffset RequestedAt,
-    DateTimeOffset ExecuteBefore,
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids,
+    global::System.DateTimeOffset RequestedAt,
+    global::System.DateTimeOffset ExecuteBefore,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<Transfer>
+) : global::Daml.Runtime.Data.IDamlRecord<Transfer>
 {
     /// <summary>The Daml field <c>sender</c>.</summary>
-    [DamlFieldAttribute("sender")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("sender")]
     public global::Splice.Api.Token.HoldingV2.Account Sender { get; init; } = Sender;
 
     /// <summary>The Daml field <c>receiver</c>.</summary>
-    [DamlFieldAttribute("receiver")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("receiver")]
     public global::Splice.Api.Token.HoldingV2.Account Receiver { get; init; } = Receiver;
 
     /// <summary>The Daml field <c>amount</c>.</summary>
-    [DamlFieldAttribute("amount")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("amount")]
     public decimal Amount { get; init; } = Amount;
 
     /// <summary>The Daml field <c>instrumentId</c>.</summary>
-    [DamlFieldAttribute("instrumentId")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("instrumentId")]
     public global::Splice.Api.Token.HoldingV2.InstrumentId InstrumentId { get; init; } = InstrumentId;
 
     /// <summary>The Daml field <c>requestedAt</c>.</summary>
-    [DamlFieldAttribute("requestedAt")]
-    public DateTimeOffset RequestedAt { get; init; } = RequestedAt;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("requestedAt")]
+    public global::System.DateTimeOffset RequestedAt { get; init; } = RequestedAt;
 
     /// <summary>The Daml field <c>executeBefore</c>.</summary>
-    [DamlFieldAttribute("executeBefore")]
-    public DateTimeOffset ExecuteBefore { get; init; } = ExecuteBefore;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("executeBefore")]
+    public global::System.DateTimeOffset ExecuteBefore { get; init; } = ExecuteBefore;
 
-    private readonly IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _inputHoldingCids = DamlFieldCollections.Copy(InputHoldingCids);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _inputHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(InputHoldingCids);
 
     /// <summary>The Daml field <c>inputHoldingCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("inputHoldingCids")]
-    public IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("inputHoldingCids")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> InputHoldingCids
     {
         get => _inputHoldingCids;
-        init => _inputHoldingCids = DamlFieldCollections.Copy(value);
+        init => _inputHoldingCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -70,68 +70,68 @@ public sealed record Transfer(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(Transfer? other) =>
         other is not null
-        && EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Sender, other.Sender)
-        && EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Receiver, other.Receiver)
-        && EqualityComparer<decimal>.Default.Equals(Amount, other.Amount)
-        && EqualityComparer<global::Splice.Api.Token.HoldingV2.InstrumentId>.Default.Equals(InstrumentId, other.InstrumentId)
-        && EqualityComparer<DateTimeOffset>.Default.Equals(RequestedAt, other.RequestedAt)
-        && EqualityComparer<DateTimeOffset>.Default.Equals(ExecuteBefore, other.ExecuteBefore)
-        && DamlFieldCollections.Equal(InputHoldingCids, other.InputHoldingCids)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Sender, other.Sender)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default.Equals(Receiver, other.Receiver)
+        && global::System.Collections.Generic.EqualityComparer<decimal>.Default.Equals(Amount, other.Amount)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.HoldingV2.InstrumentId>.Default.Equals(InstrumentId, other.InstrumentId)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset>.Default.Equals(RequestedAt, other.RequestedAt)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset>.Default.Equals(ExecuteBefore, other.ExecuteBefore)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(InputHoldingCids, other.InputHoldingCids)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Sender);
         hash.Add(Receiver);
         hash.Add(Amount);
         hash.Add(InstrumentId);
         hash.Add(RequestedAt);
         hash.Add(ExecuteBefore);
-        hash.Add(DamlFieldCollections.Hash(InputHoldingCids));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(InputHoldingCids));
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("sender", Sender.ToRecord()),
-        DamlField.Create("receiver", Receiver.ToRecord()),
-        DamlField.Create("amount", new DamlNumeric(Amount)),
-        DamlField.Create("instrumentId", InstrumentId.ToRecord()),
-        DamlField.Create("requestedAt", new DamlTimestamp(RequestedAt)),
-        DamlField.Create("executeBefore", new DamlTimestamp(ExecuteBefore)),
-        DamlField.Create("inputHoldingCids", new DamlList(InputHoldingCids.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("sender", Sender.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("receiver", Receiver.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("amount", new global::Daml.Runtime.Data.DamlNumeric(Amount)),
+        global::Daml.Runtime.Data.DamlField.Create("instrumentId", InstrumentId.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("requestedAt", new global::Daml.Runtime.Data.DamlTimestamp(RequestedAt)),
+        global::Daml.Runtime.Data.DamlField.Create("executeBefore", new global::Daml.Runtime.Data.DamlTimestamp(ExecuteBefore)),
+        global::Daml.Runtime.Data.DamlField.Create("inputHoldingCids", new global::Daml.Runtime.Data.DamlList(InputHoldingCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Transfer FromRecord(DamlRecord record) => new Transfer(
-        Sender: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("sender").As<DamlRecord>()),
-        Receiver: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("receiver").As<DamlRecord>()),
-        Amount: record.GetRequiredField("amount").As<DamlNumeric>().Value,
-        InstrumentId: global::Splice.Api.Token.HoldingV2.InstrumentId.FromRecord(record.GetRequiredField("instrumentId").As<DamlRecord>()),
-        RequestedAt: record.GetRequiredField("requestedAt").As<DamlTimestamp>().Value,
-        ExecuteBefore: record.GetRequiredField("executeBefore").As<DamlTimestamp>().Value,
-        InputHoldingCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("inputHoldingCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList(),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static Transfer FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Transfer(
+        Sender: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("sender").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Receiver: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("receiver").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        InstrumentId: global::Splice.Api.Token.HoldingV2.InstrumentId.FromRecord(record.GetRequiredField("instrumentId").As<global::Daml.Runtime.Data.DamlRecord>()),
+        RequestedAt: record.GetRequiredField("requestedAt").As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
+        ExecuteBefore: record.GetRequiredField("executeBefore").As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
+        InputHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("inputHoldingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("sender", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender"))),
-            DamlField.Create("receiver", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiver"), context.Field("receiver"))),
-            DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))),
-            DamlField.Create("instrumentId", global::Splice.Api.Token.HoldingV2.InstrumentId.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))),
-            DamlField.Create("requestedAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "requestedAt"), context.Field("requestedAt"))),
-            DamlField.Create("executeBefore", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "executeBefore"), context.Field("executeBefore"))),
-            DamlField.Create("inputHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inputHoldingCids"), context.Field("inputHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("sender", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender"))),
+            global::Daml.Runtime.Data.DamlField.Create("receiver", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiver"), context.Field("receiver"))),
+            global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))),
+            global::Daml.Runtime.Data.DamlField.Create("instrumentId", global::Splice.Api.Token.HoldingV2.InstrumentId.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))),
+            global::Daml.Runtime.Data.DamlField.Create("requestedAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "requestedAt"), context.Field("requestedAt"))),
+            global::Daml.Runtime.Data.DamlField.Create("executeBefore", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "executeBefore"), context.Field("executeBefore"))),
+            global::Daml.Runtime.Data.DamlField.Create("inputHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inputHoldingCids"), context.Field("inputHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
 

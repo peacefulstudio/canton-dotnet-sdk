@@ -24,41 +24,41 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml template RichTypes:GenericResults
 /// </summary>
 public sealed partial record GenericResults(
-    [property: DamlFieldAttribute("owner")] Party Owner
-) : ITemplate, IHasChoices<GenericResults>, IDamlRecord<GenericResults>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<GenericResults>, global::Daml.Runtime.Data.IDamlRecord<GenericResults>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5", "RichTypes", "GenericResults");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "RichTypes", "GenericResults");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "a8b37866c5d18247c0e5d90fd5a37a1150bb24cf5b791cb152a603bba0d8c2f5";
+    public static string PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hecd531570c32";
+    public static string PackageName => "richtypes-hf9ffaa5ee2ff";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("owner", Owner.ToDamlValue())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("owner", Owner.ToDamlValue())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static GenericResults FromRecord(DamlRecord record) => new GenericResults(
-        Owner: Party.FromDamlValue(record.GetRequiredField("owner").As<DamlParty>())
+    public static GenericResults FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new GenericResults(
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner")))
         );
     }
 
@@ -66,231 +66,253 @@ public sealed partial record GenericResults(
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<GenericResults, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
     /// <summary>
-    /// Exercise the ReturnContractIds choice.
+    /// Exercise the ReturnBox choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnContractIds, IReadOnlyList<ContractId<GenericResults>>> ChoiceReturnContractIds { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnBox, global::Daml.Codegen.Testing.Conformance.RichTypes.Box<long>> ChoiceReturnBox { get; } = new()
     {
-        Name = new ChoiceName("ReturnContractIds"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnBox"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnContractIds.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => (IReadOnlyList<ContractId<GenericResults>>)val.As<DamlList>().Values.Select(x => new ContractId<GenericResults>(x.As<DamlContractId>().Value)).ToList(),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnContractIds.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnBox.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Box<long>.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnBox.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Box<long>.__ReadDamlLfJson(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), null),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnContractIds choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnContractIds, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>> ChoiceReturnContractIds { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnContractIds"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnContractIds.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>)val.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)),
     };
 
     /// <summary>
     /// Exercise the ReturnEither choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnEither, Either<string, long>> ChoiceReturnEither { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnEither, global::Daml.Runtime.Stdlib.Either<string, long>> ChoiceReturnEither { get; } = new()
     {
-        Name = new ChoiceName("ReturnEither"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnEither"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnEither.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => Either<string, long>.FromValue(val, __v0 => __v0.As<DamlText>().Value, __v1 => __v1.As<DamlInt64>().Value),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnEither.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnEither.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Runtime.Stdlib.Either<string, long>.FromValue(val, __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnEither.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEither(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0)),
     };
 
     /// <summary>
     /// Exercise the ReturnGenMap choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnGenMap, IReadOnlyDictionary<string, long>> ChoiceReturnGenMap { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnGenMap, global::System.Collections.Generic.IReadOnlyDictionary<string, long>> ChoiceReturnGenMap { get; } = new()
     {
-        Name = new ChoiceName("ReturnGenMap"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnGenMap"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnGenMap.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => (IReadOnlyDictionary<string, long>)val.As<DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<DamlText>().Value, kv => kv.Value.As<DamlInt64>().Value),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnGenMap.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnGenMap.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyDictionary<string, long>)val.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnGenMap.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0)),
     };
 
     /// <summary>
     /// Exercise the ReturnNestedOptional choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnNestedOptional, Optional<Optional<string>>> ChoiceReturnNestedOptional { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnNestedOptional, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>> ChoiceReturnNestedOptional { get; } = new()
     {
-        Name = new ChoiceName("ReturnNestedOptional"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnNestedOptional"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnNestedOptional.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => Optional<Optional<string>>.FromChainValue(val, __optional0 => Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<DamlText>().Value)),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnNestedOptional.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnNestedOptional.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(val, __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value)),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNestedOptional.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))),
     };
 
     /// <summary>
     /// Exercise the ReturnNonEmpty choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnNonEmpty, NonEmpty<long>> ChoiceReturnNonEmpty { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnNonEmpty, global::Daml.Runtime.Stdlib.NonEmpty<long>> ChoiceReturnNonEmpty { get; } = new()
     {
-        Name = new ChoiceName("ReturnNonEmpty"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnNonEmpty"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnNonEmpty.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => NonEmpty<long>.FromRecord(val.As<DamlRecord>(), __v0 => __v0.As<DamlInt64>().Value),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnNonEmpty.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnNonEmpty.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Runtime.Stdlib.NonEmpty<long>.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNonEmpty.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNonEmpty(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0)),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnOptionalSuit choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnOptionalSuit, global::Daml.Codegen.Testing.Conformance.RichTypes.Suit?> ChoiceReturnOptionalSuit { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnOptionalSuit"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnOptionalSuit.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => val.AsOptional().HasValue ? global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.FromDamlEnum(val.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlEnum>()) : null,
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalSuit.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(json, context, (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.__ReadDamlLfJson(__json0, __ctx0)),
     };
 
     /// <summary>
     /// Exercise the ReturnOptionalText choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnOptionalText, string?> ChoiceReturnOptionalText { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnOptionalText, string?> ChoiceReturnOptionalText { get; } = new()
     {
-        Name = new ChoiceName("ReturnOptionalText"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnOptionalText"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnOptionalText.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => val.AsOptional().HasValue ? val.AsOptional().Value!.As<DamlText>().Value : null,
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnOptionalText.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnOptionalText.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => val.AsOptional().HasValue ? val.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null,
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalText.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnOutcome choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnOutcome, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome> ChoiceReturnOutcome { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnOutcome"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnOutcome.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.FromVariant(val.As<global::Daml.Runtime.Data.DamlVariant>()),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOutcome.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.__ReadDamlLfJson(json, context),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnOutcomes choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnOutcomes, global::System.Collections.Generic.IReadOnlyDictionary<string, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>> ChoiceReturnOutcomes { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnOutcomes"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnOutcomes.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyDictionary<string, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>)val.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.FromVariant(kv.Value.As<global::Daml.Runtime.Data.DamlVariant>())),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOutcomes.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.__ReadDamlLfJson(__json0, __ctx0)),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnProfiles choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnProfiles, global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>> ChoiceReturnProfiles { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnProfiles"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnProfiles.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>)val.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnProfiles.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(json, context, (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.__ReadDamlLfJson(__json0, __ctx0)),
     };
 
     /// <summary>
     /// Exercise the ReturnSet choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnSet, Set<long>> ChoiceReturnSet { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnSet, global::Daml.Runtime.Stdlib.Set<long>> ChoiceReturnSet { get; } = new()
     {
-        Name = new ChoiceName("ReturnSet"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnSet"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnSet.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => Set<long>.FromRecord(val.As<DamlRecord>(), __v0 => __v0.As<DamlInt64>().Value),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnSet.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnSet.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Runtime.Stdlib.Set<long>.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSet.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadSet(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0)),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnSlot choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnSlot, global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>> ChoiceReturnSlot { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnSlot"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnSlot.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>.FromVariant(val.As<global::Daml.Runtime.Data.DamlVariant>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSlot.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>.__ReadDamlLfJson(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), null),
+    };
+
+    /// <summary>
+    /// Exercise the ReturnSuit choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnSuit, global::Daml.Codegen.Testing.Conformance.RichTypes.Suit> ChoiceReturnSuit { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnSuit"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => ReturnSuit.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.FromDamlEnum(val.As<global::Daml.Runtime.Data.DamlEnum>()),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSuit.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>
     /// Exercise the ReturnTextMap choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnTextMap, IReadOnlyDictionary<string, long>> ChoiceReturnTextMap { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnTextMap, global::System.Collections.Generic.IReadOnlyDictionary<string, long>> ChoiceReturnTextMap { get; } = new()
     {
-        Name = new ChoiceName("ReturnTextMap"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnTextMap"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnTextMap.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => (IReadOnlyDictionary<string, long>)val.As<DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<DamlInt64>().Value),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnTextMap.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => ReturnTextMap.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyDictionary<string, long>)val.As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTextMap.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0)),
     };
 
     /// <summary>
     /// Exercise the ReturnTuple choice.
     /// </summary>
-    public static Choice<GenericResults, ReturnTuple, Tuple2<string, long>> ChoiceReturnTuple { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<GenericResults, ReturnTuple, global::Daml.Runtime.Stdlib.Tuple2<string, long>> ChoiceReturnTuple { get; } = new()
     {
-        Name = new ChoiceName("ReturnTuple"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("ReturnTuple"),
         Consuming = false,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => ReturnTuple.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => Tuple2<string, long>.FromRecord(val.As<DamlRecord>(), __v0 => __v0.As<DamlText>().Value, __v1 => __v1.As<DamlInt64>().Value),
-        ArgumentJsonReader = (json, context) => GenericResults.ReturnTuple.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0)),
+        ArgumentDecoder = val => ReturnTuple.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Runtime.Stdlib.Tuple2<string, long>.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTuple.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), null, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0), null),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceReturnContractIds, ChoiceReturnEither, ChoiceReturnGenMap, ChoiceReturnNestedOptional, ChoiceReturnNonEmpty, ChoiceReturnOptionalText, ChoiceReturnSet, ChoiceReturnTextMap, ChoiceReturnTuple];
-
-}
-
-/// <summary>
-/// Typed projection of the contracts created by the ReturnContractIds choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record ReturnContractIdsResult(
-    IReadOnlyList<ContractId<GenericResults>> GenericResults
-)
-{
-    private readonly IReadOnlyList<ContractId<GenericResults>> _genericResults = DamlFieldCollections.Copy(GenericResults);
-
-    /// <summary>The <c>GenericResults</c> contracts this slot of the choice's return type carries. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    public IReadOnlyList<ContractId<GenericResults>> GenericResults
-    {
-        get => _genericResults;
-        init => _genericResults = DamlFieldCollections.Copy(value);
-    }
-
-    /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
-    /// <param name="other">The value to compare against.</param>
-    /// <returns><c>true</c> when every member is equal.</returns>
-    public bool Equals(ReturnContractIdsResult? other) =>
-        other is not null
-        && DamlFieldCollections.Equal(GenericResults, other.GenericResults);
-
-    /// <inheritdoc />
-    public override int GetHashCode()
-    {
-        var hash = new HashCode();
-        hash.Add(DamlFieldCollections.Hash(GenericResults));
-        return hash.ToHashCode();
-    }
-
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="ReturnContractIdsResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<ReturnContractIdsResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-
-        return new ExerciseOutcome<ReturnContractIdsResult>.One(new ReturnContractIdsResult(
-            GenericResults: matches0.ConvertAll(c => new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>(c))
-        ));
-    }
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceReturnBox, ChoiceReturnContractIds, ChoiceReturnEither, ChoiceReturnGenMap, ChoiceReturnNestedOptional, ChoiceReturnNonEmpty, ChoiceReturnOptionalSuit, ChoiceReturnOptionalText, ChoiceReturnOutcome, ChoiceReturnOutcomes, ChoiceReturnProfiles, ChoiceReturnSet, ChoiceReturnSlot, ChoiceReturnSuit, ChoiceReturnTextMap, ChoiceReturnTuple];
 
 }
 
 
 /// <summary>
-/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="GenericResults"/>.
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
 /// and projects success from the choice's own exercise result.
@@ -302,21 +324,21 @@ public static class GenericResultsExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnContractIdsCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnContractIds argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnContractIdsCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnContractIds"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnContractIds"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the ReturnContractIds choice and projects the choice's exercise result to a typed <see cref="ReturnContractIdsResult"/>.
+    /// Exercises the ReturnContractIds choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::System.Collections.Generic.IReadOnlyList&lt;global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults&gt;&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -330,20 +352,20 @@ public static class GenericResultsExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReturnContractIdsResult>> TryReturnContractIdsAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnContractIds argument,
-        Party owner,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>>> TryReturnContractIdsAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds argument,
+        global::Daml.Runtime.Data.Party owner,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = owner;
 
         return contractId.TryReturnContractIdsAsync(
             client,
@@ -357,7 +379,7 @@ public static class GenericResultsExtensions
     }
 
     /// <summary>
-    /// Exercises the ReturnContractIds choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ReturnContractIdsResult"/>.
+    /// Exercises the ReturnContractIds choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::System.Collections.Generic.IReadOnlyList&lt;global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults&gt;&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -371,18 +393,18 @@ public static class GenericResultsExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<ReturnContractIdsResult>> TryReturnContractIdsAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnContractIds argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>>> TryReturnContractIdsAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnContractIdsCommand(argument);
 
@@ -392,10 +414,10 @@ public static class GenericResultsExtensions
     }
 
     /// <summary>
-    /// Exercises the ReturnContractIds choice on a fetched <see cref="GenericResults"/> contract,
+    /// Exercises the ReturnContractIds choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;GenericResults&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -405,19 +427,19 @@ public static class GenericResultsExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReturnContractIdsResult>> TryReturnContractIdsAsync(
-        this IContract<ContractId<GenericResults>, GenericResults> contract,
-        ILedgerWriter client,
-        GenericResults.ReturnContractIds argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>>> TryReturnContractIdsAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>, global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryReturnContractIdsAsync(
             client,
@@ -431,11 +453,11 @@ public static class GenericResultsExtensions
     }
 
     /// <summary>
-    /// Exercises the ReturnContractIds choice on a fetched <see cref="GenericResults"/> contract with an
+    /// Exercises the ReturnContractIds choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;GenericResults&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -446,20 +468,20 @@ public static class GenericResultsExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ReturnContractIdsResult>> TryReturnContractIdsAsync(
-        this IContract<ContractId<GenericResults>, GenericResults> contract,
-        ILedgerWriter client,
-        GenericResults.ReturnContractIds argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>>> TryReturnContractIdsAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>, global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnContractIds argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryReturnContractIdsAsync(
             client,
@@ -472,48 +494,8 @@ public static class GenericResultsExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<ReturnContractIdsResult> ProjectReturnContractIdsResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = ReturnContractIdsResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<ReturnContractIdsResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnContractIds", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeReturnContractIdsResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<ReturnContractIdsResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<ReturnContractIdsResult> DecodeReturnContractIdsResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        foreach (var element0_0 in exerciseResult.As<DamlList>().Values)
-        {
-            matches0.Add(element0_0.As<DamlContractId>().Value);
-        }
-
-
-        return new ExerciseOutcome<ReturnContractIdsResult>.One(new ReturnContractIdsResult(
-            GenericResults: matches0.ConvertAll(c => new ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>(c))
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults>>> ProjectReturnContractIdsResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnContractIds, contractId);
 }
 
 /// <summary>
@@ -537,23 +519,23 @@ public static class GenericResultsSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<GenericResults>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<GenericResults>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         GenericResults payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Owner;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Owner;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<GenericResults>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="GenericResults"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -565,20 +547,20 @@ public static class GenericResultsNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<GenericResults> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -589,17 +571,17 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -609,26 +591,26 @@ public static class GenericResultsNonContractExtensions
     }
 
     /// <summary>
-    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnEither choice on this contract id.
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnBox choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnEitherCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnEither argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnBoxCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnBox argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnEither"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnBox"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the ReturnEither choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>Either&lt;string, long&gt;</c>. Structured Canton/Daml errors
+    /// Exercises the ReturnBox choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.Box&lt;long&gt;</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -640,18 +622,70 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<Either<string, long>>> TryReturnEitherAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnEither argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<long>>> TryReturnBoxAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnBox argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnBoxCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnBoxResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnEither choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnEitherCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnEither argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnEither"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnEither choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.Either&lt;string, long&gt;</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Either<string, long>>> TryReturnEitherAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnEither argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnEitherCommand(argument);
 
@@ -665,22 +699,22 @@ public static class GenericResultsNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnGenMapCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnGenMap argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnGenMapCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnGenMap argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnGenMap"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnGenMap"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the ReturnGenMap choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>IReadOnlyDictionary&lt;string, long&gt;</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::System.Collections.Generic.IReadOnlyDictionary&lt;string, long&gt;</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -692,18 +726,18 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, long>>> TryReturnGenMapAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnGenMap argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, long>>> TryReturnGenMapAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnGenMap argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnGenMapCommand(argument);
 
@@ -717,22 +751,22 @@ public static class GenericResultsNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnNestedOptionalCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnNestedOptional argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnNestedOptionalCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNestedOptional argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnNestedOptional"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnNestedOptional"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the ReturnNestedOptional choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>Optional&lt;Optional&lt;string&gt;&gt;</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.Optional&lt;global::Daml.Runtime.Stdlib.Optional&lt;string&gt;&gt;</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -744,18 +778,18 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<Optional<Optional<string>>>> TryReturnNestedOptionalAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnNestedOptional argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>> TryReturnNestedOptionalAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNestedOptional argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnNestedOptionalCommand(argument);
 
@@ -769,22 +803,22 @@ public static class GenericResultsNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnNonEmptyCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnNonEmpty argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnNonEmptyCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNonEmpty argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnNonEmpty"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnNonEmpty"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the ReturnNonEmpty choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>NonEmpty&lt;long&gt;</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.NonEmpty&lt;long&gt;</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -796,18 +830,18 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<NonEmpty<long>>> TryReturnNonEmptyAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnNonEmpty argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.NonEmpty<long>>> TryReturnNonEmptyAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnNonEmpty argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnNonEmptyCommand(argument);
 
@@ -817,20 +851,72 @@ public static class GenericResultsNonContractExtensions
     }
 
     /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnOptionalSuit choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnOptionalSuitCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalSuit argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnOptionalSuit"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnOptionalSuit choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.Suit?</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit?>> TryReturnOptionalSuitAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalSuit argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnOptionalSuitCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnOptionalSuitResult(tx, contractId.Value));
+    }
+
+    /// <summary>
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnOptionalText choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnOptionalTextCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnOptionalText argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnOptionalTextCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalText argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnOptionalText"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnOptionalText"),
             argument.ToRecord());
     }
 
@@ -848,18 +934,18 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<string?>> TryReturnOptionalTextAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnOptionalText argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<string?>> TryReturnOptionalTextAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOptionalText argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnOptionalTextCommand(argument);
 
@@ -869,26 +955,26 @@ public static class GenericResultsNonContractExtensions
     }
 
     /// <summary>
-    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnSet choice on this contract id.
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnOutcome choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnSetCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnSet argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnOutcomeCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOutcome argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnSet"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnOutcome"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the ReturnSet choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>Set&lt;long&gt;</c>. Structured Canton/Daml errors
+    /// Exercises the ReturnOutcome choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -900,18 +986,174 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<Set<long>>> TryReturnSetAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnSet argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>> TryReturnOutcomeAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOutcome argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnOutcomeCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnOutcomeResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnOutcomes choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnOutcomesCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOutcomes argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnOutcomes"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnOutcomes choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::System.Collections.Generic.IReadOnlyDictionary&lt;string, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome&gt;</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>>> TryReturnOutcomesAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnOutcomes argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnOutcomesCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnOutcomesResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnProfiles choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnProfilesCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnProfiles argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnProfiles"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnProfiles choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::System.Collections.Generic.IReadOnlyList&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.Profile&gt;</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>>> TryReturnProfilesAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnProfiles argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnProfilesCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnProfilesResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnSet choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnSetCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSet argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnSet"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnSet choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.Set&lt;long&gt;</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Set<long>>> TryReturnSetAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSet argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnSetCommand(argument);
 
@@ -921,26 +1163,26 @@ public static class GenericResultsNonContractExtensions
     }
 
     /// <summary>
-    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnTextMap choice on this contract id.
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnSlot choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnTextMapCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnTextMap argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnSlotCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSlot argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnTextMap"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnSlot"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the ReturnTextMap choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>IReadOnlyDictionary&lt;string, long&gt;</c>. Structured Canton/Daml errors
+    /// Exercises the ReturnSlot choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.Slot&lt;long&gt;</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -952,18 +1194,122 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<IReadOnlyDictionary<string, long>>> TryReturnTextMapAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnTextMap argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>>> TryReturnSlotAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSlot argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnSlotCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnSlotResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnSuit choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnSuitCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSuit argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnSuit"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnSuit choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.Suit</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit>> TryReturnSuitAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnSuit argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.ReturnSuitCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectReturnSuitResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the ReturnTextMap choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnTextMapCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTextMap argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnTextMap"),
+            argument.ToRecord());
+    }
+
+    /// <summary>
+    /// Exercises the ReturnTextMap choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::System.Collections.Generic.IReadOnlyDictionary&lt;string, long&gt;</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, long>>> TryReturnTextMapAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTextMap argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnTextMapCommand(argument);
 
@@ -977,22 +1323,22 @@ public static class GenericResultsNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ReturnTupleCommand(
-        this ContractId<GenericResults> contractId,
-        GenericResults.ReturnTuple argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ReturnTupleCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTuple argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            GenericResults.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
-            new ChoiceName("ReturnTuple"),
+            new global::Daml.Runtime.Commands.ChoiceName("ReturnTuple"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the ReturnTuple choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>Tuple2&lt;string, long&gt;</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Stdlib.Tuple2&lt;string, long&gt;</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -1004,18 +1350,18 @@ public static class GenericResultsNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<Tuple2<string, long>>> TryReturnTupleAsync(
-        this ContractId<GenericResults> contractId,
-        ILedgerWriter client,
-        GenericResults.ReturnTuple argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<string, long>>> TryReturnTupleAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ReturnTuple argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ReturnTupleCommand(argument);
 
@@ -1024,264 +1370,51 @@ public static class GenericResultsNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectReturnTupleResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceArchive, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<long>> ProjectReturnBoxResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnBox, contractId);
 
-    private static ExerciseOutcome<Either<string, long>> ProjectReturnEitherResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnEither", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnEither.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<Either<string, long>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<Either<string, long>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Either<string, long>> ProjectReturnEitherResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnEither, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnEither' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, long>> ProjectReturnGenMapResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnGenMap, contractId);
 
-    private static ExerciseOutcome<IReadOnlyDictionary<string, long>> ProjectReturnGenMapResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnGenMap", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnGenMap.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<IReadOnlyDictionary<string, long>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<IReadOnlyDictionary<string, long>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>> ProjectReturnNestedOptionalResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnNestedOptional, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnGenMap' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.NonEmpty<long>> ProjectReturnNonEmptyResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnNonEmpty, contractId);
 
-    private static ExerciseOutcome<Optional<Optional<string>>> ProjectReturnNestedOptionalResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnNestedOptional", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnNestedOptional.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<Optional<Optional<string>>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<Optional<Optional<string>>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit?> ProjectReturnOptionalSuitResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnOptionalSuit, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnNestedOptional' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<string?> ProjectReturnOptionalTextResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnOptionalText, contractId);
 
-    private static ExerciseOutcome<NonEmpty<long>> ProjectReturnNonEmptyResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnNonEmpty", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnNonEmpty.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<NonEmpty<long>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<NonEmpty<long>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome> ProjectReturnOutcomeResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnOutcome, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnNonEmpty' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>> ProjectReturnOutcomesResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnOutcomes, contractId);
 
-    private static ExerciseOutcome<string?> ProjectReturnOptionalTextResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnOptionalText", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnOptionalText.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<string?>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<string?>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>> ProjectReturnProfilesResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnProfiles, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnOptionalText' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Set<long>> ProjectReturnSetResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnSet, contractId);
 
-    private static ExerciseOutcome<Set<long>> ProjectReturnSetResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnSet", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnSet.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<Set<long>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<Set<long>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>> ProjectReturnSlotResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnSlot, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnSet' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit> ProjectReturnSuitResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnSuit, contractId);
 
-    private static ExerciseOutcome<IReadOnlyDictionary<string, long>> ProjectReturnTextMapResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnTextMap", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnTextMap.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<IReadOnlyDictionary<string, long>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<IReadOnlyDictionary<string, long>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::System.Collections.Generic.IReadOnlyDictionary<string, long>> ProjectReturnTextMapResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnTextMap, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnTextMap' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<Tuple2<string, long>> ProjectReturnTupleResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, GenericResults.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, GenericResults.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "ReturnTuple", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = GenericResults.ChoiceReturnTuple.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<Tuple2<string, long>>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<Tuple2<string, long>>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'ReturnTuple' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<string, long>> ProjectReturnTupleResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.ChoiceReturnTuple, contractId);
 }

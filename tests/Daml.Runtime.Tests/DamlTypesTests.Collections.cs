@@ -352,15 +352,26 @@ public partial class DamlTypesTests
     {
         var record = DamlRecord.Create(DamlField.Create("item", new DamlText("boxed")));
 
-        record.GetTypeParameterField("item", value => value.As<DamlText>().Value).Should().Be("boxed");
+        record.GetTypeParameterField("item", value => value.As<DamlText>().Value, null).Should().Be("boxed");
     }
 
     [Fact]
-    public void DamlRecord_GetTypeParameterField_should_read_an_omitted_field_as_None_at_an_Optional_instantiation()
+    public void DamlRecord_GetTypeParameterField_should_convert_the_present_value_when_the_instantiation_is_an_Optional()
+    {
+        var record = DamlRecord.Create(DamlField.Create("item", DamlOptional.Some(new DamlText("boxed"))));
+
+        var item = record.GetTypeParameterField(
+            "item", value => value.As<DamlOptional>().Value!.As<DamlText>().Value, DamlOptional.None);
+
+        item.Should().Be("boxed");
+    }
+
+    [Fact]
+    public void DamlRecord_GetTypeParameterField_should_hand_an_omitted_field_to_the_converter_as_the_given_None_at_an_Optional_instantiation()
     {
         var record = DamlRecord.Create();
 
-        var item = record.GetTypeParameterField("item", value => value.As<DamlOptional>().Value);
+        var item = record.GetTypeParameterField("item", value => value.As<DamlOptional>().Value, DamlOptional.None);
 
         item.Should().BeNull();
     }
@@ -373,29 +384,32 @@ public partial class DamlTypesTests
         var item = record.GetTypeParameterField(
             "item",
             value => Optional<Optional<string>>.FromChainValue(
-                value, inner => Optional<string>.FromChainValue(inner, text => text.As<DamlText>().Value)));
+                value, inner => Optional<string>.FromChainValue(inner, text => text.As<DamlText>().Value)),
+            DamlOptional.None);
 
         item.Should().Be(new Optional<Optional<string>>.None());
     }
 
     [Fact]
-    public void DamlRecord_GetTypeParameterField_should_report_an_omitted_field_missing_at_a_List_instantiation()
+    public void DamlRecord_GetTypeParameterField_should_report_an_omitted_field_missing_at_a_required_instantiation_without_calling_the_converter()
     {
         var record = DamlRecord.Create();
 
-        var act = () => record.GetTypeParameterField("item", value => value.As<DamlList>().Values);
+        var act = () => record.GetTypeParameterField<string>(
+            "item", _ => throw new Xunit.Sdk.XunitException("the converter must not be called"), null);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("Required field 'item' not found in record.");
     }
 
     [Fact]
-    public void DamlRecord_GetTypeParameterField_should_report_an_omitted_field_missing_at_a_non_Optional_instantiation()
+    public void DamlRecord_GetTypeParameterField_should_surface_the_InvalidCastException_a_converter_throws_at_an_Optional_instantiation()
     {
         var record = DamlRecord.Create();
 
-        var act = () => record.GetTypeParameterField("item", value => value.As<DamlText>().Value);
+        var act = () => record.GetTypeParameterField<string>(
+            "item", _ => throw new InvalidCastException("converter bug"), DamlOptional.None);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("Required field 'item' not found in record.");
+        act.Should().Throw<InvalidCastException>().WithMessage("converter bug");
     }
 
     [Fact]

@@ -15,30 +15,30 @@ public sealed partial record Offer
     /// Choice argument type for Retag.
     /// </summary>
     public sealed record Retag(
-        [property: DamlFieldAttribute("label")] string Label,
-        [property: DamlFieldAttribute("count")] long Count
-    ) : IDamlRecord<Retag>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("label")] string Label,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("count")] long Count
+    ) : global::Daml.Runtime.Data.IDamlRecord<Retag>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("label", new DamlText(Label)),
-            DamlField.Create("count", new DamlInt64(Count))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("label", new global::Daml.Runtime.Data.DamlText(Label)),
+            global::Daml.Runtime.Data.DamlField.Create("count", new global::Daml.Runtime.Data.DamlInt64(Count))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Retag FromRecord(DamlRecord record) => new Retag(
-            Label: record.GetRequiredField("label").As<DamlText>().Value,
-            Count: record.GetRequiredField("count").As<DamlInt64>().Value
+        public static Retag FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Retag(
+            Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value,
+            Count: record.GetRequiredField("count").As<global::Daml.Runtime.Data.DamlInt64>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("label", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "label"), context.Field("label"))),
-                DamlField.Create("count", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "count"), context.Field("count")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("label", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "label"), context.Field("label"))),
+                global::Daml.Runtime.Data.DamlField.Create("count", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "count"), context.Field("count")))
             );
         }
 

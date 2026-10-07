@@ -18,6 +18,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Daml.Codegen.CSharp.Tests" />
     <InternalsVisibleTo Include="Daml.Codegen.CSharp.Cli" />
+    <InternalsVisibleTo Include="Daml.Codegen.Tooling" />
   </ItemGroup>
 
   <ItemGroup>

@@ -326,6 +326,19 @@ public class TransactionTreeTests
     }
 
     [Fact]
+    public void ToTransactionResult_forwards_the_undecoded_create_arguments_to_the_flattened_contract()
+    {
+        var undecoded = new DamlUndecodedJson("""{"owner":"alice::ns"}""");
+        var created = MakeCreated("00alice") with { UndecodedCreateArguments = undecoded };
+        var tree = new TransactionTree("u1", LedgerOffset.At(5), [created]);
+
+        var result = tree.ToTransactionResult();
+
+        result.CreatedContracts.Should().ContainSingle().Which.UndecodedPayload.Should().Be(
+            new DamlUndecodedJson("""{"owner":"alice::ns"}"""));
+    }
+
+    [Fact]
     public void ToTransactionResult_forwards_every_created_field_to_the_flattened_contract()
     {
         var key = new ContractKey(DamlRecord.Create(DamlField.Create("owner", new DamlParty("alice"))), FooTemplateId);

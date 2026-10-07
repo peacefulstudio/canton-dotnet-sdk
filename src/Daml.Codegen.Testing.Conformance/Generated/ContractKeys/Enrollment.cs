@@ -23,13 +23,13 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// Generated from Daml template ContractKeys:Enrollment
 /// </summary>
 public sealed partial record Enrollment(
-    [property: DamlFieldAttribute("custodian")] Party Custodian,
-    [property: DamlFieldAttribute("note")] string? Note,
-    [property: DamlFieldAttribute("active")] bool Active
-) : ITemplate, IHasKey<Enrollment, Tuple2<Party, Optional<string>>>, IHasChoices<Enrollment>, IDamlRecord<Enrollment>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("custodian")] global::Daml.Runtime.Data.Party Custodian,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("note")] string? Note,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("active")] bool Active
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasKey<Enrollment, global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<string>>>, global::Daml.Runtime.Contracts.IHasChoices<Enrollment>, global::Daml.Runtime.Data.IDamlRecord<Enrollment>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Enrollment");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Enrollment");
 
     /// <summary>Gets the package ID.</summary>
     public static string PackageId => "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
@@ -38,61 +38,61 @@ public sealed partial record Enrollment(
     public static string PackageName => "contractkeys-h4fd930e5658f";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 0, 1);
+    public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Gets the witness pairing this template with its contract key type and carrying the key codec; passing it to a generic method infers both type parameters from one argument.</summary>
-    public static KeyDescriptor<Enrollment, Tuple2<Party, Optional<string>>> Key { get; } =
+    public static global::Daml.Runtime.Contracts.KeyDescriptor<Enrollment, global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<string>>> Key { get; } =
         new()
         {
-            KeyEncoder = key => key.ToRecord(__t0 => (DamlValue)(__t0.ToDamlValue()), __t1 => (DamlValue)(__t1.ToValue(__optional1 => new DamlText(__optional1)))),
-            KeyDecoder = value => Tuple2<Party, Optional<string>>.FromRecord(value.As<DamlRecord>(), __v0 => Party.FromDamlValue(__v0.As<DamlParty>()), __v1 => Optional<string>.FromValue(__v1, __optional1 => __optional1.As<DamlText>().Value)),
-            KeyJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))),
+            KeyEncoder = key => key.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToDamlValue()), __t1 => (global::Daml.Runtime.Data.DamlValue)(__t1.ToValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1)))),
+            KeyDecoder = value => global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<string>>.FromRecord(value.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Runtime.Data.Party.FromDamlValue(__v0.As<global::Daml.Runtime.Data.DamlParty>()), null, __v1 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v1, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value), global::Daml.Runtime.Data.DamlOptional.None),
+            KeyJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTuple2(json, context, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0), null, (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1)), global::Daml.Runtime.Data.DamlOptional.None),
         };
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("custodian", Custodian.ToDamlValue()),
-        DamlField.Create("note", Note is { } __Note ? new DamlOptional(new DamlText(__Note)) : DamlOptional.None),
-        DamlField.Create("active", new DamlBool(Active))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("custodian", Custodian.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("note", Note is { } __Note ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlText(__Note)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("active", new global::Daml.Runtime.Data.DamlBool(Active))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Enrollment FromRecord(DamlRecord record) => new Enrollment(
-        Custodian: Party.FromDamlValue(record.GetRequiredField("custodian").As<DamlParty>()),
-        Note: record.GetOptionalField("note").AsOptional().HasValue ? record.GetOptionalField("note").AsOptional().Value!.As<DamlText>().Value : null,
-        Active: record.GetRequiredField("active").As<DamlBool>().Value
+    public static Enrollment FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Enrollment(
+        Custodian: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("custodian").As<global::Daml.Runtime.Data.DamlParty>()),
+        Note: record.GetOptionalField("note").AsOptional().HasValue ? record.GetOptionalField("note").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null,
+        Active: record.GetRequiredField("active").As<global::Daml.Runtime.Data.DamlBool>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))),
-            DamlField.Create("note", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "note"), context.Field("note"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))),
-            DamlField.Create("active", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "active"), context.Field("active")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(3);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "note", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("note"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("active", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "active"), context.Field("active"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
     /// <summary>
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Enrollment, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Enrollment, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
@@ -101,19 +101,19 @@ public sealed partial record Enrollment(
     /// Exercise the Toggle choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<Enrollment, Toggle, ContractId<Enrollment>> ChoiceToggle { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<Enrollment, Toggle, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>> ChoiceToggle { get; } = new()
     {
-        Name = new ChoiceName("Toggle"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Toggle"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => Toggle.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => new ContractId<Enrollment>(val.As<DamlContractId>().Value),
-        ArgumentJsonReader = (json, context) => Enrollment.Toggle.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => Toggle.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle.__ReadDamlLfJson(json, context),
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceToggle];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceToggle];
 
     /// <summary>
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseByKeyCommand"/> for the Archive choice on the contract carrying this key.
@@ -124,15 +124,15 @@ public sealed partial record Enrollment(
     /// the ledger resolves this command against a first match by an order it only partly
     /// guarantees. Keeping a key unique is the application's responsibility.
     /// </remarks>
-    public static ExerciseByKeyCommand ArchiveByKeyCommand(
-        Tuple2<Party, Optional<string>> key)
+    public static global::Daml.Runtime.Commands.ExerciseByKeyCommand ArchiveByKeyCommand(
+        global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<string>> key)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        return new ExerciseByKeyCommand(
-            Enrollment.TemplateId,
-            key.ToRecord(__t0 => (DamlValue)(__t0.ToDamlValue()), __t1 => (DamlValue)(__t1.ToValue(__optional1 => new DamlText(__optional1)))),
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+        global::System.ArgumentNullException.ThrowIfNull(key);
+        return new global::Daml.Runtime.Commands.ExerciseByKeyCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.TemplateId,
+            key.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToDamlValue()), __t1 => (global::Daml.Runtime.Data.DamlValue)(__t1.ToValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1)))),
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
@@ -145,84 +145,24 @@ public sealed partial record Enrollment(
     /// the ledger resolves this command against a first match by an order it only partly
     /// guarantees. Keeping a key unique is the application's responsibility.
     /// </remarks>
-    public static ExerciseByKeyCommand ToggleByKeyCommand(
-        Tuple2<Party, Optional<string>> key,
-        Enrollment.Toggle argument)
+    public static global::Daml.Runtime.Commands.ExerciseByKeyCommand ToggleByKeyCommand(
+        global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<string>> key,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle argument)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseByKeyCommand(
-            Enrollment.TemplateId,
-            key.ToRecord(__t0 => (DamlValue)(__t0.ToDamlValue()), __t1 => (DamlValue)(__t1.ToValue(__optional1 => new DamlText(__optional1)))),
-            new ChoiceName("Toggle"),
+        global::System.ArgumentNullException.ThrowIfNull(key);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseByKeyCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.TemplateId,
+            key.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToDamlValue()), __t1 => (global::Daml.Runtime.Data.DamlValue)(__t1.ToValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1)))),
+            new global::Daml.Runtime.Commands.ChoiceName("Toggle"),
             argument.ToRecord());
     }
 
 }
 
-/// <summary>
-/// Typed projection of the contracts created by the Toggle choice.
-/// One field per template the choice creates; cardinality follows the choice's
-/// return type (single, optional, list).
-/// </summary>
-public sealed record ToggleResult(
-    ContractId<Enrollment> Enrollment
-)
-{
-    /// <summary>
-    /// Projects an upstream transaction's created contracts to a typed <see cref="ToggleResult"/>.
-    /// Returns:
-    /// <list type="bullet">
-    ///   <item><see cref="ExerciseOutcome{T}.One"/> when every expected template's cardinality matches.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.None"/> when at least one required slot's template is missing from the transaction.</item>
-    ///   <item><see cref="ExerciseOutcome{T}.Many"/> when a single-cardinality slot has more than one created contract of its template, or an optional-cardinality slot has more than one.</item>
-    /// </list>
-    /// Cardinality is matched by template ID's <c>(module, entity)</c> pair only — package upgrades that share the same logical template name match cleanly.
-    /// </summary>
-    public static ExerciseOutcome<ToggleResult> FromCreatedContracts(IEnumerable<CreatedContract> created)
-    {
-        ArgumentNullException.ThrowIfNull(created);
-        var templateMatches0 = new List<string>();
-        foreach (var item in created)
-        {
-            if (string.Equals(item.TemplateId.ModuleName, global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(item.TemplateId.EntityName, global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.TemplateId.EntityName, StringComparison.Ordinal))
-            {
-                templateMatches0.Add(item.ContractId);
-            }
-        }
-        var matches0 = new List<string>();
-        var templateMatchIndex0 = 0;
-        if (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-        while (templateMatchIndex0 < templateMatches0.Count)
-        {
-            matches0.Add(templateMatches0[templateMatchIndex0]);
-            templateMatchIndex0++;
-        }
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ToggleResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ToggleResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ToggleResult>.One(new ToggleResult(
-            Enrollment: new ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>(matches0[0])
-        ));
-    }
-
-}
-
 
 /// <summary>
-/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="Enrollment"/>.
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment"/>.
 /// One method per create-bearing choice; each delegates to
 /// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
 /// and projects success from the choice's own exercise result.
@@ -234,21 +174,21 @@ public static class EnrollmentExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand ToggleCommand(
-        this ContractId<Enrollment> contractId,
-        Enrollment.Toggle argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ToggleCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contractId,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            Enrollment.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.TemplateId,
             contractId,
-            new ChoiceName("Toggle"),
+            new global::Daml.Runtime.Commands.ChoiceName("Toggle"),
             argument.ToRecord());
     }
 
     /// <summary>
-    /// Exercises the Toggle choice and projects the choice's exercise result to a typed <see cref="ToggleResult"/>.
+    /// Exercises the Toggle choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment&gt;</c>.
     /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
     /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
     /// dispatching to <c>ILedgerWriter</c>.
@@ -262,20 +202,20 @@ public static class EnrollmentExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
-        this ContractId<Enrollment> contractId,
-        ILedgerWriter client,
-        Enrollment.Toggle argument,
-        Party custodian,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>>> TryToggleAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle argument,
+        global::Daml.Runtime.Data.Party custodian,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
-        SubmitterInfo submitter = custodian;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = custodian;
 
         return contractId.TryToggleAsync(
             client,
@@ -289,7 +229,7 @@ public static class EnrollmentExtensions
     }
 
     /// <summary>
-    /// Exercises the Toggle choice with an explicit <see cref="SubmitterInfo"/> and projects the choice's exercise result to a typed <see cref="ToggleResult"/>.
+    /// Exercises the Toggle choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment&gt;</c>.
     /// Companion to the named-<c>Party</c> overload for the case where the submitter must
     /// read contracts it does not act as — the choice's created contracts are visible to an
     /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
@@ -303,18 +243,18 @@ public static class EnrollmentExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
-        this ContractId<Enrollment> contractId,
-        ILedgerWriter client,
-        Enrollment.Toggle argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>>> TryToggleAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ToggleCommand(argument);
 
@@ -324,10 +264,10 @@ public static class EnrollmentExtensions
     }
 
     /// <summary>
-    /// Exercises the Toggle choice on a fetched <see cref="Enrollment"/> contract,
+    /// Exercises the Toggle choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment"/> contract,
     /// reading every controller and observer party off the contract payload so the
     /// caller passes no parties. Delegates to the
-    /// <c>ContractId&lt;Enrollment&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -337,19 +277,19 @@ public static class EnrollmentExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
-        this IContract<ContractId<Enrollment>, Enrollment> contract,
-        ILedgerWriter client,
-        Enrollment.Toggle argument,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>>> TryToggleAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>, global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle argument,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryToggleAsync(
             client,
@@ -363,11 +303,11 @@ public static class EnrollmentExtensions
     }
 
     /// <summary>
-    /// Exercises the Toggle choice on a fetched <see cref="Enrollment"/> contract with an
+    /// Exercises the Toggle choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment"/> contract with an
     /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
     /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
     /// payload cannot name. Delegates to the
-    /// <c>ContractId&lt;Enrollment&gt;</c> overload.
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment&gt;</c> overload.
     /// </summary>
     /// <param name="contract">The fetched contract on which to exercise the choice.</param>
     /// <param name="client">The ledger client.</param>
@@ -378,20 +318,20 @@ public static class EnrollmentExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ToggleResult>> TryToggleAsync(
-        this IContract<ContractId<Enrollment>, Enrollment> contract,
-        ILedgerWriter client,
-        Enrollment.Toggle argument,
-        SubmitterInfo submitter,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>>> TryToggleAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>, global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.Toggle argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contract);
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(argument);
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
 
         return contract.Id.TryToggleAsync(
             client,
@@ -404,53 +344,8 @@ public static class EnrollmentExtensions
             cancellationToken);
     }
 
-    private static ExerciseOutcome<ToggleResult> ProjectToggleResult(TransactionResult tx, string contractId)
-    {
-        var fromCreatedContracts = ToggleResult.FromCreatedContracts(tx.CreatedContracts);
-        if (fromCreatedContracts is ExerciseOutcome<ToggleResult>.Many)
-        {
-            return fromCreatedContracts;
-        }
-
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Enrollment.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Enrollment.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Toggle", StringComparison.Ordinal))
-            {
-                try
-                {
-                    return DecodeToggleResult(exercised.ExerciseResult);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<ToggleResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        return fromCreatedContracts;
-    }
-
-    private static ExerciseOutcome<ToggleResult> DecodeToggleResult(DamlValue exerciseResult)
-    {
-        var matches0 = new List<string>();
-        matches0.Add(exerciseResult.As<DamlContractId>().Value);
-
-        if (matches0.Count == 0)
-        {
-            return new ExerciseOutcome<ToggleResult>.None();
-        }
-        if (matches0.Count > 1)
-        {
-            return new ExerciseOutcome<ToggleResult>.Many(EquatableArray.Create(matches0));
-        }
-
-        return new ExerciseOutcome<ToggleResult>.One(new ToggleResult(
-            Enrollment: new ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>(matches0[0])
-        ));
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment>> ProjectToggleResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.ChoiceToggle, contractId);
 }
 
 /// <summary>
@@ -474,23 +369,23 @@ public static class EnrollmentSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<Enrollment>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Enrollment>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         Enrollment payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Custodian;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Custodian;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Enrollment>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="Enrollment"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -502,20 +397,20 @@ public static class EnrollmentNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<Enrollment> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            Enrollment.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -526,17 +421,17 @@ public static class EnrollmentNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<Enrollment> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -545,32 +440,6 @@ public static class EnrollmentNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, Enrollment.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, Enrollment.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = Enrollment.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.ContractKeys.Enrollment.ChoiceArchive, contractId);
 }

@@ -87,6 +87,11 @@ interface Holding where
         [1 .. pieces]
       pure (map (toInterfaceContractId @Holding) cids)
 
+  nonconsuming choice Grade : Suit
+    controller holder this
+    do
+      pure Hearts
+
 template Asset
   with
     issuer : Party
@@ -221,6 +226,43 @@ template GenericResults
       controller owner
       do
         pure (if outer then Some (if inner then Some "present" else None) else None)
+
+    nonconsuming choice ReturnOutcome : Outcome
+      with
+        wantWin : Bool
+      controller owner
+      do
+        pure (if wantWin then Win with prize = 12.50; tier = "gold" else Pending)
+
+    nonconsuming choice ReturnSuit : Suit
+      controller owner
+      do
+        pure Hearts
+
+    nonconsuming choice ReturnSlot : Slot Int
+      controller owner
+      do
+        pure (Filled 7)
+
+    nonconsuming choice ReturnBox : Box Int
+      controller owner
+      do
+        pure (Box with item = 5)
+
+    nonconsuming choice ReturnProfiles : [Profile]
+      controller owner
+      do
+        pure [Profile "alice" 3, Profile "bob" 4]
+
+    nonconsuming choice ReturnOutcomes : Map Text Outcome
+      controller owner
+      do
+        pure (Map.fromList [("won", Win 12.50 "gold"), ("waiting", Pending)])
+
+    nonconsuming choice ReturnOptionalSuit : Optional Suit
+      controller owner
+      do
+        pure (Some Hearts)
 
 data TrailingNote = TrailingNote
   with

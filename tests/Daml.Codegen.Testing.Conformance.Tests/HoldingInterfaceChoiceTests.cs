@@ -119,6 +119,60 @@ public class HoldingInterfaceChoiceTests
     }
 
     [Fact]
+    public async Task TryDescribeAsync_ignores_the_same_choice_exercised_on_the_template_without_the_interface()
+    {
+        var templateOnly = DescribeExercisedEvent(new DamlText("wrong")) with { InterfaceId = null };
+        var tx = TransactionWith(templateOnly, DescribeExercisedEvent(new DamlText("balance: 42")));
+        using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(tx));
+
+        var outcome = await Target.TryDescribeAsync(client, new Describe("balance: "), new Party("alice"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<string>.One>().Which.Result.Should().Be("balance: 42");
+    }
+
+    [Fact]
+    public async Task TryDescribeAsync_throws_when_the_transaction_carries_no_exercised_event()
+    {
+        using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(EmptyTransaction()));
+
+        var act = () => Target.TryDescribeAsync(client, new Describe("balance: "), new Party("alice"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>())
+            .WithMessage("Submission succeeded but no 'Describe' exercise on contract 'holding-cid' was recorded on transaction upd-1. " +
+                "The transaction returned for this submission carries no exercised event for it. " +
+                "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+                "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+                "request the LEDGER_EFFECTS shape with verbose events.");
+    }
+
+    [Fact]
+    public async Task TryReissueAsync_decodes_the_returned_contract_id_through_the_choice_descriptor()
+    {
+        var reissued = DescribeExercisedEvent(new DamlContractId("reissued-cid")) with { ChoiceName = new ChoiceName("Reissue") };
+        using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(TransactionWith(reissued)));
+
+        var outcome = await Target.TryReissueAsync(client, new Reissue(12.5m), new Party("alice"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<IHolding>>.One>()
+            .Which.Result.Value.Should().Be("reissued-cid");
+    }
+
+    [Fact]
+    public async Task TryArchiveAsync_decodes_a_unit_result_to_the_DamlUnit_singleton()
+    {
+        var archived = DescribeExercisedEvent(DamlUnit.Instance) with { ChoiceName = new ChoiceName("Archive"), Consuming = true };
+        using var client = new FakeLedgerClient(_ => new ExerciseOutcome<TransactionResult>.One(TransactionWith(archived)));
+
+        var outcome = await Target.TryArchiveAsync(client, new Party("alice"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<DamlUnit>.One>().Which.Result.Should().Be(DamlUnit.Instance);
+    }
+
+    [Fact]
     public void HoldingView_round_trips_through_its_record()
     {
         var view = new HoldingView(42m);

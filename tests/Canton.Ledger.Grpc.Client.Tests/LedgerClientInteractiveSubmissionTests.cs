@@ -13,6 +13,8 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using NSubstitute;
 using Xunit;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime.Outcomes;
 using Interactive = Com.Daml.Ledger.Api.V2.Interactive;
 using RuntimeCommands = Daml.Runtime.Commands;
 using Status = Grpc.Core.Status;
@@ -236,7 +238,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareSubmissionAsync_surfaces_a_participant_rejection_as_RpcException()
+    public async Task PrepareSubmissionAsync_surfaces_a_participant_rejection_as_a_not_committed_ledger_operation_failure()
     {
         _service.PrepareSubmissionAsync(
                 Arg.Any<Interactive.PrepareSubmissionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
@@ -244,7 +246,10 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
 
         var act = () => CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
 
-        (await act.Should().ThrowAsync<RpcException>()).Which.StatusCode.Should().Be(StatusCode.InvalidArgument);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.InvalidArgument));
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<RpcException>();
     }
 
     [Fact]
@@ -362,7 +367,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteSubmissionAsync_surfaces_a_participant_rejection_as_RpcException()
+    public async Task ExecuteSubmissionAsync_surfaces_a_participant_rejection_as_an_unknown_commit_ledger_operation_failure()
     {
         _service.ExecuteSubmissionAsync(
                 Arg.Any<Interactive.ExecuteSubmissionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
@@ -370,7 +375,10 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
 
         var act = () => CreateClient().ExecuteSubmissionAsync(Signed(), cancellationToken: Ct);
 
-        (await act.Should().ThrowAsync<RpcException>()).Which.StatusCode.Should().Be(StatusCode.FailedPrecondition);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.FailedPrecondition));
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.InnerException.Should().BeOfType<RpcException>();
     }
 
     [Fact]
@@ -437,7 +445,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteSubmissionAndWaitForTransactionAsync_surfaces_a_participant_rejection_as_RpcException()
+    public async Task ExecuteSubmissionAndWaitForTransactionAsync_surfaces_a_participant_rejection_as_an_unknown_commit_ledger_operation_failure()
     {
         _service.ExecuteSubmissionAndWaitForTransactionAsync(
                 Arg.Any<Interactive.ExecuteSubmissionAndWaitForTransactionRequest>(),
@@ -446,7 +454,10 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
 
         var act = () => CreateClient().ExecuteSubmissionAndWaitForTransactionAsync(Signed(), Submitter(), cancellationToken: Ct);
 
-        (await act.Should().ThrowAsync<RpcException>()).Which.StatusCode.Should().Be(StatusCode.NotFound);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.NotFound));
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.InnerException.Should().BeOfType<RpcException>();
     }
 
     [Fact]
@@ -465,10 +476,10 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
             .Returns(_ => Faulted<Interactive.ExecuteSubmissionAndWaitForTransactionResponse>(StatusCode.Unavailable));
         var client = CreateClient();
 
-        await ((Func<Task>)(() => client.ExecuteSubmissionAsync(Signed(), cancellationToken: Ct))).Should().ThrowAsync<RpcException>();
-        await ((Func<Task>)(() => client.ExecuteSubmissionAndWaitAsync(Signed(), cancellationToken: Ct))).Should().ThrowAsync<RpcException>();
+        await ((Func<Task>)(() => client.ExecuteSubmissionAsync(Signed(), cancellationToken: Ct))).Should().ThrowAsync<LedgerOperationException>();
+        await ((Func<Task>)(() => client.ExecuteSubmissionAndWaitAsync(Signed(), cancellationToken: Ct))).Should().ThrowAsync<LedgerOperationException>();
         await ((Func<Task>)(() => client.ExecuteSubmissionAndWaitForTransactionAsync(Signed(), Submitter(), cancellationToken: Ct)))
-            .Should().ThrowAsync<RpcException>();
+            .Should().ThrowAsync<LedgerOperationException>();
 
         _ = _service.Received(1).ExecuteSubmissionAsync(
             Arg.Any<Interactive.ExecuteSubmissionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
@@ -550,7 +561,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPreferredPackagesAsync_surfaces_a_participant_rejection_as_RpcException()
+    public async Task GetPreferredPackagesAsync_surfaces_a_participant_rejection_as_a_not_committed_ledger_operation_failure()
     {
         _service.GetPreferredPackagesAsync(
                 Arg.Any<Interactive.GetPreferredPackagesRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
@@ -558,7 +569,10 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
 
         var act = () => CreateClient().GetPreferredPackagesAsync([], cancellationToken: Ct);
 
-        (await act.Should().ThrowAsync<RpcException>()).Which.StatusCode.Should().Be(StatusCode.FailedPrecondition);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.FailedPrecondition));
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<RpcException>();
     }
 
     [Fact]

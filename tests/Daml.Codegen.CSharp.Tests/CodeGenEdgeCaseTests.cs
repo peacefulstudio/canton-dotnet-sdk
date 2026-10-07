@@ -63,7 +63,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var amountFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Amount.cs", StringComparison.Ordinal));
+        var amountFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Amount.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         amountFile.Should().NotBeNull();
@@ -71,7 +71,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Numeric with scale still maps to decimal
         code.Should().Contain("decimal Value");
-        code.Should().Contain("new DamlNumeric(Value)");
+        code.Should().Contain("new global::Daml.Runtime.Data.DamlNumeric(Value)");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var amountFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Amount.cs", StringComparison.Ordinal));
+        var amountFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Amount.cs", global::System.StringComparison.Ordinal));
 
         amountFile.Should().NotBeNull();
         var code = amountFile!.Content;
@@ -141,7 +141,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", StringComparison.Ordinal));
+        var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         containerFile.Should().NotBeNull();
@@ -176,7 +176,7 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", StringComparison.Ordinal));
+        var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", global::System.StringComparison.Ordinal));
 
         containerFile.Should().NotBeNull();
         var code = containerFile!.Content;
@@ -210,7 +210,7 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var boxFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Box.cs", StringComparison.Ordinal));
+        var boxFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Box.cs", global::System.StringComparison.Ordinal));
 
         boxFile.Should().NotBeNull();
         var code = boxFile!.Content;
@@ -246,7 +246,7 @@ public partial class CodeGenEdgeCaseTests
         var generator = CreateGenerator();
 
         var files = generator.Generate(dar);
-        var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", StringComparison.Ordinal));
+        var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", global::System.StringComparison.Ordinal));
 
         containerFile.Should().NotBeNull();
         var code = containerFile!.Content;

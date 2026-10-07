@@ -53,14 +53,14 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
+        var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         contractFile.Should().NotBeNull();
         var code = contractFile!.Content;
 
-        code.Should().Contain("Choice<Asset, DamlUnit, Party> ChoiceGetOwner");
-        code.Should().Contain("ResultDecoder = val => Party.FromDamlValue(val.As<DamlParty>())");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Asset, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.Party> ChoiceGetOwner");
+        code.Should().Contain("ResultDecoder = val => global::Daml.Runtime.Data.Party.FromDamlValue(val.As<global::Daml.Runtime.Data.DamlParty>())");
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
+        var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         contractFile.Should().NotBeNull();
@@ -115,8 +115,8 @@ public partial class CodeGenEdgeCaseTests
         // Complex types decode element-by-element through the field-conversion helper.
         // The previous expectation `IReadOnlyList<string>.FromRecord(...)` was a known
         // codegen bug — IReadOnlyList<T> has no FromRecord, so it never compiled.
-        code.Should().Contain("Choice<Asset, DamlUnit, IReadOnlyList<string>>");
-        code.Should().Contain("ResultDecoder = val => (IReadOnlyList<string>)val.As<DamlList>().Values.Select(x => x.As<DamlText>().Value).ToList()");
+        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Asset, global::Daml.Runtime.Data.DamlUnit, global::System.Collections.Generic.IReadOnlyList<string>>");
+        code.Should().Contain("ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyList<string>)val.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList()");
     }
 
     #endregion
@@ -158,7 +158,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
+        var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         assetFile.Should().NotBeNull();
@@ -211,16 +211,16 @@ public partial class CodeGenEdgeCaseTests
         var files = generator.Generate(dar);
 
         // Assert - Should have Token.cs (template) and OtherType.cs (data type), not two Token.cs
-        var tokenFiles = files.Where(f => f.RelativePath.EndsWith("Token.cs", StringComparison.Ordinal)).ToList();
+        var tokenFiles = files.Where(f => f.RelativePath.EndsWith("Token.cs", global::System.StringComparison.Ordinal)).ToList();
         tokenFiles.Should().HaveCount(1);
 
         // The Token should be a template (has ITemplate)
-        tokenFiles[0].Content.Should().Contain(": ITemplate");
+        tokenFiles[0].Content.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate");
 
         // OtherType should exist as a data type
-        var otherTypeFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("OtherType.cs", StringComparison.Ordinal));
+        var otherTypeFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("OtherType.cs", global::System.StringComparison.Ordinal));
         otherTypeFile.Should().NotBeNull();
-        otherTypeFile!.Content.Should().Contain(": IDamlRecord<OtherType>");
+        otherTypeFile!.Content.Should().Contain(": global::Daml.Runtime.Data.IDamlRecord<OtherType>");
     }
 
     #endregion
@@ -255,7 +255,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var maybeFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Maybe.cs", StringComparison.Ordinal));
+        var maybeFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Maybe.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         maybeFile.Should().NotBeNull();

@@ -21,9 +21,11 @@ internal static class ReadScenarios
         CancellationToken cancellationToken)
     {
         var elapsed = new List<TimeSpan>(repetitions);
+        var allocated = new List<long>(repetitions);
         for (var repetition = 0; repetition < repetitions; repetition++)
         {
             var creates = 0;
+            var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
             var start = Stopwatch.GetTimestamp();
             await foreach (var streamEvent in transport.Client
                                .SubscribeAsync<Marker>(owner, fromOffset, toOffset, cancellationToken)
@@ -41,10 +43,11 @@ internal static class ReadScenarios
             }
 
             elapsed.Add(Stopwatch.GetElapsedTime(start));
+            allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore);
             ExpectCount(transport, "update stream replay", expectedCreates, creates);
         }
 
-        return ThroughputSummary.Of(expectedCreates, elapsed);
+        return ThroughputSummary.Of(expectedCreates, elapsed, allocated);
     }
 
     public static async Task<ThroughputSummary> ActiveContractSnapshotAsync(
@@ -56,9 +59,11 @@ internal static class ReadScenarios
         CancellationToken cancellationToken)
     {
         var elapsed = new List<TimeSpan>(repetitions);
+        var allocated = new List<long>(repetitions);
         for (var repetition = 0; repetition < repetitions; repetition++)
         {
             var contracts = 0;
+            var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
             var start = Stopwatch.GetTimestamp();
             await foreach (var entry in transport.Client
                                .SubscribeActiveAsync<Marker>(owner, activeAtOffset, cancellationToken: cancellationToken)
@@ -76,10 +81,11 @@ internal static class ReadScenarios
             }
 
             elapsed.Add(Stopwatch.GetElapsedTime(start));
+            allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore);
             ExpectCount(transport, "ACS snapshot", expectedContracts, contracts);
         }
 
-        return ThroughputSummary.Of(expectedContracts, elapsed);
+        return ThroughputSummary.Of(expectedContracts, elapsed, allocated);
     }
 
     private static void ExpectCount(Transport transport, string scenario, int expected, int actual)

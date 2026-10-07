@@ -55,20 +55,41 @@ public class TryReserveAsyncTests
                 ExercisedEvents = [.. exercised],
             }));
 
+    private const string NoReserveExerciseMessage =
+        "Submission succeeded but no 'Reserve' exercise on contract 'desk-cid' was recorded on transaction upd-reserve. " +
+        "The transaction returned for this submission carries no exercised event for it. " +
+        "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+        "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+        "request the LEDGER_EFFECTS shape with verbose events.";
+
     [Fact]
-    public async Task TryReserveAsync_returns_the_contract_id_the_Reserve_exercise_returned_when_no_created_contract_is_visible()
+    public async Task TryReserveAsync_returns_the_contract_id_the_Reserve_exercise_returned_when_no_ticket_was_created()
     {
         using var client = ClientCommitting([], ReserveExercised("desk-cid", new DamlContractId("reserved-ticket")));
 
         var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>()
-            .Which.Result.Ticket.Value.Should().Be("reserved-ticket");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("reserved-ticket");
     }
 
     [Fact]
-    public async Task TryReserveAsync_returns_the_contract_id_the_Reserve_exercise_returned_over_a_different_visible_ticket()
+    public async Task TryReserveAsync_returns_the_returned_contract_id_when_it_is_the_only_ticket_created()
+    {
+        using var client = ClientCommitting(
+            [TicketCreated("reserved-ticket")],
+            ReserveExercised("desk-cid", new DamlContractId("reserved-ticket")));
+
+        var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("reserved-ticket");
+    }
+
+    [Fact]
+    public async Task TryReserveAsync_returns_the_returned_contract_id_over_a_different_created_ticket()
     {
         using var client = ClientCommitting(
             [TicketCreated("unrelated-ticket")],
@@ -77,8 +98,8 @@ public class TryReserveAsyncTests
         var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>()
-            .Which.Result.Ticket.Value.Should().Be("reserved-ticket");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("reserved-ticket");
     }
 
     [Fact]
@@ -89,8 +110,8 @@ public class TryReserveAsyncTests
         var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), new SubmitterInfo(Patron),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>()
-            .Which.Result.Ticket.Value.Should().Be("reserved-ticket");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("reserved-ticket");
     }
 
     [Fact]
@@ -105,12 +126,12 @@ public class TryReserveAsyncTests
         var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>()
-            .Which.Result.Ticket.Value.Should().Be("reserved-ticket");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("reserved-ticket");
     }
 
     [Fact]
-    public async Task TryReserveAsync_keeps_reporting_Many_when_two_tickets_are_visible()
+    public async Task TryReserveAsync_reports_One_of_the_returned_ticket_when_two_tickets_are_created()
     {
         using var client = ClientCommitting(
             [TicketCreated("ticket-a"), TicketCreated("ticket-b")],
@@ -119,47 +140,71 @@ public class TryReserveAsyncTests
         var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.Many>()
-            .Which.ContractIds.Should().Equal("ticket-a", "ticket-b");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("ticket-b");
     }
 
     [Fact]
-    public async Task TryReserveAsync_ignores_a_Reserve_exercise_on_another_desk_and_projects_the_visible_ticket()
+    public async Task TryReserveAsync_ignores_a_Reserve_exercise_on_another_desk()
+    {
+        using var client = ClientCommitting(
+            [],
+            ReserveExercised("other-desk-cid", new DamlContractId("other-ticket")),
+            ReserveExercised("desk-cid", new DamlContractId("reserved-ticket")));
+
+        var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.One>()
+            .Which.Result.Value.Should().Be("reserved-ticket");
+    }
+
+    [Fact]
+    public async Task TryReserveAsync_throws_when_only_another_desk_exercised_Reserve()
     {
         using var client = ClientCommitting(
             [TicketCreated("visible-ticket")],
             ReserveExercised("other-desk-cid", new DamlContractId("other-ticket")));
 
-        var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
+        var act = () => Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>()
-            .Which.Result.Ticket.Value.Should().Be("visible-ticket");
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage(NoReserveExerciseMessage);
     }
 
     [Fact]
-    public async Task TryReserveAsync_ignores_another_choice_exercised_on_the_same_desk_and_projects_the_visible_ticket()
+    public async Task TryReserveAsync_throws_when_only_another_choice_was_exercised_on_the_same_desk()
     {
         using var client = ClientCommitting(
             [TicketCreated("visible-ticket")],
             DeskExercised("desk-cid", "Issue", new DamlContractId("issued-ticket")));
 
-        var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
+        var act = () => Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.One>()
-            .Which.Result.Ticket.Value.Should().Be("visible-ticket");
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage(NoReserveExerciseMessage);
     }
 
     [Fact]
-    public async Task TryReserveAsync_returns_None_when_neither_an_exercise_nor_a_ticket_is_visible()
+    public async Task TryReserveAsync_throws_when_no_exercise_is_recorded_even_though_a_ticket_was_created()
+    {
+        using var client = ClientCommitting([TicketCreated("visible-ticket")]);
+
+        var act = () => Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage(NoReserveExerciseMessage);
+    }
+
+    [Fact]
+    public async Task TryReserveAsync_throws_when_neither_an_exercise_nor_a_ticket_is_recorded()
     {
         using var client = ClientCommitting([]);
 
-        var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
+        var act = () => Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.None>();
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage(NoReserveExerciseMessage);
     }
 
     [Fact]
@@ -170,7 +215,7 @@ public class TryReserveAsyncTests
         var outcome = await Desk.TryReserveAsync(client, new TicketDesk.Reserve(), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var undecodable = outcome.Should().BeOfType<ExerciseOutcome<ReserveResult>.CommittedUndecodable>().Subject;
+        var undecodable = outcome.Should().BeOfType<ExerciseOutcome<ContractId<Ticket>>.CommittedUndecodable>().Subject;
         undecodable.UpdateId.Should().Be("upd-reserve");
         undecodable.Message.Should().Be("Cannot cast DamlInt64 to DamlContractId");
         undecodable.SourceException.Should().BeOfType<InvalidCastException>();

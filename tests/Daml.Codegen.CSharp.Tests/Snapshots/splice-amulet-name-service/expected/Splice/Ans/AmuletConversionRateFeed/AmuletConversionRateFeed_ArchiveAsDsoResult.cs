@@ -25,28 +25,28 @@ public enum AmuletConversionRateFeed_ArchiveAsDsoResult
 public static class AmuletConversionRateFeed_ArchiveAsDsoResultExtensions
 {
     /// <summary>Converts to a DamlEnum value.</summary>
-    public static DamlEnum ToDamlEnum(this AmuletConversionRateFeed_ArchiveAsDsoResult value)
+    public static global::Daml.Runtime.Data.DamlEnum ToDamlEnum(this global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult value)
     {
         return value switch
         {
-            AmuletConversionRateFeed_ArchiveAsDsoResult.AmuletConversionRateFeed_ArchiveAsDsoResult => DamlEnum.Create("AmuletConversionRateFeed_ArchiveAsDsoResult"),
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+            global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult.AmuletConversionRateFeed_ArchiveAsDsoResult => global::Daml.Runtime.Data.DamlEnum.Create("AmuletConversionRateFeed_ArchiveAsDsoResult"),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value, null)
         };
     }
 
     /// <summary>Creates an instance from a DamlEnum value.</summary>
-    public static AmuletConversionRateFeed_ArchiveAsDsoResult FromDamlEnum(DamlEnum value)
+    public static global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult FromDamlEnum(global::Daml.Runtime.Data.DamlEnum value)
     {
         return value.Constructor switch
         {
-            "AmuletConversionRateFeed_ArchiveAsDsoResult" => AmuletConversionRateFeed_ArchiveAsDsoResult.AmuletConversionRateFeed_ArchiveAsDsoResult,
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value.Constructor, null)
+            "AmuletConversionRateFeed_ArchiveAsDsoResult" => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult.AmuletConversionRateFeed_ArchiveAsDsoResult,
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(value), value.Constructor, null)
         };
     }
 
     /// <summary>Decodes a Daml-LF JSON enum constructor directly into a DamlEnum, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlEnum __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context) =>
+    public static global::Daml.Runtime.Data.DamlEnum __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context) =>
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 
     private static readonly string[] ExpectedConstructors = ["AmuletConversionRateFeed_ArchiveAsDsoResult"];

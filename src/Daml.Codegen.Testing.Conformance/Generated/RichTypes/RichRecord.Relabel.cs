@@ -15,26 +15,26 @@ public sealed partial record RichRecord
     /// Choice argument type for Relabel.
     /// </summary>
     public sealed record Relabel(
-        [property: DamlFieldAttribute("newLabel")] string NewLabel
-    ) : IDamlRecord<Relabel>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("newLabel")] string NewLabel
+    ) : global::Daml.Runtime.Data.IDamlRecord<Relabel>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("newLabel", new DamlText(NewLabel))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("newLabel", new global::Daml.Runtime.Data.DamlText(NewLabel))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Relabel FromRecord(DamlRecord record) => new Relabel(
-            NewLabel: record.GetRequiredField("newLabel").As<DamlText>().Value
+        public static Relabel FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Relabel(
+            NewLabel: record.GetRequiredField("newLabel").As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("newLabel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newLabel"), context.Field("newLabel")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("newLabel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newLabel"), context.Field("newLabel")))
             );
         }
 

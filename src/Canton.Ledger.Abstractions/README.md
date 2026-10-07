@@ -5,14 +5,14 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Abstractions --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.Abstractions --version 0.6.0-preview.4
 ```
 
 ## Key Types
 
 | Type | Purpose |
 |------|---------|
-| `ICantonLedgerClient` | The Canton participant client surface — everything on `ILedgerClient` plus the Canton-only operations (fire-and-forget submit, the command completion stream, connected-synchronizer and Ledger API version discovery, offset/id point reads, tree-shaped submission, traffic-cost estimation) |
+| `ICantonLedgerClient` | The Canton participant client surface — everything on `ILedgerClient` plus the Canton-only operations (fire-and-forget submit, the command completion stream, connected-synchronizer and Ledger API version discovery, offset/id point reads, by-id disclosure reads through `GetDisclosureAsync<T>`, tree-shaped submission, traffic-cost estimation) |
 | `CompletionStreamEvent` | A command-completion stream event — `CommandAccepted`/`CommandRejected`/`Checkpoint`/`StreamError`, with the verdict modelled as the event type |
 | `Completion` | The transport-neutral command-completion payload (command id, offset, act-as parties, synchronizer time, submission/user ids, deduplication period) |
 | `CompletionStatus` | The `google.rpc.Code` verdict of a rejected command (`Code`, `Message`) plus the structured rejection detail decoded from `google.rpc.Status.details` (`ErrorId`, `Metadata`) |
@@ -34,14 +34,14 @@ dotnet add package Canton.Ledger.Abstractions --version 0.6.0-preview.3
 | `VettedPackage` | A package vetted on a participant and synchronizer |
 | `PackageIdResolver` / `Identifier.ForPackageName` | Package-name addressing: `ForPackageName` builds the `#<package-name>:<module>:<entity>` identifier Canton resolves per request, and `PackageIdResolver` caches the package id of a name's highest known version over any `IAdminClient` |
 | `ParsedLedgerError` | A participant error decoded from the `google.rpc.Status` payload (category, error id, message, `ErrorInfo` metadata, the `TransportStatus` the transport reported), in the one shape both clients produce; `MapCategory` is the single classifier turning the wire `category` into a `DamlErrorCategory` |
-| `TransactionResultExerciseExtensions` | Typed accessors over `TransactionResult.ExercisedEvents` — `ExerciseResult<TReturn>(choice)` for the single matching event and `AllExerciseResults<TReturn>(choice)` for every one, in transaction order, deserialized through `FromDamlValue`; both transports project into the same `TransactionResult`, so the accessors read the same either way |
+| `TransactionResultExerciseExtensions` | Typed accessors over `TransactionResult.ExercisedEvents` — `ExerciseResult<TReturn>(choice)` for the single matching event and `AllExerciseResults<TReturn>(choice)` for every one, in transaction order, decoded through the generated choice descriptor the event's own `InterfaceId` and then `TemplateId` resolve to (variants, enums, generic types and collections included), falling back to `FromDamlValue` when no binding resolves or its result type is not assignable to `TReturn`, and handing a `DamlValue` target the raw value; both transports project into the same `TransactionResult`, so the accessors read the same either way |
 | `MalformedTransactionTreeException` | Thrown when the node ids on a transaction's events cannot describe a tree, so no `TransactionTree` can be reconstructed from them — the one exception both transports' tree projections raise, so a consumer catches it once regardless of transport |
-| `MalformedResponseException` | Thrown when a participant's response body cannot be read as the Ledger API describes it — a required field is absent, or a value does not decode into the type it claims. Says the fault is the participant's, not the caller's, and carries the un-prefixed `Detail` behind the message |
+| `MalformedResponseException` | Describes why a participant's response body cannot be read as the Ledger API describes it — a required field is absent, or a value does not decode into the type it claims. A throwing gRPC call raises it as the `InnerException` of a `LedgerOperationException` with `Status` `UndecodableBody`; the JSON Ledger API client reports the same status with whichever failure the read raised, which can be a `JsonException`. Says the fault is the participant's, not the caller's, and carries the un-prefixed `Detail` behind the message |
 | `ITokenProvider` | The bearer-token source every transport authenticates through — `Task<string> GetTokenAsync(CancellationToken)` |
 | `ITokenProvider.None` | Static singleton signalling unauthenticated access; the clients detect it and send no Authorization header |
 | `IPqsClient` | The Participant Query Store read surface — active-contract queries by template or interface, filtered, paged, by contract id, and existence checks |
 | `PqsFilter` | A filter condition on a PQS query. Opaque by design: it declares no public members and its cases are internal, so a filter can only be built through `Filter` |
-| `Filter` | Builds `PqsFilter`s from strongly-typed expressions — `Filter.Field<T>(t => t.Prop, value)` and `Filter.Where<T>(t => predicate)`, composed with `Filter.And`/`Filter.Or`. Comparisons are typed by each field's Daml type; field names come from codegen `[DamlField]` metadata, never from user input |
+| `Filter` | Builds `PqsFilter`s from strongly-typed expressions — `Filter.Field<T>(t => t.Prop, value)` and `Filter.Where<T>(t => predicate)`, composed with `Filter.And`/`Filter.Or`. Comparisons are typed by each field's Daml type; field names come from codegen `[DamlField]` metadata, never from user input. An expression the filter cannot translate, including a member of a type the code generator did not emit, throws `ArgumentException` |
 | `PqsPage` | A bounded page of query results (`Limit`, `Offset`), applied as `LIMIT`/`OFFSET` on the query itself |
 | `InterfaceContract<TInterface, TView>` | An active contract observed through a Daml interface — its interface-typed `ContractId` paired with the participant-computed view |
 

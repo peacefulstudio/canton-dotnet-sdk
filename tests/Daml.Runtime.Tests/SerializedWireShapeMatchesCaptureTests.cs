@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using AwesomeAssertions;
+using Daml.Runtime.Data;
 using Daml.Runtime.Serialization;
 using Xunit;
 
@@ -15,7 +16,9 @@ namespace Daml.Runtime.Tests;
 public class SerializedWireShapeMatchesCaptureTests
 {
     [Theory]
-    [MemberData(nameof(DecodedWireSamplePayloads))]
+    [MemberData(
+        nameof(DamlLfJsonReaderWireSamplesTests.DecodedWireSamplePayloads),
+        MemberType = typeof(DamlLfJsonReaderWireSamplesTests))]
     public void Serialize_should_reproduce_the_captured_payload(
         string fileName, string payloadPath, string shapeName)
     {
@@ -29,14 +32,26 @@ public class SerializedWireShapeMatchesCaptureTests
             "the participant's own payload is the wire grammar the writer has to speak");
     }
 
-    /// <summary>
-    /// A capture whose payloads the typed reader cannot decode, so the writer cannot be held
-    /// against it. Naming one here is the only way to leave it out of the gate below.
-    /// </summary>
-    private static readonly string[] CapturesCarryingNoDecodableRecord =
-    [
-        "probe_nested_optional_matrix.json",
-    ];
+    [Theory]
+    [MemberData(
+        nameof(DamlLfJsonReaderWireSamplesTests.AcceptedNestedOptionalCandidates),
+        MemberType = typeof(DamlLfJsonReaderWireSamplesTests))]
+    public void Serialize_should_reproduce_every_nested_optional_encoding_the_participant_accepted(string candidate)
+    {
+        using var document = DamlLfJsonReaderWireSamplesTests.LoadWireSample(DamlLfJsonReaderWireSamplesTests.NestedOptionalProbe);
+        var echoed = document.RootElement.GetProperty("response").GetProperty(candidate).GetProperty("echoed");
+
+        var nestedNote = DamlLfJsonReaderWireSamplesTests.ReadOptionalOptionalText(echoed);
+        using var written = JsonDocument.Parse(DamlJsonSerializer.Serialize(nestedNote));
+
+        CapturedPayloadDisagreements.Between(echoed, written.RootElement, candidate).Should().BeEmpty(
+            "the participant accepted and echoed this encoding of an Optional (Optional Text)");
+    }
+
+    [Fact]
+    public void AcceptedNestedOptionalCandidates_should_cover_the_three_accepted_encodings() =>
+        FirstColumnOf(DamlLfJsonReaderWireSamplesTests.AcceptedNestedOptionalCandidates)
+            .Should().Equal("empty_array", "array_of_empty_array", "array_of_array_of_text");
 
     /// <summary>
     /// Anchored on the corpus directory, not on the member this class's theory data is projected
@@ -48,30 +63,17 @@ public class SerializedWireShapeMatchesCaptureTests
     [Fact]
     public void SerializedWireShapeMatchesCapture_should_hold_the_writer_against_every_capture_on_disk()
     {
-        var capturesTheWriterIsHeldAgainst = FileNamesOf(DecodedWireSamplePayloads).Distinct();
+        var capturesTheWriterIsHeldAgainst = FirstColumnOf(DamlLfJsonReaderWireSamplesTests.DecodedWireSamplePayloads)
+            .Append(DamlLfJsonReaderWireSamplesTests.NestedOptionalProbe)
+            .Distinct();
 
-        capturesTheWriterIsHeldAgainst.Concat(CapturesCarryingNoDecodableRecord)
-            .Should().BeEquivalentTo(
-                Directory.EnumerateFiles(DamlLfJsonReaderWireSamplesTests.CorpusDirectory, "*.json")
-                    .Select(Path.GetFileName),
-                "a capture the writer is never held against would let the two halves of the "
-                + "grammar drift apart again");
+        capturesTheWriterIsHeldAgainst.Should().BeEquivalentTo(
+            Directory.EnumerateFiles(DamlLfJsonReaderWireSamplesTests.CorpusDirectory, "*.json")
+                .Select(Path.GetFileName),
+            "a capture the writer is never held against would let the two halves of the "
+            + "grammar drift apart again");
     }
 
-    public static TheoryData<string, string, string> DecodedWireSamplePayloads
-    {
-        get
-        {
-            var payloads = new TheoryData<string, string, string>();
-            foreach (ITheoryDataRow row in DamlLfJsonReaderWireSamplesTests.SupportedWireSamplePayloads)
-            {
-                var data = row.GetData();
-                payloads.Add((string)data[0]!, (string)data[1]!, (string)data[2]!);
-            }
-            return payloads;
-        }
-    }
-
-    private static IEnumerable<string> FileNamesOf(IEnumerable<ITheoryDataRow> rows) =>
+    private static IEnumerable<string> FirstColumnOf(IEnumerable<ITheoryDataRow> rows) =>
         rows.Select(row => (string)row.GetData()[0]!);
 }

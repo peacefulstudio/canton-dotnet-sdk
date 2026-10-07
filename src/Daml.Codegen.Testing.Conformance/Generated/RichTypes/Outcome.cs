@@ -14,32 +14,32 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// Generated from Daml variant Outcome
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record Outcome : IDamlVariant<Outcome>
+public abstract record Outcome : global::Daml.Runtime.Data.IDamlVariant<Outcome>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs an Outcome by dispatching on the DamlVariant constructor tag.</summary>
-    public static Outcome FromVariant(DamlVariant variant) =>
+    public static Outcome FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
-            "Win" => new Win(Outcome_Win.FromRecord(variant.Value.As<DamlRecord>())),
+            "Win" => new Win(global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome_Win.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
             "Pending" => new Pending(),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown Outcome constructor")
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown Outcome constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "Win" => DamlVariant.Create("Win", Outcome_Win.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "Pending" => DamlVariant.Create("Pending", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "Win" => global::Daml.Runtime.Data.DamlVariant.Create("Win", global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome_Win.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "Pending" => global::Daml.Runtime.Data.DamlVariant.Create("Pending", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -47,13 +47,13 @@ public abstract record Outcome : IDamlVariant<Outcome>
     private static readonly string[] ExpectedConstructors = ["Win", "Pending"];
 
     /// <summary>Win constructor.</summary>
-    public sealed record Win(Outcome_Win Value) : Outcome
+    public sealed record Win(global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome_Win Value) : Outcome
     {
         /// <inheritdoc />
         public override string Tag => "Win";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("Win", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("Win", Value.ToRecord());
     }
 
     /// <summary>Pending constructor (no arguments).</summary>
@@ -63,7 +63,7 @@ public abstract record Outcome : IDamlVariant<Outcome>
         public override string Tag => "Pending";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("Pending", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("Pending", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
 }

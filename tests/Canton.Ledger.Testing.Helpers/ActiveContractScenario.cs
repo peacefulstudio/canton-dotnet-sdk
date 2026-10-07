@@ -83,6 +83,18 @@ public sealed record ActiveContractScenario
     /// <summary>The value the participant-computed interface view carries.</summary>
     public const string InterfaceViewValue = "interface-view-value";
 
+    /// <summary>The first party the transaction and reassignment events name as a witness.</summary>
+    public const string FirstWitnessParty = "witness-one::ns1";
+
+    /// <summary>The second party the transaction and reassignment events name as a witness.</summary>
+    public const string SecondWitnessParty = "witness-two::ns1";
+
+    /// <summary>The party the created events' contract key carries, distinct from <see cref="OwnerParty"/>.</summary>
+    public const string ContractKeyParty = "key-holder::ns1";
+
+    /// <summary>The base64 text of the hash the created events' contract key travels with.</summary>
+    public const string ContractKeyHashBase64 = "AQID";
+
     /// <summary>The <c>view_status</c> code a successfully computed interface view reports.</summary>
     public const int ComputedViewStatusCode = 0;
 
@@ -121,6 +133,15 @@ public sealed record ActiveContractScenario
 
     /// <summary>The interface view the created event carries — the lever the interface-marker lane turns.</summary>
     public InterfaceViewRendering InterfaceView { get; init; } = InterfaceViewRendering.None;
+
+    /// <summary>Renders the created event with no event offset, the way a participant that leaves it unset does.</summary>
+    public bool OmitCreatedEventOffset { get; init; }
+
+    /// <summary>Renders the unassigned event of an <see cref="ActiveContractEntry.IncompleteUnassigned"/> entry with no event offset.</summary>
+    public bool OmitUnassignedEventOffset { get; init; }
+
+    /// <summary>The offset of the snapshot the entry is projected under, or <c>null</c> to project it under no snapshot offset.</summary>
+    public long? SnapshotOffset { get; init; }
 
     /// <summary>
     /// Renders an <see cref="ActiveContractEntry.IncompleteUnassigned"/> entry whose unassigned event

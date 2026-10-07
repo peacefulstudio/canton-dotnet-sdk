@@ -22,7 +22,11 @@ public static class ExerciseOutcomeExtensions
     /// <c>Operation</c> extension property. A <see cref="ExerciseOutcome{T}.DamlError"/>
     /// outcome surfaces its category, error id, and metadata on the exception; an
     /// <see cref="ExerciseOutcome{T}.InfraError"/> outcome surfaces its transport status
-    /// code and source exception. A <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> outcome
+    /// code and source exception. A <see cref="ExerciseOutcome{T}.None"/> or
+    /// <see cref="ExerciseOutcome{T}.Many"/> outcome throws with
+    /// <see cref="LedgerOperationException.CommitState"/> of <see cref="CommitState.Committed"/>,
+    /// because the transaction committed and only its result count was unexpected. A
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> outcome
     /// throws with <see cref="LedgerOperationException.CommitState"/> of
     /// <see cref="CommitState.Committed"/> and, when the response was decoded far enough to read
     /// one, the committed transaction's <see cref="LedgerOperationException.UpdateId"/>.
@@ -40,10 +44,10 @@ public static class ExerciseOutcomeExtensions
         return outcome switch
         {
             ExerciseOutcome<T>.One one => one.Result,
-            ExerciseOutcome<T>.None => throw new LedgerOperationException(
+            ExerciseOutcome<T>.None => throw LedgerOperationException.CommittedWithoutDetail(
                     $"{operationName}: expected exactly one result but the operation produced none (None).")
                 .WithOperation(operationName),
-            ExerciseOutcome<T>.Many many => throw new LedgerOperationException(
+            ExerciseOutcome<T>.Many many => throw LedgerOperationException.CommittedWithoutDetail(
                     $"{operationName}: expected exactly one result but the operation produced {many.Count} " +
                     $"(contract ids: {string.Join(", ", many.ContractIds)}).")
                 .WithOperation(operationName),

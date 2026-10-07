@@ -12,20 +12,20 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// <summary>
 /// Generated from Daml record DescribeCharter
 /// </summary>
-public sealed record DescribeCharter : IDamlRecord<DescribeCharter>
+public sealed record DescribeCharter : global::Daml.Runtime.Data.IDamlRecord<DescribeCharter>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create();
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create();
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static DescribeCharter FromRecord(DamlRecord record) => new DescribeCharter();
+    public static DescribeCharter FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new DescribeCharter();
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create();
+        return global::Daml.Runtime.Data.DamlRecord.Create();
     }
 
 }

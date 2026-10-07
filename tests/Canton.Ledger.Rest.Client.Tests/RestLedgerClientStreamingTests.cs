@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Text.Json;
 using System.Net;
@@ -19,6 +20,13 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public sealed class RestLedgerClientStreamingTests : IDisposable
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TestTemplate>();
+        GeneratedTypeReaders.ForChoices<TestTemplate>();
+    }
+
     private static readonly Party Alice = new("party::alice");
 
     private readonly List<StubHttpClientFactory> _factories = [];
@@ -38,7 +46,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         return factory;
     }
 
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
+    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>, IHasChoices<TestTemplate>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "StreamingTemplate");
         public static string PackageId => "pkg";
@@ -63,6 +71,8 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
             ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
             ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive];
     }
 
     private RestLedgerClient ClientWith(RecordingHttpHandler transport) =>

@@ -94,6 +94,7 @@ TYPES_CARRYING_NO_HEADER=(
   binpb
   config
   csproj
+  dalf
   dar
   json
   manifest

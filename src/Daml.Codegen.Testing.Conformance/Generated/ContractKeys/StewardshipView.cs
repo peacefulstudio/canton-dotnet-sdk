@@ -13,26 +13,26 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// Generated from Daml record StewardshipView
 /// </summary>
 public sealed record StewardshipView(
-    [property: DamlFieldAttribute("charterSummary")] string CharterSummary
-) : IStewardship, IDamlRecord<StewardshipView>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("charterSummary")] string CharterSummary
+) : global::Daml.Codegen.Testing.Conformance.ContractKeys.IStewardship, global::Daml.Runtime.Data.IDamlRecord<StewardshipView>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("charterSummary", new DamlText(CharterSummary))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("charterSummary", new global::Daml.Runtime.Data.DamlText(CharterSummary))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static StewardshipView FromRecord(DamlRecord record) => new StewardshipView(
-        CharterSummary: record.GetRequiredField("charterSummary").As<DamlText>().Value
+    public static StewardshipView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new StewardshipView(
+        CharterSummary: record.GetRequiredField("charterSummary").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("charterSummary", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "charterSummary"), context.Field("charterSummary")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("charterSummary", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "charterSummary"), context.Field("charterSummary")))
         );
     }
 

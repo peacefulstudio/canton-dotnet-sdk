@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Daml.Runtime;
@@ -8,6 +9,7 @@ using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
+using Daml.Runtime.Serialization;
 using Xunit;
 
 namespace Canton.Ledger.Rest.Client.Tests;
@@ -31,6 +33,22 @@ public class TransactionResultExerciseReachabilityTests
     }
 
     [Fact]
+    public void ExerciseResult_reads_a_record_choice_return_as_the_generated_record_type()
+    {
+        var result = Result(Exercised("Quote", DamlRecord.Create(new DamlField("bid", new DamlNumeric(1.5m)))));
+
+        result.ExerciseResult<TwapQuote>("Quote").Should().Be(new TwapQuote(1.5m));
+    }
+
+    [Fact]
+    public void ExerciseResult_reads_an_Optional_choice_return_as_a_nullable_value()
+    {
+        var result = Result(Exercised("MaybeTwap", DamlOptional.Some(new DamlNumeric(3m))));
+
+        result.ExerciseResult<decimal?>("MaybeTwap").Should().Be(3m);
+    }
+
+    [Fact]
     public void AllExerciseResults_reads_every_typed_choice_return_for_that_same_consumer()
     {
         var result = Result(
@@ -48,13 +66,28 @@ public class TransactionResultExerciseReachabilityTests
     }
 
     [Fact]
-    public void ProjectChoiceResult_reads_the_choice_return_through_those_same_accessors()
+    public void ProjectChoiceResult_reads_the_choice_return_for_a_consumer_that_takes_only_the_REST_client()
     {
         var outcome = RestTransactionResultProjector.ProjectChoiceResult<decimal>(
             new ExerciseOutcome<TransactionResult>.One(Result(Exercised("GetTrailingTwap", new DamlNumeric(7m)))),
-            new ChoiceName("GetTrailingTwap"));
+            new ExerciseCommand(TemplateId, new ContractId<TokenHolding>("00aa"), new ChoiceName("GetTrailingTwap"), DamlUnit.Instance));
 
         outcome.Should().BeOfType<ExerciseOutcome<decimal>.One>().Which.Result.Should().Be(7m);
+    }
+
+    private sealed record TwapQuote(decimal Bid) : IDamlRecord<TwapQuote>
+    {
+        public DamlRecord ToRecord() => DamlRecord.Create(new DamlField("bid", new DamlNumeric(Bid)));
+
+        public static TwapQuote FromRecord(DamlRecord record) => new(record.GetRequiredField("bid").As<DamlNumeric>().Value);
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class TokenHolding : IDamlType
+    {
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(new Identifier("pkg", "Token.Holding", "Holding"), DamlTypeKind.Template, "token");
     }
 
     private static ExercisedEvent Exercised(string choiceName, DamlValue exerciseResult) =>

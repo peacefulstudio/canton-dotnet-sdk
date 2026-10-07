@@ -20,8 +20,14 @@ namespace Daml.Ledger.Abstractions.Testing.Conformance.Tests;
 public sealed class NonTerminatingStreamConformanceTests
 {
     private const string SnapshotContract = "SubscribeActiveAsync must terminate with a terminal Checkpoint";
+    private const string InterfaceSnapshotContract =
+        "interface SubscribeActiveAsync must terminate with a terminal Checkpoint";
     private const string BoundedSubscriptionContract = "A bounded SubscribeAsync (toOffset 3) must complete";
     private const string BoundedEffectsContract = "A bounded SubscribeLedgerEffectsAsync (toOffset 3) must complete";
+    private const string InterfaceBoundedSubscriptionContract =
+        "A bounded interface SubscribeAsync (toOffset 3) must complete";
+    private const string InterfaceBoundedEffectsContract =
+        "A bounded interface SubscribeLedgerEffectsAsync (toOffset 3) must complete";
 
     [Fact]
     public async Task Unclassified_row_check_fails_with_a_TimeoutException_when_the_snapshot_never_terminates() =>
@@ -42,6 +48,29 @@ public sealed class NonTerminatingStreamConformanceTests
     public async Task Empty_snapshot_check_fails_with_a_TimeoutException_when_the_snapshot_never_terminates() =>
         await AssertBoundedFailure(
             kit => kit.Empty_active_snapshot_still_ends_with_a_terminal_Checkpoint(), SnapshotContract);
+
+    [Fact]
+    public async Task Interface_unclassified_row_check_fails_with_a_TimeoutException_when_the_interface_snapshot_never_terminates() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_active_snapshot_surfaces_unclassifiable_rows_as_Unclassified(),
+            InterfaceSnapshotContract);
+
+    [Fact]
+    public async Task Interface_terminal_checkpoint_check_fails_with_a_TimeoutException_when_the_interface_snapshot_never_terminates() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_active_snapshot_ends_with_a_terminal_Checkpoint(), InterfaceSnapshotContract);
+
+    [Fact]
+    public async Task Interface_seeded_rows_check_fails_with_a_TimeoutException_when_the_interface_snapshot_never_terminates() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_active_snapshot_yields_seeded_rows_before_the_checkpoint(),
+            InterfaceSnapshotContract);
+
+    [Fact]
+    public async Task Interface_empty_snapshot_check_fails_with_a_TimeoutException_when_the_interface_snapshot_never_terminates() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_empty_active_snapshot_still_ends_with_a_terminal_Checkpoint(),
+            InterfaceSnapshotContract);
 
     [Fact]
     public async Task Exclusive_fromOffset_check_fails_with_a_TimeoutException_when_toOffset_is_ignored() =>
@@ -65,6 +94,30 @@ public sealed class NonTerminatingStreamConformanceTests
             kit => kit.Ledger_effects_subscription_never_yields_Archived(), BoundedEffectsContract);
 
     [Fact]
+    public async Task Interface_exclusive_fromOffset_check_fails_with_a_TimeoutException_when_the_interface_toOffset_is_ignored() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_subscribing_from_an_offset_excludes_the_event_at_that_offset(),
+            InterfaceBoundedSubscriptionContract);
+
+    [Fact]
+    public async Task Interface_inclusive_toOffset_check_fails_with_a_TimeoutException_when_the_interface_toOffset_is_ignored() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_bounded_subscription_delivers_the_event_at_toOffset_then_completes(),
+            InterfaceBoundedSubscriptionContract);
+
+    [Fact]
+    public async Task Interface_acs_delta_shape_check_fails_with_a_TimeoutException_when_the_interface_toOffset_is_ignored() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_acs_delta_subscription_never_yields_Exercised(),
+            InterfaceBoundedSubscriptionContract);
+
+    [Fact]
+    public async Task Interface_ledger_effects_shape_check_fails_with_a_TimeoutException_when_the_interface_toOffset_is_ignored() =>
+        await AssertInterfaceBoundedFailure(
+            kit => kit.Interface_ledger_effects_subscription_never_yields_Archived(),
+            InterfaceBoundedEffectsContract);
+
+    [Fact]
     public async Task Snapshot_check_passes_when_an_asynchronously_yielding_transport_terminates_in_budget() =>
         await AssertPasses(kit => kit.Active_snapshot_ends_with_a_terminal_Checkpoint());
 
@@ -73,12 +126,28 @@ public sealed class NonTerminatingStreamConformanceTests
         await AssertPasses(kit => kit.Empty_active_snapshot_still_ends_with_a_terminal_Checkpoint());
 
     [Fact]
+    public async Task Interface_snapshot_check_passes_when_an_asynchronously_yielding_transport_terminates_in_budget() =>
+        await AssertPasses(kit => kit.Interface_active_snapshot_ends_with_a_terminal_Checkpoint());
+
+    [Fact]
+    public async Task Interface_empty_snapshot_check_passes_when_an_asynchronously_yielding_transport_terminates_in_budget() =>
+        await AssertPasses(kit => kit.Interface_empty_active_snapshot_still_ends_with_a_terminal_Checkpoint());
+
+    [Fact]
     public async Task Bounded_subscription_check_passes_when_an_asynchronously_yielding_transport_honours_toOffset() =>
         await AssertPasses(kit => kit.Bounded_subscription_delivers_the_event_at_toOffset_then_completes());
 
     [Fact]
     public async Task Ledger_effects_check_passes_when_an_asynchronously_yielding_transport_honours_toOffset() =>
         await AssertPasses(kit => kit.Ledger_effects_subscription_never_yields_Archived());
+
+    [Fact]
+    public async Task Interface_bounded_subscription_check_passes_when_an_asynchronously_yielding_transport_honours_toOffset() =>
+        await AssertPasses(kit => kit.Interface_bounded_subscription_delivers_the_event_at_toOffset_then_completes());
+
+    [Fact]
+    public async Task Interface_ledger_effects_check_passes_when_an_asynchronously_yielding_transport_honours_toOffset() =>
+        await AssertPasses(kit => kit.Interface_ledger_effects_subscription_never_yields_Archived());
 
     private static async Task AssertBoundedFailure(
         Func<LedgerClientConformanceTests<ConformanceProbe>, Task> check, string expectedContract)
@@ -90,6 +159,19 @@ public sealed class NonTerminatingStreamConformanceTests
         run.Should().BeOfType<TimeoutException>(
             "a transport that never terminates must fail the kit's check within its stream budget, "
             + "not hang the adopter's run");
+        run!.Message.Should().Contain(expectedContract);
+    }
+
+    private static async Task AssertInterfaceBoundedFailure(
+        Func<LedgerClientConformanceTests<ConformanceProbe>, Task> check, string expectedContract)
+    {
+        var kit = new NonTerminatingInterfaceKit();
+
+        var run = await Record.ExceptionAsync(() => check(kit));
+
+        run.Should().BeOfType<TimeoutException>(
+            "an interface snapshot that never terminates must fail the kit's check within its stream budget, "
+            + "not hang the adopter's run, while the template family conforms");
         run!.Message.Should().Contain(expectedContract);
     }
 
@@ -107,7 +189,18 @@ public sealed class NonTerminatingStreamConformanceTests
 
     private sealed class NonTerminatingKit : LedgerClientConformanceTests<ConformanceProbe>
     {
-        protected override ILedgerClient CreateClient() => new StreamBudgetFakeClient(terminates: false);
+        protected override ILedgerClient CreateClient() =>
+            new StreamBudgetFakeClient(templateTerminates: false, interfaceTerminates: true);
+
+        protected override SubmitterInfo Reader { get; } = new Party("alice");
+
+        protected override TimeSpan StreamTimeout => TimeSpan.FromMilliseconds(200);
+    }
+
+    private sealed class NonTerminatingInterfaceKit : LedgerClientConformanceTests<ConformanceProbe>
+    {
+        protected override ILedgerClient CreateClient() =>
+            new StreamBudgetFakeClient(templateTerminates: true, interfaceTerminates: false);
 
         protected override SubmitterInfo Reader { get; } = new Party("alice");
 
@@ -116,7 +209,8 @@ public sealed class NonTerminatingStreamConformanceTests
 
     private sealed class AsynchronouslyTerminatingKit : LedgerClientConformanceTests<ConformanceProbe>
     {
-        protected override ILedgerClient CreateClient() => new StreamBudgetFakeClient(terminates: true);
+        protected override ILedgerClient CreateClient() =>
+            new StreamBudgetFakeClient(templateTerminates: true, interfaceTerminates: true);
 
         protected override SubmitterInfo Reader { get; } = new Party("alice");
     }
@@ -127,9 +221,15 @@ public sealed class NonTerminatingStreamConformanceTests
 
         private static readonly TimeSpan YieldPause = TimeSpan.FromMilliseconds(1);
 
-        private readonly bool _terminates;
+        private readonly bool _templateTerminates;
 
-        public StreamBudgetFakeClient(bool terminates) => _terminates = terminates;
+        private readonly bool _interfaceTerminates;
+
+        public StreamBudgetFakeClient(bool templateTerminates, bool interfaceTerminates)
+        {
+            _templateTerminates = templateTerminates;
+            _interfaceTerminates = interfaceTerminates;
+        }
 
         public async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
@@ -138,7 +238,7 @@ public sealed class NonTerminatingStreamConformanceTests
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
             where T : ITemplate, IDamlRecord<T>
         {
-            if (!_terminates)
+            if (!_templateTerminates)
             {
                 while (true)
                 {
@@ -166,13 +266,56 @@ public sealed class NonTerminatingStreamConformanceTests
             yield return new AcsSnapshotEntry<T>.Checkpoint(new StakeholderResume(effective));
         }
 
+        public async IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
+            ViewDescriptor<TInterface, TView> view,
+            SubmitterInfo submitter,
+            LedgerOffset? activeAtOffset = null,
+            bool includeDisclosure = false,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            where TInterface : IDamlInterface, IHasView<TView>
+            where TView : IDamlRecord<TView>
+        {
+            if (!_interfaceTerminates)
+            {
+                while (true)
+                {
+                    await Task.Delay(YieldPause, CancellationToken.None);
+                    yield return InterfaceSnapshotRow<TInterface, TView>();
+                }
+            }
+
+            var effective = activeAtOffset ?? LedgerEnd;
+
+            if (effective.Value >= 1)
+            {
+                await Task.Delay(YieldPause, cancellationToken);
+                yield return InterfaceSnapshotRow<TInterface, TView>();
+            }
+
+            if (effective.Value >= 3)
+            {
+                await Task.Delay(YieldPause, cancellationToken);
+                yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified(
+                    LedgerOffset.At(3), UnclassifiedKind.Unknown, "UNMAPPED");
+            }
+
+            await Task.Delay(YieldPause, cancellationToken);
+            yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.Checkpoint(new StakeholderResume(effective));
+        }
+
         public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? fromOffset = null,
             LedgerOffset? toOffset = null,
             CancellationToken cancellationToken = default)
             where T : ITemplate, IDamlRecord<T> =>
-            Stream(SeededStream<T>(), fromOffset, toOffset, cancellationToken);
+            Stream(
+                _templateTerminates,
+                () => new ContractStreamEvent<T>.Checkpoint(LedgerOffset.Begin),
+                SeededStream<T>(),
+                fromOffset,
+                toOffset,
+                cancellationToken);
 
         public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeLedgerEffectsAsync<T>(
             SubmitterInfo submitter,
@@ -180,21 +323,60 @@ public sealed class NonTerminatingStreamConformanceTests
             LedgerOffset? toOffset = null,
             CancellationToken cancellationToken = default)
             where T : ITemplate, IDamlRecord<T> =>
-            Stream(SeededEffectsStream<T>(), fromOffset, toOffset, cancellationToken);
+            Stream(
+                _templateTerminates,
+                () => new ContractStreamEvent<T>.Checkpoint(LedgerOffset.Begin),
+                SeededEffectsStream<T>(),
+                fromOffset,
+                toOffset,
+                cancellationToken);
 
-        private async IAsyncEnumerable<ContractStreamEvent<T>> Stream<T>(
-            IEnumerable<(long Offset, ContractStreamEvent<T> Event)> seeded,
+        public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
+            ViewDescriptor<TInterface, TView> view,
+            SubmitterInfo submitter,
+            LedgerOffset? fromOffset = null,
+            LedgerOffset? toOffset = null,
+            CancellationToken cancellationToken = default)
+            where TInterface : IDamlInterface, IHasView<TView>
+            where TView : IDamlRecord<TView> =>
+            Stream(
+                _interfaceTerminates,
+                () => new InterfaceStreamEvent<TInterface, TView>.Checkpoint(LedgerOffset.Begin),
+                SeededInterfaceStream<TInterface, TView>(),
+                fromOffset,
+                toOffset,
+                cancellationToken);
+
+        public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeLedgerEffectsAsync<TInterface, TView>(
+            ViewDescriptor<TInterface, TView> view,
+            SubmitterInfo submitter,
+            LedgerOffset? fromOffset = null,
+            LedgerOffset? toOffset = null,
+            CancellationToken cancellationToken = default)
+            where TInterface : IDamlInterface, IHasView<TView>
+            where TView : IDamlRecord<TView> =>
+            Stream(
+                _interfaceTerminates,
+                () => new InterfaceStreamEvent<TInterface, TView>.Checkpoint(LedgerOffset.Begin),
+                SeededInterfaceEffectsStream<TInterface, TView>(),
+                fromOffset,
+                toOffset,
+                cancellationToken);
+
+        private static async IAsyncEnumerable<TEvent> Stream<TEvent>(
+            bool terminates,
+            Func<TEvent> neverEndingItem,
+            IEnumerable<(long Offset, TEvent Event)> seeded,
             LedgerOffset? fromOffset,
             LedgerOffset? toOffset,
             [EnumeratorCancellation] CancellationToken cancellationToken)
-            where T : ITemplate, IDamlRecord<T>
         {
-            if (!_terminates)
+            if (!terminates)
             {
                 while (true)
                 {
                     await Task.Delay(YieldPause, CancellationToken.None);
-                    yield return new ContractStreamEvent<T>.Checkpoint(LedgerOffset.Begin);
+                    yield return neverEndingItem();
                 }
             }
 
@@ -216,6 +398,12 @@ public sealed class NonTerminatingStreamConformanceTests
                 yield return evt;
             }
         }
+
+        private static InterfaceAcsSnapshotEntry<TInterface, TView>.Created InterfaceSnapshotRow<TInterface, TView>()
+            where TInterface : IDamlInterface, IHasView<TView>
+            where TView : IDamlRecord<TView> =>
+            new(new ContractId<TInterface>("c1"), TView.FromRecord(new ConformanceProbeView(42.5m).ToRecord()), null,
+                LedgerOffset.At(1), new SynchronizerId("sync"), [new Party("alice")]);
 
         private static AcsSnapshotEntry<T>.Created SnapshotRow<T>()
             where T : ITemplate, IDamlRecord<T> =>
@@ -245,6 +433,31 @@ public sealed class NonTerminatingStreamConformanceTests
                 LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
         }
 
+        private static IEnumerable<(long Offset, InterfaceStreamEvent<TInterface, TView> Event)> SeededInterfaceStream<TInterface, TView>()
+            where TInterface : IDamlInterface, IHasView<TView>
+            where TView : IDamlRecord<TView>
+        {
+            yield return (1, new InterfaceStreamEvent<TInterface, TView>.Created(
+                new ContractId<TInterface>("c1"), TView.FromRecord(new ConformanceProbeView(42.5m).ToRecord()), null,
+                LedgerOffset.At(1), new SynchronizerId("sync"), [new Party("alice")]));
+            yield return (2, new InterfaceStreamEvent<TInterface, TView>.Archived(
+                new ContractId<TInterface>("c2"), LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
+            yield return (3, new InterfaceStreamEvent<TInterface, TView>.Unclassified(
+                LedgerOffset.At(3), UnclassifiedKind.Unknown, "UNMAPPED"));
+        }
+
+        private static IEnumerable<(long Offset, InterfaceStreamEvent<TInterface, TView> Event)> SeededInterfaceEffectsStream<TInterface, TView>()
+            where TInterface : IDamlInterface, IHasView<TView>
+            where TView : IDamlRecord<TView>
+        {
+            yield return (1, new InterfaceStreamEvent<TInterface, TView>.Created(
+                new ContractId<TInterface>("c1"), TView.FromRecord(new ConformanceProbeView(42.5m).ToRecord()), null,
+                LedgerOffset.At(1), new SynchronizerId("sync"), [new Party("alice")]));
+            yield return (2, new InterfaceStreamEvent<TInterface, TView>.Exercised(
+                new ContractId<TInterface>("c1"), new ChoiceName("Archive"), DamlUnit.Instance, DamlUnit.Instance, true,
+                LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
+        }
+
         public Task<LedgerOffset> GetLedgerEndAsync(
             TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
             Task.FromResult(LedgerEnd);
@@ -270,36 +483,6 @@ public sealed class NonTerminatingStreamConformanceTests
             CommandId? commandId = null,
             TimeSpan? timeout = null, CancellationToken cancellationToken = default)
             where TTemplate : ITemplate =>
-            throw new NotSupportedException();
-
-        public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
-            ViewDescriptor<TInterface, TView> view,
-            SubmitterInfo submitter,
-            LedgerOffset? fromOffset = null,
-            LedgerOffset? toOffset = null,
-            CancellationToken cancellationToken = default)
-            where TInterface : IDamlInterface, IHasView<TView>
-            where TView : IDamlRecord<TView> =>
-            throw new NotSupportedException();
-
-        public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeLedgerEffectsAsync<TInterface, TView>(
-            ViewDescriptor<TInterface, TView> view,
-            SubmitterInfo submitter,
-            LedgerOffset? fromOffset = null,
-            LedgerOffset? toOffset = null,
-            CancellationToken cancellationToken = default)
-            where TInterface : IDamlInterface, IHasView<TView>
-            where TView : IDamlRecord<TView> =>
-            throw new NotSupportedException();
-
-        public IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
-            ViewDescriptor<TInterface, TView> view,
-            SubmitterInfo submitter,
-            LedgerOffset? activeAtOffset = null,
-            bool includeDisclosure = false,
-            CancellationToken cancellationToken = default)
-            where TInterface : IDamlInterface, IHasView<TView>
-            where TView : IDamlRecord<TView> =>
             throw new NotSupportedException();
 
         public void Dispose()

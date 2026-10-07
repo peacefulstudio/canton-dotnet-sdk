@@ -13,30 +13,30 @@ namespace Daml.Codegen.Testing.Conformance.KeyBuilders;
 /// Generated from Daml record ScheduleKey
 /// </summary>
 public sealed record ScheduleKey(
-    [property: DamlFieldAttribute("custodian")] Party Custodian,
-    [property: DamlFieldAttribute("id")] string Id
-) : IDamlRecord<ScheduleKey>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("custodian")] global::Daml.Runtime.Data.Party Custodian,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
+) : global::Daml.Runtime.Data.IDamlRecord<ScheduleKey>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("custodian", Custodian.ToDamlValue()),
-        DamlField.Create("id", new DamlText(Id))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("custodian", Custodian.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static ScheduleKey FromRecord(DamlRecord record) => new ScheduleKey(
-        Custodian: Party.FromDamlValue(record.GetRequiredField("custodian").As<DamlParty>()),
-        Id: record.GetRequiredField("id").As<DamlText>().Value
+    public static ScheduleKey FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ScheduleKey(
+        Custodian: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("custodian").As<global::Daml.Runtime.Data.DamlParty>()),
+        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))),
-            DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("custodian", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "custodian"), context.Field("custodian"))),
+            global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
         );
     }
 

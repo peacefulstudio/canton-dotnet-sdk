@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,7 +51,7 @@ public static class CreateByExercise
             .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
-        return RemapExerciseOutcome(outcome, ProjectSingleCreated<TTemplate>);
+        return outcome.ProjectCommitted(ProjectSingleCreated<TTemplate>);
     }
 
     /// <summary>
@@ -86,8 +85,7 @@ public static class CreateByExercise
             .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
-        return RemapExerciseOutcome(
-            outcome,
+        return outcome.ProjectCommitted(
             result => new ExerciseOutcome<EquatableArray<ContractId<TTemplate>>>.One(result.All<TTemplate>()));
     }
 
@@ -156,22 +154,6 @@ public static class CreateByExercise
             static () => $"Exercising the choice yielded no result (None) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",
             static count => $"Exercising the choice yielded Many ({count}) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",
             cancellationToken);
-    }
-
-    internal static ExerciseOutcome<TCreated> RemapExerciseOutcome<TCreated>(
-        ExerciseOutcome<TransactionResult> outcome,
-        Func<TransactionResult, ExerciseOutcome<TCreated>> projectCreated)
-    {
-        return outcome switch
-        {
-            ExerciseOutcome<TransactionResult>.One one => projectCreated(one.Result),
-            ExerciseOutcome<TransactionResult>.None => new ExerciseOutcome<TCreated>.None(),
-            ExerciseOutcome<TransactionResult>.Many many => new ExerciseOutcome<TCreated>.Many(many.ContractIds),
-            ExerciseOutcome<TransactionResult>.DamlError e => new ExerciseOutcome<TCreated>.DamlError(e.Category, e.ErrorId, e.Message, e.Metadata),
-            ExerciseOutcome<TransactionResult>.InfraError e => new ExerciseOutcome<TCreated>.InfraError(e.Status, e.Message, e.Category, e.SourceException),
-            ExerciseOutcome<TransactionResult>.CommittedUndecodable e => new ExerciseOutcome<TCreated>.CommittedUndecodable(e.UpdateId, e.Message, e.SourceException),
-            _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name} from TrySubmitSingleAsync."),
-        };
     }
 
     internal static ExerciseOutcome<ContractId<TTemplate>> ProjectSingleCreated<TTemplate>(TransactionResult result)

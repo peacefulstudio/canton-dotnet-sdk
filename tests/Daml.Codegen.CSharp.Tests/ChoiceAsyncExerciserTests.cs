@@ -101,7 +101,7 @@ public class ChoiceAsyncExerciserTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(DamlPrim).Build();
         var generator = CreateGenerator();
         var files = generator.Generate(dar);
-        var file = files.FirstOrDefault(f => f.RelativePath.EndsWith($"{templateName}.cs", StringComparison.Ordinal));
+        var file = files.FirstOrDefault(f => f.RelativePath.EndsWith($"{templateName}.cs", global::System.StringComparison.Ordinal));
         file.Should().NotBeNull("the codegen should emit a file for template '{0}'", templateName);
         return file!.Content;
     }
@@ -120,10 +120,6 @@ public class ChoiceAsyncExerciserTests
     [Fact]
     public void Generate_should_not_emit_create_extensions_class_when_no_create_bearing_choices()
     {
-        // Choices that return Unit / primitives don't go through the create-bearing
-        // <Choice>Async path (which projects via FromCreatedContracts). Non-CID
-        // returns are routed to a separate NonContractExtensions class, which
-        // is verified by NonContractChoiceWrapperTests.
         var module = ModuleWith(
             Template("Counter", new DamlPrimitiveType(DamlPrimitive.Int64), choiceName: "GetCount"));
 
@@ -148,15 +144,15 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<RenewResult>> TryRenewAsync(");
-        code.Should().Contain("this ContractId<Agreement> contractId");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>>> TryRenewAsync(");
+        code.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement> contractId");
         code.Should().Contain("ILedgerWriter client");
         // Dynamic-controller fallback shape: the wrapper takes a SubmitterInfo
         // parameter, never a string. Single-party callers stay one-liners via
         // SubmitterInfo's implicit conversion from string / Party.
         code.Should().Contain("SubmitterInfo submitter");
         code.Should().NotContain("string actAs");
-        code.Should().NotContain("(Party)actAs");
+        code.Should().NotContain("(global::Daml.Runtime.Data.Party)actAs");
     }
 
     [Fact]
@@ -214,19 +210,21 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("private static ExerciseOutcome<RenewResult> ProjectRenewResult(TransactionResult tx, string contractId)");
-        code.Should().Contain("return DecodeRenewResult(exercised.ExerciseResult);");
+        code.Should().Contain("private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>> ProjectRenewResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>");
+        code.Should().Contain("tx.ProjectChoiceResult(global::Test.Module.Agreement.ChoiceRenew, contractId);");
     }
 
     [Fact]
-    public void Generate_should_fall_back_to_FromCreatedContracts_when_no_exercise_result_matches()
+    public void Generate_should_never_read_the_created_contracts_to_answer_a_contract_id_choice()
     {
         var module = ModuleWith(
             Template("Agreement", ContractIdOf("Agreement"), choiceName: "Renew"));
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("var fromCreatedContracts = RenewResult.FromCreatedContracts(tx.CreatedContracts);");
+        code.Should().NotContain("FromCreatedContracts");
+        code.Should().NotContain("tx.CreatedContracts");
+        code.Should().NotContain("DecodeRenewResult");
     }
 
     [Fact]
@@ -249,7 +247,7 @@ public class ChoiceAsyncExerciserTests
         var code = GenerateAndReadTemplate(module, "Agreement");
 
         code.Should().NotContain("Unhandled outcome");
-        code.Should().NotContain("ExerciseOutcome<TransactionResult>.DamlError");
+        code.Should().NotContain("global::Daml.Runtime.Outcomes.ExerciseOutcome<TransactionResult>.DamlError");
     }
 
     [Fact]
@@ -288,14 +286,14 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("public static async Task<ExerciseOutcome<ExecuteSwapResult>> TryExecuteSwapAsync(");
-        code.Should().Contain("public static async Task<ExerciseOutcome<CancelResult>> TryCancelAsync(");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>, global::Daml.Runtime.Contracts.ContractId<global::Test.Module.SwapRecord>>>> TryExecuteSwapAsync(");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.AgreementRecord>>> TryCancelAsync(");
         // Non-creating choice (returns Int64, not a ContractId) is routed to the
         // NonContractExtensions class — not skipped — so it does emit
         // an async wrapper, just via the ExercisedEvents projector path. The
         // create-bearing AgreementExtensions class still excludes it.
         code.Should().Contain("public static class AgreementNonContractExtensions");
-        code.Should().Contain("public static async Task<ExerciseOutcome<long>> TryGetCountAsync(");
+        code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<long>> TryGetCountAsync(");
     }
 
     [Fact]

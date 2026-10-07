@@ -15,38 +15,38 @@ public sealed partial record AnsRules
     /// Choice argument type for AnsRules_RequestEntry.
     /// </summary>
     public sealed record AnsRules_RequestEntry(
-        [property: DamlFieldAttribute("name")] string Name,
-        [property: DamlFieldAttribute("url")] string Url,
-        [property: DamlFieldAttribute("description")] string Description,
-        [property: DamlFieldAttribute("user")] Party User
-    ) : IDamlRecord<AnsRules_RequestEntry>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("name")] string Name,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("url")] string Url,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("description")] string Description,
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("user")] global::Daml.Runtime.Data.Party User
+    ) : global::Daml.Runtime.Data.IDamlRecord<AnsRules_RequestEntry>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("name", new DamlText(Name)),
-            DamlField.Create("url", new DamlText(Url)),
-            DamlField.Create("description", new DamlText(Description)),
-            DamlField.Create("user", User.ToDamlValue())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("name", new global::Daml.Runtime.Data.DamlText(Name)),
+            global::Daml.Runtime.Data.DamlField.Create("url", new global::Daml.Runtime.Data.DamlText(Url)),
+            global::Daml.Runtime.Data.DamlField.Create("description", new global::Daml.Runtime.Data.DamlText(Description)),
+            global::Daml.Runtime.Data.DamlField.Create("user", User.ToDamlValue())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static AnsRules_RequestEntry FromRecord(DamlRecord record) => new AnsRules_RequestEntry(
-            Name: record.GetRequiredField("name").As<DamlText>().Value,
-            Url: record.GetRequiredField("url").As<DamlText>().Value,
-            Description: record.GetRequiredField("description").As<DamlText>().Value,
-            User: Party.FromDamlValue(record.GetRequiredField("user").As<DamlParty>())
+        public static AnsRules_RequestEntry FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRules_RequestEntry(
+            Name: record.GetRequiredField("name").As<global::Daml.Runtime.Data.DamlText>().Value,
+            Url: record.GetRequiredField("url").As<global::Daml.Runtime.Data.DamlText>().Value,
+            Description: record.GetRequiredField("description").As<global::Daml.Runtime.Data.DamlText>().Value,
+            User: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("user").As<global::Daml.Runtime.Data.DamlParty>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("name", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "name"), context.Field("name"))),
-                DamlField.Create("url", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "url"), context.Field("url"))),
-                DamlField.Create("description", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "description"), context.Field("description"))),
-                DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("name", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "name"), context.Field("name"))),
+                global::Daml.Runtime.Data.DamlField.Create("url", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "url"), context.Field("url"))),
+                global::Daml.Runtime.Data.DamlField.Create("description", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "description"), context.Field("description"))),
+                global::Daml.Runtime.Data.DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user")))
             );
         }
 

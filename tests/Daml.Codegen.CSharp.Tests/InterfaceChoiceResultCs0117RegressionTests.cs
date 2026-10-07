@@ -18,11 +18,10 @@ namespace Daml.Codegen.CSharp.Tests;
 /// <c>daml-finance-interface-instrument-base-v4</c>) failed to pack because a
 /// <c>Reference</c> template choice returning <c>ContractId Factory</c> /
 /// <c>ContractId Instrument</c> (a local Daml interface) made the generated
-/// <c>&lt;Choice&gt;Result.FromCreatedContracts</c> projector read
-/// <c>IFactory.TemplateId</c> — an interface marker exposes no <c>TemplateId</c>.
-/// The projector matches interface-typed created slots by <c>InterfaceIds</c>; these
-/// tests pin the fix against the exact reported shapes and the optional/list
-/// cardinalities the projector must also handle.
+/// choice projector read <c>IFactory.TemplateId</c> — an interface marker exposes no
+/// <c>TemplateId</c>. The projector now hands the choice descriptor to the runtime's
+/// exercise-result projection and reads no identity off the marker; these tests keep the
+/// exact reported shapes, and the optional/list cardinalities, compiling.
 /// </summary>
 public class InterfaceChoiceResultCs0117RegressionTests
 {
@@ -121,7 +120,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
             "Factory",
             ContractIdOf("Daml.Finance.Interface.Holding.V4.Factory", "Factory"));
 
-        CompilesCleanly(dar, "a Reference/GetCid choice returning ContractId Factory (a local interface) must not project via IFactory.TemplateId");
+        CompilesCleanly(dar, "a Reference/GetCid choice returning ContractId Factory (a local interface) must compile without reading IFactory.TemplateId");
     }
 
     [Fact]
@@ -133,7 +132,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
             "Instrument",
             ContractIdOf("Daml.Finance.Interface.Instrument.Base.V4.Instrument", "Instrument"));
 
-        CompilesCleanly(dar, "a Reference/GetCid choice returning ContractId Instrument (a local interface) must not project via IInstrument.TemplateId");
+        CompilesCleanly(dar, "a Reference/GetCid choice returning ContractId Instrument (a local interface) must compile without reading IInstrument.TemplateId");
     }
 
     [Fact]
@@ -146,7 +145,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
             "Factory",
             OptionalOf(ContractIdOf(module, "Factory")));
 
-        CompilesCleanly(dar, "an optional-cardinality interface-typed created slot must project via InterfaceIds");
+        CompilesCleanly(dar, "an optional interface-typed contract id result must compile");
     }
 
     [Fact]
@@ -159,7 +158,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
             "Factory",
             ListOf(ContractIdOf(module, "Factory")));
 
-        CompilesCleanly(dar, "a list-cardinality interface-typed created slot must project via InterfaceIds");
+        CompilesCleanly(dar, "a list of interface-typed contract ids result must compile");
     }
 
     [Fact]

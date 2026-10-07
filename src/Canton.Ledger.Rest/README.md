@@ -9,7 +9,7 @@ Reach for this package only when you need an endpoint the adapter does not surfa
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Rest --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.Rest --version 0.6.0-preview.4
 ```
 
 ## Related Packages
@@ -50,8 +50,8 @@ extracted Maven protos against the upstream tree before exporting patches.
 Exactly the artifacts `src/Canton.Ledger.Grpc/DownloadProtos.targets` already fetches,
 SHA-256-pinned there:
 
-- `com.daml:ledger-api-proto:3.5.18` (`$(CantonVersion)`)
-- `com.daml:ledger-api-value-proto:3.5.18`
+- `com.daml:ledger-api-proto:3.5.19` (`$(CantonVersion)`)
+- `com.daml:ledger-api-value-proto:3.5.19`
 - `com.google.api.grpc:proto-google-common-protos:2.58.0`
 
 ### Patch set

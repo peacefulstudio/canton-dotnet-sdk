@@ -5,7 +5,7 @@ Transport-agnostic abstractions for Daml ledger clients, part of the [Canton .NE
 ## Installation
 
 ```bash
-dotnet add package Daml.Ledger.Abstractions --version 0.6.0-preview.3
+dotnet add package Daml.Ledger.Abstractions --version 0.6.0-preview.4
 ```
 
 `ILedgerClient` is the composition of three capability interfaces, each
@@ -42,8 +42,8 @@ client instance under two interfaces: `ILedgerClient` (this package) and
 `Canton.Ledger.Abstractions.ICantonLedgerClient`, where
 `ICantonLedgerClient : ILedgerClient` adds the operations specific to a
 Canton participant — fire-and-forget submission, the command completion
-stream, connected-synchronizer and Ledger API version discovery, and
-offset/id point reads. Picture the surface as a stack: at the bottom the
+stream, connected-synchronizer and Ledger API version discovery,
+offset/id point reads, and by-id disclosure reads. Picture the surface as a stack: at the bottom the
 three capability slices (`ILedgerWriter`, `ILedgerReader`,
 `ILedgerStreamer`); above them `ILedgerClient`, which is nothing but the
 three combined; above that `ICantonLedgerClient`, which is `ILedgerClient`
@@ -70,6 +70,20 @@ call-site guards re-checking the token after a failed call; on
 `0.4.0-preview.1` and later those guards are dead code and can be deleted
 (see the CHANGELOG entry for that release).
 
+Failure has one contract on every transport. A throwing call raises
+`LedgerOperationException`; a `Try*` call returns an `ExerciseOutcome<T>`; a
+stream ends with a terminal `StreamError` event; a null argument or an
+unencodable value still throws synchronously with its own type. Branch on
+`LedgerOperationException.Category` and `CommitState` rather than on the
+transport's own exception: `CommitState` is `NotCommitted` for a failed read,
+`Unknown` for a write the participant may have received without answering,
+and, for a write it answered, follows the participant's error (a
+`DUPLICATE_COMMAND` rejection is `Committed` unless its `accepted` metadata is
+`"false"`). `Status` names the transport's
+verdict, including `NoResponse` when a JSON Ledger API call got no answer and
+`UndecodableBody` when the participant answered with a body the client could
+not read.
+
 Ledger positions are the `LedgerOffset` value type, never a raw `long`.
 
 Generated codegen output (`Try<Choice>Async` extensions, projector helpers)
@@ -82,5 +96,5 @@ selects a consistent set.
 Interface-only package. `Daml.Ledger.Abstractions.Testing.Conformance` ships the
 shared behavioral conformance kit — a transport implementation subclasses it
 to verify it upholds this package's documented contract (cancellation,
-unclassified-row surfacing, terminal checkpoint, seeded-row ordering) —
+unclassified-row surfacing, terminal checkpoint, seeded-row ordering, each over template and interface reads) —
 beyond that, implementers carry their own contract tests.

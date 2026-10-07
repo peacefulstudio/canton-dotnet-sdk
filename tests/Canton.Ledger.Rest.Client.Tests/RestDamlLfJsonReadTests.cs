@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -22,6 +23,19 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestDamlLfJsonReadTests
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<FieldsTemplate>();
+        GeneratedTypeReaders.ForRecord<RecordIdTemplate>();
+        GeneratedTypeReaders.ForRecord<ResultsTemplate>();
+        GeneratedTypeReaders.ForChoices<ResultsTemplate>();
+        GeneratedTypeReaders.ForRecord<PartyKeyedTemplate>();
+        GeneratedTypeReaders.ForKey<PartyKeyedTemplate, PartyKey>();
+        GeneratedTypeReaders.ForRecord<DateKeyedTemplate>();
+        GeneratedTypeReaders.ForKey<DateKeyedTemplate, DateKey>();
+    }
+
     private sealed record TextResult([property: DamlFieldAttribute("text")] string Text) : IDamlRecord<TextResult>
     {
         public DamlRecord ToRecord() => throw new NotSupportedException();
@@ -154,7 +168,7 @@ public class RestDamlLfJsonReadTests
             new(record.GetRequiredField("recordId").As<DamlText>().Value);
     }
 
-    private sealed record ResultsTemplate : ITemplate, IDamlRecord<ResultsTemplate>
+    private sealed record ResultsTemplate : ITemplate, IDamlRecord<ResultsTemplate>, IHasChoices<ResultsTemplate>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("tmpl-pkg", "Sample.Token", "ResultsHolding");
         public static string PackageId => "tmpl-pkg";
@@ -186,6 +200,8 @@ public class RestDamlLfJsonReadTests
             ResultDecoder = _ => throw new NotSupportedException(),
             ResultJsonReader = TResult.__ReadDamlLfJson,
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceTextResult, ChoiceOwnerTextResult, ChoicePartyResult, ChoiceNumericResult, ChoiceDateResult, ChoiceOwnerDateResult, ChoiceTimestampResult, ChoiceListResult];
     }
 
     private sealed record PartyKey([property: DamlFieldAttribute("party")] Party Party) : IDamlRecord<PartyKey>

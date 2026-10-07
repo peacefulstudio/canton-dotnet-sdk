@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Text.Json;
 using AwesomeAssertions;
@@ -26,7 +27,15 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestTransactionTreeProjectorTests
 {
-    private sealed record TreeHolding : ITemplate, IDamlRecord<TreeHolding>, IHasKey<TreeHolding, string>
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TreeHolding>();
+        GeneratedTypeReaders.ForKey<TreeHolding, string>();
+        GeneratedTypeReaders.ForChoices<TreeHolding>();
+    }
+
+    private sealed record TreeHolding : ITemplate, IDamlRecord<TreeHolding>, IHasChoices<TreeHolding>, IHasKey<TreeHolding, string>
     {
         public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Token.Holding", "Holding");
         public static string PackageId => "pkg";
@@ -80,6 +89,8 @@ public class RestTransactionTreeProjectorTests
             ResultDecoder = result => result.As<DamlUnit>(),
             ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceArchive, ChoiceBackwards, ChoiceDeepest, ChoiceExecuteSwap, ChoiceFirst, ChoiceInner, ChoiceNarrow, ChoiceOuter, ChoicePeek, ChoiceSecond, ChoiceStraddles, ChoiceWide];
     }
 
     [Fact]
@@ -364,15 +375,18 @@ public class RestTransactionTreeProjectorTests
     }
 
     [Fact]
-    public void Project_refuses_an_interface_choice_exercise_naming_the_interface_and_the_choice()
+    public void Project_carries_an_interface_choice_exercise_with_no_loaded_binding_as_raw_json()
     {
         var exercised = Exercised(nodeId: 0, lastDescendantNodeId: 0, "00rich", "ExecuteSwap");
         exercised.ExercisedEvent!.InterfaceId = InterfaceId;
+        exercised.ExercisedEvent.ChoiceArgument = IdiomaticValue("""{"amount": "3"}""");
+        exercised.ExercisedEvent.ExerciseResult = IdiomaticValue("\"done\"");
 
-        var act = () => RestTransactionTreeProjector.Project(Transaction(exercised));
+        var tree = RestTransactionTreeProjector.Project(Transaction(exercised));
 
-        act.Should().Throw<TemplateTypeRequiredException>().Which.Message.Should().Be(
-            "No generated type is loaded for choice 'ExecuteSwap' of 'iface-pkg:Token.Api:IAsset'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
+        var node = tree.RootEvents.Should().ContainSingle().Subject.Should().BeOfType<TreeEvent.Exercised>().Subject;
+        node.ChoiceArgument.Should().Be(new DamlUndecodedJson("""{"amount": "3"}"""));
+        node.ExerciseResult.Should().Be(new DamlUndecodedJson("\"done\""));
     }
 
     [Fact]
@@ -408,7 +422,7 @@ public class RestTransactionTreeProjectorTests
 
         act.Should().Throw<TemplateTypeRequiredException>().Which.Message.Should().Be(
             "No generated type is loaded for choice '' of 'pkg:Token.Holding:Holding'; "
-            + "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
+            + "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API. A host without a deps.json registers each generated assembly itself, once, with RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).");
     }
 
     [Fact]
@@ -503,6 +517,13 @@ public class RestTransactionTreeProjectorTests
 
         act.Should().Throw<MalformedTransactionTreeException>()
             .Which.Message.Should().Be(MalformedTreeMessages.NodeIdsDoNotAscend);
+    }
+
+    private static WireValue IdiomaticValue(string lfJson)
+    {
+        var value = new WireValue();
+        value.AdditionalProperties["idiomatic"] = lfJson;
+        return value;
     }
 
     private static WireValue UnitValue() =>

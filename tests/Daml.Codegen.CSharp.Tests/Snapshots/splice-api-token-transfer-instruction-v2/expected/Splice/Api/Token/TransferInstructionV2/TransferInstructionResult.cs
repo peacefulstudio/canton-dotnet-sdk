@@ -17,27 +17,27 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml record TransferInstructionResult
 /// </summary>
 public sealed record TransferInstructionResult(
-    TransferInstructionResult_Output Output,
-    IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> SenderChangeCids,
+    global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output Output,
+    global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> SenderChangeCids,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<TransferInstructionResult>
+) : global::Daml.Runtime.Data.IDamlRecord<TransferInstructionResult>
 {
     /// <summary>The Daml field <c>output</c>.</summary>
-    [DamlFieldAttribute("output")]
-    public TransferInstructionResult_Output Output { get; init; } = Output;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("output")]
+    public global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output Output { get; init; } = Output;
 
-    private readonly IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _senderChangeCids = DamlFieldCollections.Copy(SenderChangeCids);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> _senderChangeCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(SenderChangeCids);
 
     /// <summary>The Daml field <c>senderChangeCids</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("senderChangeCids")]
-    public IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> SenderChangeCids
+    [global::Daml.Runtime.Data.DamlFieldAttribute("senderChangeCids")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>> SenderChangeCids
     {
         get => _senderChangeCids;
-        init => _senderChangeCids = DamlFieldCollections.Copy(value);
+        init => _senderChangeCids = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -45,43 +45,43 @@ public sealed record TransferInstructionResult(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(TransferInstructionResult? other) =>
         other is not null
-        && EqualityComparer<TransferInstructionResult_Output>.Default.Equals(Output, other.Output)
-        && DamlFieldCollections.Equal(SenderChangeCids, other.SenderChangeCids)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output>.Default.Equals(Output, other.Output)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(SenderChangeCids, other.SenderChangeCids)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(Output);
-        hash.Add(DamlFieldCollections.Hash(SenderChangeCids));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(SenderChangeCids));
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("output", Output.ToVariant()),
-        DamlField.Create("senderChangeCids", new DamlList(SenderChangeCids.Select(x => (DamlValue)x.ToDamlValue()).ToList())),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("output", Output.ToVariant()),
+        global::Daml.Runtime.Data.DamlField.Create("senderChangeCids", new global::Daml.Runtime.Data.DamlList(SenderChangeCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TransferInstructionResult FromRecord(DamlRecord record) => new TransferInstructionResult(
-        Output: TransferInstructionResult_Output.FromVariant(record.GetRequiredField("output").As<DamlVariant>()),
-        SenderChangeCids: (IReadOnlyList<ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("senderChangeCids").As<DamlList>().Values.Select(x => new ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<DamlContractId>().Value)).ToList(),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static TransferInstructionResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferInstructionResult(
+        Output: global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output.FromVariant(record.GetRequiredField("output").As<global::Daml.Runtime.Data.DamlVariant>()),
+        SenderChangeCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("senderChangeCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("output", TransferInstructionResult_Output.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "output"), context.Field("output"))),
-            DamlField.Create("senderChangeCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "senderChangeCids"), context.Field("senderChangeCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("output", global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "output"), context.Field("output"))),
+            global::Daml.Runtime.Data.DamlField.Create("senderChangeCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "senderChangeCids"), context.Field("senderChangeCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
+            global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
 

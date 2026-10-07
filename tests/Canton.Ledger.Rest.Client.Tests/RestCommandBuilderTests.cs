@@ -283,8 +283,7 @@ public class RestCommandBuilderTests
         wireCommand.CreateCommand.Should().NotBeNull();
         wireCommand.CreateCommand!.TemplateId.ModuleName.Should().Be("Module");
         wireCommand.CreateCommand.TemplateId.EntityName.Should().Be("CommandBuilderTemplate");
-        wireCommand.CreateCommand.CreateArguments.Fields.Should().ContainSingle()
-            .Which.Label.Should().Be("owner");
+        Idiomatic(wireCommand.CreateCommand.CreateArguments).Should().Be("""{"owner":"party::alice"}""");
     }
 
     [Fact]
@@ -319,10 +318,7 @@ public class RestCommandBuilderTests
         wireCommand.ExerciseCommand.ContractId.Should().Be("00interfacecontract");
         wireCommand.ExerciseCommand.Choice.Should().Be("Transfer");
 
-        var argumentField = wireCommand.ExerciseCommand.ChoiceArgument.Record.Fields
-            .Should().ContainSingle().Subject;
-        argumentField.Label.Should().Be("newOwner");
-        argumentField.Value.Party.Should().Be("party::bob");
+        Idiomatic(wireCommand.ExerciseCommand.ChoiceArgument).Should().Be("""{"newOwner":"party::bob"}""");
     }
 
     [Fact]
@@ -356,15 +352,8 @@ public class RestCommandBuilderTests
         wireCommand.ExerciseByKeyCommand.TemplateId.EntityName.Should().Be("CommandBuilderTemplate");
         wireCommand.ExerciseByKeyCommand.Choice.Should().Be("Transfer");
 
-        var keyField = wireCommand.ExerciseByKeyCommand.ContractKey.Record.Fields
-            .Should().ContainSingle().Subject;
-        keyField.Label.Should().Be("owner");
-        keyField.Value.Party.Should().Be("party::alice");
-
-        var argumentField = wireCommand.ExerciseByKeyCommand.ChoiceArgument.Record.Fields
-            .Should().ContainSingle().Subject;
-        argumentField.Label.Should().Be("newOwner");
-        argumentField.Value.Party.Should().Be("party::bob");
+        Idiomatic(wireCommand.ExerciseByKeyCommand.ContractKey).Should().Be("""{"owner":"party::alice"}""");
+        Idiomatic(wireCommand.ExerciseByKeyCommand.ChoiceArgument).Should().Be("""{"newOwner":"party::bob"}""");
 
         wireCommand.ExerciseCommand.Should().BeNull();
     }
@@ -380,11 +369,10 @@ public class RestCommandBuilderTests
 
         var wireCommand = commands.CommandList.Should().ContainSingle().Subject;
         wireCommand.ExerciseByKeyCommand.Should().NotBeNull();
-        wireCommand.ExerciseByKeyCommand!.ContractKey.Party.Should().Be(
-            "party::steward",
+        Idiomatic(wireCommand.ExerciseByKeyCommand!.ContractKey).Should().Be(
+            "\"party::steward\"",
             "a template keyed on a bare scalar is emitted with a KeyEncoder that hands the naked "
             + "DamlValue over, never a single-field record wrapping it");
-        wireCommand.ExerciseByKeyCommand.ContractKey.Record.Should().BeNull();
     }
 
     [Fact]
@@ -645,18 +633,15 @@ public class RestCommandBuilderTests
         createAndExerciseCommand.TemplateId.EntityName.Should().Be("CommandBuilderTemplate");
         createAndExerciseCommand.Choice.Should().Be("Transfer");
 
-        var createArgumentField = createAndExerciseCommand.CreateArguments.Fields
-            .Should().ContainSingle().Subject;
-        createArgumentField.Label.Should().Be("owner");
-        createArgumentField.Value.Party.Should().Be("party::alice");
-
-        var choiceArgumentField = createAndExerciseCommand.ChoiceArgument.Record.Fields
-            .Should().ContainSingle().Subject;
-        choiceArgumentField.Label.Should().Be("newOwner");
-        choiceArgumentField.Value.Party.Should().Be("party::bob");
+        Idiomatic(createAndExerciseCommand.CreateArguments).Should().Be("""{"owner":"party::alice"}""");
+        Idiomatic(createAndExerciseCommand.ChoiceArgument).Should().Be("""{"newOwner":"party::bob"}""");
 
         wireCommand.CreateCommand.Should().BeNull();
         wireCommand.ExerciseCommand.Should().BeNull();
         wireCommand.ExerciseByKeyCommand.Should().BeNull();
     }
+
+    private static string Idiomatic(Raw.Value value) => (string)value.AdditionalProperties["idiomatic"];
+
+    private static string Idiomatic(Raw.Record record) => (string)record.AdditionalProperties["idiomatic"];
 }

@@ -157,9 +157,12 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
     /// failure: do not resubmit, and read the transaction by its
     /// <see cref="ExerciseOutcome{T}.CommittedUndecodable.UpdateId"/> when it carries one. The same
     /// holds when the committed transaction's choice result cannot be read as
-    /// <typeparamref name="TResult"/>: <typeparamref name="TResult"/> has no Daml mapping, or the
-    /// transaction has zero or more than one exercised event for <paramref name="command"/>'s choice
-    /// (e.g. a nonconsuming choice that only forks other choices).
+    /// <typeparamref name="TResult"/>, for example because <typeparamref name="TResult"/> has no Daml
+    /// mapping. The exercised event is the one for <paramref name="command"/>'s contract id, choice
+    /// and template or interface, so the same choice exercised on another contract in the
+    /// transaction is not a match. A transaction with no such exercised event throws
+    /// <see cref="InvalidOperationException"/>: a custom writer dropped the exercised events or the
+    /// transaction was requested without them, never a ledger answer.
     /// </remarks>
     public Task<ExerciseOutcome<TResult>> TryExerciseAsync<TResult>(
         RuntimeCommands.ExerciseCommand command,

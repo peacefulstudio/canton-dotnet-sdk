@@ -3,7 +3,9 @@
 
 using System;
 using System.Diagnostics;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
+using Daml.Runtime.Data;
 
 namespace Daml.Runtime.Outcomes;
 
@@ -58,4 +60,57 @@ public static class ExerciseOutcomeProjection
             _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name} from TrySubmitAndWaitForTransactionAsync."),
         };
     }
+
+    /// <summary>
+    /// The Exercise-result projection: finds the exercise of <paramref name="choice"/> on
+    /// <paramref name="contractId"/> in a committed <paramref name="transaction"/> and decodes its
+    /// result through the choice's <c>ResultDecoder</c> into <see cref="ExerciseOutcome{T}.One"/>.
+    /// Codegen-emitted <c>Try&lt;Choice&gt;Async</c> exercisers call this from the projector they hand
+    /// to <see cref="ProjectCommitted{TProjected}"/>; hand-written bindings may do the same.
+    /// </summary>
+    /// <remarks>
+    /// An exercised event matches when it carries <paramref name="contractId"/>, the choice name, and
+    /// the module and entity names of <typeparamref name="TOwner"/> — compared with the event's
+    /// template id when the owner is a template and with its interface id when the owner is an
+    /// interface. The package id is ignored, so package-id drift from an upgrade still matches, and an
+    /// exercise of the same choice on another contract in the same transaction is not a match.
+    /// A result that fails to decode is returned as <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>
+    /// because the command already committed; an <see cref="OperationCanceledException"/> from the
+    /// decoder propagates.
+    /// </remarks>
+    /// <typeparam name="TOwner">The template or interface marker that declares the choice.</typeparam>
+    /// <typeparam name="TArg">The choice argument type.</typeparam>
+    /// <typeparam name="TResult">The choice result type.</typeparam>
+    /// <param name="transaction">The committed transaction to read.</param>
+    /// <param name="choice">The generated choice descriptor, supplying the choice name and result decoder.</param>
+    /// <param name="contractId">The contract the choice was exercised on.</param>
+    /// <returns><see cref="ExerciseOutcome{T}.One"/> carrying the decoded result, or
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> when decoding fails.</returns>
+    /// <exception cref="InvalidOperationException">The transaction carries no matching exercised
+    /// event: a custom writer dropped exercised events, or the transaction was requested without
+    /// them (<c>ACS_DELTA</c>).</exception>
+    public static ExerciseOutcome<TResult> ProjectChoiceResult<TOwner, TArg, TResult>(
+        this TransactionResult transaction,
+        Choice<TOwner, TArg, TResult> choice,
+        string contractId)
+        where TOwner : IDamlType
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+        ArgumentNullException.ThrowIfNull(choice);
+        ArgumentNullException.ThrowIfNull(contractId);
+
+        return ExerciseResultProjector.Project(
+            transaction,
+            TOwner.DamlTypeId,
+            choice.Name,
+            result => choice.ResultDecoder(ReadCarried(result, choice)),
+            contractId);
+    }
+
+    private static DamlValue ReadCarried<TOwner, TArg, TResult>(
+        DamlValue result, Choice<TOwner, TArg, TResult> choice)
+        where TOwner : IDamlType =>
+        result is DamlUndecodedJson undecoded
+            ? UndecodedJsonReader.ReadWith(undecoded, typeof(TResult).Name, choice.ResultJsonReader)
+            : result;
 }

@@ -13,46 +13,46 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record TransferLeg
 /// </summary>
 public sealed record TransferLeg(
-    [property: DamlFieldAttribute("transferLegId")] string TransferLegId,
-    [property: DamlFieldAttribute("sender")] global::Splice.Api.Token.HoldingV2.Account Sender,
-    [property: DamlFieldAttribute("receiver")] global::Splice.Api.Token.HoldingV2.Account Receiver,
-    [property: DamlFieldAttribute("amount")] decimal Amount,
-    [property: DamlFieldAttribute("instrumentId")] string InstrumentId,
-    [property: DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IDamlRecord<TransferLeg>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("transferLegId")] string TransferLegId,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("sender")] global::Splice.Api.Token.HoldingV2.Account Sender,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("receiver")] global::Splice.Api.Token.HoldingV2.Account Receiver,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("instrumentId")] string InstrumentId,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
+) : global::Daml.Runtime.Data.IDamlRecord<TransferLeg>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("transferLegId", new DamlText(TransferLegId)),
-        DamlField.Create("sender", Sender.ToRecord()),
-        DamlField.Create("receiver", Receiver.ToRecord()),
-        DamlField.Create("amount", new DamlNumeric(Amount)),
-        DamlField.Create("instrumentId", new DamlText(InstrumentId)),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("transferLegId", new global::Daml.Runtime.Data.DamlText(TransferLegId)),
+        global::Daml.Runtime.Data.DamlField.Create("sender", Sender.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("receiver", Receiver.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("amount", new global::Daml.Runtime.Data.DamlNumeric(Amount)),
+        global::Daml.Runtime.Data.DamlField.Create("instrumentId", new global::Daml.Runtime.Data.DamlText(InstrumentId)),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TransferLeg FromRecord(DamlRecord record) => new TransferLeg(
-        TransferLegId: record.GetRequiredField("transferLegId").As<DamlText>().Value,
-        Sender: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("sender").As<DamlRecord>()),
-        Receiver: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("receiver").As<DamlRecord>()),
-        Amount: record.GetRequiredField("amount").As<DamlNumeric>().Value,
-        InstrumentId: record.GetRequiredField("instrumentId").As<DamlText>().Value,
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static TransferLeg FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferLeg(
+        TransferLegId: record.GetRequiredField("transferLegId").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Sender: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("sender").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Receiver: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("receiver").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        InstrumentId: record.GetRequiredField("instrumentId").As<global::Daml.Runtime.Data.DamlText>().Value,
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("transferLegId", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegId"), context.Field("transferLegId"))),
-            DamlField.Create("sender", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender"))),
-            DamlField.Create("receiver", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiver"), context.Field("receiver"))),
-            DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))),
-            DamlField.Create("instrumentId", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("transferLegId", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferLegId"), context.Field("transferLegId"))),
+            global::Daml.Runtime.Data.DamlField.Create("sender", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender"))),
+            global::Daml.Runtime.Data.DamlField.Create("receiver", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiver"), context.Field("receiver"))),
+            global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))),
+            global::Daml.Runtime.Data.DamlField.Create("instrumentId", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))),
+            global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
 

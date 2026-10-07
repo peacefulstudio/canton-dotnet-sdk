@@ -17,27 +17,27 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// </summary>
 /// <typeparam name="TA">Type parameter a</typeparam>
 public sealed record Box<TA>(
-    [property: DamlFieldAttribute("item")] TA Item
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("item")] TA Item
 ) where TA : notnull
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord(Func<TA, DamlValue> convertTA) => DamlRecord.Create(
-        DamlField.Create("item", convertTA(Item))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("item", convertTA(Item))
     );
 
-    /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static Box<TA> FromRecord(DamlRecord record, Func<DamlValue, TA> convertTA) => new Box<TA>(
-        Item: record.GetTypeParameterField("item", convertTA)
+    /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
+    public static Box<TA> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TA> convertTA, global::Daml.Runtime.Data.DamlValue? absentTA) => new Box<TA>(
+        Item: record.GetTypeParameterField("item", convertTA, absentTA)
     );
 
-    /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
+    /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context, global::Daml.Runtime.Serialization.DamlLfElementReader readTA)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context, global::Daml.Runtime.Serialization.DamlLfElementReader readTA, global::Daml.Runtime.Data.DamlValue? absentTA)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("item", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTypeParameterField(json, context, "item", readTA))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(1);
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddTypeParameterField(fields, json, context, "item", readTA, absentTA);
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

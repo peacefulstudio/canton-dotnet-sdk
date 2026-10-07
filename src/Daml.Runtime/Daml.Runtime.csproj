@@ -15,6 +15,10 @@
     <InternalsVisibleTo Include="Daml.Runtime.Tests" />
     <InternalsVisibleTo Include="Daml.Codegen.CSharp" />
     <InternalsVisibleTo Include="Daml.Codegen.CSharp.Tests" />
+    <InternalsVisibleTo Include="Daml.Codegen.Testing.Conformance.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Kernel" />
+    <InternalsVisibleTo Include="Canton.Ledger.Rest.Client" />
+    <InternalsVisibleTo Include="Canton.Ledger.Abstractions" />
   </ItemGroup>
 
 </Project>

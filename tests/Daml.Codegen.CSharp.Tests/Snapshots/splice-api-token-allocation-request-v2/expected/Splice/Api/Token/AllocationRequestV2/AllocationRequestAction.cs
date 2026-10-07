@@ -14,34 +14,34 @@ namespace Splice.Api.Token.AllocationRequestV2;
 /// Generated from Daml variant AllocationRequestAction
 /// </summary>
 [global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]
-public abstract record AllocationRequestAction : IDamlVariant<AllocationRequestAction>
+public abstract record AllocationRequestAction : global::Daml.Runtime.Data.IDamlVariant<AllocationRequestAction>
 {
     /// <summary>Gets the variant constructor name.</summary>
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant();
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();
 
     /// <summary>Reconstructs an AllocationRequestAction by dispatching on the DamlVariant constructor tag.</summary>
-    public static AllocationRequestAction FromVariant(DamlVariant variant) =>
+    public static AllocationRequestAction FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>
         variant.Constructor switch
         {
             "ARA_Accept" => new ARA_Accept(),
             "ARA_Reject" => new ARA_Reject(),
-            "ARA_Custom" => new ARA_Custom(AllocationRequestAction_ARA_Custom.FromRecord(variant.Value.As<DamlRecord>())),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AllocationRequestAction constructor")
+            "ARA_Custom" => new ARA_Custom(global::Splice.Api.Token.AllocationRequestV2.AllocationRequestAction_ARA_Custom.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown AllocationRequestAction constructor")
         };
 
     /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "ARA_Accept" => DamlVariant.Create("ARA_Accept", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "ARA_Reject" => DamlVariant.Create("ARA_Reject", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "ARA_Custom" => DamlVariant.Create("ARA_Custom", AllocationRequestAction_ARA_Custom.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "ARA_Accept" => global::Daml.Runtime.Data.DamlVariant.Create("ARA_Accept", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "ARA_Reject" => global::Daml.Runtime.Data.DamlVariant.Create("ARA_Reject", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "ARA_Custom" => global::Daml.Runtime.Data.DamlVariant.Create("ARA_Custom", global::Splice.Api.Token.AllocationRequestV2.AllocationRequestAction_ARA_Custom.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -55,7 +55,7 @@ public abstract record AllocationRequestAction : IDamlVariant<AllocationRequestA
         public override string Tag => "ARA_Accept";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("ARA_Accept", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("ARA_Accept", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>ARA_Reject constructor (no arguments).</summary>
@@ -65,17 +65,17 @@ public abstract record AllocationRequestAction : IDamlVariant<AllocationRequestA
         public override string Tag => "ARA_Reject";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("ARA_Reject", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("ARA_Reject", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
     /// <summary>ARA_Custom constructor.</summary>
-    public sealed record ARA_Custom(AllocationRequestAction_ARA_Custom Value) : AllocationRequestAction
+    public sealed record ARA_Custom(global::Splice.Api.Token.AllocationRequestV2.AllocationRequestAction_ARA_Custom Value) : AllocationRequestAction
     {
         /// <inheritdoc />
         public override string Tag => "ARA_Custom";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant() => DamlVariant.Create("ARA_Custom", Value.ToRecord());
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("ARA_Custom", Value.ToRecord());
     }
 
 }

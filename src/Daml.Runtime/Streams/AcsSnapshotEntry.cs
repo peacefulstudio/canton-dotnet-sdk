@@ -1,10 +1,14 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Streams;
 
@@ -22,6 +26,15 @@ namespace Daml.Runtime.Streams;
 /// <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}"/> instead, whose payload is
 /// the interface's view record.
 /// </typeparam>
+/// <remarks>
+/// Through <see cref="System.Text.Json"/> it travels as its own concrete arm's object with a
+/// <c>"$case"</c> discriminator, e.g. <c>{"$case":"Checkpoint","Resume":{"Offset":6}}</c>,
+/// mirroring <see cref="ContractStreamEvent{T}"/>'s shape (a CLR round-trip contract,
+/// not the Daml-LF wire encoding). It names <see cref="AcsSnapshotEntryJsonConverterFactory"/> in a
+/// <see cref="JsonConverterAttribute"/>, so it converts on bare <see cref="JsonSerializerOptions"/>
+/// with no registration.
+/// </remarks>
+[JsonConverter(typeof(AcsSnapshotEntryJsonConverterFactory))]
 public abstract record AcsSnapshotEntry<T>
     where T : ITemplate, IDamlRecord<T>
 {
@@ -147,11 +160,114 @@ public abstract record AcsSnapshotEntry<T>
     /// it as an identity rather than parsing it: <see cref="Category"/> and
     /// <see cref="Status"/> are both too coarse to separate two faults that need opposite
     /// handling, and <see cref="Message"/> is participant prose rather than an API.</param>
-    /// <param name="SourceException">Transport exception that caused the stream failure, when available.</param>
+    /// <param name="SourceException">Transport exception that caused the stream failure, when
+    /// available. Carries <see cref="JsonIgnoreAttribute"/> and is excluded from the
+    /// <see cref="System.Text.Json"/> round trip, as on
+    /// <see cref="ContractStreamEvent{T}.StreamError"/>: a read restores it as
+    /// <see langword="null"/>.
+    /// A diagnostic only: excluded from <see cref="Equals(StreamError)"/> and <see cref="GetHashCode"/>.</param>
     public sealed record StreamError(
         TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
         string? ErrorId = null,
-        Exception? SourceException = null) : AcsSnapshotEntry<T>;
+        [property: JsonIgnore] Exception? SourceException = null) : AcsSnapshotEntry<T>
+    {
+        /// <summary>
+        /// Compares two stream errors by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>, ignoring <see cref="SourceException"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
+        /// it does not travel through <see cref="System.Text.Json"/>, so a value read back from JSON
+        /// must equal the value that was written, and two failures with the same content are the same
+        /// failure whichever exception each one caught. It is excluded from <see cref="GetHashCode"/> likewise.
+        /// </remarks>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
+        public bool Equals(StreamError? other) =>
+            other is not null
+            && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
+            && Message == other.Message
+            && Category == other.Category
+            && ErrorId == other.ErrorId;
+
+        /// <summary>
+        /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
+        /// <see cref="Equals(StreamError)"/>.
+        /// </summary>
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, ErrorId);
+    }
+}
+
+/// <summary>
+/// Supplies the <see cref="System.Text.Json"/> converter for any closed
+/// <see cref="AcsSnapshotEntry{T}"/>, including its four arms. Without it the declared-abstract
+/// type writes an empty object for every arm and refuses to read any of them back — see
+/// <see cref="AcsSnapshotEntry{T}"/>'s remarks.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="CanConvert"/> also matches the arm types directly, so that a caller whose variable is
+/// statically typed as a concrete arm — e.g. <c>AcsSnapshotEntry&lt;T&gt;.Checkpoint</c>, not
+/// <c>AcsSnapshotEntry&lt;T&gt;</c> — still gets the discriminated shape once this factory is
+/// registered, e.g. via <see cref="DamlJsonConverters.AddDamlConverters"/>. That registration is
+/// required for the arm case specifically: <see cref="JsonConverterAttribute"/> is not inherited by
+/// <see cref="System.Text.Json"/>'s converter resolution, so the <see cref="JsonConverterAttribute"/>
+/// on <see cref="AcsSnapshotEntry{T}"/> alone leaves an arm-typed lookup on the default
+/// reflection-based contract — the same limitation <see cref="DamlJsonConverters.AddDamlConverters"/>'s
+/// remarks describe for a hand-written <see cref="Daml.Runtime.Contracts.ContractId{T}"/>
+/// derivation. Putting the attribute on the arm types too would not lift that requirement: see
+/// <see cref="DiscriminatedUnionJson.Write{TUnion}"/>'s remarks for why an arm can carry this
+/// converter only through <see cref="JsonSerializerOptions.Converters"/>, never its own attribute.
+/// </para>
+/// <para>
+/// <b>AOT / trimming incompatibility:</b> <see cref="CreateConverter"/> uses
+/// <see cref="Activator.CreateInstance(Type)"/> and <see cref="Type.MakeGenericType"/> to
+/// instantiate the closed converter at runtime — the same cost
+/// <see cref="Daml.Runtime.Stdlib.SetJsonConverterFactory"/> already carries, accepted so the
+/// attribute reaches a consumer who never registers the converters.
+/// </para>
+/// </remarks>
+[RequiresUnreferencedCode("AcsSnapshotEntryJsonConverterFactory uses MakeGenericType and Activator.CreateInstance, which are not trimming-safe.")]
+[RequiresDynamicCode("AcsSnapshotEntryJsonConverterFactory uses MakeGenericType at runtime, which requires dynamic code generation.")]
+internal sealed class AcsSnapshotEntryJsonConverterFactory : JsonConverterFactory, IDiscriminatedUnionJsonConverterFactory
+{
+    public override bool CanConvert(Type typeToConvert) =>
+        IsClosedAcsSnapshotEntry(typeToConvert) || IsArmOfClosedAcsSnapshotEntry(typeToConvert);
+
+    private static bool IsClosedAcsSnapshotEntry(Type type) =>
+        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
+        && type.GetGenericTypeDefinition() == typeof(AcsSnapshotEntry<>);
+
+    private static bool IsArmOfClosedAcsSnapshotEntry(Type type) =>
+        type.BaseType is { } baseType && IsClosedAcsSnapshotEntry(baseType);
+
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        var closedEntryType = IsClosedAcsSnapshotEntry(typeToConvert) ? typeToConvert : typeToConvert.BaseType!;
+        return (JsonConverter)Activator.CreateInstance(
+            typeof(AcsSnapshotEntryJsonConverter<>).MakeGenericType(closedEntryType.GetGenericArguments()[0]))!;
+    }
+}
+
+internal sealed class AcsSnapshotEntryJsonConverter<T> : JsonConverter<AcsSnapshotEntry<T>>
+    where T : ITemplate, IDamlRecord<T>
+{
+    private static readonly string TypeName =
+        $"{nameof(AcsSnapshotEntry<T>)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
+
+    private static readonly IReadOnlyDictionary<string, Type> Cases = new Dictionary<string, Type>
+    {
+        [nameof(AcsSnapshotEntry<T>.Created)] = typeof(AcsSnapshotEntry<T>.Created),
+        [nameof(AcsSnapshotEntry<T>.Checkpoint)] = typeof(AcsSnapshotEntry<T>.Checkpoint),
+        [nameof(AcsSnapshotEntry<T>.StreamError)] = typeof(AcsSnapshotEntry<T>.StreamError),
+        [nameof(AcsSnapshotEntry<T>.Unclassified)] = typeof(AcsSnapshotEntry<T>.Unclassified),
+    };
+
+    public override AcsSnapshotEntry<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        DiscriminatedUnionJson.Read<AcsSnapshotEntry<T>>(ref reader, options, Cases, TypeName);
+
+    public override void Write(Utf8JsonWriter writer, AcsSnapshotEntry<T> value, JsonSerializerOptions options) =>
+        DiscriminatedUnionJson.Write(writer, value, options, TypeName);
 }

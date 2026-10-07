@@ -6,6 +6,7 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Authentication;
 using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
@@ -418,7 +419,7 @@ public sealed class LedgerClientAsyncSubmitTests : IDisposable
     }
 
     [Fact]
-    public async Task SubmitAsync_records_a_server_side_cancellation_on_the_activity_and_rethrows()
+    public async Task SubmitAsync_records_a_server_side_cancellation_on_the_activity_and_translates_it()
     {
         var cancelled = new RpcException(new Status(StatusCode.Cancelled, "server cancelled"));
         StubSubmitFailure(cancelled, cancelOnCall: null);
@@ -428,7 +429,10 @@ public sealed class LedgerClientAsyncSubmitTests : IDisposable
 
         var act = async () => await client.SubmitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
 
-        (await act.Should().ThrowAsync<RpcException>()).Which.Should().BeSameAs(cancelled);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Cancelled));
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.InnerException.Should().BeSameAs(cancelled);
         capture.Activities.Should().Contain(activity => activity.Status == ActivityStatusCode.Error);
     }
 

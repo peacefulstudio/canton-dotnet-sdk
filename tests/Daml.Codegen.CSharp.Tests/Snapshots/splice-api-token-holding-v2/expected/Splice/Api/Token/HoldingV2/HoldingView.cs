@@ -13,43 +13,43 @@ namespace Splice.Api.Token.HoldingV2;
 /// Generated from Daml record HoldingView
 /// </summary>
 public sealed record HoldingView(
-    [property: DamlFieldAttribute("account")] Account Account,
-    [property: DamlFieldAttribute("instrumentId")] InstrumentId InstrumentId,
-    [property: DamlFieldAttribute("amount")] decimal Amount,
-    [property: DamlFieldAttribute("lock")] Lock? Lock,
-    [property: DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : IHolding, IDamlRecord<HoldingView>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("account")] global::Splice.Api.Token.HoldingV2.Account Account,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("instrumentId")] global::Splice.Api.Token.HoldingV2.InstrumentId InstrumentId,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("lock")] global::Splice.Api.Token.HoldingV2.Lock? Lock,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
+) : global::Splice.Api.Token.HoldingV2.IHolding, global::Daml.Runtime.Data.IDamlRecord<HoldingView>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("account", Account.ToRecord()),
-        DamlField.Create("instrumentId", InstrumentId.ToRecord()),
-        DamlField.Create("amount", new DamlNumeric(Amount)),
-        DamlField.Create("lock", Lock is { } __Lock ? new DamlOptional(__Lock.ToRecord()) : DamlOptional.None),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("account", Account.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("instrumentId", InstrumentId.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("amount", new global::Daml.Runtime.Data.DamlNumeric(Amount)),
+        global::Daml.Runtime.Data.DamlField.Create("lock", Lock is { } __Lock ? new global::Daml.Runtime.Data.DamlOptional(__Lock.ToRecord()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static HoldingView FromRecord(DamlRecord record) => new HoldingView(
-        Account: Account.FromRecord(record.GetRequiredField("account").As<DamlRecord>()),
-        InstrumentId: InstrumentId.FromRecord(record.GetRequiredField("instrumentId").As<DamlRecord>()),
-        Amount: record.GetRequiredField("amount").As<DamlNumeric>().Value,
-        Lock: record.GetOptionalField("lock").AsOptional().HasValue ? Lock.FromRecord(record.GetOptionalField("lock").AsOptional().Value!.As<DamlRecord>()) : null,
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static HoldingView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new HoldingView(
+        Account: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("account").As<global::Daml.Runtime.Data.DamlRecord>()),
+        InstrumentId: global::Splice.Api.Token.HoldingV2.InstrumentId.FromRecord(record.GetRequiredField("instrumentId").As<global::Daml.Runtime.Data.DamlRecord>()),
+        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        Lock: record.GetOptionalField("lock").AsOptional().HasValue ? global::Splice.Api.Token.HoldingV2.Lock.FromRecord(record.GetOptionalField("lock").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>()) : null,
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("account", Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "account"), context.Field("account"))),
-            DamlField.Create("instrumentId", InstrumentId.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))),
-            DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))),
-            DamlField.Create("lock", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "lock"), context.Field("lock"), (__json0, __ctx0) => Lock.__ReadDamlLfJson(__json0, __ctx0))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(5);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("account", global::Splice.Api.Token.HoldingV2.Account.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "account"), context.Field("account"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("instrumentId", global::Splice.Api.Token.HoldingV2.InstrumentId.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "instrumentId"), context.Field("instrumentId"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "lock", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("lock"), (__json0, __ctx0) => global::Splice.Api.Token.HoldingV2.Lock.__ReadDamlLfJson(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

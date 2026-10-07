@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime;
 using Daml.Runtime.Data;
@@ -16,6 +17,7 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.ExecuteTracedAsync<LedgerClient, LedgerOffset>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             StateService.Descriptor,
             "GetLedgerEnd",
@@ -26,7 +28,7 @@ internal sealed partial class LedgerClient
                     token,
                     timeout).ConfigureAwait(false);
                 activity?.SetTag(LedgerActivityTagNames.CantonOffset, response.Offset);
-                return LedgerOffset.At(response.Offset);
+                return LedgerWireConversions.ToLedgerOffset(response.Offset);
             },
             cancellationToken);
 
@@ -44,6 +46,7 @@ internal sealed partial class LedgerClient
             request.ParticipantId = participantId;
 
         return _invoker.InvokeTracedAsync<LedgerClient, GetConnectedSynchronizersResponse, IReadOnlyList<ConnectedSynchronizer>>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             StateService.Descriptor,
             "GetConnectedSynchronizers",
@@ -76,6 +79,7 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
         _invoker.InvokeTracedAsync<LedgerClient, GetLedgerApiVersionResponse, string>(
+            LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             VersionService.Descriptor,
             "GetLedgerApiVersion",

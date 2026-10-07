@@ -83,7 +83,7 @@ public abstract record CompletionStreamEvent
     /// </summary>
     /// <param name="Status">What the transport actually said, never a translation:
     /// <see cref="TransportStatus.Grpc"/> over gRPC, <see cref="TransportStatus.Http"/>
-    /// over REST, <see cref="TransportStatus.NoResponse"/> when the call got no answer,
+    /// over REST, <see cref="TransportStatus.NoResponse"/> when a REST call got no answer,
     /// and <see cref="TransportStatus.UndecodableBody"/> when the call itself succeeded
     /// but a payload could not be decoded.</param>
     /// <param name="Message">Status detail / message from the participant or transport.</param>

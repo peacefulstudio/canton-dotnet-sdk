@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Net;
 using System.Text.Json;
@@ -21,6 +22,13 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public sealed class RestLedgerClientTests : IDisposable
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TestTemplate>();
+        GeneratedTypeReaders.ForChoices<TestTemplate>();
+    }
+
     private static readonly Party Alice = new("party::alice");
     private static readonly Party Bob = new("party::bob");
 
@@ -41,7 +49,7 @@ public sealed class RestLedgerClientTests : IDisposable
         return factory;
     }
 
-    private sealed record TestTemplate([property: DamlFieldAttribute("owner")] Party Owner) : ITemplate, IDamlRecord<TestTemplate>
+    private sealed record TestTemplate([property: DamlFieldAttribute("owner")] Party Owner) : ITemplate, IDamlRecord<TestTemplate>, IHasChoices<TestTemplate>
     {
         public TestTemplate()
             : this(Alice)
@@ -95,6 +103,8 @@ public sealed class RestLedgerClientTests : IDisposable
             ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
             ResultJsonReader = (json, context) => DamlLfJsonDecoders.ReadList(json, context, DamlLfJsonDecoders.ReadContractId),
         };
+
+        public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceGetOwner, ChoiceFindOwner, ChoiceSplitHoldings];
     }
 
     private RestLedgerClient ClientWith(RecordingHttpHandler transport, string? userId = null) =>
@@ -151,7 +161,10 @@ public sealed class RestLedgerClientTests : IDisposable
         var act = () => client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var thrown = await act.Should().ThrowAsync<Daml.Ledger.Abstractions.LedgerOperationException>();
-        thrown.Which.Message.Should().Contain("ledger end offset was not a non-negative integer");
+        thrown.Which.Message.Should().Be(
+            "Server returned a malformed ledger end response body: the ledger end offset was not a non-negative integer.");
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]
@@ -163,7 +176,9 @@ public sealed class RestLedgerClientTests : IDisposable
         var act = () => client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var thrown = await act.Should().ThrowAsync<Daml.Ledger.Abstractions.LedgerOperationException>();
-        thrown.Which.Message.Should().Contain("no body was present for the ledger end");
+        thrown.Which.Message.Should().Be("Server returned a successful response but no body was present for the ledger end.");
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]
@@ -266,7 +281,7 @@ public sealed class RestLedgerClientTests : IDisposable
                 {
                   "@type": "type.googleapis.com/google.rpc.ErrorInfo",
                   "reason": "DUPLICATE_COMMAND",
-                  "metadata": {"category": "ContentionOnSharedResources"}
+                  "metadata": {"category": "InvalidGivenCurrentSystemStateResourceExists"}
                 }
               ]
             }
@@ -278,8 +293,53 @@ public sealed class RestLedgerClientTests : IDisposable
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
         var error = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>().Subject;
-        error.Category.Should().Be(DamlErrorCategory.ContentionOnSharedResources);
+        error.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists);
         error.ErrorId.Should().Be("DUPLICATE_COMMAND");
+    }
+
+    private const string ReplayedCommandBody =
+        """
+        {
+          "code": "DUPLICATE_COMMAND",
+          "cause": "A command with the given command id has already been successfully processed",
+          "context": {"accepted": "true", "completion_offset": "9663", "definite_answer": "true"},
+          "errorCategory": 10,
+          "grpcCodeValue": 6
+        }
+        """;
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_replayed_command_id_as_committed_with_the_original_offset_in_the_metadata()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.Conflict, ReplayedCommandBody);
+        var client = ClientWith(transport);
+        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate())).WithActAs(Alice);
+
+        var act = () => client.SubmitAndWaitAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("DUPLICATE_COMMAND");
+        thrown.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists);
+        thrown.CommitState.Should().Be(CommitState.Committed);
+        thrown.UpdateId.Should().BeNull();
+        thrown.Metadata.Should().ContainKey("completion_offset").WhoseValue.Should().Be("9663");
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_replayed_command_id_the_participant_did_not_accept_as_unknown()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.Conflict,
+            ReplayedCommandBody.Replace("\"accepted\": \"true\"", "\"accepted\": \"false\""));
+        var client = ClientWith(transport);
+        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate())).WithActAs(Alice);
+
+        var act = () => client.SubmitAndWaitAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
     }
 
     [Fact]
@@ -526,7 +586,9 @@ public sealed class RestLedgerClientTests : IDisposable
 
         var act = () => client.SubmitAndWaitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<Daml.Ledger.Abstractions.LedgerOperationException>();
+        var thrown = await act.Should().ThrowAsync<Daml.Ledger.Abstractions.LedgerOperationException>();
+        thrown.Which.CommitState.Should().Be(CommitState.Committed);
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
     }
 
     [Fact]
@@ -615,8 +677,23 @@ public sealed class RestLedgerClientTests : IDisposable
 
         var undecodable = outcome.Should().BeOfType<ExerciseOutcome<ResultTypeWithoutDamlMapping>.CommittedUndecodable>().Subject;
         undecodable.UpdateId.Should().Be("upd-1");
-        undecodable.Message.Should().StartWith("The command committed, but its choice result could not be read: ");
+        undecodable.Message.Should().StartWith(
+            "Choice 'GetOwner' of 'pkg:Module:LedgerClientTemplate' did not resolve to a generated result decoder: "
+            + "its generated result type Daml.Runtime.Data.Party is not assignable to "
+            + "Canton.Ledger.Rest.Client.Tests.RestLedgerClientTests+ResultTypeWithoutDamlMapping. Decoding its result as "
+            + "Canton.Ledger.Rest.Client.Tests.RestLedgerClientTests+ResultTypeWithoutDamlMapping through FromDamlValue failed: "
+            + "Cannot convert Daml.Runtime.Data.DamlParty to ");
         undecodable.SourceException.Should().BeOfType<NotSupportedException>();
+    }
+
+    private sealed record UnloadedTemplate : ITemplate
+    {
+        public static RuntimeIdentifier TemplateId { get; } = new("missing-pkg", "Missing.Module", "Missing");
+        public static string PackageId => "missing-pkg";
+        public static string PackageName => "missing-pkg-name";
+        public static Version PackageVersion { get; } = new(0, 1, 0);
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+        public DamlRecord ToRecord() => new(TemplateId, [new DamlField("owner", Alice.ToDamlValue())]);
     }
 
     private sealed class ResultTypeWithoutDamlMapping;
@@ -658,6 +735,7 @@ public sealed class RestLedgerClientTests : IDisposable
                   "offset": "1",
                   "contractId": "00holding",
                   "nodeId": 0,
+                  "acsDelta": true,
                   "templateId": {"packageId": "missing-pkg", "moduleName": "Missing.Module", "entityName": "Missing"},
                   "createArgument": {"owner": "party::alice"}
                 }
@@ -668,12 +746,42 @@ public sealed class RestLedgerClientTests : IDisposable
         """;
 
     [Fact]
-    public async Task TryExerciseAsync_returns_CommittedUndecodable_when_the_exercised_template_has_no_loaded_generated_type()
+    public async Task TryExerciseAsync_decodes_the_carried_result_through_the_result_type_when_the_exercised_template_has_no_loaded_generated_type()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, MissingTemplateExercisedTransactionResponse);
         var client = ClientWith(transport);
         var command = ExerciseCommand.For(
-            new ContractId<TestTemplate>("00holding"), new ChoiceName("GetOwner"), DamlUnit.Instance);
+            new ContractId<UnloadedTemplate>("00holding"), new ChoiceName("GetOwner"), DamlUnit.Instance);
+
+        var outcome = await client.TryExerciseAsync<Party>(
+            command, Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<Party>.One>().Which.Result.Value.Should().Be("party::alice");
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_hands_back_the_carried_result_as_raw_json_when_asked_for_a_DamlValue()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, MissingTemplateExercisedTransactionResponse);
+        var client = ClientWith(transport);
+        var command = ExerciseCommand.For(
+            new ContractId<UnloadedTemplate>("00holding"), new ChoiceName("GetOwner"), DamlUnit.Instance);
+
+        var outcome = await client.TryExerciseAsync<DamlValue>(
+            command, Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<DamlValue>.One>().Which.Result
+            .Should().Be(new DamlUndecodedJson("\"party::alice\""));
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_returns_CommittedUndecodable_with_the_committed_prefix_when_the_exercised_event_names_a_blank_choice()
+    {
+        var blankChoiceResponse = MissingTemplateExercisedTransactionResponse.Replace("\"choice\": \"GetOwner\"", "\"choice\": \" \"");
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, blankChoiceResponse);
+        var client = ClientWith(transport);
+        var command = ExerciseCommand.For(
+            new ContractId<UnloadedTemplate>("00holding"), new ChoiceName("GetOwner"), DamlUnit.Instance);
 
         var outcome = await client.TryExerciseAsync<Party>(
             command, Alice, cancellationToken: TestContext.Current.CancellationToken);
@@ -681,63 +789,53 @@ public sealed class RestLedgerClientTests : IDisposable
         var error = outcome.Should().BeOfType<ExerciseOutcome<Party>.CommittedUndecodable>().Subject;
         error.UpdateId.Should().Be("upd-1");
         error.Message.Should().Be(
-            "The command committed, but its transaction could not be decoded: No generated type is loaded for choice 'GetOwner' of 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
-        error.SourceException.Should().BeOfType<TemplateTypeRequiredException>()
-            .Which.TypeId.Should().Be("missing-pkg:Missing.Module:Missing");
+            "The command committed, but its transaction could not be decoded: No generated type is loaded for choice ' ' of 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API. A host without a deps.json registers each generated assembly itself, once, with RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).");
+        error.SourceException.Should().BeOfType<TemplateTypeRequiredException>();
     }
 
     [Fact]
-    public async Task TryCreateAsync_returns_CommittedUndecodable_when_the_created_template_has_no_loaded_generated_type()
+    public async Task TryCreateAsync_returns_the_contract_id_when_the_created_template_has_no_loaded_generated_type()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, MissingTemplateCreatedTransactionResponse);
         var client = ClientWith(transport);
 
         var outcome = await client.TryCreateAsync(
-            new TestTemplate(), Alice, cancellationToken: TestContext.Current.CancellationToken);
+            new UnloadedTemplate(), Alice, cancellationToken: TestContext.Current.CancellationToken);
 
-        var error = outcome.Should().BeOfType<ExerciseOutcome<ContractId<TestTemplate>>.CommittedUndecodable>().Subject;
-        error.UpdateId.Should().Be("upd-1");
-        error.Message.Should().Be(
-            "The command committed, but its transaction could not be decoded: No generated type is loaded for 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
-        error.SourceException.Should().BeOfType<TemplateTypeRequiredException>()
-            .Which.TypeId.Should().Be("missing-pkg:Missing.Module:Missing");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<UnloadedTemplate>>.One>().Which.Result.Value.Should().Be("00holding");
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_returns_CommittedUndecodable_when_the_created_template_has_no_loaded_generated_type()
+    public async Task TrySubmitAndWaitForTransactionAsync_carries_the_created_payload_as_raw_json_when_the_created_template_has_no_loaded_generated_type()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, MissingTemplateCreatedTransactionResponse);
         var client = ClientWith(transport);
-        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate())).WithActAs(Alice);
+        var submission = CommandsSubmission.Single(CreateCommand.For(new UnloadedTemplate())).WithActAs(Alice);
 
         var outcome = await client.TrySubmitAndWaitForTransactionAsync(
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        var error = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.CommittedUndecodable>().Subject;
-        error.UpdateId.Should().Be("upd-1");
-        error.Message.Should().Be(
-            "The command committed, but its transaction could not be decoded: No generated type is loaded for 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
-        error.SourceException.Should().BeOfType<TemplateTypeRequiredException>();
+        var transaction = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Which.Result;
+        transaction.UpdateId.Should().Be("upd-1");
+        var created = transaction.CreatedContracts.Should().ContainSingle().Subject;
+        created.ContractId.Should().Be("00holding");
+        created.UndecodedPayload.Should().Be(new DamlUndecodedJson("""{"owner": "party::alice"}"""));
+        created.Payload.Fields.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task OneOrThrowAsync_over_TryExerciseAsync_throws_a_LedgerOperationException_carrying_the_refusal_after_the_commit()
+    public async Task OneOrThrowAsync_over_TryExerciseAsync_returns_the_carried_result_when_the_exercised_template_has_no_loaded_generated_type()
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, MissingTemplateExercisedTransactionResponse);
         var client = ClientWith(transport);
         var command = ExerciseCommand.For(
-            new ContractId<TestTemplate>("00holding"), new ChoiceName("GetOwner"), DamlUnit.Instance);
+            new ContractId<UnloadedTemplate>("00holding"), new ChoiceName("GetOwner"), DamlUnit.Instance);
 
-        var thrown = await Record.ExceptionAsync(() => client.TryExerciseAsync<Party>(
+        var result = await client.TryExerciseAsync<Party>(
                 command, Alice, cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync("GetOwner"));
+            .OneOrThrowAsync("GetOwner");
 
-        var failure = thrown.Should().BeOfType<LedgerOperationException>().Subject;
-        failure.Message.Should().Be(
-            "GetOwner: committed but undecodable: The command committed, but its transaction could not be decoded: No generated type is loaded for choice 'GetOwner' of 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API.");
-        failure.InnerException.Should().BeOfType<TemplateTypeRequiredException>();
-        failure.UpdateId.Should().Be("upd-1");
-        failure.CommitState.Should().Be(CommitState.Committed);
+        result.Value.Should().Be("party::alice");
     }
 
     [Fact]

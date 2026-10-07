@@ -84,10 +84,12 @@ public enum DamlErrorCategory
     InvalidGivenCurrentSystemStateResourceMissing,
 
     /// <summary>
-    /// Request invalid because seeking found a different resource than expected
-    /// (<c>InvalidGivenCurrentSystemStateSeekDifferentResource</c>).
+    /// Request invalid because a resource was requested with a parameter beyond the current upper
+    /// bound of the system's state, such as an offset past the ledger end. Canton names this
+    /// category <c>InvalidGivenCurrentSystemStateSeekAfterEnd</c> and returns it under gRPC
+    /// <c>OUT_OF_RANGE</c>.
     /// </summary>
-    InvalidGivenCurrentSystemStateSeekDifferentResource,
+    InvalidGivenCurrentSystemStateSeekAfterEnd,
 
     /// <summary>
     /// Background process degradation warning — non-fatal

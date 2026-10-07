@@ -4,11 +4,14 @@
 using System.Globalization;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Streams;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using RuntimeCommands = Daml.Runtime.Commands;
+using Canton.Ledger.Kernel.Wire;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -58,6 +61,34 @@ internal sealed partial class RestLedgerClient
     }
 
     /// <inheritdoc />
+    public async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
+        ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : IDamlType
+    {
+        var request = new Raw.GetEventsByContractIdRequest
+        {
+            ContractId = contractId.Value,
+            EventFormat = RestSubscribeRequestBuilder.BuildDisclosureEventFormat(submitter),
+        };
+
+        try
+        {
+            return await _calls.SendAsync<Raw.GetEventsByContractIdResponse, RuntimeCommands.DisclosedContract?>(
+                Post(EventsByContractIdPath, request, "contract events"),
+                response => RestContractStreamProjector.DisclosureOf(response, _logger),
+                timeout,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (LedgerOperationException rejection) when (IsStructuredResourceMissing(rejection))
+        {
+            return null;
+        }
+    }
+
+    private static bool IsStructuredResourceMissing(LedgerOperationException rejection) =>
+        rejection is { Category: DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, ErrorId: not null };
+
+    /// <inheritdoc />
     public async Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
         RuntimeCommands.SubmitterInfo submitter, LedgerOffset? activeAtOffset = null, int? maxPageSize = null, LedgerPageToken? pageToken = null,
         bool includeDisclosure = false, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
@@ -96,7 +127,7 @@ internal sealed partial class RestLedgerClient
             var disclosure = RestContractStreamProjector.DisclosureOf(wireEntry, _logger);
             entries.AddRange(RestContractStreamProjector
                 .ProjectActiveContractEntry<T>(wireEntry, _logger, activeAt)
-                .Select(projected => ToAcsSnapshotEntry(projected, disclosure)));
+                .Select(projected => ContractSnapshotEntryArms<T>.From(projected, disclosure)));
         }
 
         return new AcsPage<T>(entries, activeAt, ToPageToken(response.NextPageToken));
@@ -110,7 +141,8 @@ internal sealed partial class RestLedgerClient
                 LatestPrunedOffsetsPath,
                 Body: null,
                 "Server returned a successful response but no body was present for the pruned offsets.",
-                "Server returned a malformed pruned offsets response body: "),
+                "Server returned a malformed pruned offsets response body: ",
+                LedgerCallKind.Read),
             response => new PrunedOffsets(
                 PrunedOffsetOf(response.ParticipantPrunedUpToInclusive),
                 PrunedOffsetOf(response.AllDivulgedContractsPrunedUpToInclusive)),
@@ -175,5 +207,6 @@ internal sealed partial class RestLedgerClient
             path,
             body,
             $"Server returned a successful response but no body was present for the {subject}.",
-            $"Server returned a malformed {subject} response body: ");
+            $"Server returned a malformed {subject} response body: ",
+            LedgerCallKind.Read);
 }

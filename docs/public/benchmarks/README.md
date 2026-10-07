@@ -55,6 +55,8 @@ The run used traffic-budgeted parameters: `--warmup 10 --seed-contracts 50 --acs
 
 ## Reproducing
 
+The maintainers run this harness weekly in CI against a LocalNet and compare allocations, latency and throughput with a stored baseline, so a regression in the streaming paths fails that run.
+
 1. Bring up a LocalNet with PQS enabled ([`canton-localnet`](https://github.com/peacefulstudio/canton-localnet)): `canton-localnet up && canton-localnet wait-ready`.
 2. Export the validator endpoints and credentials. These are the same variables the integration tests read:
 

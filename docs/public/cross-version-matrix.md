@@ -5,6 +5,27 @@ The Canton ledger clients are exercised against more than one Canton release. Th
 LocalNet per Canton release and runs the live-ledger suites against it. It runs weekly and on
 demand (`workflow_dispatch`), on GitHub-hosted `ubuntu-latest` runners, one matrix cell per job.
 
+## Supported Canton versions
+
+The clients target Canton Ledger API v2. `Canton.Ledger.Grpc` downloads the Canton Ledger API proto files from Maven Central during its build.
+
+| SDK Version | Canton Version |
+|-----------------|----------------|
+| 0.6.0 and later | 3.5.x |
+
+Before `0.6.0` the `Canton.Ledger.*` packages had their own version line:
+
+| `Canton.Ledger.*` Version | Canton Version |
+|-----------------|----------------|
+| 0.4.1 – 0.5.x | 3.5.x |
+| 0.4.0 | 3.4.x |
+| 0.2.x | 3.4.x |
+| 0.1.x | 3.4.x |
+
+The clients support Canton 3.5 only — running them against a 3.4.x participant is untested and unsupported. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.5.19`. Any `3.5.x` patch release is fine for the gRPC client: the vendored surface is stable within the minor. The REST client needs Canton `3.5.10` or later, the first patch that serves `POST /v2/state/active-contracts-page`, which every REST active-contract-set read pages over.
+
+A weekly cross-version matrix, described below, runs the live-ledger suites against the baseline Canton release, other 3.5 patches and a non-gating LocalNet unreleased (`dev`) cell, and publishes a results table per run.
+
 ## Cells
 
 The workflow's `include:` list is the single source of truth for which cells run. There are
@@ -13,7 +34,7 @@ three kinds:
 - **Baseline.** The Canton release the SDK's vendored protos and JSON Ledger API spec are
   pinned at (`<CantonVersion>` in `Directory.Build.props`), on the matching
   [canton-localnet](https://github.com/peacefulstudio/canton-localnet) release tag.
-- **Other 3.5 patches.** Canton 3.5.17, reached through the Splice 0.8.1 images. New 3.5
+- **Other 3.5 patches.** Canton 3.5.18, the previous baseline, and Canton 3.5.17. New 3.5
   patches are added as canton-localnet releases ship them. A cell takes a canton-localnet
   release tag and, when no release carries that patch, overrides the Splice image tag on a
   release whose compose tree is unchanged across those Splice releases.

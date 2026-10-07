@@ -9,6 +9,7 @@ using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
 using Daml.Codegen.Testing.Conformance.SubmitShapes;
 using Xunit;
+using PairTuple = Daml.Runtime.Stdlib.Tuple2<Daml.Runtime.Contracts.ContractId<Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>, Daml.Runtime.Stdlib.Optional<Daml.Runtime.Contracts.ContractId<Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>>>;
 
 namespace Daml.Codegen.Testing.Conformance.Tests;
 
@@ -42,7 +43,7 @@ public class TryPairAsyncTests
             }));
 
     [Fact]
-    public async Task TryPairAsync_projects_the_first_ticket_and_no_ephemeral_when_the_ledger_omits_the_trailing_None()
+    public async Task TryPairAsync_returns_the_tuple_with_an_empty_Optional_when_the_ledger_omits_the_trailing_None()
     {
         var wireResult = DamlRecord.Create(new DamlField("_1", new DamlContractId("first-ticket")));
         using var client = ClientCommitting(PairExercised(wireResult));
@@ -50,13 +51,13 @@ public class TryPairAsyncTests
         var outcome = await Desk.TryPairAsync(client, new TicketDesk.Pair(false), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>().Subject.Result;
-        result.Ticket.Value.Should().Be("first-ticket");
-        result.Ephemeral.Should().BeNull();
+        var result = outcome.Should().BeOfType<ExerciseOutcome<PairTuple>.One>().Subject.Result;
+        result._1.Value.Should().Be("first-ticket");
+        result._2.HasValue.Should().BeFalse();
     }
 
     [Fact]
-    public async Task TryPairAsync_projects_the_first_ticket_and_no_ephemeral_when_the_ledger_sends_an_explicit_None()
+    public async Task TryPairAsync_returns_the_tuple_with_an_empty_Optional_when_the_ledger_sends_an_explicit_None()
     {
         var wireResult = DamlRecord.Create(
             new DamlField("_1", new DamlContractId("first-ticket")),
@@ -66,13 +67,13 @@ public class TryPairAsyncTests
         var outcome = await Desk.TryPairAsync(client, new TicketDesk.Pair(false), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>().Subject.Result;
-        result.Ticket.Value.Should().Be("first-ticket");
-        result.Ephemeral.Should().BeNull();
+        var result = outcome.Should().BeOfType<ExerciseOutcome<PairTuple>.One>().Subject.Result;
+        result._1.Value.Should().Be("first-ticket");
+        result._2.HasValue.Should().BeFalse();
     }
 
     [Fact]
-    public async Task TryPairAsync_projects_both_contract_ids_when_the_trailing_Optional_is_present()
+    public async Task TryPairAsync_returns_both_contract_ids_when_the_trailing_Optional_is_present()
     {
         var wireResult = DamlRecord.Create(
             new DamlField("_1", new DamlContractId("first-ticket")),
@@ -82,9 +83,9 @@ public class TryPairAsyncTests
         var outcome = await Desk.TryPairAsync(client, new TicketDesk.Pair(true), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = outcome.Should().BeOfType<ExerciseOutcome<PairResult>.One>().Subject.Result;
-        result.Ticket.Value.Should().Be("first-ticket");
-        result.Ephemeral!.Value.Should().Be("second-ephemeral");
+        var result = outcome.Should().BeOfType<ExerciseOutcome<PairTuple>.One>().Subject.Result;
+        result._1.Value.Should().Be("first-ticket");
+        result._2.GetValueOrThrow().Value.Should().Be("second-ephemeral");
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public class TryPairAsyncTests
         var outcome = await Desk.TryPairAsync(client, new TicketDesk.Pair(false), Patron,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<PairResult>.CommittedUndecodable>()
+        outcome.Should().BeOfType<ExerciseOutcome<PairTuple>.CommittedUndecodable>()
             .Which.UpdateId.Should().Be("upd-pair");
     }
 }

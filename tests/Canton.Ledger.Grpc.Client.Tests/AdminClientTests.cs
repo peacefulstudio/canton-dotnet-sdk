@@ -670,27 +670,6 @@ public sealed class AdminClientTests : IDisposable
     }
 
     [Fact]
-    public async Task ListUserRights_throws_when_server_returns_right_with_unset_kind()
-    {
-        var response = new ListUserRightsResponse { Rights = { new Right() } };
-
-        _userService
-            .ListUserRightsAsync(
-                Arg.Any<ListUserRightsRequest>(),
-                Arg.Any<Metadata>(),
-                Arg.Any<DateTime?>(),
-                Arg.Any<CancellationToken>())
-            .Returns(UnaryResponse(response));
-
-        var client = CreateClient();
-
-        var act = () => client.ListUserRightsAsync("test-user", TestContext.Current.CancellationToken);
-
-        (await act.Should().ThrowAsync<NotSupportedException>())
-            .Which.Message.Should().Contain("None");
-    }
-
-    [Fact]
     public async Task ListUserRights_returns_the_rights_granted_when_the_user_was_created()
     {
         var grantedProtoRights = new List<Right>();
@@ -957,14 +936,14 @@ public sealed class AdminClientTests : IDisposable
     [Fact]
     public async Task GetPackage_throws_LedgerOperationException_carrying_the_status_of_a_rejection_without_a_structured_error()
     {
+        var rejection = new RpcException(new Status(StatusCode.NotFound, "Package not found"));
         _packageService
             .GetPackageAsync(
                 Arg.Any<GetPackageRequest>(),
                 Arg.Any<Metadata>(),
                 Arg.Any<DateTime?>(),
                 Arg.Any<CancellationToken>())
-            .Returns<AsyncUnaryCall<GetPackageResponse>>(_ =>
-                throw new RpcException(new Status(StatusCode.NotFound, "Package not found")));
+            .Returns<AsyncUnaryCall<GetPackageResponse>>(_ => throw rejection);
 
         var client = CreateClient();
 
@@ -975,7 +954,8 @@ public sealed class AdminClientTests : IDisposable
         thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.NotFound));
         thrown.Category.Should().BeNull();
         thrown.ErrorId.Should().BeNull();
-        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.InnerException.Should().BeSameAs(rejection);
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]

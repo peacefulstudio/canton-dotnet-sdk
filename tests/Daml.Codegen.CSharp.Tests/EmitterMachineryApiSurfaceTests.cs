@@ -22,7 +22,6 @@ public class EmitterMachineryApiSurfaceTests
             typeof(DamlTypeMapper),
             typeof(PackageEmitContext),
             typeof(TypeReferenceQualifier),
-            typeof(ICrossPackageResolver),
             typeof(DarCrossPackageResolver),
             typeof(PartyAnalysis),
             typeof(DamlWrappedOptional),

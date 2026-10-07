@@ -54,13 +54,13 @@ public partial class CodeGenEdgeCaseTests
 
         // Assert
         files.Should().NotContain(
-            f => f.RelativePath.EndsWith("/Holding.cs", StringComparison.Ordinal),
+            f => f.RelativePath.EndsWith("/Holding.cs", global::System.StringComparison.Ordinal),
             "the marker carries the interface's identity, so the LF record beside it has nothing left to emit");
         files.Should().Contain(
-            f => f.RelativePath.EndsWith("/IHolding.cs", StringComparison.Ordinal),
+            f => f.RelativePath.EndsWith("/IHolding.cs", global::System.StringComparison.Ordinal),
             "dropping the record must not drop the marker with it");
         files.Should().NotContain(
-            f => f.Content.Contains("record Holding :", StringComparison.Ordinal),
+            f => f.Content.Contains("record Holding :", global::System.StringComparison.Ordinal),
             "no other file may pick the declaration up either");
     }
 
@@ -94,12 +94,12 @@ public partial class CodeGenEdgeCaseTests
         // Act
         var files = generator.Generate(dar);
         var holdingFile = files.FirstOrDefault(f =>
-            f.RelativePath.EndsWith("Holding.cs", StringComparison.Ordinal));
+            f.RelativePath.EndsWith("Holding.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         holdingFile.Should().NotBeNull();
         var code = holdingFile!.Content;
-        code.Should().Contain("public sealed record Holding(\n    [property: DamlFieldAttribute(\"amount\")] decimal Amount\n) : IDamlRecord");
+        code.Should().Contain("public sealed record Holding(\n    [property: global::Daml.Runtime.Data.DamlFieldAttribute(\"amount\")] decimal Amount\n) : global::Daml.Runtime.Data.IDamlRecord");
         code.Should().NotContain(": ITemplate");
         code.Should().NotContain("InvalidOperationException");
     }
@@ -155,7 +155,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar).ToList();
-        var tokenFiles = files.Where(f => f.RelativePath.EndsWith("/Token.cs", StringComparison.Ordinal)).ToList();
+        var tokenFiles = files.Where(f => f.RelativePath.EndsWith("/Token.cs", global::System.StringComparison.Ordinal)).ToList();
 
         // Assert — the codegen flattens all modules into one namespace, so the two
         // Token declarations would collide on a file path. Skipping the shadowed one
@@ -163,10 +163,10 @@ public partial class CodeGenEdgeCaseTests
         tokenFiles.Should().ContainSingle(
             "module A's Token is shadowed by its interface and emits nothing, so only module B's is left");
         tokenFiles[0].Content.Should().Contain(
-            "public sealed record Token(\n    [property: DamlFieldAttribute(\"symbol\")] string Symbol\n) : IDamlRecord",
+            "public sealed record Token(\n    [property: global::Daml.Runtime.Data.DamlFieldAttribute(\"symbol\")] string Symbol\n) : global::Daml.Runtime.Data.IDamlRecord",
             "module B's Token must keep its IDamlRecord regular-record shape");
         files.Should().Contain(
-            f => f.RelativePath.EndsWith("/IToken.cs", StringComparison.Ordinal),
+            f => f.RelativePath.EndsWith("/IToken.cs", global::System.StringComparison.Ordinal),
             "module A's interface marker is still emitted");
     }
 
@@ -239,7 +239,7 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var ifaceFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("IHolding.cs", StringComparison.Ordinal));
+        var ifaceFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("IHolding.cs", global::System.StringComparison.Ordinal));
 
         // Assert — the file contains both the interface declaration AND a
         // sibling static extensions class with one method per choice.
@@ -247,29 +247,29 @@ public partial class CodeGenEdgeCaseTests
         var code = ifaceFile!.Content;
 
         // Marker-typed interface declaration is unchanged
-        code.Should().Contain("public interface IHolding : IDamlInterface");
+        code.Should().Contain("public interface IHolding : global::Daml.Runtime.Contracts.IDamlInterface");
 
         // Sibling extensions class with one method per choice
         code.Should().Contain("public static class IHoldingExtensions");
 
         code.Should().Contain(
-            "public static async Task<ExerciseOutcome<Transfer_Result>> TryTransferAsync(",
+            "public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Test.Holding.Transfer_Result>> TryTransferAsync(",
             "a record-argument choice returns ExerciseOutcome<Transfer_Result> — the choice's own return type, decoded through the choice descriptor's ResultDecoder rather than the raw ExerciseOutcome<TransactionResult>");
-        code.Should().Contain("this ContractId<IHolding> contractId,");
+        code.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,");
         code.Should().Contain("ILedgerWriter client,");
         code.Should().Contain("Transfer argument,");
         code.Should().Contain("SubmitterInfo submitter,");
         // Internally builds the command via the runtime For<TOwner> helper — the
         // wire-level template_id slot carries IHolding.InterfaceId, and the choice
         // argument is serialised via argument.ToRecord().
-        code.Should().Contain("ExerciseCommand.For<IHolding>(contractId, new ChoiceName(\"Transfer\"), argument.ToRecord())");
+        code.Should().Contain("global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName(\"Transfer\"), argument.ToRecord())");
         code.Should().Contain("client." + TrySubmitSingleArgumentOrder);
 
         // Unit-argument choice: no `argument` parameter, DamlUnit.Instance is passed
         code.Should().Contain(
-            "public static async Task<ExerciseOutcome<DamlUnit>> TryLockAsync(\n        this ContractId<IHolding> contractId,\n        ILedgerWriter client,\n        SubmitterInfo submitter,",
+            "public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryLockAsync(\n        this global::Daml.Runtime.Contracts.ContractId<IHolding> contractId,\n        global::Daml.Ledger.Abstractions.ILedgerWriter client,\n        global::Daml.Runtime.Commands.SubmitterInfo submitter,",
             "a single-line signature assertion cannot tell one emitted parameter list from another, so it is pinned verbatim — a failure here means the exerciser signature changed or the emitter's indentation did, not that the assertion is wrong");
-        code.Should().Contain("ExerciseCommand.For<IHolding>(contractId, new ChoiceName(\"Lock\"), DamlUnit.Instance)");
+        code.Should().Contain("global::Daml.Runtime.Commands.ExerciseCommand.For<IHolding>(contractId, new global::Daml.Runtime.Commands.ChoiceName(\"Lock\"), global::Daml.Runtime.Data.DamlUnit.Instance)");
     }
 
     [Fact]
@@ -301,11 +301,11 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var ifaceFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("IMarker.cs", StringComparison.Ordinal));
+        var ifaceFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("IMarker.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         ifaceFile.Should().NotBeNull();
-        ifaceFile!.Content.Should().Contain("public interface IMarker : IDamlInterface");
+        ifaceFile!.Content.Should().Contain("public interface IMarker : global::Daml.Runtime.Contracts.IDamlInterface");
         ifaceFile.Content.Should().NotContain("IMarkerExtensions");
     }
 
@@ -359,17 +359,17 @@ public partial class CodeGenEdgeCaseTests
 
         // Act
         var files = generator.Generate(dar);
-        var walletFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wallet.cs", StringComparison.Ordinal));
+        var walletFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wallet.cs", global::System.StringComparison.Ordinal));
 
         // Assert
         walletFile.Should().NotBeNull();
         var code = walletFile!.Content;
 
-        code.Should().Contain("ContractId<IHolding>");
-        code.Should().Contain("IReadOnlyList<ContractId<IHolding>>");
-        code.Should().Contain("ContractId<IHolding>?", "an Optional interface contract id maps to the nullable marker");
-        code.Should().NotContain("ContractId<Holding>", "the interface-shadowed record name must never appear as a contract-id type argument");
-        code.Should().Contain("ContractId<Account>", "contract ids to a real template are unchanged");
+        code.Should().Contain("global::Daml.Runtime.Contracts.ContractId<global::Test.Holding.IHolding>");
+        code.Should().Contain("global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Test.Holding.IHolding>>");
+        code.Should().Contain("global::Daml.Runtime.Contracts.ContractId<global::Test.Holding.IHolding>?", "an Optional interface contract id maps to the nullable marker");
+        code.Should().NotContain("global::Daml.Runtime.Contracts.ContractId<Holding>", "the interface-shadowed record name must never appear as a contract-id type argument");
+        code.Should().Contain("global::Daml.Runtime.Contracts.ContractId<global::Test.Holding.Account>", "contract ids to a real template are unchanged");
     }
 
     #endregion

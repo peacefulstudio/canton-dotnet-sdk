@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -13,15 +14,6 @@ public class VariantEmitterTests
 {
     private const string LocalPackageId = "pkg-id";
     private const string ModuleName = "Test.Module";
-
-    private sealed class StubResolver : ICrossPackageResolver
-    {
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => typeRef.Name;
-
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) => null;
-    }
 
     private static DamlPackage Package(params DamlDataType[] dataTypes) =>
         new()
@@ -49,8 +41,9 @@ public class VariantEmitterTests
     private static string Emit(string targetName, DamlDataType[] packageTypes, bool generateXmlDocs = true)
     {
         var options = Options(generateXmlDocs);
-        var context = PackageEmitContext.ForPackage(Package(packageTypes), options, isMainPackage: true).Single();
-        var resolver = new StubResolver();
+        var resolution = RealResolution.Of(Package(packageTypes), options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
         var mapper = new DamlTypeMapper(context, resolver);
         var emitter = new VariantEmitter(context, resolver, options, mapper);
         var target = packageTypes.First(d => d.Name == targetName);
@@ -108,7 +101,7 @@ public class VariantEmitterTests
     {
         var output = EmitVariant(Variant("PaymentMethod", Ctor("Cash"), Ctor("Card", Text)), generateXmlDocs);
 
-        LineBefore(output, "public abstract record PaymentMethod : IDamlVariant<PaymentMethod>").Should().Be(
+        LineBefore(output, "public abstract record PaymentMethod : global::Daml.Runtime.Data.IDamlVariant<PaymentMethod>").Should().Be(
             "[global::System.Text.Json.Serialization.JsonConverter(typeof(global::Daml.Runtime.Serialization.DamlVariantJsonConverterFactory))]");
     }
 
@@ -152,7 +145,7 @@ public class VariantEmitterTests
             Ctor("Card", Text),
             Ctor("BankTransfer", Text)));
 
-        output.Should().Contain("public abstract record PaymentMethod : IDamlVariant");
+        output.Should().Contain("public abstract record PaymentMethod : global::Daml.Runtime.Data.IDamlVariant");
         output.Should().Contain("public abstract string Tag { get; }");
 
         output.Should().Contain("public sealed record Cash() : PaymentMethod");
@@ -189,17 +182,17 @@ public class VariantEmitterTests
     {
         var output = EmitVariant(Variant("Maybe", Ctor("Nothing"), Ctor("Just", Text)));
 
-        output.Should().Contain("public abstract record Maybe : IDamlVariant");
-        output.Should().Contain("public abstract DamlVariant ToVariant();");
+        output.Should().Contain("public abstract record Maybe : global::Daml.Runtime.Data.IDamlVariant");
+        output.Should().Contain("public abstract global::Daml.Runtime.Data.DamlVariant ToVariant();");
         output.Should().NotContain("ToRecord");
         output.Should().NotContain("NotImplementedException");
 
-        output.Should().Contain("public override DamlVariant ToVariant() => DamlVariant.Create(\"Nothing\", DamlUnit.Instance);");
-        output.Should().Contain("public override DamlVariant ToVariant() => DamlVariant.Create(\"Just\", new DamlText(Value));");
+        output.Should().Contain("public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create(\"Nothing\", global::Daml.Runtime.Data.DamlUnit.Instance);");
+        output.Should().Contain("public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create(\"Just\", new global::Daml.Runtime.Data.DamlText(Value));");
 
-        output.Should().Contain("public static Maybe FromVariant(DamlVariant variant) =>");
+        output.Should().Contain("public static Maybe FromVariant(global::Daml.Runtime.Data.DamlVariant variant) =>");
         output.Should().Contain("\"Nothing\" => new Nothing(),");
-        output.Should().Contain("\"Just\" => new Just(variant.Value.As<DamlText>().Value),");
+        output.Should().Contain("\"Just\" => new Just(variant.Value.As<global::Daml.Runtime.Data.DamlText>().Value),");
     }
 
     [Fact]
@@ -212,8 +205,8 @@ public class VariantEmitterTests
 
         output.Should().NotContain(".ToRecord()");
         output.Should().NotContain(".FromRecord(");
-        output.Should().Contain("public override DamlVariant ToVariant() => DamlVariant.Create(\"Wrap\", Value.ToVariant());");
-        output.Should().Contain("\"Wrap\" => new Wrap(Inner.FromVariant(variant.Value.As<DamlVariant>())),");
+        output.Should().Contain("public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create(\"Wrap\", Value.ToVariant());");
+        output.Should().Contain("\"Wrap\" => new Wrap(global::Test.Package.Test.Module.Inner.FromVariant(variant.Value.As<global::Daml.Runtime.Data.DamlVariant>())),");
     }
 
     [Fact]
@@ -261,7 +254,7 @@ public class VariantEmitterTests
         output.Should().NotContain("Just constructor.</summary>");
         output.Should().NotContain("/// <inheritdoc />");
 
-        output.Should().Contain("public abstract record Maybe : IDamlVariant");
+        output.Should().Contain("public abstract record Maybe : global::Daml.Runtime.Data.IDamlVariant");
         output.Should().Contain("public sealed record Just(string Value) : Maybe");
     }
 }

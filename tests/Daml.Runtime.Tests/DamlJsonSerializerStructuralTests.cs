@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Daml.Runtime.Data;
 using Daml.Runtime.Serialization;
 using AwesomeAssertions;
@@ -199,6 +200,102 @@ public class DamlJsonSerializerStructuralTests
     }
 
     [Fact]
+    public void Serialize_should_pin_the_duplicate_label_message_naming_the_label()
+    {
+        var record = DamlRecord.Create(
+            DamlField.Create("amount", new DamlNumeric(1.0m)),
+            DamlField.Create("amount", new DamlNumeric(2.0m)));
+
+        var act = () => DamlJsonSerializer.Serialize(record);
+
+        act.Should().Throw<JsonException>().WithMessage(
+            "Duplicate field label 'amount' in Daml record; refusing to serialize last-wins");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_record_field_label()
+    {
+        var record = DamlRecord.Create(DamlField.Create("", new DamlText("x")));
+
+        var act = () => DamlJsonSerializer.Serialize(record);
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml record field label must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_record_field_label_in_a_nested_record()
+    {
+        var inner = DamlRecord.Create(DamlField.Create("", new DamlText("x")));
+        var outer = DamlRecord.Create(DamlField.Create("inner", inner));
+
+        var act = () => DamlJsonSerializer.Serialize(outer);
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml record field label must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_record_field_label_through_the_value_overload()
+    {
+        DamlValue record = DamlRecord.Create(DamlField.Create("", new DamlText("x")));
+
+        var act = () => DamlJsonSerializer.Serialize(record);
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml record field label must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_variant_constructor()
+    {
+        var act = () => DamlJsonSerializer.Serialize(DamlVariant.Create("", new DamlInt64(1)));
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml variant constructor must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_variant_constructor_inside_a_record_field()
+    {
+        var record = DamlRecord.Create(DamlField.Create("outcome", DamlVariant.Create("", DamlUnit.Instance)));
+
+        var act = () => DamlJsonSerializer.Serialize(record);
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml variant constructor must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_enum_constructor()
+    {
+        var act = () => DamlJsonSerializer.Serialize(DamlEnum.Create(""));
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml enum constructor must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_throw_JsonException_for_an_empty_enum_constructor_inside_a_list()
+    {
+        var list = DamlList.Create(DamlEnum.Create("Hearts"), DamlEnum.Create(""));
+
+        var act = () => DamlJsonSerializer.Serialize(list);
+
+        act.Should().Throw<JsonException>().WithMessage("A Daml enum constructor must not be empty");
+    }
+
+    [Fact]
+    public void Serialize_should_keep_accepting_an_empty_TextMap_key()
+    {
+        var map = DamlTextMap.Create(("", new DamlInt64(1)));
+
+        DamlJsonSerializer.Serialize(map).Should().Be("""{"":"1"}""");
+    }
+
+    [Fact]
+    public void Serialize_should_keep_accepting_an_empty_TextMap_key_inside_a_record()
+    {
+        var record = DamlRecord.Create(DamlField.Create("attributes", DamlTextMap.Create(("", new DamlInt64(1)))));
+
+        DamlJsonSerializer.Serialize(record).Should().Be("""{"attributes":{"":"1"}}""");
+    }
+
+    [Fact]
     public void DeserializeRecord_should_throw_JsonException_for_duplicate_json_properties()
     {
         var act = () => DamlJsonSerializer.DeserializeRecord("""{"amount":"1.0","amount":"2.0"}""");
@@ -309,6 +406,116 @@ public class DamlJsonSerializerStructuralTests
         DamlJsonSerializer.Serialize(DamlOptional.Some(new DamlText("present")))
             .Should().Be("\"present\"");
     }
+
+    [Fact]
+    public void Serialize_should_render_a_flat_Some_of_None_as_an_array_of_an_empty_array()
+    {
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.None)).Should().Be("[[]]");
+    }
+
+    [Fact]
+    public void Serialize_should_render_a_flat_Some_of_Some_as_an_array_of_an_array()
+    {
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.Some(new DamlText("x"))))
+            .Should().Be("""[["x"]]""");
+    }
+
+    [Fact]
+    public void Serialize_should_render_a_flat_Some_of_Some_of_None_with_one_array_level_per_optional()
+    {
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.Some(DamlOptional.None)))
+            .Should().Be("[[[]]]");
+    }
+
+    [Fact]
+    public void Serialize_should_write_a_flat_Some_of_None_differently_from_None()
+    {
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.None))
+            .Should().NotBe(DamlJsonSerializer.Serialize(DamlOptional.None));
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.None))
+            .Should().NotBe(DamlJsonSerializer.Serialize(DamlOptionalChain.None));
+    }
+
+    [Fact]
+    public void Serialize_should_write_a_flat_optional_carrying_a_chain_level_with_one_array_level_per_optional()
+    {
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptionalChain.Some(new DamlText("x"))))
+            .Should().Be("""[["x"]]""");
+    }
+
+    [Fact]
+    public void Serialize_should_write_a_flat_optional_inside_a_chain_level_as_an_array()
+    {
+        DamlJsonSerializer.Serialize(DamlOptionalChain.Some(DamlOptional.Some(new DamlText("x"))))
+            .Should().Be("""[["x"]]""");
+        DamlJsonSerializer.Serialize(DamlOptionalChain.Some(DamlOptional.None))
+            .Should().Be("[[]]");
+    }
+
+    [Fact]
+    public void Serialize_should_leave_a_flat_Some_of_a_non_optional_payload_unchanged()
+    {
+        DamlJsonSerializer.Serialize(DamlOptional.Some(DamlList.Create(new DamlText("a"))))
+            .Should().Be("""["a"]""");
+        DamlJsonSerializer.Serialize(DamlOptional.Some(new DamlInt64(7))).Should().Be("\"7\"");
+    }
+
+    [Fact]
+    public void Serialize_should_nest_a_flat_optional_found_inside_a_record_field()
+    {
+        var record = new DamlRecord(null, [new DamlField("maybeMaybeNote", DamlOptional.Some(DamlOptional.None))]);
+
+        DamlJsonSerializer.Serialize(record).Should().Be("""{"maybeMaybeNote":[[]]}""");
+    }
+
+    [Fact]
+    public void Serialize_should_not_collapse_an_optional_inside_a_list_element_of_a_flat_optional()
+    {
+        var list = DamlList.Create(DamlOptional.Some(DamlOptional.None), DamlOptional.None);
+
+        DamlJsonSerializer.Serialize(DamlOptional.Some(list)).Should().Be("[[[]],null]");
+    }
+
+    [Fact]
+    public void Serialize_should_write_every_flat_nested_shape_as_the_encoding_the_participant_accepted()
+    {
+        using var matrix = DamlLfJsonReaderWireSamplesTests.LoadWireSample("probe_nested_optional_matrix.json");
+        var acceptedSomeNone = DamlLfJsonReaderWireSamplesTests.ResolvePayload(
+            matrix.RootElement, "response/array_of_empty_array/sent");
+        var acceptedSomeSome = DamlLfJsonReaderWireSamplesTests.ResolvePayload(
+            matrix.RootElement, "response/array_of_array_of_text/sent");
+
+        SameJson(DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.None)), acceptedSomeNone)
+            .Should().BeTrue();
+        SameJson(
+                DamlJsonSerializer.Serialize(DamlOptional.Some(DamlOptional.Some(new DamlText("deep")))),
+                acceptedSomeSome)
+            .Should().BeTrue();
+    }
+
+    private static bool SameJson(string written, JsonElement captured) =>
+        JsonNode.DeepEquals(JsonNode.Parse(written), JsonNode.Parse(captured.GetRawText()));
+
+    [Theory]
+    [MemberData(nameof(FlatNestedShapesWithTheirChainEquivalent))]
+    public void Serialize_then_ReadRecord_should_recover_the_chain_equivalent_of_a_flat_nested_optional(
+        DamlValue flat, DamlValue expectedChain)
+    {
+        var json = DamlJsonSerializer.Serialize(new DamlRecord(null, [new DamlField("nestedNote", flat)]));
+
+        var read = DamlLfJsonReader.ReadRecord<DamlLfJsonReaderWireSamplesTests.NestedNoteHolder>(json);
+
+        read.GetRequiredField("nestedNote").Should().Be(expectedChain);
+    }
+
+    public static TheoryData<DamlValue, DamlValue> FlatNestedShapesWithTheirChainEquivalent => new()
+    {
+        { DamlOptional.Some(DamlOptional.None), DamlOptionalChain.Some(DamlOptionalChain.None) },
+        {
+            DamlOptional.Some(DamlOptional.Some(new DamlText("deep"))),
+            DamlOptionalChain.Some(DamlOptionalChain.Some(new DamlText("deep")))
+        },
+    };
 
     [Fact]
     public void Serialize_should_never_emit_a_nested_optional_encoding_the_participant_rejected()

@@ -17,37 +17,37 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// Generated from Daml record TransferInstructionView
 /// </summary>
 public sealed record TransferInstructionView(
-    ContractId<ITransferInstruction>? OriginalInstructionCid,
-    Transfer Transfer,
-    DateTimeOffset? ExpiresAt,
-    IReadOnlyDictionary<TransferInstructionAction, IReadOnlyList<IReadOnlyList<Party>>> AvailableActions,
+    global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>? OriginalInstructionCid,
+    global::Splice.Api.Token.TransferInstructionV2.Transfer Transfer,
+    global::System.DateTimeOffset? ExpiresAt,
+    global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> AvailableActions,
     global::Splice.Api.Token.MetadataV1.Metadata Meta
-) : ITransferInstruction, IDamlRecord<TransferInstructionView>
+) : global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction, global::Daml.Runtime.Data.IDamlRecord<TransferInstructionView>
 {
     /// <summary>The Daml field <c>originalInstructionCid</c>.</summary>
-    [DamlFieldAttribute("originalInstructionCid")]
-    public ContractId<ITransferInstruction>? OriginalInstructionCid { get; init; } = OriginalInstructionCid;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("originalInstructionCid")]
+    public global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>? OriginalInstructionCid { get; init; } = OriginalInstructionCid;
 
     /// <summary>The Daml field <c>transfer</c>.</summary>
-    [DamlFieldAttribute("transfer")]
-    public Transfer Transfer { get; init; } = Transfer;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("transfer")]
+    public global::Splice.Api.Token.TransferInstructionV2.Transfer Transfer { get; init; } = Transfer;
 
     /// <summary>The Daml field <c>expiresAt</c>.</summary>
-    [DamlFieldAttribute("expiresAt")]
-    public DateTimeOffset? ExpiresAt { get; init; } = ExpiresAt;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("expiresAt")]
+    public global::System.DateTimeOffset? ExpiresAt { get; init; } = ExpiresAt;
 
-    private readonly IReadOnlyDictionary<TransferInstructionAction, IReadOnlyList<IReadOnlyList<Party>>> _availableActions = DamlFieldCollections.Copy(AvailableActions);
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> _availableActions = global::Daml.Runtime.Data.DamlFieldCollections.Copy(AvailableActions);
 
     /// <summary>The Daml field <c>availableActions</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("availableActions")]
-    public IReadOnlyDictionary<TransferInstructionAction, IReadOnlyList<IReadOnlyList<Party>>> AvailableActions
+    [global::Daml.Runtime.Data.DamlFieldAttribute("availableActions")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>> AvailableActions
     {
         get => _availableActions;
-        init => _availableActions = DamlFieldCollections.Copy(value);
+        init => _availableActions = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>The Daml field <c>meta</c>.</summary>
-    [DamlFieldAttribute("meta")]
+    [global::Daml.Runtime.Data.DamlFieldAttribute("meta")]
     public global::Splice.Api.Token.MetadataV1.Metadata Meta { get; init; } = Meta;
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -55,54 +55,54 @@ public sealed record TransferInstructionView(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(TransferInstructionView? other) =>
         other is not null
-        && EqualityComparer<ContractId<ITransferInstruction>?>.Default.Equals(OriginalInstructionCid, other.OriginalInstructionCid)
-        && EqualityComparer<Transfer>.Default.Equals(Transfer, other.Transfer)
-        && EqualityComparer<DateTimeOffset?>.Default.Equals(ExpiresAt, other.ExpiresAt)
-        && DamlFieldCollections.Equal(AvailableActions, other.AvailableActions)
-        && EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>?>.Default.Equals(OriginalInstructionCid, other.OriginalInstructionCid)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.TransferInstructionV2.Transfer>.Default.Equals(Transfer, other.Transfer)
+        && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset?>.Default.Equals(ExpiresAt, other.ExpiresAt)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(AvailableActions, other.AvailableActions)
+        && global::System.Collections.Generic.EqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default.Equals(Meta, other.Meta);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(OriginalInstructionCid);
         hash.Add(Transfer);
         hash.Add(ExpiresAt);
-        hash.Add(DamlFieldCollections.Hash(AvailableActions));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(AvailableActions));
         hash.Add(Meta);
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("originalInstructionCid", OriginalInstructionCid is { } __OriginalInstructionCid ? new DamlOptional(__OriginalInstructionCid.ToDamlValue()) : DamlOptional.None),
-        DamlField.Create("transfer", Transfer.ToRecord()),
-        DamlField.Create("expiresAt", ExpiresAt is { } __ExpiresAt ? new DamlOptional(new DamlTimestamp(__ExpiresAt)) : DamlOptional.None),
-        DamlField.Create("availableActions", new DamlGenMap(AvailableActions.Select(kv => ((DamlValue)kv.Key.ToVariant(), (DamlValue)new DamlList(kv.Value.Select(x => (DamlValue)new DamlList(x.Select(x => (DamlValue)x.ToDamlValue()).ToList())).ToList()))).ToList())),
-        DamlField.Create("meta", Meta.ToRecord())
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("originalInstructionCid", OriginalInstructionCid is { } __OriginalInstructionCid ? new global::Daml.Runtime.Data.DamlOptional(__OriginalInstructionCid.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("transfer", Transfer.ToRecord()),
+        global::Daml.Runtime.Data.DamlField.Create("expiresAt", ExpiresAt is { } __ExpiresAt ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTimestamp(__ExpiresAt)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("availableActions", new global::Daml.Runtime.Data.DamlGenMap(AvailableActions.Select(kv => ((global::Daml.Runtime.Data.DamlValue)kv.Key.ToVariant(), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlList(kv.Value.Select(x => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlList(x.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())).ToList()))).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static TransferInstructionView FromRecord(DamlRecord record) => new TransferInstructionView(
-        OriginalInstructionCid: record.GetOptionalField("originalInstructionCid").AsOptional().HasValue ? new ContractId<ITransferInstruction>(record.GetOptionalField("originalInstructionCid").AsOptional().Value!.As<DamlContractId>().Value) : null,
-        Transfer: Transfer.FromRecord(record.GetRequiredField("transfer").As<DamlRecord>()),
-        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<DamlTimestamp>().Value : null,
-        AvailableActions: (IReadOnlyDictionary<TransferInstructionAction, IReadOnlyList<IReadOnlyList<Party>>>)record.GetRequiredField("availableActions").As<DamlGenMap>().Entries.ToDictionary(kv => TransferInstructionAction.FromVariant(kv.Key.As<DamlVariant>()), kv => (IReadOnlyList<IReadOnlyList<Party>>)kv.Value.As<DamlList>().Values.Select(x => (IReadOnlyList<Party>)x.As<DamlList>().Values.Select(x => Party.FromDamlValue(x.As<DamlParty>())).ToList()).ToList()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<DamlRecord>())
+    public static TransferInstructionView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferInstructionView(
+        OriginalInstructionCid: record.GetOptionalField("originalInstructionCid").AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>(record.GetOptionalField("originalInstructionCid").AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null,
+        Transfer: global::Splice.Api.Token.TransferInstructionV2.Transfer.FromRecord(record.GetRequiredField("transfer").As<global::Daml.Runtime.Data.DamlRecord>()),
+        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        AvailableActions: (global::System.Collections.Generic.IReadOnlyDictionary<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction, global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>>)record.GetRequiredField("availableActions").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction.FromVariant(kv.Key.As<global::Daml.Runtime.Data.DamlVariant>()), kv => (global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>>)kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)x.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList()).ToList()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("originalInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "originalInstructionCid"), context.Field("originalInstructionCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))),
-            DamlField.Create("transfer", Transfer.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transfer"), context.Field("transfer"))),
-            DamlField.Create("expiresAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "expiresAt"), context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
-            DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => TransferInstructionAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))),
-            DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(5);
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "originalInstructionCid", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("originalInstructionCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("transfer", global::Splice.Api.Token.TransferInstructionV2.Transfer.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transfer"), context.Field("transfer"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "expiresAt", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("expiresAt"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("availableActions", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "availableActions"), context.Field("availableActions"), (__json0, __ctx0) => global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction.__ReadDamlLfJson(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(__json1, __ctx1, (__json2, __ctx2) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json2, __ctx2))))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
 }

@@ -23,14 +23,14 @@ namespace Splice.Ans.AmuletConversionRateFeed;
 /// Generated from Daml template Splice.Ans.AmuletConversionRateFeed:AmuletConversionRateFeed
 /// </summary>
 public sealed partial record AmuletConversionRateFeed(
-    [property: DamlFieldAttribute("publisher")] Party Publisher,
-    [property: DamlFieldAttribute("dso")] Party Dso,
-    [property: DamlFieldAttribute("nextUpdateAfter")] DateTimeOffset? NextUpdateAfter,
-    [property: DamlFieldAttribute("amuletConversionRate")] decimal AmuletConversionRate
-) : ITemplate, IHasChoices<AmuletConversionRateFeed>, IDamlRecord<AmuletConversionRateFeed>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("publisher")] global::Daml.Runtime.Data.Party Publisher,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("dso")] global::Daml.Runtime.Data.Party Dso,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("nextUpdateAfter")] global::System.DateTimeOffset? NextUpdateAfter,
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amuletConversionRate")] decimal AmuletConversionRate
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<AmuletConversionRateFeed>, global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1", "Splice.Ans.AmuletConversionRateFeed", "AmuletConversionRateFeed");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1", "Splice.Ans.AmuletConversionRateFeed", "AmuletConversionRateFeed");
 
     /// <summary>Gets the package ID.</summary>
     public static string PackageId => "cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1";
@@ -39,91 +39,91 @@ public sealed partial record AmuletConversionRateFeed(
     public static string PackageName => "splice-amulet-name-service";
 
     /// <summary>Gets the package version.</summary>
-    public static Version PackageVersion { get; } = new(0, 1, 24);
+    public static global::System.Version PackageVersion { get; } = new(0, 1, 24);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
+    public static global::Daml.Runtime.Contracts.DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, global::Daml.Runtime.Contracts.DamlTypeKind.Template, PackageName);
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("publisher", Publisher.ToDamlValue()),
-        DamlField.Create("dso", Dso.ToDamlValue()),
-        DamlField.Create("nextUpdateAfter", NextUpdateAfter is { } __NextUpdateAfter ? new DamlOptional(new DamlTimestamp(__NextUpdateAfter)) : DamlOptional.None),
-        DamlField.Create("amuletConversionRate", new DamlNumeric(AmuletConversionRate))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("publisher", Publisher.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("dso", Dso.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("nextUpdateAfter", NextUpdateAfter is { } __NextUpdateAfter ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlTimestamp(__NextUpdateAfter)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("amuletConversionRate", new global::Daml.Runtime.Data.DamlNumeric(AmuletConversionRate))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AmuletConversionRateFeed FromRecord(DamlRecord record) => new AmuletConversionRateFeed(
-        Publisher: Party.FromDamlValue(record.GetRequiredField("publisher").As<DamlParty>()),
-        Dso: Party.FromDamlValue(record.GetRequiredField("dso").As<DamlParty>()),
-        NextUpdateAfter: record.GetOptionalField("nextUpdateAfter").AsOptional().HasValue ? record.GetOptionalField("nextUpdateAfter").AsOptional().Value!.As<DamlTimestamp>().Value : null,
-        AmuletConversionRate: record.GetRequiredField("amuletConversionRate").As<DamlNumeric>().Value
+    public static AmuletConversionRateFeed FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed(
+        Publisher: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("publisher").As<global::Daml.Runtime.Data.DamlParty>()),
+        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso").As<global::Daml.Runtime.Data.DamlParty>()),
+        NextUpdateAfter: record.GetOptionalField("nextUpdateAfter").AsOptional().HasValue ? record.GetOptionalField("nextUpdateAfter").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        AmuletConversionRate: record.GetRequiredField("amuletConversionRate").As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("publisher", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "publisher"), context.Field("publisher"))),
-            DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))),
-            DamlField.Create("nextUpdateAfter", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.OptionalField(json, "nextUpdateAfter"), context.Field("nextUpdateAfter"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0))),
-            DamlField.Create("amuletConversionRate", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletConversionRate"), context.Field("amuletConversionRate")))
-        );
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(4);
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("publisher", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "publisher"), context.Field("publisher"))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("dso", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "dso"), context.Field("dso"))));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nextUpdateAfter", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nextUpdateAfter"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(__json0, __ctx0)));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("amuletConversionRate", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletConversionRate"), context.Field("amuletConversionRate"))));
+        return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
 
     /// <summary>
     /// Exercise the AmuletConversionRateFeed_ArchiveAsDso choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<AmuletConversionRateFeed, AmuletConversionRateFeed_ArchiveAsDso, AmuletConversionRateFeed_ArchiveAsDsoResult> ChoiceAmuletConversionRateFeed_ArchiveAsDso { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<AmuletConversionRateFeed, AmuletConversionRateFeed_ArchiveAsDso, global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult> ChoiceAmuletConversionRateFeed_ArchiveAsDso { get; } = new()
     {
-        Name = new ChoiceName("AmuletConversionRateFeed_ArchiveAsDso"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("AmuletConversionRateFeed_ArchiveAsDso"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => AmuletConversionRateFeed_ArchiveAsDso.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => AmuletConversionRateFeed_ArchiveAsDsoResultExtensions.FromDamlEnum(val.As<DamlEnum>()),
-        ArgumentJsonReader = (json, context) => AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDso.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => AmuletConversionRateFeed_ArchiveAsDsoResultExtensions.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => AmuletConversionRateFeed_ArchiveAsDso.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResultExtensions.FromDamlEnum(val.As<global::Daml.Runtime.Data.DamlEnum>()),
+        ArgumentJsonReader = (json, context) => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDso.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResultExtensions.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>
     /// Exercise the AmuletConversionRateFeed_Update choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<AmuletConversionRateFeed, AmuletConversionRateFeed_Update, AmuletConversionRateFeed_UpdateResult> ChoiceAmuletConversionRateFeed_Update { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<AmuletConversionRateFeed, AmuletConversionRateFeed_Update, global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult> ChoiceAmuletConversionRateFeed_Update { get; } = new()
     {
-        Name = new ChoiceName("AmuletConversionRateFeed_Update"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("AmuletConversionRateFeed_Update"),
         Consuming = true,
         ArgumentEncoder = arg => arg.ToRecord(),
-        ArgumentDecoder = val => AmuletConversionRateFeed_Update.FromRecord(val.As<DamlRecord>()),
-        ResultDecoder = val => AmuletConversionRateFeed_UpdateResult.FromRecord(val.As<DamlRecord>()),
-        ArgumentJsonReader = (json, context) => AmuletConversionRateFeed.AmuletConversionRateFeed_Update.__ReadDamlLfJson(json, context),
-        ResultJsonReader = (json, context) => AmuletConversionRateFeed_UpdateResult.__ReadDamlLfJson(json, context),
+        ArgumentDecoder = val => AmuletConversionRateFeed_Update.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ArgumentJsonReader = (json, context) => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.AmuletConversionRateFeed_Update.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult.__ReadDamlLfJson(json, context),
     };
 
     /// <summary>
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static Choice<AmuletConversionRateFeed, DamlUnit, DamlUnit> ChoiceArchive { get; } = new()
+    public static global::Daml.Runtime.Commands.Choice<AmuletConversionRateFeed, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
-        Name = new ChoiceName("Archive"),
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
-        ArgumentEncoder = _ => DamlRecord.Create(),
-        ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
-        ResultDecoder = _ => DamlUnit.Instance,
+        ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),
+        ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException("Choice 'Archive' argument must decode to an empty record."),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
         ArgumentJsonReader = (json, context) =>
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create();
+            return global::Daml.Runtime.Data.DamlRecord.Create();
         },
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceAmuletConversionRateFeed_ArchiveAsDso, ChoiceAmuletConversionRateFeed_Update, ChoiceArchive];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceAmuletConversionRateFeed_ArchiveAsDso, ChoiceAmuletConversionRateFeed_Update, ChoiceArchive];
 
 }
 
@@ -149,16 +149,16 @@ public static class AmuletConversionRateFeedSubmissionExtensions
     /// <param name="payload">The contract payload.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static Task<ExerciseOutcome<ContractId<AmuletConversionRateFeed>>> TryCreateAsync(
-        this ILedgerWriter client,
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<AmuletConversionRateFeed>>> TryCreateAsync(
+        this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         AmuletConversionRateFeed payload,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(payload);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(payload);
 
-        SubmitterInfo submitter = payload.Publisher;
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Publisher;
 
         return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<AmuletConversionRateFeed>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
     }
@@ -171,10 +171,10 @@ public static class AmuletConversionRateFeedSubmissionExtensions
     /// choice.
     /// </summary>
     /// <param name="payload">The contract payload.</param>
-    public static IReadOnlyList<Party> Observers(AmuletConversionRateFeed payload)
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party> Observers(AmuletConversionRateFeed payload)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        return new Party[]
+        global::System.ArgumentNullException.ThrowIfNull(payload);
+        return new global::Daml.Runtime.Data.Party[]
         {
             payload.Dso
         };
@@ -182,7 +182,7 @@ public static class AmuletConversionRateFeedSubmissionExtensions
 }
 
 /// <summary>
-/// Async exerciser extensions for <see cref="AmuletConversionRateFeed"/> contract IDs whose choices
+/// Async exerciser extensions for <see cref="global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed"/> contract IDs whose choices
 /// return a non-contract-id payload (Decimal, records, lists, Unit, etc.).
 /// Each method submits the choice via
 /// <c>SingleCommandExtensions.TrySubmitSingleAsync</c> and lifts the typed result
@@ -195,22 +195,22 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand AmuletConversionRateFeed_ArchiveAsDsoCommand(
-        this ContractId<AmuletConversionRateFeed> contractId,
-        AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDso argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand AmuletConversionRateFeed_ArchiveAsDsoCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> contractId,
+        global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDso argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            AmuletConversionRateFeed.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.TemplateId,
             contractId,
-            new ChoiceName("AmuletConversionRateFeed_ArchiveAsDso"),
+            new global::Daml.Runtime.Commands.ChoiceName("AmuletConversionRateFeed_ArchiveAsDso"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the AmuletConversionRateFeed_ArchiveAsDso choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>AmuletConversionRateFeed_ArchiveAsDsoResult</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -222,18 +222,18 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<AmuletConversionRateFeed_ArchiveAsDsoResult>> TryAmuletConversionRateFeed_ArchiveAsDsoAsync(
-        this ContractId<AmuletConversionRateFeed> contractId,
-        ILedgerWriter client,
-        AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDso argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult>> TryAmuletConversionRateFeed_ArchiveAsDsoAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDso argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AmuletConversionRateFeed_ArchiveAsDsoCommand(argument);
 
@@ -247,22 +247,22 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
     /// <param name="argument">The choice argument.</param>
-    public static ExerciseCommand AmuletConversionRateFeed_UpdateCommand(
-        this ContractId<AmuletConversionRateFeed> contractId,
-        AmuletConversionRateFeed.AmuletConversionRateFeed_Update argument)
+    public static global::Daml.Runtime.Commands.ExerciseCommand AmuletConversionRateFeed_UpdateCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> contractId,
+        global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.AmuletConversionRateFeed_Update argument)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        ArgumentNullException.ThrowIfNull(argument);
-        return new ExerciseCommand(
-            AmuletConversionRateFeed.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.TemplateId,
             contractId,
-            new ChoiceName("AmuletConversionRateFeed_Update"),
+            new global::Daml.Runtime.Commands.ChoiceName("AmuletConversionRateFeed_Update"),
             argument.ToRecord());
     }
 
     /// <summary>
     /// Exercises the AmuletConversionRateFeed_Update choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>AmuletConversionRateFeed_UpdateResult</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -274,18 +274,18 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<AmuletConversionRateFeed_UpdateResult>> TryAmuletConversionRateFeed_UpdateAsync(
-        this ContractId<AmuletConversionRateFeed> contractId,
-        ILedgerWriter client,
-        AmuletConversionRateFeed.AmuletConversionRateFeed_Update argument,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult>> TryAmuletConversionRateFeed_UpdateAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.AmuletConversionRateFeed_Update argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.AmuletConversionRateFeed_UpdateCommand(argument);
 
@@ -298,20 +298,20 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Archive choice on this contract id.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
-    public static ExerciseCommand ArchiveCommand(
-        this ContractId<AmuletConversionRateFeed> contractId)
+    public static global::Daml.Runtime.Commands.ExerciseCommand ArchiveCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> contractId)
     {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new ExerciseCommand(
-            AmuletConversionRateFeed.TemplateId,
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.TemplateId,
             contractId,
-            new ChoiceName("Archive"),
-            DamlRecord.Create());
+            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>
     /// Exercises the Archive choice and lifts the choice's exercise result to
-    /// <see cref="ExerciseOutcome{T}"/> over <c>DamlUnit</c>. Structured Canton/Daml errors
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
     /// and infrastructure/transport errors pass through unchanged.
     /// </summary>
     /// <param name="contractId">The contract on which to exercise the choice.</param>
@@ -322,17 +322,17 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task<ExerciseOutcome<DamlUnit>> TryArchiveAsync(
-        this ContractId<AmuletConversionRateFeed> contractId,
-        ILedgerWriter client,
-        SubmitterInfo submitter,
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
         string? workflowId = null,
-        CommandId? commandId = null,
-        TimeSpan? timeout = null,
-        Func<CommandsSubmission, CommandsSubmission>? configure = null,
-        CancellationToken cancellationToken = default)
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(client);
 
         var command = contractId.ArchiveCommand();
 
@@ -341,90 +341,12 @@ public static class AmuletConversionRateFeedNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
-    private static ExerciseOutcome<AmuletConversionRateFeed_ArchiveAsDsoResult> ProjectAmuletConversionRateFeed_ArchiveAsDsoResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, AmuletConversionRateFeed.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, AmuletConversionRateFeed.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "AmuletConversionRateFeed_ArchiveAsDso", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = AmuletConversionRateFeed.ChoiceAmuletConversionRateFeed_ArchiveAsDso.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<AmuletConversionRateFeed_ArchiveAsDsoResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<AmuletConversionRateFeed_ArchiveAsDsoResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult> ProjectAmuletConversionRateFeed_ArchiveAsDsoResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.ChoiceAmuletConversionRateFeed_ArchiveAsDso, contractId);
 
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'AmuletConversionRateFeed_ArchiveAsDso' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult> ProjectAmuletConversionRateFeed_UpdateResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.ChoiceAmuletConversionRateFeed_Update, contractId);
 
-    private static ExerciseOutcome<AmuletConversionRateFeed_UpdateResult> ProjectAmuletConversionRateFeed_UpdateResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, AmuletConversionRateFeed.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, AmuletConversionRateFeed.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "AmuletConversionRateFeed_Update", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = AmuletConversionRateFeed.ChoiceAmuletConversionRateFeed_Update.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<AmuletConversionRateFeed_UpdateResult>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<AmuletConversionRateFeed_UpdateResult>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'AmuletConversionRateFeed_Update' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
-
-    private static ExerciseOutcome<DamlUnit> ProjectArchiveResult(TransactionResult tx, string contractId)
-    {
-        foreach (var exercised in tx.ExercisedEvents)
-        {
-            if (string.Equals(exercised.ContractId, contractId, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.ModuleName, AmuletConversionRateFeed.TemplateId.ModuleName, StringComparison.Ordinal)
-                && string.Equals(exercised.TemplateId.EntityName, AmuletConversionRateFeed.TemplateId.EntityName, StringComparison.Ordinal)
-                && string.Equals(exercised.ChoiceName.Value, "Archive", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var decoded = AmuletConversionRateFeed.ChoiceArchive.ResultDecoder!(exercised.ExerciseResult);
-                    return new ExerciseOutcome<DamlUnit>.One(decoded);
-                }
-                catch (global::System.Exception ex) when (ex is not global::System.OperationCanceledException)
-                {
-                    return new ExerciseOutcome<DamlUnit>.CommittedUndecodable(tx.UpdateId, ex.Message, ex);
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Submission succeeded but no 'Archive' exercise on contract '{contractId}' was recorded on transaction {tx.UpdateId}. " +
-            "The transaction returned for this submission carries no exercised event for it. " +
-            "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
-            "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
-            "request the LEDGER_EFFECTS shape with verbose events.");
-    }
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed.ChoiceArchive, contractId);
 }

@@ -148,6 +148,93 @@ public class CrossTransportOptionalMatrixTests
         decoded.Should().Be(shapeCase.Original);
     }
 
+    private static readonly DamlField OwnerField = DamlField.Create("owner", new DamlParty("alice::1220"));
+
+    private static DamlRecord TrailingNoteRecord(params DamlField[] fields) => DamlRecord.Create(fields);
+
+    private sealed record UntypedRow(
+        string Name, Func<string, DamlRecord> ReadJson, string Json, DamlRecord Expected);
+
+    private static readonly UntypedRow[] UntypedRows =
+    [
+        new(
+            "OptionalTails omitted trailing flat None",
+            json => DamlLfJsonReader.ReadRecord<OptionalTails>(json),
+            """{"owner":"alice::1220","midNote":"mid","inner":{"text":"inner","remark":"remark"}}""",
+            DamlRecord.Create(
+                OwnerField,
+                DamlField.Create("midNote", DamlOptional.Some(new DamlText("mid"))),
+                DamlField.Create("inner", TrailingNoteRecord(
+                    DamlField.Create("text", new DamlText("inner")),
+                    DamlField.Create("remark", DamlOptional.Some(new DamlText("remark"))))))),
+        new(
+            "OptionalTails omitted trailing flat None inside a nested record",
+            json => DamlLfJsonReader.ReadRecord<OptionalTails>(json),
+            """{"owner":"alice::1220","midNote":"mid","inner":{"text":"inner"},"tailNote":"tail"}""",
+            DamlRecord.Create(
+                OwnerField,
+                DamlField.Create("midNote", DamlOptional.Some(new DamlText("mid"))),
+                DamlField.Create("inner", TrailingNoteRecord(DamlField.Create("text", new DamlText("inner")))),
+                DamlField.Create("tailNote", DamlOptional.Some(new DamlText("tail"))))),
+        new(
+            "OptionalTails mid-record None written as null",
+            json => DamlLfJsonReader.ReadRecord<OptionalTails>(json),
+            """{"owner":"alice::1220","midNote":null,"inner":{"text":"inner"}}""",
+            DamlRecord.Create(
+                OwnerField,
+                DamlField.Create("midNote", DamlOptional.None),
+                DamlField.Create("inner", TrailingNoteRecord(DamlField.Create("text", new DamlText("inner")))))),
+        new(
+            "NestedOptionalTails omitted trailing nested None",
+            json => DamlLfJsonReader.ReadRecord<NestedOptionalTails>(json),
+            """{"owner":"alice::1220"}""",
+            DamlRecord.Create(OwnerField)),
+        new(
+            "AnnotationView omitted trailing nested None",
+            json => DamlLfJsonReader.ReadRecord<AnnotationView>(json),
+            """{"label":"view"}""",
+            DamlRecord.Create(DamlField.Create("label", new DamlText("view")))),
+        new(
+            "NestedOptionalShapes omitted nested None in a generic instantiation and a tuple component",
+            json => DamlLfJsonReader.ReadRecord<NestedOptionalShapes>(json),
+            """{"owner":"alice::1220","boxed":{},"trailing":{"_1":"head"}}""",
+            DamlRecord.Create(
+                OwnerField,
+                DamlField.Create("boxed", DamlRecord.Create()),
+                DamlField.Create("trailing", DamlRecord.Create(DamlField.Create("_1", new DamlText("head")))))),
+        new(
+            "Enrollment key omitted trailing None tuple component",
+            json => ReadKey(Enrollment.Key.KeyJsonReader, json),
+            """{"_1":"alice::1220"}""",
+            DamlRecord.Create(DamlField.Create("_1", new DamlParty("alice::1220")))),
+        new(
+            "Registration key omitted trailing nested None tuple component",
+            json => ReadKey(Registration.Key.KeyJsonReader, json),
+            """{"_1":"alice::1220"}""",
+            DamlRecord.Create(DamlField.Create("_1", new DamlParty("alice::1220")))),
+    ];
+
+    private static DamlRecord ReadKey(Func<JsonElement, DamlLfJsonDecodeContext, DamlValue> keyJsonReader, string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return (DamlRecord)keyJsonReader(document.RootElement, DamlLfJsonDecodeContext.Root("key"));
+    }
+
+    public static TheoryData<string> UntypedRowNames() => [.. UntypedRows.Select(row => row.Name)];
+
+    [Theory]
+    [MemberData(nameof(UntypedRowNames))]
+    public void OptionalMatrix_reads_the_same_untyped_record_through_the_JSON_reader_as_through_the_gRPC_converter(string name)
+    {
+        var row = UntypedRows.Single(candidate => candidate.Name == name);
+
+        var viaJson = row.ReadJson(row.Json);
+        var viaGrpc = ThroughGrpcConverter(row.Expected);
+
+        viaJson.Should().Be(row.Expected);
+        viaGrpc.Should().Be(row.Expected);
+    }
+
     [Fact]
     public void OptionalMatrix_serializes_the_three_states_as_the_ledger_writes_them()
     {

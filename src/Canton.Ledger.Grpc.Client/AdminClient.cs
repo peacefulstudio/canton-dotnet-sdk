@@ -119,13 +119,14 @@ internal sealed partial class AdminClient : IAdminClient
 
     /// <inheritdoc />
     public Task<string> GetParticipantIdAsync(CancellationToken cancellationToken = default) =>
-        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetParticipantIdResponse, string>(
+        _invoker.InvokeTracedAsync<AdminClient, GetParticipantIdResponse, string>(
+            LedgerCallKind.Read,
             ActivitySource,
             PartyManagementService.Descriptor,
             "GetParticipantId",
             (headers, deadline, token) => _partyService.GetParticipantIdAsync(new GetParticipantIdRequest(), headers, deadline, token),
             response => response.ParticipantId,
-            cancellationToken));
+            cancellationToken);
 
     /// <inheritdoc />
     public Task<PartyDetails> AllocatePartyAsync(
@@ -135,7 +136,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ArgumentNullException.ThrowIfNull(partyIdHint);
 
-        return SurfaceLedgerErrorsAsync(AllocatePartyCoreAsync(partyIdHint, synchronizerId, cancellationToken));
+        return AllocatePartyCoreAsync(partyIdHint, synchronizerId, cancellationToken);
     }
 
     private async Task<PartyDetails> AllocatePartyCoreAsync(
@@ -150,6 +151,7 @@ internal sealed partial class AdminClient : IAdminClient
             request.SynchronizerId = synchronizer.Value;
 
         var details = await _invoker.InvokeTracedAsync<AdminClient, AllocatePartyResponse, PartyDetails>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             PartyManagementService.Descriptor,
             "AllocateParty",
@@ -178,13 +180,14 @@ internal sealed partial class AdminClient : IAdminClient
         var request = new GetPartiesRequest();
         request.Parties.AddRange(parties.Select(party => party.Value));
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetPartiesResponse, IReadOnlyList<PartyDetails>>(
+        return _invoker.InvokeTracedAsync<AdminClient, GetPartiesResponse, IReadOnlyList<PartyDetails>>(
+            LedgerCallKind.Read,
             ActivitySource,
             PartyManagementService.Descriptor,
             "GetParties",
             (headers, deadline, token) => _partyService.GetPartiesAsync(request, headers, deadline, token),
             response => response.PartyDetails.Select(FromProtoPartyDetails).ToList(),
-            cancellationToken));
+            cancellationToken);
     }
 
     /// <inheritdoc />
@@ -193,7 +196,8 @@ internal sealed partial class AdminClient : IAdminClient
     {
         var request = new ListKnownPartiesRequest { PageSize = PageSize };
 
-        return SurfaceLedgerErrorsAsync(_invoker.ExecuteTracedAsync<AdminClient, IReadOnlyList<PartyDetails>>(
+        return _invoker.ExecuteTracedAsync<AdminClient, IReadOnlyList<PartyDetails>>(
+            LedgerCallKind.Read,
             ActivitySource,
             PartyManagementService.Descriptor,
             "ListKnownParties",
@@ -209,7 +213,7 @@ internal sealed partial class AdminClient : IAdminClient
                 },
                 response => response.NextPageToken,
                 response => response.PartyDetails.Select(FromProtoPartyDetails)),
-            cancellationToken));
+            cancellationToken);
     }
 
     /// <inheritdoc />
@@ -221,7 +225,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        return SurfaceLedgerErrorsAsync(CreateUserCoreAsync(userId, primaryParty, rights, cancellationToken));
+        return CreateUserCoreAsync(userId, primaryParty, rights, cancellationToken);
     }
 
     private async Task<UserDetails> CreateUserCoreAsync(
@@ -238,6 +242,7 @@ internal sealed partial class AdminClient : IAdminClient
             request.Rights.AddRange(rights.Select(ToProtoRight));
 
         var details = await _invoker.InvokeTracedAsync<AdminClient, CreateUserResponse, UserDetails>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             UserManagementService.Descriptor,
             "CreateUser",
@@ -263,7 +268,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ArgumentNullException.ThrowIfNull(userId);
 
-        return SurfaceLedgerErrorsAsync(GetUserCoreAsync(userId, cancellationToken));
+        return GetUserCoreAsync(userId, cancellationToken);
     }
 
     private async Task<UserDetails?> GetUserCoreAsync(string userId, CancellationToken cancellationToken)
@@ -271,6 +276,7 @@ internal sealed partial class AdminClient : IAdminClient
         try
         {
             return await _invoker.InvokeTracedAsync<AdminClient, GetUserResponse, UserDetails?>(
+                LedgerCallKind.Read,
                 ActivitySource,
                 UserManagementService.Descriptor,
                 "GetUser",
@@ -294,7 +300,7 @@ internal sealed partial class AdminClient : IAdminClient
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentNullException.ThrowIfNull(rights);
 
-        return SurfaceLedgerErrorsAsync(GrantUserRightsCoreAsync(userId, rights, cancellationToken));
+        return GrantUserRightsCoreAsync(userId, rights, cancellationToken);
     }
 
     private async Task GrantUserRightsCoreAsync(
@@ -306,6 +312,7 @@ internal sealed partial class AdminClient : IAdminClient
         request.Rights.AddRange(rights.Select(ToProtoRight));
 
         await _invoker.InvokeTracedAsync<AdminClient, GrantUserRightsResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             UserManagementService.Descriptor,
             "GrantUserRights",
@@ -328,7 +335,7 @@ internal sealed partial class AdminClient : IAdminClient
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentNullException.ThrowIfNull(rights);
 
-        return SurfaceLedgerErrorsAsync(RevokeUserRightsCoreAsync(userId, rights, cancellationToken));
+        return RevokeUserRightsCoreAsync(userId, rights, cancellationToken);
     }
 
     private async Task RevokeUserRightsCoreAsync(
@@ -340,6 +347,7 @@ internal sealed partial class AdminClient : IAdminClient
         request.Rights.AddRange(rights.Select(ToProtoRight));
 
         await _invoker.InvokeTracedAsync<AdminClient, RevokeUserRightsResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             UserManagementService.Descriptor,
             "RevokeUserRights",
@@ -360,7 +368,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ArgumentNullException.ThrowIfNull(userId);
 
-        return SurfaceLedgerErrorsAsync(ListUserRightsCoreAsync(userId, cancellationToken));
+        return ListUserRightsCoreAsync(userId, cancellationToken);
     }
 
     private async Task<IReadOnlyList<UserRight>?> ListUserRightsCoreAsync(
@@ -370,6 +378,7 @@ internal sealed partial class AdminClient : IAdminClient
         try
         {
             return await _invoker.InvokeTracedAsync<AdminClient, ListUserRightsResponse, IReadOnlyList<UserRight>?>(
+                LedgerCallKind.Read,
                 ActivitySource,
                 UserManagementService.Descriptor,
                 "ListUserRights",
@@ -391,7 +400,8 @@ internal sealed partial class AdminClient : IAdminClient
     {
         var request = new ListUsersRequest { PageSize = PageSize };
 
-        return SurfaceLedgerErrorsAsync(_invoker.ExecuteTracedAsync<AdminClient, IReadOnlyList<UserDetails>>(
+        return _invoker.ExecuteTracedAsync<AdminClient, IReadOnlyList<UserDetails>>(
+            LedgerCallKind.Read,
             ActivitySource,
             UserManagementService.Descriptor,
             "ListUsers",
@@ -407,7 +417,7 @@ internal sealed partial class AdminClient : IAdminClient
                 },
                 response => response.NextPageToken,
                 response => response.Users.Select(FromProtoUser)),
-            cancellationToken));
+            cancellationToken);
     }
 
     /// <inheritdoc />
@@ -434,7 +444,8 @@ internal sealed partial class AdminClient : IAdminClient
             UpdateMask = new FieldMask { Paths = { update.UpdatePaths() } },
         };
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateUserResponse, UserDetails>(
+        return _invoker.InvokeTracedAsync<AdminClient, UpdateUserResponse, UserDetails>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             UserManagementService.Descriptor,
             "UpdateUser",
@@ -442,7 +453,7 @@ internal sealed partial class AdminClient : IAdminClient
             response => FromProtoUser(response.User),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -454,14 +465,15 @@ internal sealed partial class AdminClient : IAdminClient
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         var request = new DeleteUserRequest { UserId = userId, IdentityProviderId = identityProviderId ?? string.Empty };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, DeleteUserResponse>(
+        return _invoker.InvokeTracedAsync<AdminClient, DeleteUserResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             UserManagementService.Descriptor,
             "DeleteUser",
             (headers, deadline, token) => _userService.DeleteUserAsync(request, headers, deadline, token),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -479,14 +491,15 @@ internal sealed partial class AdminClient : IAdminClient
             SourceIdentityProviderId = sourceIdentityProviderId ?? string.Empty,
             TargetIdentityProviderId = targetIdentityProviderId ?? string.Empty,
         };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateUserIdentityProviderIdResponse>(
+        return _invoker.InvokeTracedAsync<AdminClient, UpdateUserIdentityProviderIdResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             UserManagementService.Descriptor,
             "UpdateUserIdentityProviderId",
             (headers, deadline, token) => _userService.UpdateUserIdentityProviderIdAsync(request, headers, deadline, token),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -509,14 +522,15 @@ internal sealed partial class AdminClient : IAdminClient
             UpdateMask = new FieldMask { Paths = { update.UpdatePaths() } },
         };
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdatePartyDetailsResponse, PartyDetails>(
+        return _invoker.InvokeTracedAsync<AdminClient, UpdatePartyDetailsResponse, PartyDetails>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             PartyManagementService.Descriptor,
             "UpdatePartyDetails",
             (headers, deadline, token) => _partyService.UpdatePartyDetailsAsync(request, headers, deadline, token),
             response => FromProtoPartyDetails(response.PartyDetails),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -532,13 +546,14 @@ internal sealed partial class AdminClient : IAdminClient
             SourceIdentityProviderId = sourceIdentityProviderId ?? string.Empty,
             TargetIdentityProviderId = targetIdentityProviderId ?? string.Empty,
         };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdatePartyIdentityProviderIdResponse>(
+        return _invoker.InvokeTracedAsync<AdminClient, UpdatePartyIdentityProviderIdResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             PartyManagementService.Descriptor,
             "UpdatePartyIdentityProviderId",
             (headers, deadline, token) => _partyService.UpdatePartyIdentityProviderIdAsync(request, headers, deadline, token),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -557,13 +572,14 @@ internal sealed partial class AdminClient : IAdminClient
             State = ToProtoCommandState(state),
             Limit = (uint)(limit ?? 0),
         };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetCommandStatusResponse, IReadOnlyList<CommandStatus>>(
+        return _invoker.InvokeTracedAsync<AdminClient, GetCommandStatusResponse, IReadOnlyList<CommandStatus>>(
+            LedgerCallKind.Read,
             ActivitySource,
             CommandInspectionService.Descriptor,
             "GetCommandStatus",
             (headers, deadline, token) => _commandInspectionService.GetCommandStatusAsync(request, headers, deadline, token),
             response => response.CommandStatus.Select(FromProtoCommandStatus).ToList(),
-            cancellationToken));
+            cancellationToken);
     }
 
     private static ObjectMeta? ToProtoMetadata(IReadOnlyDictionary<string, string>? annotations)
@@ -595,17 +611,18 @@ internal sealed partial class AdminClient : IAdminClient
     };
 
     private static CommandStatus FromProtoCommandStatus(Com.Daml.Ledger.Api.V2.Admin.CommandStatus status) =>
-        new(
-            status.Completion?.CommandId ?? string.Empty,
-            FromProtoCommandState(status.State),
-            status.Started?.ToDateTimeOffset(),
-            status.Completed?.ToDateTimeOffset(),
-            status.SynchronizerId);
+        MalformedResponse.Decoding(status, present => new CommandStatus(
+            present.Completion?.CommandId ?? string.Empty,
+            FromProtoCommandState(present.State),
+            present.Started?.ToDateTimeOffset(),
+            present.Completed?.ToDateTimeOffset(),
+            present.SynchronizerId));
 
     /// <inheritdoc />
     public Task<IReadOnlyList<PackageDetails>> ListKnownPackagesAsync(
         CancellationToken cancellationToken = default) =>
-        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, ListKnownPackagesResponse, IReadOnlyList<PackageDetails>>(
+        _invoker.InvokeTracedAsync<AdminClient, ListKnownPackagesResponse, IReadOnlyList<PackageDetails>>(
+            LedgerCallKind.Read,
             ActivitySource,
             PackageManagementService.Descriptor,
             "ListKnownPackages",
@@ -617,12 +634,13 @@ internal sealed partial class AdminClient : IAdminClient
                     p.Version,
                     p.PackageSize <= long.MaxValue
                         ? (long)p.PackageSize
-                        : throw new InvalidOperationException(
-                            $"Package '{p.PackageId}' reports a size of {p.PackageSize} bytes, which exceeds the supported maximum of {long.MaxValue}."),
-                    (p.KnownSince ?? throw new InvalidOperationException(
-                        $"Package '{p.PackageId}' is missing the required known_since timestamp.")).ToDateTimeOffset()))
+                        : throw MalformedResponse.WithDetail(
+                            $"package '{p.PackageId}' reports a size of {p.PackageSize} bytes, which exceeds the supported maximum of {long.MaxValue}."),
+                    MalformedResponse.Decoding(
+                        p.KnownSince ?? throw MalformedResponse.MissingRequiredField($"package '{p.PackageId}' has no known_since"),
+                        knownSince => knownSince.ToDateTimeOffset())))
                 .ToList(),
-            cancellationToken));
+            cancellationToken);
 
     /// <inheritdoc />
     public Task<IdentityProviderConfig> CreateIdentityProviderConfigAsync(
@@ -632,14 +650,15 @@ internal sealed partial class AdminClient : IAdminClient
         ArgumentNullException.ThrowIfNull(config);
 
         var request = new CreateIdentityProviderConfigRequest { IdentityProviderConfig = ToProtoIdentityProviderConfig(config) };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, CreateIdentityProviderConfigResponse, IdentityProviderConfig>(
+        return _invoker.InvokeTracedAsync<AdminClient, CreateIdentityProviderConfigResponse, IdentityProviderConfig>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             IdentityProviderConfigService.Descriptor,
             "CreateIdentityProviderConfig",
             (headers, deadline, token) => _identityProviderConfigService.CreateIdentityProviderConfigAsync(request, headers, deadline, token),
             response => FromProtoIdentityProviderConfig(response.IdentityProviderConfig),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -649,7 +668,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
 
-        return SurfaceLedgerErrorsAsync(GetIdentityProviderConfigCoreAsync(identityProviderId, cancellationToken));
+        return GetIdentityProviderConfigCoreAsync(identityProviderId, cancellationToken);
     }
 
     private async Task<IdentityProviderConfig?> GetIdentityProviderConfigCoreAsync(
@@ -659,6 +678,7 @@ internal sealed partial class AdminClient : IAdminClient
         try
         {
             return await _invoker.InvokeTracedAsync<AdminClient, GetIdentityProviderConfigResponse, IdentityProviderConfig?>(
+                LedgerCallKind.Read,
                 ActivitySource,
                 IdentityProviderConfigService.Descriptor,
                 "GetIdentityProviderConfig",
@@ -676,13 +696,14 @@ internal sealed partial class AdminClient : IAdminClient
     /// <inheritdoc />
     public Task<IReadOnlyList<IdentityProviderConfig>> ListIdentityProviderConfigsAsync(
         CancellationToken cancellationToken = default) =>
-        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, ListIdentityProviderConfigsResponse, IReadOnlyList<IdentityProviderConfig>>(
+        _invoker.InvokeTracedAsync<AdminClient, ListIdentityProviderConfigsResponse, IReadOnlyList<IdentityProviderConfig>>(
+            LedgerCallKind.Read,
             ActivitySource,
             IdentityProviderConfigService.Descriptor,
             "ListIdentityProviderConfigs",
             (headers, deadline, token) => _identityProviderConfigService.ListIdentityProviderConfigsAsync(new ListIdentityProviderConfigsRequest(), headers, deadline, token),
             response => response.IdentityProviderConfigs.Select(FromProtoIdentityProviderConfig).ToList(),
-            cancellationToken));
+            cancellationToken);
 
     /// <inheritdoc />
     public Task<IdentityProviderConfig> UpdateIdentityProviderConfigAsync(
@@ -705,14 +726,15 @@ internal sealed partial class AdminClient : IAdminClient
             },
             UpdateMask = new FieldMask { Paths = { update.UpdatePaths() } },
         };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateIdentityProviderConfigResponse, IdentityProviderConfig>(
+        return _invoker.InvokeTracedAsync<AdminClient, UpdateIdentityProviderConfigResponse, IdentityProviderConfig>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             IdentityProviderConfigService.Descriptor,
             "UpdateIdentityProviderConfig",
             (headers, deadline, token) => _identityProviderConfigService.UpdateIdentityProviderConfigAsync(request, headers, deadline, token),
             response => FromProtoIdentityProviderConfig(response.IdentityProviderConfig),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -723,13 +745,14 @@ internal sealed partial class AdminClient : IAdminClient
         ArgumentException.ThrowIfNullOrWhiteSpace(identityProviderId);
 
         var request = new DeleteIdentityProviderConfigRequest { IdentityProviderId = identityProviderId };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, DeleteIdentityProviderConfigResponse>(
+        return _invoker.InvokeTracedAsync<AdminClient, DeleteIdentityProviderConfigResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             IdentityProviderConfigService.Descriptor,
             "DeleteIdentityProviderConfig",
             (headers, deadline, token) => _identityProviderConfigService.DeleteIdentityProviderConfigAsync(request, headers, deadline, token),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -753,7 +776,8 @@ internal sealed partial class AdminClient : IAdminClient
             request.ExpectedTopologySerial = ToProtoPriorTopologySerial(expectedTopologySerial);
         request.UpdateVettedPackagesForceFlags.AddRange(ToProtoForceFlags(safetyOverrides));
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, UpdateVettedPackagesResponse, VettedPackagesUpdateResult>(
+        return _invoker.InvokeTracedAsync<AdminClient, UpdateVettedPackagesResponse, VettedPackagesUpdateResult>(
+            dryRun ? LedgerCallKind.Read : LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             PackageManagementService.Descriptor,
             "UpdateVettedPackages",
@@ -762,7 +786,7 @@ internal sealed partial class AdminClient : IAdminClient
                 FromProtoVettedPackages(response.PastVettedPackages),
                 FromProtoVettedPackages(response.NewVettedPackages)),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     /// <inheritdoc />
@@ -778,13 +802,14 @@ internal sealed partial class AdminClient : IAdminClient
             SubmissionId = submissionId ?? string.Empty,
             PruneAllDivulgedContracts = pruneAllDivulgedContracts,
         };
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, PruneResponse>(
+        return _invoker.InvokeTracedAsync<AdminClient, PruneResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             ParticipantPruningService.Descriptor,
             "Prune",
             (headers, deadline, token) => _pruningService.PruneAsync(request, headers, deadline, token),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     private static WireIdentityProviderConfig ToProtoIdentityProviderConfig(IdentityProviderConfig config) =>
@@ -797,8 +822,11 @@ internal sealed partial class AdminClient : IAdminClient
             Audience = config.Audience,
         };
 
-    private static IdentityProviderConfig FromProtoIdentityProviderConfig(WireIdentityProviderConfig config) =>
-        new(config.IdentityProviderId, config.IsDeactivated, config.Issuer, config.JwksUrl, config.Audience);
+    private static IdentityProviderConfig FromProtoIdentityProviderConfig(WireIdentityProviderConfig? config) =>
+        MalformedResponse.Decoding(
+            config ?? throw MalformedResponse.MissingRequiredField("the response has no identity_provider_config"),
+            present => new IdentityProviderConfig(
+                present.IdentityProviderId, present.IsDeactivated, present.Issuer, present.JwksUrl, present.Audience));
 
     private static VettedPackagesRef ToProtoPackageSelector(PackageSelector reference) =>
         new()
@@ -847,16 +875,16 @@ internal sealed partial class AdminClient : IAdminClient
     private static VettedPackagesSnapshot? FromProtoVettedPackages(WireVettedPackages? snapshot) =>
         snapshot is null
             ? null
-            : new VettedPackagesSnapshot(
-                snapshot.Packages.Select(package => new VettedPackageEntry(
+            : MalformedResponse.Decoding(snapshot, present => new VettedPackagesSnapshot(
+                present.Packages.Select(package => new VettedPackageEntry(
                     package.PackageId,
                     package.PackageName,
                     package.PackageVersion,
                     package.ValidFromInclusive?.ToDateTimeOffset(),
                     package.ValidUntilExclusive?.ToDateTimeOffset())).ToList(),
-                snapshot.ParticipantId,
-                snapshot.SynchronizerId,
-                snapshot.TopologySerial);
+                present.ParticipantId,
+                present.SynchronizerId,
+                present.TopologySerial));
 
     /// <inheritdoc />
     public Task<PackageArchive> GetPackageAsync(
@@ -865,7 +893,8 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetPackageResponse, PackageArchive>(
+        return _invoker.InvokeTracedAsync<AdminClient, GetPackageResponse, PackageArchive>(
+            LedgerCallKind.Read,
             ActivitySource,
             PackageService.Descriptor,
             "GetPackage",
@@ -875,32 +904,34 @@ internal sealed partial class AdminClient : IAdminClient
                 response.Hash,
                 MapHashFunction(response.HashFunction)),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId)));
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId));
     }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<string>> ListPackagesAsync(CancellationToken cancellationToken = default) =>
-        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, ListPackagesResponse, IReadOnlyList<string>>(
+        _invoker.InvokeTracedAsync<AdminClient, ListPackagesResponse, IReadOnlyList<string>>(
+            LedgerCallKind.Read,
             ActivitySource,
             PackageService.Descriptor,
             "ListPackages",
             (headers, deadline, token) => _packageService.ListPackagesAsync(new ListPackagesRequest(), headers, deadline, token),
             response => response.PackageIds.ToList(),
-            cancellationToken));
+            cancellationToken);
 
     /// <inheritdoc />
     public Task<PackageStatus> GetPackageStatusAsync(string packageId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetPackageStatusResponse, PackageStatus>(
+        return _invoker.InvokeTracedAsync<AdminClient, GetPackageStatusResponse, PackageStatus>(
+            LedgerCallKind.Read,
             ActivitySource,
             PackageService.Descriptor,
             "GetPackageStatus",
             (headers, deadline, token) => _packageService.GetPackageStatusAsync(new GetPackageStatusRequest { PackageId = packageId }, headers, deadline, token),
             response => MapPackageStatus(response.PackageStatus),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId)));
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId));
     }
 
     private static PackageStatus MapPackageStatus(WirePackageStatus status) => status switch
@@ -912,13 +943,16 @@ internal sealed partial class AdminClient : IAdminClient
 
     /// <inheritdoc />
     public Task<DateTimeOffset> GetTimeAsync(CancellationToken cancellationToken = default) =>
-        SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, GetTimeResponse, DateTimeOffset>(
+        _invoker.InvokeTracedAsync<AdminClient, GetTimeResponse, DateTimeOffset>(
+            LedgerCallKind.Read,
             ActivitySource,
             TimeService.Descriptor,
             "GetTime",
             (headers, deadline, token) => _timeService.GetTimeAsync(new GetTimeRequest(), headers, deadline, token),
-            response => response.CurrentTime.ToDateTimeOffset(),
-            cancellationToken));
+            response => MalformedResponse.Decoding(
+                response.CurrentTime ?? throw MalformedResponse.MissingRequiredField("the GetTime response has no current_time"),
+                currentTime => currentTime.ToDateTimeOffset()),
+            cancellationToken);
 
     /// <inheritdoc />
     public Task SetTimeAsync(
@@ -932,13 +966,14 @@ internal sealed partial class AdminClient : IAdminClient
             NewTime = Timestamp.FromDateTimeOffset(newTime),
         };
 
-        return SurfaceLedgerErrorsAsync(_invoker.InvokeTracedAsync<AdminClient, Empty>(
+        return _invoker.InvokeTracedAsync<AdminClient, Empty>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             TimeService.Descriptor,
             "SetTime",
             (headers, deadline, token) => _timeService.SetTimeAsync(request, headers, deadline, token),
             cancellationToken,
-            replayable: false));
+            replayable: false);
     }
 
     private static HashFunction MapHashFunction(WireHashFunction hashFunction) => hashFunction switch
@@ -958,7 +993,8 @@ internal sealed partial class AdminClient : IAdminClient
         if (prefixes is { Count: > 0 })
             request.PackageMetadataFilter = new PackageMetadataFilter { PackageNamePrefixes = { prefixes } };
 
-        return SurfaceLedgerErrorsAsync(_invoker.ExecuteTracedAsync<AdminClient, IReadOnlyList<VettedPackage>>(
+        return _invoker.ExecuteTracedAsync<AdminClient, IReadOnlyList<VettedPackage>>(
+            LedgerCallKind.Read,
             ActivitySource,
             PackageService.Descriptor,
             "ListVettedPackages",
@@ -973,14 +1009,14 @@ internal sealed partial class AdminClient : IAdminClient
                         token).ConfigureAwait(false);
                 },
                 response => response.NextPageToken,
-                response => response.VettedPackages.SelectMany(group =>
+                response => MalformedResponse.Decoding(response, present => present.VettedPackages.SelectMany(group =>
                     group.Packages.Select(p => new VettedPackage(
                         p.PackageId,
                         p.PackageName,
                         p.PackageVersion,
                         group.ParticipantId,
-                        new SynchronizerId(group.SynchronizerId))))),
-            cancellationToken));
+                        new SynchronizerId(group.SynchronizerId)))).ToList())),
+            cancellationToken);
     }
 
     private static async Task<IReadOnlyList<TItem>> FetchAllPagesAsync<TResponse, TItem>(
@@ -1032,7 +1068,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return SurfaceLedgerErrorsAsync(UploadDarCoreAsync(darFile, submissionId, synchronizerId: null, cancellationToken));
+        return UploadDarCoreAsync(darFile, submissionId, synchronizerId: null, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -1044,7 +1080,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return SurfaceLedgerErrorsAsync(UploadDarCoreAsync(darFile, submissionId, synchronizerId, cancellationToken));
+        return UploadDarCoreAsync(darFile, submissionId, synchronizerId, cancellationToken);
     }
 
     private async Task UploadDarCoreAsync(
@@ -1064,6 +1100,7 @@ internal sealed partial class AdminClient : IAdminClient
             request.SynchronizerId = synchronizer.Value;
 
         await _invoker.InvokeTracedAsync<AdminClient, UploadDarFileResponse>(
+            LedgerCallKind.EffectAppliedWrite,
             ActivitySource,
             PackageManagementService.Descriptor,
             "UploadDarFile",
@@ -1087,7 +1124,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return SurfaceLedgerErrorsAsync(ValidateDarCoreAsync(darFile, synchronizerId: null, cancellationToken));
+        return ValidateDarCoreAsync(darFile, synchronizerId: null, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -1098,7 +1135,7 @@ internal sealed partial class AdminClient : IAdminClient
     {
         ThrowIfNullOrEmpty(darFile);
 
-        return SurfaceLedgerErrorsAsync(ValidateDarCoreAsync(darFile, synchronizerId, cancellationToken));
+        return ValidateDarCoreAsync(darFile, synchronizerId, cancellationToken);
     }
 
     private async Task ValidateDarCoreAsync(byte[] darFile, SynchronizerId? synchronizerId, CancellationToken cancellationToken)
@@ -1108,6 +1145,7 @@ internal sealed partial class AdminClient : IAdminClient
             request.SynchronizerId = synchronizer.Value;
 
         await _invoker.InvokeTracedAsync<AdminClient, ValidateDarFileResponse>(
+            LedgerCallKind.Read,
             ActivitySource,
             PackageManagementService.Descriptor,
             "ValidateDarFile",
@@ -1121,30 +1159,6 @@ internal sealed partial class AdminClient : IAdminClient
     private static partial void LogDarValidated(ILogger logger, int darSize);
 
     private static bool IsNotFound(RpcException exception) => exception.StatusCode == StatusCode.NotFound;
-
-    private static async Task<T> SurfaceLedgerErrorsAsync<T>(Task<T> call)
-    {
-        try
-        {
-            return await call.ConfigureAwait(false);
-        }
-        catch (RpcException rejection)
-        {
-            throw DamlErrorParser.Parse(rejection).ToException();
-        }
-    }
-
-    private static async Task SurfaceLedgerErrorsAsync(Task call)
-    {
-        try
-        {
-            await call.ConfigureAwait(false);
-        }
-        catch (RpcException rejection)
-        {
-            throw DamlErrorParser.Parse(rejection).ToException();
-        }
-    }
 
     private static void ThrowIfNullOrEmpty(byte[] darFile)
     {
@@ -1165,23 +1179,29 @@ internal sealed partial class AdminClient : IAdminClient
         _ => throw new NotSupportedException($"Unknown right type: {right.GetType().Name}")
     };
 
-    internal static UserRight FromProtoRight(Right right) => right.KindCase switch
-    {
-        Right.KindOneofCase.ParticipantAdmin => new UserRight.ParticipantAdmin(),
-        Right.KindOneofCase.CanActAs => new UserRight.ActAs(new Party(right.CanActAs.Party)),
-        Right.KindOneofCase.CanReadAs => new UserRight.ReadAs(new Party(right.CanReadAs.Party)),
-        Right.KindOneofCase.IdentityProviderAdmin => new UserRight.IdentityProviderAdmin(),
-        Right.KindOneofCase.CanReadAsAnyParty => new UserRight.ReadAsAnyParty(),
-        Right.KindOneofCase.CanExecuteAs => new UserRight.ExecuteAs(new Party(right.CanExecuteAs.Party)),
-        Right.KindOneofCase.CanExecuteAsAnyParty => new UserRight.ExecuteAsAnyParty(),
-        _ => throw new NotSupportedException($"Unknown right kind: {right.KindCase}")
-    };
+    internal static UserRight FromProtoRight(Right right) =>
+        MalformedResponse.Decoding<Right, UserRight>(right, present => present.KindCase switch
+        {
+            Right.KindOneofCase.ParticipantAdmin => new UserRight.ParticipantAdmin(),
+            Right.KindOneofCase.CanActAs => new UserRight.ActAs(new Party(present.CanActAs.Party)),
+            Right.KindOneofCase.CanReadAs => new UserRight.ReadAs(new Party(present.CanReadAs.Party)),
+            Right.KindOneofCase.IdentityProviderAdmin => new UserRight.IdentityProviderAdmin(),
+            Right.KindOneofCase.CanReadAsAnyParty => new UserRight.ReadAsAnyParty(),
+            Right.KindOneofCase.CanExecuteAs => new UserRight.ExecuteAs(new Party(present.CanExecuteAs.Party)),
+            Right.KindOneofCase.CanExecuteAsAnyParty => new UserRight.ExecuteAsAnyParty(),
+            _ => throw new NotSupportedException($"Unknown right kind: {present.KindCase}")
+        });
 
-    internal static UserDetails FromProtoUser(User user) =>
-        new(user.Id, string.IsNullOrEmpty(user.PrimaryParty) ? null : new Party(user.PrimaryParty));
+    internal static UserDetails FromProtoUser(User? user) =>
+        MalformedResponse.Decoding(
+            user ?? throw MalformedResponse.MissingRequiredField("the response has no user"),
+            present => new UserDetails(
+                present.Id, string.IsNullOrEmpty(present.PrimaryParty) ? null : new Party(present.PrimaryParty)));
 
-    private static PartyDetails FromProtoPartyDetails(Com.Daml.Ledger.Api.V2.Admin.PartyDetails details) =>
-        new(new Party(details.Party), details.IsLocal);
+    private static PartyDetails FromProtoPartyDetails(Com.Daml.Ledger.Api.V2.Admin.PartyDetails? details) =>
+        MalformedResponse.Decoding(
+            details ?? throw MalformedResponse.MissingRequiredField("the response has no party_details"),
+            present => new PartyDetails(new Party(present.Party), present.IsLocal));
 
     /// <summary>
     /// Creates a <see cref="CallInvoker"/> bound to this client's channel for driving raw generated

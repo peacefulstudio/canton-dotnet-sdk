@@ -248,6 +248,34 @@ public sealed class AdminClientExternalPartyTests : IDisposable
     }
 
     [Fact]
+    public async Task AllocateExternalPartyAsync_raises_an_undecodable_body_failure_that_committed_when_the_response_names_no_party()
+    {
+        StubAllocate(new AllocateExternalPartyResponse());
+
+        var act = () => CreateClient().AllocateExternalPartyAsync(Allocation(), Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.Committed);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>()
+            .Which.InnerException.Should().BeOfType<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_response_names_no_party()
+    {
+        StubGenerate(new GenerateExternalPartyTopologyResponse());
+
+        var act = () => CreateClient().GenerateExternalPartyTopologyAsync(TopologyRequest(), Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>()
+            .Which.InnerException.Should().BeOfType<ArgumentException>();
+    }
+
+    [Fact]
     public async Task AllocateExternalPartyAsync_throws_ArgumentNullException_for_a_null_allocation()
     {
         var act = () => CreateClient().AllocateExternalPartyAsync(null!, Ct);

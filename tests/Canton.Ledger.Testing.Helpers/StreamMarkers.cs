@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
@@ -20,8 +21,16 @@ namespace Canton.Ledger.Testing.Helpers;
 /// </summary>
 public sealed record TemplateMarker(
     [property: DamlFieldAttribute("owner")] Party Owner)
-    : ITemplate, IDamlRecord<TemplateMarker>, IHasKey<TemplateMarker, Party>
+    : ITemplate, IDamlRecord<TemplateMarker>, IHasKey<TemplateMarker, Party>, IHasChoices<TemplateMarker>
 {
+    [ModuleInitializer]
+    internal static void RegisterTemplateMarker()
+    {
+        GeneratedTypeReaders.ForRecord<TemplateMarker>();
+        GeneratedTypeReaders.ForKey<TemplateMarker, Party>();
+        GeneratedTypeReaders.ForChoices<TemplateMarker>();
+    }
+
     /// <summary>The template identity wire events must carry to classify as this marker.</summary>
     public static RuntimeIdentifier TemplateId { get; } = new("tmpl-pkg", "Sample.Token", "Holding");
 
@@ -46,19 +55,23 @@ public sealed record TemplateMarker(
     };
 
     /// <summary>
-    /// The unit-to-unit choice the stream scenarios exercise, so a transport that decodes exercise
-    /// payloads against the choice's declared types can resolve it.
+    /// The text-to-text choice the stream scenarios exercise, so a transport that decodes exercise
+    /// payloads against the choice's declared types can resolve it, and an argument swapped with a
+    /// result stays visible.
     /// </summary>
-    public static Choice<TemplateMarker, DamlUnit, DamlUnit> ChoiceTransfer { get; } = new()
+    public static Choice<TemplateMarker, DamlText, DamlText> ChoiceTransfer { get; } = new()
     {
         Name = new ChoiceName(TransactionEventScenario.ChoiceName),
         Consuming = true,
-        ArgumentEncoder = unit => unit,
-        ArgumentDecoder = value => value.As<DamlUnit>(),
-        ArgumentJsonReader = DamlLfJsonDecoders.ReadUnit,
-        ResultJsonReader = DamlLfJsonDecoders.ReadUnit,
-        ResultDecoder = result => result.As<DamlUnit>(),
+        ArgumentEncoder = text => text,
+        ArgumentDecoder = value => value.As<DamlText>(),
+        ArgumentJsonReader = DamlLfJsonDecoders.ReadText,
+        ResultJsonReader = DamlLfJsonDecoders.ReadText,
+        ResultDecoder = result => result.As<DamlText>(),
     };
+
+    /// <inheritdoc />
+    public static IReadOnlyList<IChoice> Choices { get; } = [ChoiceTransfer];
 
     /// <inheritdoc />
     public DamlRecord ToRecord() => DamlRecord.Create(
@@ -170,4 +183,42 @@ public interface IViewedInterfaceMarker : IDamlInterface, IHasView<ViewedInterfa
 
     static DamlTypeDescriptor IDamlType.DamlTypeId =>
         new(InterfaceId, DamlTypeKind.Interface, "viewed-token-api");
+}
+
+/// <summary>
+/// A hand-authored <see cref="ITemplate"/> that reports <see cref="DamlTypeKind.Interface"/> and
+/// carries <see cref="InterfaceMarker"/>'s identity, so the template-typed stream projectors take
+/// their interface-view branch against the same wire events the interface lane renders. No code
+/// generator emits this shape; it is how the template read family reaches an unavailable view.
+/// </summary>
+public sealed record InterfaceKindTemplateMarker(
+    [property: DamlFieldAttribute("amount")] string Amount)
+    : ITemplate, IDamlRecord<InterfaceKindTemplateMarker>
+{
+    /// <summary>The identity wire events must implement to classify as this marker.</summary>
+    public static RuntimeIdentifier TemplateId { get; } = InterfaceMarker.InterfaceId;
+
+    /// <inheritdoc />
+    public static string PackageId => InterfaceMarker.PackageId;
+
+    /// <inheritdoc />
+    public static string PackageName => InterfaceMarker.PackageName;
+
+    /// <inheritdoc />
+    public static Version PackageVersion { get; } = new(0, 1, 0);
+
+    /// <inheritdoc />
+    public static DamlTypeDescriptor DamlTypeId { get; } =
+        new(TemplateId, DamlTypeKind.Interface, PackageName);
+
+    /// <inheritdoc />
+    public DamlRecord ToRecord() => DamlRecord.Create(
+        DamlField.Create("amount", new DamlText(Amount)));
+
+    public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
+        InterfaceMarkerView.__ReadDamlLfJson(json, context);
+
+    /// <summary>Creates an instance from a DamlRecord.</summary>
+    public static InterfaceKindTemplateMarker FromRecord(DamlRecord record) =>
+        new(record.GetRequiredField("amount").As<DamlText>().Value);
 }

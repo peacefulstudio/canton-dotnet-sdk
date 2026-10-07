@@ -4,22 +4,13 @@
 namespace Canton.Ledger.Rest.Client;
 
 /// <summary>
-/// Wire property names of the <see cref="Raw.Value"/> sum that our own specification does not
-/// declare as arms, so they travel through <c>AdditionalProperties</c> instead. Encoder, decoder
-/// and Daml-LF writer share these names, so a rename fails the build rather than silently leaving
+/// Wire property name of the <see cref="Raw.Value"/> sum that our own specification does not
+/// declare as an arm, so it travels through <c>AdditionalProperties</c> instead. Encoder, decoder
+/// and Daml-LF writer share this name, so a rename fails the build rather than silently leaving
 /// one of them looking for a key nothing writes.
 /// </summary>
 internal static class WireValueNames
 {
-    internal const string Unit = "unit";
-
-    /// <summary>
-    /// Marks a wire <see cref="Raw.Optional"/> as one level of a nested <c>Optional (Optional a)</c>
-    /// chain. The wire shape cannot tell a chain level from a flat <c>Optional a</c>, yet Daml-LF JSON
-    /// writes every chain level as an array and a flat one as <c>null</c> or its bare value.
-    /// </summary>
-    internal const string OptionalChain = "optionalChain";
-
     /// <summary>
     /// Holds the raw Daml-LF JSON text of every wire <see cref="Raw.Value"/> and <see cref="Raw.Record"/>
     /// read from a participant — ambiguous without the Daml type, so the read path preserves it here

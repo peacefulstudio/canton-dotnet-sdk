@@ -4,6 +4,7 @@
 using System.Reflection;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
+using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Xunit;
@@ -39,15 +40,39 @@ public class FakePqsClientTests
     }
 
     [Fact]
-    public async Task QueryAsync_with_filter_returns_the_same_staged_contracts_ignoring_the_filter()
+    public async Task QueryAsync_with_filter_returns_only_the_staged_contracts_the_filter_matches()
+    {
+        var alices = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid1"), new DemoHolding(Alice, 42m));
+        var bobs = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid2"), new DemoHolding(new Party("bob"), 7m));
+        var client = FakePqsClient.Create().WithQueryResults(alices, bobs).Build();
+
+        var results = await client.QueryAsync<DemoHolding>(
+            Filter.Field<DemoHolding>(h => h.Owner, "bob"), TestContext.Current.CancellationToken);
+
+        results.Should().Equal(bobs);
+    }
+
+    [Fact]
+    public async Task QueryAsync_with_filter_returns_nothing_when_no_staged_contract_matches()
     {
         var contract = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid1"), new DemoHolding(Alice, 42m));
         var client = FakePqsClient.Create().WithQueryResults(contract).Build();
-        var filter = Filter.Field<DemoHolding>(h => h.Owner, "bob");
 
-        var results = await client.QueryAsync<DemoHolding>(filter, TestContext.Current.CancellationToken);
+        var results = await client.QueryAsync<DemoHolding>(
+            Filter.Field<DemoHolding>(h => h.Owner, "bob"), TestContext.Current.CancellationToken);
 
-        results.Should().ContainSingle().Which.Should().Be(contract);
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task QueryAsync_with_filter_keeps_staging_order_among_the_matches()
+    {
+        var client = FakePqsClient.Create().WithQueryResults(StagedHoldings(5)).Build();
+
+        var results = await client.QueryAsync<DemoHolding>(
+            Filter.Where<DemoHolding>(h => h.Amount != 2m && h.Amount != 4m), TestContext.Current.CancellationToken);
+
+        results.Select(c => c.Id.Value).Should().Equal("cid1", "cid3", "cid5");
     }
 
     [Fact]
@@ -61,16 +86,43 @@ public class FakePqsClientTests
     }
 
     [Fact]
-    public async Task QueryOneAsync_returns_the_first_staged_contract()
+    public async Task QueryOneAsync_returns_the_first_staged_contract_the_filter_matches()
     {
-        var first = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid1"), new DemoHolding(Alice, 1m));
+        var first = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid1"), new DemoHolding(new Party("bob"), 1m));
         var second = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid2"), new DemoHolding(Alice, 2m));
-        var client = FakePqsClient.Create().WithQueryResults(first, second).Build();
+        var third = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid3"), new DemoHolding(Alice, 3m));
+        var client = FakePqsClient.Create().WithQueryResults(first, second, third).Build();
         var filter = Filter.Field<DemoHolding>(h => h.Owner, "alice");
 
         var result = await client.QueryOneAsync<DemoHolding>(filter, TestContext.Current.CancellationToken);
 
-        result.Should().Be(first);
+        result.Should().Be(second);
+    }
+
+    [Fact]
+    public async Task QueryOneAsync_returns_null_when_staged_contracts_exist_but_none_match()
+    {
+        var contract = new Contract<DemoHolding>(new ContractId<DemoHolding>("cid1"), new DemoHolding(Alice, 1m));
+        var client = FakePqsClient.Create().WithQueryResults(contract).Build();
+        var filter = Filter.Field<DemoHolding>(h => h.Owner, "bob");
+
+        var result = await client.QueryOneAsync<DemoHolding>(filter, TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task QueryAsync_with_filter_evaluates_every_filter_shape_against_the_serialized_contract_payload()
+    {
+        var matching = RichContract("rich-1", count: 42, label: "alpha", tags: ["urgent", "blue"]);
+        var other = RichContract("rich-2", count: 1, label: "beta", tags: []);
+        var client = FakePqsClient.Create().WithQueryResults(matching, other).Build();
+        var filter = Filter.Where<RichRecord>(r => r.Count > 5 && r.Tags.Any(tag => tag == "blue")
+            && r.Amount == 12.34m && r.Profile.Level == 7 && r.Outcome is Outcome.Win && r.Suit == Suit.Hearts);
+
+        var results = await client.QueryAsync<RichRecord>(filter, TestContext.Current.CancellationToken);
+
+        results.Should().Equal(matching);
     }
 
     [Fact]
@@ -263,15 +315,27 @@ public class FakePqsClientTests
     }
 
     [Fact]
-    public async Task QueryAsync_with_filter_and_page_slices_the_staged_contracts_ignoring_the_filter()
+    public async Task QueryAsync_with_filter_and_page_filters_first_then_slices_the_matches_in_contract_id_order()
     {
-        var client = FakePqsClient.Create().WithQueryResults(StagedHoldings(3)).Build();
-        var filter = Filter.Field<DemoHolding>(h => h.Owner, "bob");
+        var client = FakePqsClient.Create().WithQueryResults(StagedHoldings(7)).Build();
+        var filter = Filter.Where<DemoHolding>(h => h.Amount != 2m && h.Amount != 5m);
 
         var page = await client.QueryAsync<DemoHolding>(
             filter, new PqsPage(limit: 2, offset: 1), TestContext.Current.CancellationToken);
 
-        page.Select(c => c.Id.Value).Should().Equal("cid2", "cid3");
+        page.Select(c => c.Id.Value).Should().Equal("cid3", "cid4");
+    }
+
+    [Fact]
+    public async Task QueryAsync_with_filter_and_page_returns_an_empty_page_past_the_last_match()
+    {
+        var client = FakePqsClient.Create().WithQueryResults(StagedHoldings(4)).Build();
+        var filter = Filter.Where<DemoHolding>(h => h.Amount > 2m);
+
+        var page = await client.QueryAsync<DemoHolding>(
+            filter, new PqsPage(limit: 5, offset: 2), TestContext.Current.CancellationToken);
+
+        page.Should().BeEmpty();
     }
 
     [Fact]
@@ -333,9 +397,132 @@ public class FakePqsClientTests
             .Which.Message.Should().Contain("WithInterfaceQueryResults").And.Contain("IDemoHoldingView");
     }
 
+    private static Contract<RichRecord> RichContract(string id, long count, string label, IReadOnlyList<string> tags) =>
+        new(
+            new ContractId<RichRecord>(id),
+            new RichRecord(
+                Owner: Alice,
+                Count: count,
+                Amount: 12.34m,
+                Label: label,
+                Active: true,
+                AsOf: new DateOnly(2026, 5, 29),
+                ObservedAt: new DateTimeOffset(2026, 5, 29, 13, 30, 0, TimeSpan.Zero),
+                Note: "hello",
+                Tags: tags,
+                Attributes: new Dictionary<string, string> { ["k1"] = "v1" },
+                Marker: new ContractId<Marker>("marker-1"),
+                HoldingCid: new ContractId<IHolding>("holding-1"),
+                HoldingCids: [new ContractId<IHolding>("holding-1")],
+                Profile: new Profile(Nickname: "cdg", Level: 7L),
+                Outcome: new Outcome.Win(new Outcome_Win(Prize: 250.50m, Tier: "gold")),
+                Suit: Suit.Hearts,
+                Fee: 0.05m));
+
     private static Contract<DemoHolding>[] StagedHoldings(int count) =>
         [.. Enumerable.Range(1, count).Select(i =>
             new Contract<DemoHolding>(new ContractId<DemoHolding>($"cid{i}"), new DemoHolding(Alice, i)))];
+
+    private static Contract<DemoHolding>[] HoldingsStagedOutOfContractIdOrder() =>
+    [
+        new(new ContractId<DemoHolding>("00cc"), new DemoHolding(Alice, 3m)),
+        new(new ContractId<DemoHolding>("00aa"), new DemoHolding(Alice, 1m)),
+        new(new ContractId<DemoHolding>("00bb"), new DemoHolding(Alice, 2m)),
+    ];
+
+    [Theory]
+    [InlineData(1, 0, new[] { "00aa" })]
+    [InlineData(1, 1, new[] { "00bb" })]
+    [InlineData(2, 1, new[] { "00bb", "00cc" })]
+    [InlineData(3, 0, new[] { "00aa", "00bb", "00cc" })]
+    public async Task QueryAsync_with_page_slices_in_contract_id_order_not_staging_order(
+        int limit, int offset, string[] expectedContractIds)
+    {
+        var client = FakePqsClient.Create().WithQueryResults(HoldingsStagedOutOfContractIdOrder()).Build();
+
+        var page = await client.QueryAsync<DemoHolding>(
+            new PqsPage(limit, offset), TestContext.Current.CancellationToken);
+
+        page.Select(c => c.Id.Value).Should().Equal(expectedContractIds);
+    }
+
+    [Theory]
+    [InlineData(1, 0, new[] { "00aa" })]
+    [InlineData(1, 1, new[] { "00bb" })]
+    [InlineData(2, 1, new[] { "00bb", "00cc" })]
+    [InlineData(3, 0, new[] { "00aa", "00bb", "00cc" })]
+    public async Task QueryAsync_with_filter_and_page_slices_in_contract_id_order_not_staging_order(
+        int limit, int offset, string[] expectedContractIds)
+    {
+        var client = FakePqsClient.Create().WithQueryResults(HoldingsStagedOutOfContractIdOrder()).Build();
+        var filter = Filter.Where<DemoHolding>(h => h.Amount > 0m);
+
+        var page = await client.QueryAsync<DemoHolding>(
+            filter, new PqsPage(limit, offset), TestContext.Current.CancellationToken);
+
+        page.Select(c => c.Id.Value).Should().Equal(expectedContractIds);
+    }
+
+    [Fact]
+    public async Task QueryAsync_with_filter_and_page_orders_only_the_matches_by_contract_id()
+    {
+        var client = FakePqsClient.Create().WithQueryResults(HoldingsStagedOutOfContractIdOrder()).Build();
+        var filter = Filter.Where<DemoHolding>(h => h.Amount != 1m);
+
+        var page = await client.QueryAsync<DemoHolding>(
+            filter, new PqsPage(limit: 1, offset: 0), TestContext.Current.CancellationToken);
+
+        page.Select(c => c.Id.Value).Should().Equal("00bb");
+    }
+
+    [Theory]
+    [InlineData(1, 0, new[] { "00aa" })]
+    [InlineData(1, 1, new[] { "00bb" })]
+    [InlineData(2, 1, new[] { "00bb", "00cc" })]
+    public async Task QueryAsync_interface_with_page_slices_in_contract_id_order_not_staging_order(
+        int limit, int offset, string[] expectedContractIds)
+    {
+        var client = FakePqsClient.Create()
+            .WithInterfaceQueryResults(
+                new InterfaceContract<IDemoHoldingView, DemoHoldingView>(
+                    new ContractId<IDemoHoldingView>("00cc"), new DemoHoldingView(3m)),
+                new InterfaceContract<IDemoHoldingView, DemoHoldingView>(
+                    new ContractId<IDemoHoldingView>("00aa"), new DemoHoldingView(1m)),
+                new InterfaceContract<IDemoHoldingView, DemoHoldingView>(
+                    new ContractId<IDemoHoldingView>("00bb"), new DemoHoldingView(2m)))
+            .Build();
+
+        var page = await client.QueryAsync<IDemoHoldingView, DemoHoldingView>(
+            new PqsPage(limit, offset), TestContext.Current.CancellationToken);
+
+        page.Select(c => c.Id.Value).Should().Equal(expectedContractIds);
+    }
+
+    [Fact]
+    public async Task QueryAsync_with_page_orders_contract_ids_by_ordinal_code_point()
+    {
+        var client = FakePqsClient.Create()
+            .WithQueryResults(
+                new Contract<DemoHolding>(new ContractId<DemoHolding>("cid10"), new DemoHolding(Alice, 1m)),
+                new Contract<DemoHolding>(new ContractId<DemoHolding>("cid-2"), new DemoHolding(Alice, 2m)),
+                new Contract<DemoHolding>(new ContractId<DemoHolding>("cid2"), new DemoHolding(Alice, 3m)))
+            .Build();
+
+        var page = await client.QueryAsync<DemoHolding>(
+            new PqsPage(limit: 3), TestContext.Current.CancellationToken);
+
+        page.Select(c => c.Id.Value).Should().Equal("cid-2", "cid10", "cid2");
+    }
+
+    [Fact]
+    public async Task QueryAsync_without_page_keeps_staging_order()
+    {
+        var client = FakePqsClient.Create().WithQueryResults(HoldingsStagedOutOfContractIdOrder()).Build();
+
+        var all = await client.QueryAsync<DemoHolding>(TestContext.Current.CancellationToken);
+
+        all.Select(c => c.Id.Value).Should().Equal("00cc", "00aa", "00bb");
+    }
 
     [Fact]
     public async Task Build_snapshots_staged_results_so_later_builder_mutation_is_ignored()

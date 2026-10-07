@@ -23,6 +23,101 @@ namespace Canton.Ledger.Abstractions;
 /// So consumers of the flagship fire path reach these operations through the injected abstraction
 /// without downcasting to the concrete <c>LedgerClient</c> — keeping the client mockable and decoratable.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Failure contract.</b> One contract covers every call on this interface and the narrower reader,
+/// writer and streamer interfaces it inherits, on the gRPC and the JSON Ledger API transport alike, so
+/// a caller handles a dead or failing ledger the same way on either.
+/// </para>
+/// <list type="bullet">
+/// <item>
+/// <description>
+/// <b>Throwing calls</b> raise <see cref="LedgerOperationException"/> for every failure that comes from
+/// the participant or the wire: no connection, no answer within the deadline, a rejection, or a response
+/// body that cannot be decoded. The exception carries the transport-native
+/// <see cref="LedgerOperationException.Status"/>; the
+/// <see cref="LedgerOperationException.Category"/>, <see cref="LedgerOperationException.ErrorId"/> and
+/// <see cref="LedgerOperationException.Metadata"/> the participant sent, when it sent them; the
+/// <see cref="LedgerOperationException.CommitState"/> its kind of call decides; and the transport's own
+/// exception as <see cref="Exception.InnerException"/>.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>Status is transport-native.</b> A dead address is <see cref="TransportStatus.Grpc"/> with
+/// <c>Unavailable</c> on gRPC and <see cref="TransportStatus.NoResponse"/> on JSON; a deadline overrun is
+/// <see cref="TransportStatus.Grpc"/> with <c>DeadlineExceeded</c> on gRPC and
+/// <see cref="TransportStatus.NoResponse"/> on JSON; a participant that answered over HTTP is
+/// <see cref="TransportStatus.Http"/>; a body that cannot be decoded is
+/// <see cref="TransportStatus.UndecodableBody"/> on both. <see cref="TransportStatus.NoResponse"/> is
+/// never reported by gRPC. A caller that must behave the same on both transports branches on
+/// <see cref="LedgerOperationException.Category"/> and <see cref="LedgerOperationException.CommitState"/>,
+/// not on the status arm.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>Commit state follows the kind of call.</b> A read, a prepare and a snapshot commit nothing, so
+/// their failures are always <see cref="CommitState.NotCommitted"/>. A submission that only waits for
+/// acceptance (<see cref="SubmitAsync"/>, <see cref="SubmitReassignmentAsync"/>,
+/// <see cref="ExecuteSubmissionAsync"/>) and a submission that waits for its effect
+/// (<c>SubmitAndWaitAsync</c>, the <c>ExecuteSubmissionAndWait*</c> calls) report
+/// <see cref="CommitState.Unknown"/> when no answer arrived, and take the state from the error when the
+/// participant answered with one: <see cref="CommitState.NotCommitted"/> for a structured rejection,
+/// <see cref="CommitState.Unknown"/> for a <see cref="LedgerOperationException.Category"/> of
+/// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, with two error ids taking precedence over the
+/// category: <c>DUPLICATE_COMMAND</c> is <see cref="CommitState.Committed"/> because the ledger already accepted
+/// a command with that command id (<see cref="CommitState.Unknown"/> when its <c>accepted</c> metadata is
+/// <c>"false"</c>), and <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is <see cref="CommitState.Unknown"/>, and
+/// <see cref="CommitState.Unknown"/> for a failure that names no structured error. They differ only on a
+/// 2xx answer whose body cannot be read: an acceptance-only call stays
+/// <see cref="CommitState.Unknown"/>, a call that waits for its effect is
+/// <see cref="CommitState.Committed"/>.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>Try calls do not throw those failures.</b> The <c>Try*</c> members return an
+/// <see cref="ExerciseOutcome{T}"/>: <see cref="ExerciseOutcome{T}.DamlError"/> for a rejection,
+/// <see cref="ExerciseOutcome{T}.InfraError"/> for a missing answer or a deadline overrun, and
+/// <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> when the command committed but the transaction
+/// cannot be decoded — do not resubmit that one.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>Streams end with a value.</b> A failure after the stream opened, or while opening it, is the stream's
+/// last entry, a terminal error entry such as <see cref="CompletionStreamEvent.StreamError"/>, and the
+/// enumeration then completes. The one exception is the active-contract-set snapshot reads that resolve the
+/// ledger end first (a snapshot with no offset): a failure there is a
+/// <see cref="LedgerOperationException"/> with <see cref="CommitState.NotCommitted"/> raised when the
+/// enumeration starts, not when the call returns.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>Caller cancellation is not a failure of the ledger.</b> Cancelling the
+/// <see cref="CancellationToken"/> raises <see cref="OperationCanceledException"/> (or a subtype such as
+/// <see cref="TaskCanceledException"/>) from throwing calls and Try calls alike, and ends a stream with the
+/// same exception rather than a terminal error entry.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>Caller errors are outside the contract.</b> A null or malformed argument throws its usual
+/// <see cref="ArgumentException"/> type synchronously at the call, before anything is sent, and never
+/// becomes a <see cref="LedgerOperationException"/>. A failure of the configured token provider
+/// propagates unchanged on gRPC. On the JSON Ledger API the provider runs inside the HTTP pipeline, so an
+/// <see cref="System.Net.Http.HttpRequestException"/> (including a token endpoint that is unreachable or answers
+/// with a non-success status), a <see cref="TimeoutException"/>, or an <see cref="OperationCanceledException"/>
+/// the caller did not cause is reported as <see cref="TransportStatus.NoResponse"/>: a
+/// <see cref="LedgerOperationException"/> from a throwing call, an
+/// <see cref="ExerciseOutcome{T}.InfraError"/> from a <c>Try*</c> call, a terminal error entry on a stream. Any
+/// other provider exception propagates unchanged.
+/// </description>
+/// </item>
+/// </list>
+/// </remarks>
 public interface ICantonLedgerClient : ILedgerClient
 {
     /// <summary>
@@ -49,6 +144,21 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
+    /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
+    /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
+    /// surfaced, so resubmit with the same command id. A structured participant rejection is
+    /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
+    /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
+    /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
+    /// <see cref="CommitState.Committed"/> (the ledger already accepted a command with that command id, so do not
+    /// resubmit it; <see cref="CommitState.Unknown"/> when its <c>accepted</c> metadata is <c>"false"</c>), and
+    /// <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is <see cref="CommitState.Unknown"/>.
+    /// An acknowledgement the client cannot read is <see cref="CommitState.Unknown"/> too.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<RuntimeCommands.CommandId> SubmitAsync(
         RuntimeCommands.CommandsSubmission submission,
         TimeSpan? timeout = null,
@@ -74,6 +184,21 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
+    /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
+    /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
+    /// surfaced, so resubmit with the same command id. A structured participant rejection is
+    /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
+    /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
+    /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
+    /// <see cref="CommitState.Committed"/> (the ledger already accepted a command with that command id, so do not
+    /// resubmit it; <see cref="CommitState.Unknown"/> when its <c>accepted</c> metadata is <c>"false"</c>), and
+    /// <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is <see cref="CommitState.Unknown"/>.
+    /// An acknowledgement the client cannot read is <see cref="CommitState.Unknown"/> too.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<RuntimeCommands.CommandId> SubmitReassignmentAsync(
         ReassignmentSubmission submission,
         TimeSpan? timeout = null,
@@ -100,6 +225,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// and <c>reassignment_counter</c> the participant reported, so a consumer driving the
     /// unassign→assign dance reads the id straight off the returned event.
     /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<ExerciseOutcome<ContractStreamEvent<T>>> TrySubmitAndWaitForReassignmentAsync<T>(
         ReassignmentSubmission submission,
         TimeSpan? timeout = null,
@@ -148,6 +275,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> when the committed transaction cannot be
     /// decoded or cannot describe a tree.
     /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<ExerciseOutcome<TransactionTree>> TrySubmitAndWaitForTransactionTreeAsync(
         RuntimeCommands.CommandsSubmission submission,
         RuntimeCommands.SubmitterInfo submitter,
@@ -211,17 +340,31 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The snapshot faulted, carried an unclassified row, or ended without its terminal checkpoint.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
-    Task<IReadOnlyList<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
+    async Task<IReadOnlyList<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
         bool includeDisclosure = false,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
-        where TView : IDamlRecord<TView> =>
-        InterfaceViewSnapshot.DrainAsync(
+        where TView : IDamlRecord<TView>
+    {
+        var rows = await InterfaceSnapshotArmReader<TInterface, TView>.DrainAsync(
             SubscribeActiveAsync(
                 new ViewDescriptor<TInterface, TView>(), submitter, activeAtOffset, includeDisclosure, cancellationToken),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+
+        return rows.ConvertAll(ToActiveContract);
+
+        static ActiveContract<InterfaceContract<TInterface, TView>> ToActiveContract(
+            InterfaceAcsSnapshotEntry<TInterface, TView>.Created row) =>
+            new(
+                new InterfaceContract<TInterface, TView>(row.ContractId, row.Payload) { Key = row.Key },
+                row.Offset,
+                row.SynchronizerId)
+            {
+                Disclosure = row.Disclosure,
+            };
+    }
 
     /// <summary>
     /// Streams command completions for the submitter's parties as they arrive,
@@ -270,6 +413,11 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <see cref="LedgerOffset.Begin"/>.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was cancelled; thrown rather than reported as a
+    /// <see cref="CompletionStreamEvent.StreamError"/>. The JSON transport throws it at the call when the token is already
+    /// cancelled, the gRPC transport on enumeration.
+    /// </exception>
     IAsyncEnumerable<CompletionStreamEvent> CompletionStreamAsync(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? beginExclusiveOffset = null,
@@ -291,6 +439,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<IReadOnlyList<ConnectedSynchronizer>> GetConnectedSynchronizersAsync(
         Party? party = null,
         string? participantId = null,
@@ -304,6 +458,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<string> GetLedgerApiVersionAsync(
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default);
@@ -331,6 +491,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// is malformed (a required field is unset, or a value cannot be decoded) and
     /// cannot be projected.
     /// </exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<TransactionResult> GetUpdateByOffsetAsync(
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
@@ -356,6 +522,14 @@ public interface ICantonLedgerClient : ILedgerClient
     /// is malformed (a required field is unset, or a value cannot be decoded) and
     /// cannot be projected.
     /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="updateId"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="ArgumentException"><paramref name="updateId"/> is blank, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<TransactionResult> GetUpdateByIdAsync(
         string updateId,
         RuntimeCommands.SubmitterInfo submitter,
@@ -395,11 +569,20 @@ public interface ICantonLedgerClient : ILedgerClient
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// The update at <paramref name="offset"/> is a reassignment or topology transaction rather than a
-    /// ledger transaction, its payload is malformed, or its node ids cannot describe a tree — the last
-    /// carried as a <c>MalformedTransactionTreeException</c> in
-    /// <see cref="Exception.InnerException"/>, so catch this base type rather than the derived one.
-    /// A tree that cannot be rebuilt fails loudly instead of coming back silently wrong.
+    /// ledger transaction, its payload is malformed, or its node ids cannot describe a tree. A tree
+    /// that cannot be rebuilt reaches the caller on both transports as a
+    /// <see cref="LedgerOperationException"/> with <see cref="TransportStatus.UndecodableBody"/> and
+    /// <see cref="CommitState.NotCommitted"/>, whose <see cref="Exception.InnerException"/> is a
+    /// <c>MalformedResponseException</c> carrying the <c>MalformedTransactionTreeException</c>. Catch
+    /// <see cref="LedgerOperationException"/> or this base type rather than the derived ones. A tree
+    /// that cannot be rebuilt fails loudly instead of coming back silently wrong.
     /// </exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<TransactionTree> GetUpdateTreeByOffsetAsync(
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
@@ -435,6 +618,13 @@ public interface ICantonLedgerClient : ILedgerClient
     /// omit the estimation, and one with traffic control disabled does. An estimation that is present
     /// but reports zero is a zero-cost estimate, not an absent one.
     /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<TrafficCostEstimate?> EstimateTrafficCostAsync(
         RuntimeCommands.CommandsSubmission submission,
         TimeSpan? timeout = null,
@@ -452,6 +642,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<CreatedContract<T>> GetContractAsync<T>(
         ContractId<T> contractId,
         RuntimeCommands.SubmitterInfo submitter,
@@ -470,12 +666,55 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<ContractLifecycle<T>> GetEventsByContractIdAsync<T>(
         ContractId<T> contractId,
         RuntimeCommands.SubmitterInfo submitter,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>;
+
+    /// <summary>
+    /// Reads the explicit-disclosure data of one contract through
+    /// <c>EventQueryService.GetEventsByContractId</c> with a wildcard filter that requests the created event
+    /// blob. No payload is decoded, so <typeparamref name="T"/> may be a template or an interface and the
+    /// id of a contract reached through an interface works like any other. The
+    /// <paramref name="submitter"/>'s combined <c>ActAs ∪ ReadAs</c> parties scope visibility.
+    /// </summary>
+    /// <param name="contractId">The id of the contract to disclose.</param>
+    /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's default. When <see langword="null"/>, the gRPC client falls
+    /// back to <c>LedgerClientOptions.Timeout</c> and the JSON Ledger API client to its
+    /// <c>HttpClient</c> timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// The contract id, template id and created event blob to attach to a submission, or
+    /// <see langword="null"/> when the contract is not visible to the <paramref name="submitter"/>, does not
+    /// exist, or has been archived. The disclosure's synchronizer id is left unset: the read reports only the
+    /// synchronizer that sequenced the creation, which differs from the contract's current assignment after a
+    /// reassignment, so the participant's synchronizer router selects the synchronizer. When the current
+    /// assignment matters, pin it with <see cref="RuntimeCommands.CommandsSubmission.WithSynchronizerId"/> or
+    /// use the disclosure from an active-contract read, which reports the current synchronizer.
+    /// </returns>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+    Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
+        ContractId<T> contractId,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where T : IDamlType;
 
     /// <summary>
     /// Reads one page of the active-contract snapshot for <typeparamref name="T"/> through
@@ -496,6 +735,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
@@ -514,6 +759,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// Per-call deadline overriding the client's configured request timeout.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default);
@@ -537,6 +788,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// A returned update is a reassignment or topology transaction rather than a ledger transaction, or its
     /// payload is malformed and cannot be projected.
     /// </exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<UpdatesPage> GetUpdatesPageAsync(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? beginExclusive = null,
@@ -559,6 +816,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// </param>
     /// <param name="beginExclusiveOffset">The exclusive offset to start from; ledger begin when omitted.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="parties"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was cancelled; thrown rather than reported as a
+    /// <see cref="CompletionStreamEvent.StreamError"/>. The JSON transport throws it at the call when the token is already
+    /// cancelled, the gRPC transport on enumeration.
+    /// </exception>
     IAsyncEnumerable<CompletionStreamEvent> GetCompletionsAsync(
         IEnumerable<Party> parties,
         LedgerOffset? beginExclusiveOffset = null,
@@ -577,6 +840,13 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="submission">The commands to prepare, exactly as they would be submitted.</param>
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<PreparedSubmission> PrepareSubmissionAsync(
         RuntimeCommands.CommandsSubmission submission,
         TimeSpan? timeout = null,
@@ -590,6 +860,26 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="submission">The prepared submission and its signatures.</param>
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="submission"/> cannot be encoded for the transport — on gRPC a prepared transaction that is not a
+    /// serialized <c>PreparedTransaction</c> message, on JSON a signature or hashing scheme without a wire name — thrown
+    /// synchronously at the call.
+    /// </exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
+    /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
+    /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
+    /// surfaced, so resubmit with the same command id. A structured participant rejection is
+    /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
+    /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
+    /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
+    /// <see cref="CommitState.Committed"/> (the ledger already accepted a command with that command id, so do not
+    /// resubmit it; <see cref="CommitState.Unknown"/> when its <c>accepted</c> metadata is <c>"false"</c>), and
+    /// <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is <see cref="CommitState.Unknown"/>.
+    /// An acknowledgement the client cannot read is <see cref="CommitState.Unknown"/> too.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task ExecuteSubmissionAsync(
         SignedSubmission submission,
         TimeSpan? timeout = null,
@@ -603,6 +893,27 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>The update id and completion offset of the committed transaction.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="submission"/> cannot be encoded for the transport — on gRPC a prepared transaction that is not a
+    /// serialized <c>PreparedTransaction</c> message, on JSON a signature or hashing scheme without a wire name — thrown
+    /// synchronously at the call.
+    /// </exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
+    /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
+    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so resubmit with the same command id.
+    /// A structured participant rejection is <see cref="CommitState.NotCommitted"/>, except a
+    /// <see cref="LedgerOperationException.Category"/> of <c>DeadlineExceededRequestStateUnknown</c> or
+    /// <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>, and two error ids that take precedence
+    /// over the category: <c>DUPLICATE_COMMAND</c> is <see cref="CommitState.Committed"/> (the ledger already
+    /// accepted a command with that command id, so do not resubmit it; <see cref="CommitState.Unknown"/> when
+    /// its <c>accepted</c> metadata is <c>"false"</c>), and <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is
+    /// <see cref="CommitState.Unknown"/>. A 2xx answer whose body the client cannot
+    /// decode raises <see cref="TransportStatus.UndecodableBody"/> with <see cref="CommitState.Committed"/>: the
+    /// command took effect, so do not resubmit it.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<ExecutedSubmission> ExecuteSubmissionAndWaitAsync(
         SignedSubmission submission,
         TimeSpan? timeout = null,
@@ -617,6 +928,27 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="submitter">The parties whose visibility scopes the returned transaction.</param>
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="submission"/> cannot be encoded for the transport — on gRPC a prepared transaction that is not a
+    /// serialized <c>PreparedTransaction</c> message, on JSON a signature or hashing scheme without a wire name — thrown
+    /// synchronously at the call.
+    /// </exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
+    /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
+    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so resubmit with the same command id.
+    /// A structured participant rejection is <see cref="CommitState.NotCommitted"/>, except a
+    /// <see cref="LedgerOperationException.Category"/> of <c>DeadlineExceededRequestStateUnknown</c> or
+    /// <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>, and two error ids that take precedence
+    /// over the category: <c>DUPLICATE_COMMAND</c> is <see cref="CommitState.Committed"/> (the ledger already
+    /// accepted a command with that command id, so do not resubmit it; <see cref="CommitState.Unknown"/> when
+    /// its <c>accepted</c> metadata is <c>"false"</c>), and <c>SUBMISSION_ALREADY_IN_FLIGHT</c> is
+    /// <see cref="CommitState.Unknown"/>. A 2xx answer whose body the client cannot
+    /// decode raises <see cref="TransportStatus.UndecodableBody"/> with <see cref="CommitState.Committed"/>: the
+    /// command took effect, so do not resubmit it.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<TransactionResult> ExecuteSubmissionAndWaitForTransactionAsync(
         SignedSubmission submission,
         RuntimeCommands.SubmitterInfo submitter,
@@ -637,6 +969,13 @@ public interface ICantonLedgerClient : ILedgerClient
     /// </param>
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="requirements"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<PreferredPackages> GetPreferredPackagesAsync(
         IEnumerable<PackageVettingRequirement> requirements,
         SynchronizerId? synchronizerId = null,
@@ -661,6 +1000,13 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>The preference, or <see langword="null"/> when no package satisfies the requirements.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="parties"/> or <paramref name="packageName"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<PackagePreference?> GetPreferredPackageVersionAsync(
         IEnumerable<Party> parties,
         string packageName,

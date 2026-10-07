@@ -51,6 +51,32 @@ public class ExerciseOutcomeExtensionsTests
     }
 
     [Fact]
+    public void OneOrThrow_reports_a_None_outcome_as_committed_because_the_transaction_committed()
+    {
+        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.None();
+
+        var act = () => outcome.OneOrThrow("Mint");
+
+        var exception = act.Should().Throw<LedgerOperationException>().Which;
+        exception.CommitState.Should().Be(CommitState.Committed);
+        exception.UpdateId.Should().BeNull();
+        exception.InnerException.Should().BeNull();
+    }
+
+    [Fact]
+    public void OneOrThrow_reports_a_Many_outcome_as_committed_because_the_transaction_committed()
+    {
+        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.Many(["cid-1", "cid-2"]);
+
+        var act = () => outcome.OneOrThrow("Mint");
+
+        var exception = act.Should().Throw<LedgerOperationException>().Which;
+        exception.CommitState.Should().Be(CommitState.Committed);
+        exception.UpdateId.Should().BeNull();
+        exception.InnerException.Should().BeNull();
+    }
+
+    [Fact]
     public void OneOrThrow_throws_for_DamlError_carrying_the_structured_payload()
     {
         ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.DamlError(

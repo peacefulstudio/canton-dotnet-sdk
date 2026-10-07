@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --version 0.6.0-preview.3
+dotnet add package Daml.Runtime --version 0.6.0-preview.4
 ```
 
 ## Usage
@@ -95,6 +95,52 @@ package id, so a template upgrade that changes the package hash still
 resolves. When `T` is a generated Daml *interface* marker, a created
 contract matches on its `InterfaceIds` instead of its `TemplateId`.
 
+### Reading a Choice Result
+
+A choice's result is read from the exercise of that choice, never from the contracts the
+transaction happened to create. Generated `Try<Choice>Async` exercisers do it for you and
+return the descriptor's own result type: a choice returning `ContractId T` yields
+`ExerciseOutcome<ContractId<T>>`, `Optional (ContractId T)` yields
+`ExerciseOutcome<ContractId<T>?>`, `[ContractId T]` yields
+`ExerciseOutcome<IReadOnlyList<ContractId<T>>>` and a tuple yields
+`ExerciseOutcome<Tuple2<A, B>>`, read through `_1` and `_2`. There is no generated
+`<Choice>Result` wrapper record. These exercisers never return `Many`, and never return
+`None` for want of a created contract.
+
+A hand-written binding does the same with
+`ExerciseOutcomeProjection.ProjectChoiceResult`, handing it the generated
+`Choice<TOwner, TArg, TResult>` descriptor and the contract id:
+
+```csharp
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Outcomes;
+using IouContract = Iou.Iou;
+
+// tx is a TransactionResult from a committed submission, and contractId is the
+// ContractId<IouContract> of the Iou it exercised.
+
+ExerciseOutcome<ContractId<IouContract>> outcome =
+    tx.ProjectChoiceResult(IouContract.ChoiceTransfer, contractId.Value);
+```
+
+The exercise is matched by contract id, choice name and template (or interface) name, with the
+package id ignored. A result that fails to decode is `CommittedUndecodable`, because the
+command committed; a transaction with no exercise of the choice on that contract throws
+`InvalidOperationException`, since a conforming ledger never answers that way.
+
+### Values Without a Generated Type
+
+Over the JSON Ledger API a node whose template, interface or choice has no single generated
+binding loaded is carried as `DamlUndecodedJson`, a `DamlValue` holding the Daml-LF JSON text
+exactly as the participant sent it. `CreatedContract.UndecodedPayload` holds the create arguments
+of such a created node and is `null` for every node that decoded. `FromDamlValue<T>` decodes
+one through the target type's own JSON reader. gRPC never produces one, and `DamlJsonSerializer`
+refuses to write one.
+
+Bindings are found through a registry that each generated package fills when its module is
+first used. A host that loads no `deps.json` registers a binding assembly itself with
+`RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle)`.
+
 ### Manual Serialization
 
 If you need to work with Daml values directly:
@@ -133,6 +179,13 @@ using IouContract = Iou.Iou;
 var iou = IouContract.FromRecord(DamlLfJsonReader.ReadRecord<IouContract>(json));
 ```
 
+The record `ReadRecord<T>` returns holds only the fields the payload sent. Both transports leave
+out a record's trailing `None` fields: gRPC every one, the JSON Ledger API those of a flat
+`Optional` (it still sends a nested `Optional`'s `None` as `[]`), so an untyped `DamlRecord` can
+lack an `Optional` field its type declares. Read an `Optional` field of an untyped record with
+`GetOptionalField` or `GetOptionalChainField`, which read an absent field as `None`, rather than
+`GetField` or `GetRequiredField`.
+
 ### System.Text.Json Converters
 
 `Party`, `ContractId<T>`, `SynchronizerId`, `CommandId`, `ChoiceName` and `WorkflowId`
@@ -155,7 +208,7 @@ var party = JsonSerializer.Deserialize<Party>(json);
 ```
 
 **`System.Text.Json` is a CLR round-trip, not a wire decoder.** What it guarantees is that
-a value reads back as itself. It is not a way to decode a payload Canton produced: above
+a value reads back as itself. Every public value type in this package and in generated code compares by content, so "itself" means equal to the value written, with an equal hash code. It is not a way to decode a payload Canton produced: above
 the scalars listed here the shapes differ from the Daml-LF JSON encoding a participant and
 PQS speak. A `Map<K,V>` writes `{"Entries":[…],"Count":…}`, a `NonEmpty<T>` writes
 `{"Hd":…,"Tl":…,"All":…}`, a `Set<T>` writes the bare array above where Daml-LF spells the same
@@ -172,6 +225,14 @@ using IouContract = Iou.Iou;
 
 var iou = IouContract.FromRecord(DamlLfJsonReader.ReadRecord<IouContract>(pqsRowJson));
 ```
+
+The unions that carry a stream or call result round-trip too: `AcsSnapshotEntry<T>`,
+`InterfaceAcsSnapshotEntry<TInterface, TView>`, `ExerciseOutcome<T>` and `DeduplicationPeriod`
+each write their own arm's object with a `"$case"` discriminator, in the shape
+`ContractStreamEvent<T>` already uses: `{"$case":"One","Result":42}` or
+`{"$case":"Offset","Start":42}`. The converters are named by `[JsonConverter]` attributes on the
+base types, so bare options read them. `SourceException` on the error arms is left out of the
+JSON and reads back as `null`; the error arms compare equal whatever their `SourceException`.
 
 `ContractId<T>` is sealed and carries its converter the same way, so every contract id the
 codegen hands out — a choice result, `Contract<T>.Id`, a stream row's id — converts with no
@@ -226,22 +287,25 @@ the `#nullable enable` the emitter otherwise writes — carries no annotation to
 parameters is marked required, and an absent member binds to `null`. The CHANGELOG records that
 limit in full.
 
-Not every record round-trips on these options alone, and the gaps below are older than the
-converter rather than introduced by it. `DamlValue` is abstract and `DamlValueJsonConverter` is
-registered only inside `DamlJsonSerializer`'s own options rather than in
-`DamlJsonConverters.All`, so a record carrying a `DamlRecord` writes its field values as `{}`
-and throws `NotSupportedException` reading them back — add `DamlValueJsonConverter` to the same
-options and `CreatedEvent` and `CreatedContract` round-trip.
+Not every record round-trips yet, and the gaps below are older than the converters rather than introduced by them. `DamlValue` is abstract and carries no `[JsonConverter]`, so a record carrying a `DamlValue` — a `DamlRecord` payload in `CreatedEvent` or `CreatedContract`, an `ExercisedEvent`'s choice argument — writes those values as `{}` and throws `NotSupportedException` reading them back. Registering `DamlValueJsonConverter` does not close the gap: it writes the untyped Daml-LF JSON spelling, which does not say which `DamlValue` it came from, so a `DamlParty` field reads back as a `DamlText`.
 
-Two gaps have no converter to add, both for the same reason. `TreeEvent` is abstract and
-carries no `[JsonDerivedType]`, so a `TransactionTree` writes its root events as `{}`; and
-`ICommand` is a bare interface, so a `CommandsSubmission` writes each of its commands as
-`{"CommandType":"Exercise"}` and cannot read one back at all. Of the event records carrying
-`EquatableArray<T>` members, `ArchivedEvent` is the only one that round-trips on these
-options alone.
+One gap has no converter to add. `TreeEvent` is abstract and
+carries no `[JsonDerivedType]`, so a `TransactionTree` writes its root events as `{}`. Of the
+event records carrying `EquatableArray<T>` members, `ArchivedEvent` is the only one that
+round-trips on these options alone.
 
-`TransactionResult` round-trips — with `DamlValueJsonConverter` added alongside for the
-`DamlRecord` payloads its created contracts carry — and the converters on its two scalar
+Two families are written, never read back, by design. The commands (`CreateCommand`,
+`ExerciseCommand`, `ExerciseByKeyCommand`, `CreateAndExerciseCommand`) and the
+`CommandsSubmission` that wraps them are built and submitted in memory, so a caller that retries
+rebuilds the command rather than reading one back, and resubmits it with the original `CommandId`
+so the participant deduplicates it; `ICommand` is a bare interface
+and a `CommandsSubmission` writes each of its commands as `{"CommandType":"Exercise"}`. The
+non-generic `ContractId` base is abstract and every template is one of its arms, so a bare
+contract-id string cannot name its `T`; declare `ContractId<T>`, which round-trips as the bare
+contract-id string, and which is the type every created id and `ContractId` choice result already
+carries.
+
+`TransactionResult` round-trips when it carries no created contracts and no exercised events — a created contract's `DamlRecord` payload and an exercised event's choice argument hit the `DamlValue` gap above — and the converters on its two scalar
 members are what make it. `LedgerOffset` (the type of `CompletionOffset`) and `CommandId` are `readonly record struct`s
 exposing only a get-only
 `Value`, and `System.Text.Json` prefers a struct's implicit parameterless constructor unless
@@ -251,8 +315,8 @@ resumed stream from the beginning, while a command id read back as a non-null `C
 whose `Value` threw `InvalidOperationException` far from the read that caused it. The same
 loss reached `ChoiceName` on the exercise commands and `WorkflowId` on a submission; all four
 now travel as their bare wire scalar, `WorkflowId` alone accepting the blank one the Ledger
-API declares `workflow_id` may carry — though a whole `ExerciseCommand` or `CommandsSubmission`
-still does not read back, for the `ICommand` reason above.
+API declares `workflow_id` may carry — a whole `ExerciseCommand` or `CommandsSubmission` is
+still written, never read back, as above.
 
 Every one of the four recovers only a member the payload actually names — a converter never
 runs for a property that is absent. For `LedgerOffset` the modifier above closes that second
@@ -295,13 +359,23 @@ the generic's own declaration already wraps that type parameter in an `Optional`
 refused by codegen. A generic's body is emitted once from its declaration, so it cannot
 also account for a level the use site substitutes in.
 
-The two wire nodes are not interchangeable. A flat `DamlOptional` writes JSON `null` or
-its bare value; each `DamlOptionalChain` level writes the array form, `[]` when absent and
-`[v]` when present, which is what a participant accepts in a nested position.
+The two wire nodes are not interchangeable. A flat `DamlOptional` whose payload is not an
+Optional writes JSON `null` or its bare value; each `DamlOptionalChain` level, and each level of
+a `DamlOptional` that carries another Optional, writes the array form, `[]` when absent and
+`[v]` when present, which is what a participant accepts in a nested position: `Some None` is
+`[[]]` and `Some (Some "x")` is `[["x"]]`. A flat
+`DamlOptional.None` therefore always writes `null`, which a participant rejects at the outer
+level of an `Optional (Optional a)`. A gRPC-read value holding that `None` fails if
+resubmitted over REST: rebuild the level as `DamlOptionalChain.None`, or convert through the
+generated type.
 
 The tag matters only on write. A read takes either node at every Optional level, so a
 generated `FromRecord` decodes a nested `Optional` from a gRPC value, whose converter returns
 a flat `DamlOptional` at every level, as well as from the JSON reader's chain.
+
+### Stdlib type names share one flat namespace
+
+Every Daml standard library type `Daml.Runtime` provides lives directly in `Daml.Runtime.Stdlib`, with no sub-namespaces. They include `Tuple2` to `Tuple20`, `Ordering`, `Unit<a>` (the one-element tuple, not `DamlUnit`), `Validation`, `Formula`, `Sum`, `Product`, `Max`, `Min`, `Down`, `All`, `Any`, `Archive` and the general-error records, so a field of any of them compiles with or without `--include-dependencies`. A type of your own with the same name as one of them (`Unit`, `Sum`, `Min`, `Max`, `Any` and so on) may need a `using` alias in hand-written code that imports both namespaces.
 
 ### Collection fields compare by content
 

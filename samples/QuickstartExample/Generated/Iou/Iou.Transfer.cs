@@ -15,26 +15,26 @@ public sealed partial record Iou
     /// Choice argument type for Transfer.
     /// </summary>
     public sealed record Transfer(
-        [property: DamlFieldAttribute("newOwner")] Party NewOwner
-    ) : IDamlRecord<Transfer>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("newOwner")] global::Daml.Runtime.Data.Party NewOwner
+    ) : global::Daml.Runtime.Data.IDamlRecord<Transfer>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("newOwner", NewOwner.ToDamlValue())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("newOwner", NewOwner.ToDamlValue())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Transfer FromRecord(DamlRecord record) => new Transfer(
-            NewOwner: Party.FromDamlValue(record.GetRequiredField("newOwner").As<DamlParty>())
+        public static Transfer FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Transfer(
+            NewOwner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("newOwner").As<global::Daml.Runtime.Data.DamlParty>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("newOwner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newOwner"), context.Field("newOwner")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("newOwner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newOwner"), context.Field("newOwner")))
             );
         }
 

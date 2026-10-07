@@ -12,20 +12,20 @@ namespace Splice.Ans;
 /// <summary>
 /// Generated from Daml record AnsEntryContext_TerminateResult
 /// </summary>
-public sealed record AnsEntryContext_TerminateResult : IDamlRecord<AnsEntryContext_TerminateResult>
+public sealed record AnsEntryContext_TerminateResult : global::Daml.Runtime.Data.IDamlRecord<AnsEntryContext_TerminateResult>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create();
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create();
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnsEntryContext_TerminateResult FromRecord(DamlRecord record) => new AnsEntryContext_TerminateResult();
+    public static AnsEntryContext_TerminateResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntryContext_TerminateResult();
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create();
+        return global::Daml.Runtime.Data.DamlRecord.Create();
     }
 
 }

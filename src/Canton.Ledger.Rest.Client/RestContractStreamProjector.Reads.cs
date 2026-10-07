@@ -22,8 +22,8 @@ internal static partial class RestContractStreamProjector
             throw MalformedResponse.MissingRequiredField("the contract-by-id response has no createdEvent");
         }
 
-        RequireTemplateId(created.TemplateId, nameof(Raw.CreatedEvent), created.ContractId);
-        if (!RestMarkerMatcher<T>.MatchesCreated(created) || !TryResolveCreatedPayload<T>(created, out var payload))
+        RestProjectionCore.RequireTemplateId(created.TemplateId, nameof(Raw.CreatedEvent), created.ContractId);
+        if (!RestMarkerMatcher<T>.MatchesCreated(created) || !RestProjectionCore.TryResolvePayload<T, T>(created, out var payload))
         {
             throw new InvalidOperationException(
                 $"Contract '{created.ContractId}' is a {created.TemplateId.ModuleName}.{created.TemplateId.EntityName}, "
@@ -31,9 +31,9 @@ internal static partial class RestContractStreamProjector
         }
 
         return new CreatedContract<T>(
-            new ContractId<T>(created.ContractId),
+            RestWireConversions.ToContractId<T>(created.ContractId),
             payload,
-            ContractKeyOf(created),
+            RestProjectionCore.ContractKeyOf(created),
             RestWireConversions.ToPartyList(created.WitnessParties));
     }
 
@@ -43,10 +43,11 @@ internal static partial class RestContractStreamProjector
         ContractStreamEvent<T>.Created? created = null;
         if (response.Created?.CreatedEvent is { } createdEvent)
         {
-            created = CreatedFromWire<T>(
+            RestProjectionCore.RequireTemplateId(createdEvent.TemplateId, nameof(Raw.CreatedEvent), createdEvent.ContractId);
+            created = RestProjectionCore.CreatedFromWire<ContractArms<T>, ContractStreamEvent<T>, T, T>(
                     createdEvent,
                     RequireSynchronizer(response.Created.SynchronizerId, createdEvent.ContractId),
-                    RestWireConversions.ParseOffset(createdEvent.Offset))
+                    RestWireConversions.ParseOffset(createdEvent.Offset)).Event
                 as ContractStreamEvent<T>.Created
                 ?? throw new InvalidOperationException(
                     $"Contract '{createdEvent.ContractId}' cannot be read as {typeof(T).Name}: its interface view is unavailable.");
@@ -55,9 +56,9 @@ internal static partial class RestContractStreamProjector
         ContractStreamEvent<T>.Archived? archived = null;
         if (response.Archived?.ArchivedEvent is { } archivedEvent)
         {
-            RequireTemplateId(archivedEvent.TemplateId, nameof(Raw.ArchivedEvent), archivedEvent.ContractId);
-            archived = new ContractStreamEvent<T>.Archived(
-                new ContractId<T>(archivedEvent.ContractId),
+            RestProjectionCore.RequireTemplateId(archivedEvent.TemplateId, nameof(Raw.ArchivedEvent), archivedEvent.ContractId);
+            archived = (ContractStreamEvent<T>.Archived)ContractArms<T>.Archived(
+                RestWireConversions.ToContractId<T>(archivedEvent.ContractId),
                 LedgerOffset.At(RestWireConversions.ParseOffset(archivedEvent.Offset)),
                 RequireSynchronizer(response.Archived.SynchronizerId, archivedEvent.ContractId),
                 RestWireConversions.ToPartyList(archivedEvent.WitnessParties));

@@ -40,6 +40,10 @@ internal static class LedgerWireConversions
     private static RuntimeCommands.CommandId ToNamedCommandId(string commandId) =>
         (RuntimeCommands.CommandId)commandId;
 
+    public static ContractId<T> ToContractId<T>(string wireContractId)
+        where T : IDamlType =>
+        MalformedResponse.Decoding(wireContractId, id => new ContractId<T>(id));
+
     public static LedgerOffset ToLedgerOffset(long wireOffset) =>
         MalformedResponse.Decoding(wireOffset, LedgerOffset.At);
 

@@ -28,7 +28,9 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Canton.Ledger.Abstractions.Tests/Canton.Ledger.Abstractions.Tests.csproj" />
+    <Project Path="tests/Canton.Ledger.Client.Parity.SpliceBindings/Canton.Ledger.Client.Parity.SpliceBindings.csproj" />
     <Project Path="tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj" />
+    <Project Path="tests/Canton.Ledger.Client.PublishedBindings.Tests/Canton.Ledger.Client.PublishedBindings.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Grpc.Client.Tests/Canton.Ledger.Grpc.Client.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Kernel.Tests/Canton.Ledger.Kernel.Tests.csproj" />

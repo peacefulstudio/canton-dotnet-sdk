@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\Roslyn\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <Compile Include="..\Shared\StjRoundTrip\*.cs" Link="Shared\StjRoundTrip\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

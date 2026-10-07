@@ -4,6 +4,7 @@
 using System.Text;
 using Daml.Codegen.CSharp.CodeGen;
 using Daml.Codegen.Intermediate.Model;
+using Daml.Codegen.CSharp.Tests.TestHelpers;
 using AwesomeAssertions;
 using Xunit;
 
@@ -14,21 +15,12 @@ public class ChoiceEmitterDescriptorTests
     private const string LocalPackageId = "pkg-id";
     private const string StdlibPackageId = "stdlib-pkg";
 
-    private sealed class StubResolver(
-        string resolvedName = "Resolved",
-        IReadOnlyDictionary<string, DamlPackage>? packages = null) : ICrossPackageResolver
-    {
-        private readonly IReadOnlyDictionary<string, DamlPackage> _packages = packages ?? new Dictionary<string, DamlPackage>();
+    private static DamlPackage Package(params DamlDataType[] dataTypes) => PackageDeclaring([], dataTypes);
 
-        public string Resolve(DamlTypeRef typeRef, PackageEmitContext context) => resolvedName;
+    private static DamlPackage PackageDeclaring(DamlTemplate template, params DamlDataType[] dataTypes) =>
+        PackageDeclaring([template], dataTypes);
 
-        public IReadOnlySet<string> DiscoveredExternalPackageIds => new HashSet<string>();
-
-        public DamlPackage? LookupPackage(string packageId) =>
-            _packages.TryGetValue(packageId, out var package) ? package : null;
-    }
-
-    private static DamlPackage Package(params DamlDataType[] dataTypes) =>
+    private static DamlPackage PackageDeclaring(IReadOnlyList<DamlTemplate> templates, DamlDataType[] dataTypes) =>
         new()
         {
             PackageId = LocalPackageId,
@@ -40,7 +32,7 @@ public class ChoiceEmitterDescriptorTests
                 new DamlModule
                 {
                     Name = "Main",
-                    Templates = [],
+                    Templates = templates,
                     DataTypes = dataTypes,
                     Interfaces = [],
                 },
@@ -48,17 +40,19 @@ public class ChoiceEmitterDescriptorTests
             DependencyReferences = [],
         };
 
-    private static PackageEmitContext Context(DamlPackage package) =>
-        PackageEmitContext.ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true).Single();
+    private static CodeGenOptions Options => new() { NamespacePrefix = "Test.Package" };
 
-    private static ChoiceEmitter Emitter(PackageEmitContext context, StubResolver resolver) =>
-        new(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
+    private static RealResolution Resolution(DamlPackage package, params DamlPackage[] dependencies) =>
+        RealResolution.Of(package, Options, dependencies);
 
-    private static string EmitDescriptors(DamlTemplate template, DamlPackage package, StubResolver? resolver = null)
+    private static ChoiceEmitter Emitter(PackageEmitContext context, RealResolution resolution) =>
+        new(context, resolution.Resolver, Options, new DamlTypeMapper(context, resolution.Resolver), new PartyAnalysis());
+
+    private static ChoiceEmitter Emitter(RealResolution resolution) => Emitter(resolution.Context, resolution);
+
+    private static string EmitDescriptors(DamlTemplate template, DamlPackage package, params DamlPackage[] dependencies)
     {
-        var context = Context(package);
-        var actualResolver = resolver ?? new StubResolver();
-        var emitter = Emitter(context, actualResolver);
+        var emitter = Emitter(Resolution(package, dependencies));
         var sb = new StringBuilder();
         var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
         emitter.WriteChoiceDescriptors(indent, template);
@@ -92,12 +86,12 @@ public class ChoiceEmitterDescriptorTests
 
         var output = EmitDescriptors(Template(choice), Package());
 
-        output.Should().Contain("public static Choice<Asset, DamlUnit, DamlUnit> ChoiceAccept { get; } = new()");
-        output.Should().Contain("Name = new ChoiceName(\"Accept\"),");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<Asset, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceAccept { get; } = new()");
+        output.Should().Contain("Name = new global::Daml.Runtime.Commands.ChoiceName(\"Accept\"),");
         output.Should().Contain("Consuming = true,");
-        output.Should().Contain("ArgumentEncoder = _ => DamlUnit.Instance,");
-        output.Should().Contain("ArgumentDecoder = val => val is DamlUnit u ? u : throw new global::System.InvalidOperationException(\"Choice 'Accept' argument must decode to DamlUnit.\"),");
-        output.Should().Contain("ResultDecoder = _ => DamlUnit.Instance");
+        output.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,");
+        output.Should().Contain("ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlUnit u ? u : throw new global::System.InvalidOperationException(\"Choice 'Accept' argument must decode to DamlUnit.\"),");
+        output.Should().Contain("ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance");
         output.Should().Contain("ArgumentJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),");
     }
 
@@ -113,19 +107,18 @@ public class ChoiceEmitterDescriptorTests
             Modules = [],
             DependencyReferences = [],
         };
-        var resolver = new StubResolver(packages: new Dictionary<string, DamlPackage> { [StdlibPackageId] = stdlibPackage });
         var choice = Choice("Archive", new DamlTypeRef(StdlibPackageId, "DA.Internal.Template", "Archive"), new DamlPrimitiveType(DamlPrimitive.Unit));
 
-        var output = EmitDescriptors(Template(choice), Package(), resolver);
+        var output = EmitDescriptors(Template(choice), Package(), stdlibPackage);
 
-        output.Should().Contain("ArgumentDecoder = val => val is DamlRecord { Fields.Count: 0 } ? DamlUnit.Instance : throw new global::System.InvalidOperationException(\"Choice 'Archive' argument must decode to an empty record.\"),");
+        output.Should().Contain("ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException(\"Choice 'Archive' argument must decode to an empty record.\"),");
         output.Should().Contain(
             "ArgumentJsonReader = (json, context) =>\n"
             + "    {\n"
             + "        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);\n"
-            + "        return DamlRecord.Create();\n"
+            + "        return global::Daml.Runtime.Data.DamlRecord.Create();\n"
             + "    },");
-        output.Should().NotContain("ArgumentDecoder = _ => DamlUnit.Instance,");
+        output.Should().NotContain("ArgumentDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,");
     }
 
     [Fact]
@@ -138,11 +131,11 @@ public class ChoiceEmitterDescriptorTests
         };
         var choice = Choice("Transfer", new DamlTypeRef(LocalPackageId, "Main", "TransferArg"), new DamlPrimitiveType(DamlPrimitive.Unit));
 
-        var output = EmitDescriptors(Template(choice), Package(argRecord));
+        var output = EmitDescriptors(Template(choice), PackageDeclaring(Template(choice), argRecord));
 
-        output.Should().Contain("public static Choice<Asset, Transfer, DamlUnit> ChoiceTransfer { get; } = new()");
+        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<Asset, Transfer, global::Daml.Runtime.Data.DamlUnit> ChoiceTransfer { get; } = new()");
         output.Should().Contain("ArgumentEncoder = arg => arg.ToRecord(),");
-        output.Should().Contain("ArgumentDecoder = val => Transfer.FromRecord(val.As<DamlRecord>()),");
+        output.Should().Contain("ArgumentDecoder = val => Transfer.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),");
     }
 
     /// <summary>
@@ -162,7 +155,7 @@ public class ChoiceEmitterDescriptorTests
         };
         var choice = Choice("DamlRecord", new DamlTypeRef(LocalPackageId, "Main", "TransferArg"), new DamlPrimitiveType(DamlPrimitive.Unit));
 
-        var output = EmitDescriptors(Template(choice), Package(argRecord));
+        var output = EmitDescriptors(Template(choice), PackageDeclaring(Template(choice), argRecord));
 
         output.Should().Contain("ArgumentDecoder = val => DamlRecord.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),");
         output.Should().NotContain("val.As<DamlRecord>()");
@@ -178,7 +171,7 @@ public class ChoiceEmitterDescriptorTests
 
         var output = EmitDescriptors(Template(choice), Package());
 
-        output.Should().Contain("ResultDecoder = val => Optional<TA>.FromValue(");
+        output.Should().Contain("ResultDecoder = val => global::Daml.Runtime.Stdlib.Optional<TA>.FromValue(");
         output.Should().NotContain(".AsOptional().HasValue");
         output.Should().Contain(
             "ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(json, context, "
@@ -198,12 +191,10 @@ public class ChoiceEmitterDescriptorTests
     [Fact]
     public void GetChoiceArgumentInfo_classifies_unit_as_damlunit()
     {
-        var context = Context(Package());
-        var resolver = new StubResolver();
-        var emitter = Emitter(context, resolver);
+        var emitter = Emitter(Resolution(Package()));
         var choice = Choice("Accept", new DamlPrimitiveType(DamlPrimitive.Unit), new DamlPrimitiveType(DamlPrimitive.Unit));
 
-        var argument = emitter.GetChoiceArgumentInfo(choice, context.DataTypes);
+        var argument = emitter.GetChoiceArgumentInfo(choice);
 
         argument.TypeName.Should().Be("DamlUnit");
     }
@@ -219,12 +210,10 @@ public class ChoiceEmitterDescriptorTests
     [MemberData(nameof(UnmappableChoiceArgumentTypes))]
     public void GetChoiceArgumentInfo_throws_codegen_exception_for_an_unmappable_argument_type(string label, DamlType argumentType)
     {
-        var context = Context(Package());
-        var resolver = new StubResolver();
-        var emitter = Emitter(context, resolver);
+        var emitter = Emitter(Resolution(Package()));
         var choice = Choice("Mystery", argumentType, new DamlPrimitiveType(DamlPrimitive.Unit));
 
-        emitter.Invoking(e => e.GetChoiceArgumentInfo(choice, context.DataTypes))
+        emitter.Invoking(e => e.GetChoiceArgumentInfo(choice))
             .Should().Throw<CodegenException>(
                 "{0} cannot back an exercisable choice-argument record, so generation must fail loudly", label)
             .WithMessage("*Mystery*");
@@ -238,13 +227,11 @@ public class ChoiceEmitterDescriptorTests
             Name = "TransferArg",
             Definition = new DamlRecordDefinition([new DamlFieldDefinition("newOwner", new DamlPrimitiveType(DamlPrimitive.Party))]),
         };
-        var package = Package(argRecord);
-        var context = Context(package);
-        var resolver = new StubResolver();
-        var emitter = Emitter(context, resolver);
         var choice = Choice("Transfer", new DamlTypeRef(LocalPackageId, "Main", "TransferArg"), new DamlPrimitiveType(DamlPrimitive.Unit));
+        var package = PackageDeclaring(Template(choice), argRecord);
+        var emitter = Emitter(Resolution(package));
 
-        var argument = emitter.GetChoiceArgumentInfo(choice, context.DataTypes);
+        var argument = emitter.GetChoiceArgumentInfo(choice);
 
         argument.TypeName.Should().Be("Transfer");
         argument.IsNestedTemplateArg.Should().BeTrue();
@@ -252,8 +239,28 @@ public class ChoiceEmitterDescriptorTests
     }
 
     [Fact]
+    public void GetChoiceArgumentInfo_resolves_a_foreign_package_argument_through_the_resolver_even_when_a_local_record_shares_its_module_and_name()
+    {
+        var argRecord = new DamlDataType
+        {
+            Name = "TransferArg",
+            Definition = new DamlRecordDefinition([new DamlFieldDefinition("newOwner", new DamlPrimitiveType(DamlPrimitive.Party))]),
+        };
+        var localChoice = Choice("Transfer", new DamlTypeRef(LocalPackageId, "Main", "TransferArg"), new DamlPrimitiveType(DamlPrimitive.Unit));
+        var foreignChoice = Choice("Forward", new DamlTypeRef("other-pkg", "Main", "TransferArg"), new DamlPrimitiveType(DamlPrimitive.Unit));
+        var foreignPackage = TestPackages.Named("other-pkg", "other-package", TestPackages.ModuleOf("Main", TestPackages.Record("TransferArg")));
+        var emitter = Emitter(Resolution(PackageDeclaring(Template(localChoice, foreignChoice), argRecord), foreignPackage));
+
+        var argument = emitter.GetChoiceArgumentInfo(foreignChoice);
+
+        argument.TypeName.Should().Be("global::Main.TransferArg");
+        argument.IsNestedTemplateArg.Should().BeFalse();
+    }
+
+    [Fact]
     public void GetChoiceArgumentInfo_resolves_the_argument_from_its_own_module_when_simple_names_collide()
     {
+        var choice = Choice("Expire", new DamlTypeRef(LocalPackageId, "Agreement", "Expire"), new DamlPrimitiveType(DamlPrimitive.Unit));
         var package = new DamlPackage
         {
             PackageId = LocalPackageId,
@@ -264,27 +271,25 @@ public class ChoiceEmitterDescriptorTests
             [
                 ModuleWithExpireRecord(
                     "Agreement",
-                    [new DamlFieldDefinition("actor", new DamlPrimitiveType(DamlPrimitive.Party))]),
+                    [new DamlFieldDefinition("actor", new DamlPrimitiveType(DamlPrimitive.Party))],
+                    Template(choice)),
                 ModuleWithExpireRecord("Offer", []),
             ],
             DependencyReferences = [],
         };
-        var context = PackageEmitContext
-            .ForPackage(package, new CodeGenOptions { NamespacePrefix = "Test.Package" }, isMainPackage: true)
-            .Single(moduleContext => moduleContext.Module.Name == "Agreement");
-        var emitter = Emitter(context, new StubResolver());
-        var choice = Choice("Expire", new DamlTypeRef(LocalPackageId, "Agreement", "Expire"), new DamlPrimitiveType(DamlPrimitive.Unit));
+        var resolution = Resolution(package);
+        var emitter = Emitter(resolution.Contexts.Single(moduleContext => moduleContext.Module.Name == "Agreement"), resolution);
 
-        var argument = emitter.GetChoiceArgumentInfo(choice, context.DataTypes);
+        var argument = emitter.GetChoiceArgumentInfo(choice);
 
         argument.Fields.Should().ContainSingle(field => field.Name == "actor");
     }
 
-    private static DamlModule ModuleWithExpireRecord(string moduleName, DamlFieldDefinition[] expireFields) =>
+    private static DamlModule ModuleWithExpireRecord(string moduleName, DamlFieldDefinition[] expireFields, DamlTemplate? template = null) =>
         new()
         {
             Name = moduleName,
-            Templates = [],
+            Templates = template is null ? [] : [template],
             DataTypes =
             [
                 new DamlDataType

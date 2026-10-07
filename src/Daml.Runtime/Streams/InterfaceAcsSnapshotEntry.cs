@@ -1,10 +1,14 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Streams;
 
@@ -30,7 +34,16 @@ namespace Daml.Runtime.Streams;
 /// it. A row that arrives without an interface view is surfaced as
 /// <see cref="Unclassified"/> with
 /// <see cref="UnclassifiedKind.InterfaceViewUnavailable"/>.
+/// <para>
+/// Through <see cref="System.Text.Json"/> it travels as its own concrete arm's object with a
+/// <c>"$case"</c> discriminator, mirroring <see cref="AcsSnapshotEntry{T}"/>'s shape (a
+/// CLR round-trip contract, not the Daml-LF wire encoding). It names
+/// <see cref="InterfaceAcsSnapshotEntryJsonConverterFactory"/> in a
+/// <see cref="JsonConverterAttribute"/>, so it converts on bare <see cref="JsonSerializerOptions"/>
+/// with no registration.
+/// </para>
 /// </remarks>
+[JsonConverter(typeof(InterfaceAcsSnapshotEntryJsonConverterFactory))]
 public abstract record InterfaceAcsSnapshotEntry<TInterface, TView>
     where TInterface : IDamlInterface, IHasView<TView>
     where TView : IDamlRecord<TView>
@@ -152,11 +165,118 @@ public abstract record InterfaceAcsSnapshotEntry<TInterface, TView>
     /// <see cref="Status"/> are both too coarse to separate two faults that need opposite
     /// handling, and <see cref="Message"/> is participant prose rather than an API.</param>
     /// <param name="SourceException">Transport exception that caused the stream failure, when
-    /// available.</param>
+    /// available. Carries <see cref="JsonIgnoreAttribute"/> and is excluded from the
+    /// <see cref="System.Text.Json"/> round trip, as on
+    /// <see cref="InterfaceStreamEvent{TInterface, TView}.StreamError"/>: a read restores it as
+    /// <see langword="null"/>.
+    /// A diagnostic only: excluded from <see cref="Equals(StreamError)"/> and <see cref="GetHashCode"/>.</param>
     public sealed record StreamError(
         TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
         string? ErrorId = null,
-        Exception? SourceException = null) : InterfaceAcsSnapshotEntry<TInterface, TView>;
+        [property: JsonIgnore] Exception? SourceException = null) : InterfaceAcsSnapshotEntry<TInterface, TView>
+    {
+        /// <summary>
+        /// Compares two stream errors by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>, ignoring <see cref="SourceException"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
+        /// it does not travel through <see cref="System.Text.Json"/>, so a value read back from JSON
+        /// must equal the value that was written, and two failures with the same content are the same
+        /// failure whichever exception each one caught. It is excluded from <see cref="GetHashCode"/> likewise.
+        /// </remarks>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
+        public bool Equals(StreamError? other) =>
+            other is not null
+            && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
+            && Message == other.Message
+            && Category == other.Category
+            && ErrorId == other.ErrorId;
+
+        /// <summary>
+        /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
+        /// <see cref="Equals(StreamError)"/>.
+        /// </summary>
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, ErrorId);
+    }
+}
+
+/// <summary>
+/// Supplies the <see cref="System.Text.Json"/> converter for any closed
+/// <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}"/>, including its four arms. Without it the
+/// declared-abstract type writes an empty object for every arm and refuses to read any of them back
+/// — see <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}"/>'s remarks.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="CanConvert"/> also matches the arm types directly, so that a caller whose variable is
+/// statically typed as a concrete arm — e.g.
+/// <c>InterfaceAcsSnapshotEntry&lt;TInterface, TView&gt;.Checkpoint</c>, not
+/// <c>InterfaceAcsSnapshotEntry&lt;TInterface, TView&gt;</c> — still gets the discriminated shape once
+/// this factory is registered, e.g. via <see cref="DamlJsonConverters.AddDamlConverters"/>. That
+/// registration is required for the arm case specifically:
+/// <see cref="JsonConverterAttribute"/> is not inherited by <see cref="System.Text.Json"/>'s
+/// converter resolution, so the <see cref="JsonConverterAttribute"/> on
+/// <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}"/> alone leaves an arm-typed lookup on the
+/// default reflection-based contract — the same limitation
+/// <see cref="DamlJsonConverters.AddDamlConverters"/>'s remarks describe for a hand-written
+/// <see cref="Daml.Runtime.Contracts.ContractId{T}"/> derivation. Putting the attribute on the arm
+/// types too would not lift that requirement: see
+/// <see cref="DiscriminatedUnionJson.Write{TUnion}"/>'s remarks for why an arm can carry this
+/// converter only through <see cref="JsonSerializerOptions.Converters"/>, never its own attribute.
+/// </para>
+/// <para>
+/// <b>AOT / trimming incompatibility:</b> <see cref="CreateConverter"/> uses
+/// <see cref="Activator.CreateInstance(Type)"/> and <see cref="Type.MakeGenericType"/> to
+/// instantiate the closed converter at runtime — the same cost
+/// <see cref="Daml.Runtime.Stdlib.SetJsonConverterFactory"/> already carries, accepted so the
+/// attribute reaches a consumer who never registers the converters.
+/// </para>
+/// </remarks>
+[RequiresUnreferencedCode("InterfaceAcsSnapshotEntryJsonConverterFactory uses MakeGenericType and Activator.CreateInstance, which are not trimming-safe.")]
+[RequiresDynamicCode("InterfaceAcsSnapshotEntryJsonConverterFactory uses MakeGenericType at runtime, which requires dynamic code generation.")]
+internal sealed class InterfaceAcsSnapshotEntryJsonConverterFactory : JsonConverterFactory, IDiscriminatedUnionJsonConverterFactory
+{
+    public override bool CanConvert(Type typeToConvert) =>
+        IsClosedInterfaceAcsSnapshotEntry(typeToConvert) || IsArmOfClosedInterfaceAcsSnapshotEntry(typeToConvert);
+
+    private static bool IsClosedInterfaceAcsSnapshotEntry(Type type) =>
+        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
+        && type.GetGenericTypeDefinition() == typeof(InterfaceAcsSnapshotEntry<,>);
+
+    private static bool IsArmOfClosedInterfaceAcsSnapshotEntry(Type type) =>
+        type.BaseType is { } baseType && IsClosedInterfaceAcsSnapshotEntry(baseType);
+
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        var closedEntryType = IsClosedInterfaceAcsSnapshotEntry(typeToConvert) ? typeToConvert : typeToConvert.BaseType!;
+        var typeArguments = closedEntryType.GetGenericArguments();
+        return (JsonConverter)Activator.CreateInstance(
+            typeof(InterfaceAcsSnapshotEntryJsonConverter<,>).MakeGenericType(typeArguments[0], typeArguments[1]))!;
+    }
+}
+
+internal sealed class InterfaceAcsSnapshotEntryJsonConverter<TInterface, TView> : JsonConverter<InterfaceAcsSnapshotEntry<TInterface, TView>>
+    where TInterface : IDamlInterface, IHasView<TView>
+    where TView : IDamlRecord<TView>
+{
+    private static readonly string TypeName =
+        $"{nameof(InterfaceAcsSnapshotEntry<TInterface, TView>)}<{DiscriminatedUnionJson.Describe(typeof(TInterface))}, {DiscriminatedUnionJson.Describe(typeof(TView))}>";
+
+    private static readonly IReadOnlyDictionary<string, Type> Cases = new Dictionary<string, Type>
+    {
+        [nameof(InterfaceAcsSnapshotEntry<TInterface, TView>.Created)] = typeof(InterfaceAcsSnapshotEntry<TInterface, TView>.Created),
+        [nameof(InterfaceAcsSnapshotEntry<TInterface, TView>.Checkpoint)] = typeof(InterfaceAcsSnapshotEntry<TInterface, TView>.Checkpoint),
+        [nameof(InterfaceAcsSnapshotEntry<TInterface, TView>.StreamError)] = typeof(InterfaceAcsSnapshotEntry<TInterface, TView>.StreamError),
+        [nameof(InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified)] = typeof(InterfaceAcsSnapshotEntry<TInterface, TView>.Unclassified),
+    };
+
+    public override InterfaceAcsSnapshotEntry<TInterface, TView> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        DiscriminatedUnionJson.Read<InterfaceAcsSnapshotEntry<TInterface, TView>>(ref reader, options, Cases, TypeName);
+
+    public override void Write(Utf8JsonWriter writer, InterfaceAcsSnapshotEntry<TInterface, TView> value, JsonSerializerOptions options) =>
+        DiscriminatedUnionJson.Write(writer, value, options, TypeName);
 }

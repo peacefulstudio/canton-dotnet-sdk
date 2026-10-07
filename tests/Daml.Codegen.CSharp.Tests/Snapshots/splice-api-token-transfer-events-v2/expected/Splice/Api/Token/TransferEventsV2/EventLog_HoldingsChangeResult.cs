@@ -12,20 +12,20 @@ namespace Splice.Api.Token.TransferEventsV2;
 /// <summary>
 /// Generated from Daml record EventLog_HoldingsChangeResult
 /// </summary>
-public sealed record EventLog_HoldingsChangeResult : IDamlRecord<EventLog_HoldingsChangeResult>
+public sealed record EventLog_HoldingsChangeResult : global::Daml.Runtime.Data.IDamlRecord<EventLog_HoldingsChangeResult>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create();
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create();
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static EventLog_HoldingsChangeResult FromRecord(DamlRecord record) => new EventLog_HoldingsChangeResult();
+    public static EventLog_HoldingsChangeResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new EventLog_HoldingsChangeResult();
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create();
+        return global::Daml.Runtime.Data.DamlRecord.Create();
     }
 
 }

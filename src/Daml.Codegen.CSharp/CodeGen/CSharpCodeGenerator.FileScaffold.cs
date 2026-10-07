@@ -53,6 +53,11 @@ public sealed partial class CSharpCodeGenerator
 
     private static void WriteTrackedUsings(IndentWriter headerIndent, IndentWriter bodyIndent)
     {
+        if (bodyIndent.RequiredUsings.Count == 0)
+        {
+            return;
+        }
+
         foreach (var ns in bodyIndent.RequiredUsings)
         {
             headerIndent.AppendLine($"using {ns};");

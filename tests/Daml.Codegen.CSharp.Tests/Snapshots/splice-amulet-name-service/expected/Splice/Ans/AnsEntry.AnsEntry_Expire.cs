@@ -15,26 +15,26 @@ public sealed partial record AnsEntry
     /// Choice argument type for AnsEntry_Expire.
     /// </summary>
     public sealed record AnsEntry_Expire(
-        [property: DamlFieldAttribute("actor")] Party Actor
-    ) : IDamlRecord<AnsEntry_Expire>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("actor")] global::Daml.Runtime.Data.Party Actor
+    ) : global::Daml.Runtime.Data.IDamlRecord<AnsEntry_Expire>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("actor", Actor.ToDamlValue())
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("actor", Actor.ToDamlValue())
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static AnsEntry_Expire FromRecord(DamlRecord record) => new AnsEntry_Expire(
-            Actor: Party.FromDamlValue(record.GetRequiredField("actor").As<DamlParty>())
+        public static AnsEntry_Expire FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntry_Expire(
+            Actor: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("actor").As<global::Daml.Runtime.Data.DamlParty>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("actor", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actor"), context.Field("actor")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("actor", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actor"), context.Field("actor")))
             );
         }
 

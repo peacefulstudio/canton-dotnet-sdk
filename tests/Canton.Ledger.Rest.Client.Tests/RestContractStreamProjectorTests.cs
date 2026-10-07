@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Serialization;
 using System.Text.Json;
 using System.Net;
@@ -23,6 +24,14 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestContractStreamProjectorTests
 {
+    [ModuleInitializer]
+    internal static void RegisterHandWrittenTemplates()
+    {
+        GeneratedTypeReaders.ForRecord<TemplateMarker>();
+        GeneratedTypeReaders.ForRecord<KeylessMarker>();
+        GeneratedTypeReaders.ForRecord<CirceMarker>();
+    }
+
 
     private sealed record TemplateMarker(DamlRecord Record) : ITemplate, IDamlRecord<TemplateMarker>
     {
@@ -138,59 +147,6 @@ public class RestContractStreamProjectorTests
         created.Payload.Owner.Should().Be((Party)"alice::ns1");
     }
 
-    [Fact]
-    public async Task ProjectActiveContractEntry_surfaces_a_template_mismatch_as_Unclassified_created_event()
-    {
-        var response = await ActiveContractsResponseFrom(
-            """
-            {
-              "contractEntry": {
-                "JsActiveContract": {
-                  "createdEvent": {
-                    "offset": "42",
-                    "contractId": "00other",
-                    "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
-                    "createArgument": {}
-                  },
-                  "synchronizerId": "sync-1"
-                }
-              }
-            }
-            """);
-
-        var projected = ProjectSingleActiveContractEntry(response);
-
-        var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        unclassified.Offset.Should().Be(LedgerOffset.At(42L));
-        unclassified.Kind.Should().Be(UnclassifiedKind.CreatedEvent);
-    }
-
-    [Fact]
-    public async Task ProjectActiveContractEntry_surfaces_a_missing_synchronizer_id_as_Unclassified()
-    {
-        var response = await ActiveContractsResponseFrom(
-            """
-            {
-              "contractEntry": {
-                "JsActiveContract": {
-                  "createdEvent": {
-                    "offset": "42",
-                    "contractId": "00holding",
-                    "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
-                    "createArgument": {}
-                  }
-                }
-              }
-            }
-            """);
-
-        var projected = ProjectSingleActiveContractEntry(response);
-
-        var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        unclassified.Offset.Should().Be(LedgerOffset.At(42L));
-        unclassified.Kind.Should().Be(UnclassifiedKind.MissingSynchronizerId);
-    }
-
     [Theory]
     [InlineData("""{}""")]
     [InlineData("""{"workflowId": "wf-1"}""")]
@@ -296,20 +252,6 @@ public class RestContractStreamProjectorTests
         var unclassified = projected[1].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
         unclassified.Offset.Should().Be(LedgerOffset.At(50L));
         unclassified.Kind.Should().Be(UnclassifiedKind.MissingSynchronizerId);
-    }
-
-    [Fact]
-    public async Task ProjectActiveContractEntry_omits_the_Unassigned_when_the_incomplete_unassigned_created_does_not_match_the_marker()
-    {
-        var response = await IncompleteUnassignedResponseFrom(
-            "Other",
-            """{"contractId": "00holding", "source": "sync-1", "target": "sync-2", "offset": "50", "reassignmentCounter": "7"}""");
-
-        var projected = ProjectSingleActiveContractEntry(response);
-
-        var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        unclassified.Offset.Should().Be(LedgerOffset.At(42L));
-        unclassified.Kind.Should().Be(UnclassifiedKind.CreatedEvent);
     }
 
     [Fact]

@@ -85,9 +85,9 @@ public class EmittedViewFieldCollisionCompilesTests
         var files = EmitViewedInterface("owner");
 
         SourceOf(files, ViewRecordFileName).Should().Contain(
-            $"Party Owner\n) : I{InterfaceName}, IDamlRecord<{ViewRecordName}>",
+            $"global::Daml.Runtime.Data.Party Owner\n) : global::Test.Module.IAsset, global::Daml.Runtime.Data.IDamlRecord<{ViewRecordName}>",
             "the collision cases below only prove something if the same fixture enriches a clean view record");
-        SourceOf(files, MarkerFileName).Should().Contain("Party Owner { get; }");
+        SourceOf(files, MarkerFileName).Should().Contain("global::Daml.Runtime.Data.Party Owner { get; }");
         ShouldCompileCleanly(files, "the enriched shape is the baseline every degraded case falls back from");
     }
 
@@ -104,13 +104,13 @@ public class EmittedViewFieldCollisionCompilesTests
 
         ShouldCompileCleanly(files, $"the emitter must degrade rather than emit uncompilable C#: {collision}");
         SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
+            ": global::Test.Module.IAsset,",
             $"the view record must not be stamped with a marker it cannot satisfy: {collision}");
         SourceOf(files, MarkerFileName).Should().NotContain(
             "Party ",
             $"the marker must not mirror a field the stamped record would not implement: {collision}");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
             "degrading the enrichment must still leave a subscribable marker paired with its view record");
     }
 
@@ -170,13 +170,13 @@ public class EmittedViewFieldCollisionCompilesTests
 
         ShouldCompileCleanly(files, $"the emitter must degrade rather than emit uncompilable or warning-producing C#: {collision}");
         SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
+            ": global::Test.Module.IAsset,",
             $"the view record must not be stamped with a marker it cannot satisfy: {collision}");
         SourceOf(files, MarkerFileName).Should().NotContain(
             "Party ",
             $"the marker must not mirror a field the stamped record would not implement: {collision}");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
             "degrading the enrichment must still leave a subscribable marker paired with its view record");
     }
 
@@ -230,23 +230,20 @@ public class EmittedViewFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_view_record_with_a_field_colliding_with_a_choice_arg_type_name_is_left_un_stamped_and_compiles()
+    public void Emitted_view_record_with_a_field_named_like_a_choice_arg_type_is_stamped_and_compiles()
     {
-        // A view field named "transferArg" mirrors to property "TransferArg TransferArg { get; }"
-        // on the marker. Inside the marker body, "TransferArg.FromRecord(...)" in the choice's
-        // decoder lambda would resolve to that property instead of the type (CS0176 / CS0120).
         var files = EmitViewedInterfaceWithTypedArgChoice("transferArg");
 
-        ShouldCompileCleanly(files, "the emitter must degrade rather than emit uncompilable C#: the marker's decoder lambda uses the bare type name TransferArg, which would be shadowed by a mirrored view-field property of the same name");
-        SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
-            "the view record must not be stamped with a marker it cannot satisfy: the decoder lambda TypeName.FromRecord() would resolve to the property, not the type");
-        SourceOf(files, MarkerFileName).Should().NotContain(
-            "Party TransferArg",
-            "the marker must not mirror a field whose C# name collides with the choice arg type name");
+        ShouldCompileCleanly(files, "the choice argument decoder receiver is global::-rooted, so the mirrored TransferArg property cannot shadow it");
+        SourceOf(files, ViewRecordFileName).Should().Contain(
+            ": global::Test.Module.IAsset,",
+            "a view field named like a same-module decoder receiver collides with nothing, because the marker emits every receiver global::-rooted");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
-            "degrading the enrichment must still leave a subscribable marker paired with its view record");
+            "global::Daml.Runtime.Data.Party TransferArg { get; }",
+            "the marker mirrors the field the stamped record implements");
+        SourceOf(files, MarkerFileName).Should().Contain(
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
+            "the enriched marker still carries its View witness");
     }
 
     private static IReadOnlyList<GeneratedFile> EmitViewedInterfaceWithTypedReturnChoice(string viewFieldName)
@@ -299,23 +296,20 @@ public class EmittedViewFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_view_record_with_a_field_colliding_with_a_choice_return_type_name_is_left_un_stamped_and_compiles()
+    public void Emitted_view_record_with_a_field_named_like_a_choice_return_type_is_stamped_and_compiles()
     {
-        // A view field named "result" mirrors to property "Result Result { get; }" on the marker.
-        // Inside the marker body, "Result.FromRecord(...)" in the choice's result decoder lambda
-        // would resolve to that property instead of the type (CS0176 / CS0120).
         var files = EmitViewedInterfaceWithTypedReturnChoice("result");
 
-        ShouldCompileCleanly(files, "the emitter must degrade rather than emit uncompilable C#: the marker's result decoder lambda uses the bare type name Result, which would be shadowed by a mirrored view-field property of the same name");
-        SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
-            "the view record must not be stamped with a marker it cannot satisfy: the result decoder lambda TypeName.FromRecord() would resolve to the property, not the type");
-        SourceOf(files, MarkerFileName).Should().NotContain(
-            "Party Result",
-            "the marker must not mirror a field whose C# name collides with the choice return type name");
+        ShouldCompileCleanly(files, "the choice result decoder receiver is global::-rooted, so the mirrored Result property cannot shadow it");
+        SourceOf(files, ViewRecordFileName).Should().Contain(
+            ": global::Test.Module.IAsset,",
+            "a view field named like a same-module decoder receiver collides with nothing, because the marker emits every receiver global::-rooted");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
-            "degrading the enrichment must still leave a subscribable marker paired with its view record");
+            "global::Daml.Runtime.Data.Party Result { get; }",
+            "the marker mirrors the field the stamped record implements");
+        SourceOf(files, MarkerFileName).Should().Contain(
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
+            "the enriched marker still carries its View witness");
     }
 
     private static IReadOnlyList<GeneratedFile> EmitViewedInterfaceWithWrappedReturnChoice(string viewFieldName)
@@ -370,23 +364,20 @@ public class EmittedViewFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_view_record_with_a_field_colliding_with_a_wrapped_choice_return_type_name_is_left_un_stamped_and_compiles()
+    public void Emitted_view_record_with_a_field_named_like_a_wrapped_choice_return_type_is_stamped_and_compiles()
     {
-        // A view field named "result" mirrors to property "Result Result { get; }" on the marker.
-        // The choice returns List<Result>; DamlTypeMapper.FromValue recurses into the List arg and
-        // emits Result.FromRecord(...) as a bare receiver inside the marker's descriptor initialiser.
         var files = EmitViewedInterfaceWithWrappedReturnChoice("result");
 
-        ShouldCompileCleanly(files, "the emitter must degrade rather than emit uncompilable C#: the marker's result decoder lambda recurses into List<Result> and uses the bare type name Result, which would be shadowed by a mirrored view-field property of the same name");
-        SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
-            "the view record must not be stamped with a marker it cannot satisfy: the inner decoder lambda TypeName.FromRecord() would resolve to the property, not the type");
-        SourceOf(files, MarkerFileName).Should().NotContain(
-            "Party Result",
-            "the marker must not mirror a field whose C# name collides with the inner type of the wrapped choice return type");
+        ShouldCompileCleanly(files, "the decoder receiver inside List<Result> is global::-rooted, so the mirrored Result property cannot shadow it");
+        SourceOf(files, ViewRecordFileName).Should().Contain(
+            ": global::Test.Module.IAsset,",
+            "a view field named like a same-module decoder receiver collides with nothing, because the marker emits every receiver global::-rooted");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
-            "degrading the enrichment must still leave a subscribable marker paired with its view record");
+            "global::Daml.Runtime.Data.Party Result { get; }",
+            "the marker mirrors the field the stamped record implements");
+        SourceOf(files, MarkerFileName).Should().Contain(
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
+            "the enriched marker still carries its View witness");
     }
 
     private static IReadOnlyList<GeneratedFile> EmitViewedInterfaceWithWrappedOptionalReturnChoice(string viewFieldName)
@@ -435,32 +426,24 @@ public class EmittedViewFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_view_record_with_a_field_colliding_with_a_wrapped_optional_choice_return_type_name_is_left_un_stamped_and_compiles()
+    public void Emitted_view_record_with_a_field_named_like_a_wrapped_optional_choice_return_type_is_stamped_and_compiles()
     {
-        // A view field named "result" mirrors to property "Result Result { get; }" on the marker.
-        // The choice returns DamlWrappedOptional<Result>; DamlTypeMapper.FromValue recurses into
-        // its Argument and emits Result.FromRecord(...) as a bare receiver inside the marker's
-        // descriptor initialiser.
         var files = EmitViewedInterfaceWithWrappedOptionalReturnChoice("result");
 
-        ShouldCompileCleanly(files, "the emitter must degrade rather than emit uncompilable C#: the marker's result decoder lambda recurses into DamlWrappedOptional<Result> and uses the bare type name Result, which would be shadowed by a mirrored view-field property of the same name");
-        SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
-            "the view record must not be stamped with a marker it cannot satisfy: the inner decoder lambda TypeName.FromRecord() would resolve to the property, not the type");
-        SourceOf(files, MarkerFileName).Should().NotContain(
-            "Party Result",
-            "the marker must not mirror a field whose C# name collides with the inner type of the wrapped-optional choice return type");
+        ShouldCompileCleanly(files, "the decoder receiver inside the wrapped optional is global::-rooted, so the mirrored Result property cannot shadow it");
+        SourceOf(files, ViewRecordFileName).Should().Contain(
+            ": global::Test.Module.IAsset,",
+            "a view field named like a same-module decoder receiver collides with nothing, because the marker emits every receiver global::-rooted");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
-            "degrading the enrichment must still leave a subscribable marker paired with its view record");
+            "global::Daml.Runtime.Data.Party Result { get; }",
+            "the marker mirrors the field the stamped record implements");
+        SourceOf(files, MarkerFileName).Should().Contain(
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
+            "the enriched marker still carries its View witness");
     }
 
     private static IReadOnlyList<GeneratedFile> EmitViewedInterfaceWithNestedTemplateReturnChoice(string viewFieldName)
     {
-        // Template "Transfer" has a non-Unit choice "Execute" with arg type "ExecuteArg" (a same-module record).
-        // DarCrossPackageResolver.ResolveLocal nests ExecuteArg under Transfer, so its decoder
-        // receiver becomes "Transfer.ExecuteArg.FromRecord(...)". A view field mirroring to
-        // property "Transfer" would shadow "Transfer" in expression position (CS0120).
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -498,12 +481,6 @@ public class EmittedViewFieldCollisionCompilesTests
                 },
             ],
         };
-        // Also emit the "Transfer" template that nests ExecuteArg as its choice argument type.
-        // This causes DarCrossPackageResolver.ResolveLocal to return "Transfer.ExecuteArg" as
-        // the compound receiver for the ExecuteArg type reference.
-        //
-        // A template's payload is a same-named record; we include an empty Transfer record so
-        // the emitter can locate it.
         var allDataTypes = new List<DamlDataType>(module.DataTypes)
         {
             new DamlDataType { Name = "Transfer", Definition = new DamlRecordDefinition([]) },
@@ -536,24 +513,20 @@ public class EmittedViewFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_view_record_with_a_field_colliding_with_a_nesting_template_name_is_left_un_stamped_and_compiles()
+    public void Emitted_view_record_with_a_field_named_like_a_nesting_template_is_stamped_and_compiles()
     {
-        // A view field named "transfer" mirrors to property "Transfer Transfer { get; }" on the marker.
-        // The choice argument type ExecuteArg is nested under template Transfer, so its decoder
-        // receiver is "Transfer.ExecuteArg.FromRecord(...)". The "Transfer" segment is shadowed by the
-        // mirrored property, causing CS0120.
         var files = EmitViewedInterfaceWithNestedTemplateReturnChoice("transfer");
 
-        ShouldCompileCleanly(files, "the emitter must degrade rather than emit uncompilable C#: the marker's arg decoder lambda uses Transfer.ExecuteArg.FromRecord(...) where Transfer is shadowed by the mirrored view-field property of the same name");
-        SourceOf(files, ViewRecordFileName).Should().NotContain(
-            $": I{InterfaceName},",
-            "the view record must not be stamped with a marker it cannot satisfy: the nested decoder receiver's first segment would resolve to the property, not the type");
-        SourceOf(files, MarkerFileName).Should().NotContain(
-            "Party Transfer",
-            "the marker must not mirror a field whose C# name collides with the nesting template name of a choice argument type");
+        ShouldCompileCleanly(files, "the nested decoder receiver is global::-rooted, so the mirrored Transfer property cannot shadow its first segment");
+        SourceOf(files, ViewRecordFileName).Should().Contain(
+            ": global::Test.Module.IAsset,",
+            "a view field named like a same-module decoder receiver collides with nothing, because the marker emits every receiver global::-rooted");
         SourceOf(files, MarkerFileName).Should().Contain(
-            $"ViewDescriptor<I{InterfaceName}, {ViewRecordName}> View {{ get; }} = new();",
-            "degrading the enrichment must still leave a subscribable marker paired with its view record");
+            "global::Daml.Runtime.Data.Party Transfer { get; }",
+            "the marker mirrors the field the stamped record implements");
+        SourceOf(files, MarkerFileName).Should().Contain(
+            $"global::Daml.Runtime.Contracts.ViewDescriptor<I{InterfaceName}, global::Test.Module.{ViewRecordName}> View {{ get; }} = new();",
+            "the enriched marker still carries its View witness");
     }
 
     private static IReadOnlyList<GeneratedFile> EmitInterfaceChoiceWithLocalArgTypeNamed(string argTypeName)

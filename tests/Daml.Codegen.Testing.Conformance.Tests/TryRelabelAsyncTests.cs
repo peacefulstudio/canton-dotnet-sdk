@@ -17,42 +17,47 @@ public class TryRelabelAsyncTests
     private static readonly ContractId<RichRecord> Target = new("rich-cid");
     private static readonly RichRecord.Relabel Argument = new("renamed");
 
-    private static CreatedContract CreatedOf(string contractId, Identifier templateId) =>
-        new(
-            EventId: $"evt-{contractId}",
-            ContractId: contractId,
-            TemplateId: templateId,
-            Payload: DamlRecord.Create(),
-            WitnessParties: [new Party("alice")],
-            Signatories: [new Party("alice")],
-            Observers: []);
-
-    private static TransactionResult TransactionCreating(string newRichRecordId) =>
+    private static TransactionResult TransactionReturning(string newRichRecordId) =>
         new(
             UpdateId: "upd-1",
             CompletionOffset: LedgerOffset.At(1),
-            CreatedContracts: [CreatedOf(newRichRecordId, RichRecord.TemplateId)],
+            CreatedContracts: [],
             ArchivedContractIds: [],
-            CommandId: default);
+            CommandId: default)
+        {
+            ExercisedEvents =
+            [
+                new ExercisedEvent(
+                    ContractId: "rich-cid",
+                    TemplateId: RichRecord.TemplateId,
+                    InterfaceId: null,
+                    ChoiceName: new ChoiceName("Relabel"),
+                    ChoiceArgument: DamlRecord.Create(),
+                    ExerciseResult: new DamlContractId(newRichRecordId),
+                    Consuming: false,
+                    ActingParties: [new Party("alice")],
+                    WitnessParties: [new Party("alice")]),
+            ],
+        };
 
     [Fact]
-    public async Task TryRelabelAsync_projects_the_created_rich_record_on_success()
+    public async Task TryRelabelAsync_returns_the_contract_id_the_choice_exercised_to()
     {
         using var client = new FakeLedgerClient(
-            _ => new ExerciseOutcome<TransactionResult>.One(TransactionCreating("new-rich-cid")));
+            _ => new ExerciseOutcome<TransactionResult>.One(TransactionReturning("new-rich-cid")));
 
         var outcome = await Target.TryRelabelAsync(client, Argument, new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<RelabelResult>.One>();
-        ((ExerciseOutcome<RelabelResult>.One)outcome).Result.RichRecord.Value.Should().Be("new-rich-cid");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<RichRecord>>.One>()
+            .Which.Result.Value.Should().Be("new-rich-cid");
     }
 
     [Fact]
     public async Task TryRelabelAsync_builds_an_exercise_command_for_the_relabel_choice_on_the_target()
     {
         using var client = new FakeLedgerClient(
-            _ => new ExerciseOutcome<TransactionResult>.One(TransactionCreating("new-rich-cid")));
+            _ => new ExerciseOutcome<TransactionResult>.One(TransactionReturning("new-rich-cid")));
 
         await Target.TryRelabelAsync(client, Argument, new Party("alice"), workflowId: "wf-7",
             cancellationToken: TestContext.Current.CancellationToken);
@@ -75,7 +80,7 @@ public class TryRelabelAsyncTests
     public async Task TryRelabelAsync_omits_workflow_id_when_blank(string? workflowId)
     {
         using var client = new FakeLedgerClient(
-            _ => new ExerciseOutcome<TransactionResult>.One(TransactionCreating("new-rich-cid")));
+            _ => new ExerciseOutcome<TransactionResult>.One(TransactionReturning("new-rich-cid")));
 
         await Target.TryRelabelAsync(client, Argument, new Party("alice"), workflowId: workflowId,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -87,7 +92,7 @@ public class TryRelabelAsyncTests
     public async Task TryRelabelAsync_forwards_a_non_blank_workflow_id_verbatim()
     {
         using var client = new FakeLedgerClient(
-            _ => new ExerciseOutcome<TransactionResult>.One(TransactionCreating("new-rich-cid")));
+            _ => new ExerciseOutcome<TransactionResult>.One(TransactionReturning("new-rich-cid")));
 
         await Target.TryRelabelAsync(client, Argument, new Party("alice"), workflowId: " padded ",
             cancellationToken: TestContext.Current.CancellationToken);
@@ -109,7 +114,7 @@ public class TryRelabelAsyncTests
         var outcome = await Target.TryRelabelAsync(client, Argument, new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var error = outcome.Should().BeOfType<ExerciseOutcome<RelabelResult>.DamlError>().Subject;
+        var error = outcome.Should().BeOfType<ExerciseOutcome<ContractId<RichRecord>>.DamlError>().Subject;
         error.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
         error.Message.Should().Be("gone");
     }
@@ -124,7 +129,7 @@ public class TryRelabelAsyncTests
         var outcome = await Target.TryRelabelAsync(client, Argument, new Party("alice"),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var error = outcome.Should().BeOfType<ExerciseOutcome<RelabelResult>.InfraError>().Subject;
+        var error = outcome.Should().BeOfType<ExerciseOutcome<ContractId<RichRecord>>.InfraError>().Subject;
         error.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         error.Message.Should().Be("unavailable");
     }

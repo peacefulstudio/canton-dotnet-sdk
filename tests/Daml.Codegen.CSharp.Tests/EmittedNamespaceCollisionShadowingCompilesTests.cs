@@ -236,7 +236,7 @@ public class EmittedNamespaceCollisionShadowingCompilesTests
 
         var holding = files.First(f => f.RelativePath.EndsWith("Holding.cs", StringComparison.Ordinal));
         holding.Content.Should().Contain(
-            "public static KeyDescriptor<Holding, IReadOnlyList<global::Daml.Runtime.Data.Party>> Key { get; }",
+            "public static global::Daml.Runtime.Contracts.KeyDescriptor<Holding, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>> Key { get; }",
             "the nested-generic key witness qualifies the shadowed imported type");
         holding.Content.Should().Contain(
             "IReadOnlyList<global::Daml.Runtime.Data.Party> key)",

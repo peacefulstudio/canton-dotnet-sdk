@@ -13,26 +13,26 @@ namespace Splice.Api.Token.AllocationV2;
 /// Generated from Daml record AllocationAction.AA_Custom
 /// </summary>
 public sealed record AllocationAction_AA_Custom(
-    [property: DamlFieldAttribute("id")] string Id
-) : IDamlRecord<AllocationAction_AA_Custom>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
+) : global::Daml.Runtime.Data.IDamlRecord<AllocationAction_AA_Custom>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("id", new DamlText(Id))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AllocationAction_AA_Custom FromRecord(DamlRecord record) => new AllocationAction_AA_Custom(
-        Id: record.GetRequiredField("id").As<DamlText>().Value
+    public static AllocationAction_AA_Custom FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationAction_AA_Custom(
+        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
         );
     }
 

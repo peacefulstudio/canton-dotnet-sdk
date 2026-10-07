@@ -14,26 +14,26 @@ namespace Splice.Ans;
 /// Generated from Daml record AnsEntryContext_RejectEntryInitialPaymentResult
 /// </summary>
 public sealed record AnsEntryContext_RejectEntryInitialPaymentResult(
-    [property: DamlFieldAttribute("amuletSum")] global::Splice.Amulet.AmuletCreateSummary<ContractId<global::Splice.Amulet.Amulet>> AmuletSum
-) : IDamlRecord<AnsEntryContext_RejectEntryInitialPaymentResult>
+    [property: global::Daml.Runtime.Data.DamlFieldAttribute("amuletSum")] global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>> AmuletSum
+) : global::Daml.Runtime.Data.IDamlRecord<AnsEntryContext_RejectEntryInitialPaymentResult>
 {
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("amuletSum", AmuletSum.ToRecord(__t0 => (DamlValue)(__t0.ToDamlValue())))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("amuletSum", AmuletSum.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToDamlValue())))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static AnsEntryContext_RejectEntryInitialPaymentResult FromRecord(DamlRecord record) => new AnsEntryContext_RejectEntryInitialPaymentResult(
-        AmuletSum: global::Splice.Amulet.AmuletCreateSummary<ContractId<global::Splice.Amulet.Amulet>>.FromRecord(record.GetRequiredField("amuletSum").As<DamlRecord>(), __v0 => new ContractId<global::Splice.Amulet.Amulet>(__v0.As<DamlContractId>().Value))
+    public static AnsEntryContext_RejectEntryInitialPaymentResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntryContext_RejectEntryInitialPaymentResult(
+        AmuletSum: global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>>.FromRecord(record.GetRequiredField("amuletSum").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>(__v0.As<global::Daml.Runtime.Contracts.DamlContractId>().Value), null)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("amuletSum", global::Splice.Amulet.AmuletCreateSummary<ContractId<global::Splice.Amulet.Amulet>>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletSum"), context.Field("amuletSum"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("amuletSum", global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletSum"), context.Field("amuletSum"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0), null))
         );
     }
 

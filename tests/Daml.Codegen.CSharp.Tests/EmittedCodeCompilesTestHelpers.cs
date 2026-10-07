@@ -16,7 +16,7 @@ namespace Daml.Codegen.CSharp.Tests;
 /// Smoke test that pipes the codegen-emitted source through Roslyn against the
 /// real <c>Daml.Runtime</c> + <c>Daml.Ledger.Abstractions</c> assemblies. Pins
 /// "the emitted shape compiles" against quiet drift: string-shape tests in
-/// <see cref="ChoiceResultStructTests"/> and <see cref="ChoiceAsyncExerciserTests"/>
+/// <see cref="ContractIdChoiceProjectorTests"/> and <see cref="ChoiceAsyncExerciserTests"/>
 /// can pass while the surrounding template body introduces Roslyn errors — this
 /// test fails on any such error-severity diagnostic. Warnings are not asserted
 /// against; consumer projects choose their own warning policy.

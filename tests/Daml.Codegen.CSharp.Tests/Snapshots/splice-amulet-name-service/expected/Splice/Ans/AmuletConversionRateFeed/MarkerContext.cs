@@ -17,22 +17,22 @@ namespace Splice.Ans.AmuletConversionRateFeed;
 /// Generated from Daml record MarkerContext
 /// </summary>
 public sealed record MarkerContext(
-    ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight> FeaturedAppRightCid,
-    IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary> Beneficiaries
-) : IDamlRecord<MarkerContext>
+    global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight> FeaturedAppRightCid,
+    global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary> Beneficiaries
+) : global::Daml.Runtime.Data.IDamlRecord<MarkerContext>
 {
     /// <summary>The Daml field <c>featuredAppRightCid</c>.</summary>
-    [DamlFieldAttribute("featuredAppRightCid")]
-    public ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight> FeaturedAppRightCid { get; init; } = FeaturedAppRightCid;
+    [global::Daml.Runtime.Data.DamlFieldAttribute("featuredAppRightCid")]
+    public global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight> FeaturedAppRightCid { get; init; } = FeaturedAppRightCid;
 
-    private readonly IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary> _beneficiaries = DamlFieldCollections.Copy(Beneficiaries);
+    private readonly global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary> _beneficiaries = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Beneficiaries);
 
     /// <summary>The Daml field <c>beneficiaries</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
-    [DamlFieldAttribute("beneficiaries")]
-    public IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary> Beneficiaries
+    [global::Daml.Runtime.Data.DamlFieldAttribute("beneficiaries")]
+    public global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary> Beneficiaries
     {
         get => _beneficiaries;
-        init => _beneficiaries = DamlFieldCollections.Copy(value);
+        init => _beneficiaries = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
 
     /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
@@ -40,38 +40,38 @@ public sealed record MarkerContext(
     /// <returns><c>true</c> when every member is equal.</returns>
     public bool Equals(MarkerContext? other) =>
         other is not null
-        && EqualityComparer<ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>>.Default.Equals(FeaturedAppRightCid, other.FeaturedAppRightCid)
-        && DamlFieldCollections.Equal(Beneficiaries, other.Beneficiaries);
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>>.Default.Equals(FeaturedAppRightCid, other.FeaturedAppRightCid)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Beneficiaries, other.Beneficiaries);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        var hash = new global::System.HashCode();
         hash.Add(FeaturedAppRightCid);
-        hash.Add(DamlFieldCollections.Hash(Beneficiaries));
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Beneficiaries));
         return hash.ToHashCode();
     }
 
     /// <summary>Converts this value to a DamlRecord.</summary>
-    public DamlRecord ToRecord() => DamlRecord.Create(
-        DamlField.Create("featuredAppRightCid", FeaturedAppRightCid.ToDamlValue()),
-        DamlField.Create("beneficiaries", new DamlList(Beneficiaries.Select(x => (DamlValue)x.ToRecord()).ToList()))
+    public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+        global::Daml.Runtime.Data.DamlField.Create("featuredAppRightCid", FeaturedAppRightCid.ToDamlValue()),
+        global::Daml.Runtime.Data.DamlField.Create("beneficiaries", new global::Daml.Runtime.Data.DamlList(Beneficiaries.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToRecord()).ToList()))
     );
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
-    public static MarkerContext FromRecord(DamlRecord record) => new MarkerContext(
-        FeaturedAppRightCid: new ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>(record.GetRequiredField("featuredAppRightCid").As<DamlContractId>().Value),
-        Beneficiaries: (IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary>)record.GetRequiredField("beneficiaries").As<DamlList>().Values.Select(x => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.FromRecord(x.As<DamlRecord>())).ToList()
+    public static MarkerContext FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new MarkerContext(
+        FeaturedAppRightCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>(record.GetRequiredField("featuredAppRightCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        Beneficiaries: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary>)record.GetRequiredField("beneficiaries").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+    public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        return DamlRecord.Create(
-            DamlField.Create("featuredAppRightCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "featuredAppRightCid"), context.Field("featuredAppRightCid"))),
-            DamlField.Create("beneficiaries", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "beneficiaries"), context.Field("beneficiaries"), (__json0, __ctx0) => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.__ReadDamlLfJson(__json0, __ctx0)))
+        return global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("featuredAppRightCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "featuredAppRightCid"), context.Field("featuredAppRightCid"))),
+            global::Daml.Runtime.Data.DamlField.Create("beneficiaries", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "beneficiaries"), context.Field("beneficiaries"), (__json0, __ctx0) => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.__ReadDamlLfJson(__json0, __ctx0)))
         );
     }
 

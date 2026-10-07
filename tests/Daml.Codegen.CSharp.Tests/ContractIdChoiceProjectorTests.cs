@@ -190,27 +190,32 @@ public class ContractIdChoiceProjectorTests
 
     private static string CaseOf(object outcome) => outcome.GetType().Name;
 
-    private static object? SlotOf(object outcome, string field)
-    {
-        var result = outcome.GetType().GetProperty("Result")!.GetValue(outcome)!;
-        return result.GetType().GetProperty(field)!.GetValue(result);
-    }
+    private static object? NullableResultOf(object outcome) =>
+        outcome.GetType().GetProperty("Result")!.GetValue(outcome);
 
-    private static string? CidOf(object? contractId) =>
-        (string?)contractId?.GetType().GetProperty("Value")!.GetValue(contractId);
+    private static object ResultOf(object outcome) => NullableResultOf(outcome)!;
 
-    private static IEnumerable<string?> CidsOf(object? contractIds) =>
-        ((IEnumerable)contractIds!).Cast<object>().Select(CidOf);
+    private static object Component(object tuple, string name) =>
+        tuple.GetType().GetProperty(name)!.GetValue(tuple)!;
 
-    private static IEnumerable<string> ManyIdsOf(object outcome) =>
-        ((IEnumerable)outcome.GetType().GetProperty("ContractIds")!.GetValue(outcome)!).Cast<string>();
+    private static string CidOf(object contractId) =>
+        (string)contractId.GetType().GetProperty("Value")!.GetValue(contractId)!;
+
+    private static IEnumerable<string> CidsOf(object contractIds) =>
+        ((IEnumerable)contractIds).Cast<object>().Select(CidOf);
+
+    private static bool HasValue(object optional) =>
+        (bool)optional.GetType().GetProperty("HasValue")!.GetValue(optional)!;
+
+    private static object ValueOf(object optional) =>
+        optional.GetType().GetMethod("GetValueOrThrow")!.Invoke(optional, null)!;
 
     private static DamlRecord Pair(DamlValue first, DamlValue second) =>
         DamlRecord.Create(new DamlField("_1", first), new DamlField("_2", second));
 
-    private static ExercisedEvent DeskExercised(string choiceName, DamlValue result) =>
+    private static ExercisedEvent DeskExercised(string choiceName, DamlValue result, string contractId = DeskCid) =>
         new(
-            ContractId: DeskCid,
+            ContractId: contractId,
             TemplateId: new Identifier(PackageId, ModuleName, "Desk"),
             InterfaceId: null,
             ChoiceName: new Daml.Runtime.Commands.ChoiceName(choiceName),
@@ -242,19 +247,19 @@ public class ContractIdChoiceProjectorTests
         };
 
     [Fact]
-    public void Trade_projects_each_tuple_component_to_its_slot_when_no_created_contract_is_visible()
+    public void Trade_returns_each_tuple_component_as_the_contract_id_the_exercise_result_names()
     {
         var tx = Transaction([], DeskExercised("Trade", Pair(new DamlContractId("buyer-1"), new DamlContractId("seller-1"))));
 
         var outcome = Project("Trade", tx);
 
         CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
-        CidOf(SlotOf(outcome, "Seller")).Should().Be("seller-1");
+        CidOf(Component(ResultOf(outcome), "_1")).Should().Be("buyer-1");
+        CidOf(Component(ResultOf(outcome), "_2")).Should().Be("seller-1");
     }
 
     [Fact]
-    public void Split_projects_two_same_template_components_in_tuple_order_over_created_order()
+    public void Split_returns_two_same_template_components_in_tuple_order_over_created_order()
     {
         var tx = Transaction(
             [Created("half-b", "Half"), Created("half-a", "Half")],
@@ -263,12 +268,12 @@ public class ContractIdChoiceProjectorTests
         var outcome = Project("Split", tx);
 
         CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Half")).Should().Be("half-a");
-        CidOf(SlotOf(outcome, "Half2")).Should().Be("half-b");
+        CidOf(Component(ResultOf(outcome), "_1")).Should().Be("half-a");
+        CidOf(Component(ResultOf(outcome), "_2")).Should().Be("half-b");
     }
 
     [Fact]
-    public void Split_keeps_reporting_Many_when_more_halves_are_visible_than_the_tuple_names()
+    public void Split_reports_One_of_the_returned_halves_when_more_halves_are_visible_than_the_tuple_names()
     {
         var tx = Transaction(
             [Created("half-a", "Half"), Created("half-b", "Half"), Created("half-c", "Half")],
@@ -276,68 +281,60 @@ public class ContractIdChoiceProjectorTests
 
         var outcome = Project("Split", tx);
 
-        CaseOf(outcome).Should().Be("Many");
-        ManyIdsOf(outcome).Should().Equal("half-b", "half-c");
+        CaseOf(outcome).Should().Be("One");
+        CidOf(Component(ResultOf(outcome), "_1")).Should().Be("half-a");
+        CidOf(Component(ResultOf(outcome), "_2")).Should().Be("half-b");
     }
 
     [Fact]
-    public void Split_falls_back_to_the_visible_halves_when_no_Split_exercise_is_present()
+    public void Split_throws_when_the_transaction_carries_no_Split_exercise_even_though_halves_were_created()
     {
         var tx = Transaction([Created("half-a", "Half"), Created("half-b", "Half")]);
 
-        var outcome = Project("Split", tx);
+        var act = () => Project("Split", tx);
 
-        CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Half")).Should().Be("half-a");
-        CidOf(SlotOf(outcome, "Half2")).Should().Be("half-b");
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Submission succeeded but no 'Split' exercise on contract 'desk-cid' was recorded on transaction update-desk. *");
     }
 
     [Fact]
-    public void Maybe_projects_the_contract_id_a_present_optional_carries()
+    public void Split_ignores_the_same_choice_exercised_on_another_desk_in_the_transaction()
+    {
+        var tx = Transaction(
+            [],
+            DeskExercised("Split", Pair(new DamlContractId("nested-a"), new DamlContractId("nested-b")), contractId: "nested-desk-cid"),
+            DeskExercised("Split", Pair(new DamlContractId("half-a"), new DamlContractId("half-b"))));
+
+        var outcome = Project("Split", tx);
+
+        CidOf(Component(ResultOf(outcome), "_1")).Should().Be("half-a");
+        CidOf(Component(ResultOf(outcome), "_2")).Should().Be("half-b");
+    }
+
+    [Fact]
+    public void Maybe_returns_the_contract_id_a_present_optional_carries()
     {
         var tx = Transaction([], DeskExercised("Maybe", DamlOptional.Some(new DamlContractId("buyer-1"))));
 
         var outcome = Project("Maybe", tx);
 
         CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
+        CidOf(ResultOf(outcome)).Should().Be("buyer-1");
     }
 
     [Fact]
-    public void Maybe_projects_the_contract_id_a_present_optional_chain_level_carries()
-    {
-        var tx = Transaction([], DeskExercised("Maybe", DamlOptionalChain.Some(new DamlContractId("buyer-1"))));
-
-        var outcome = Project("Maybe", tx);
-
-        CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
-    }
-
-    [Fact]
-    public void Maybe_projects_a_bare_contract_id_as_present()
-    {
-        var tx = Transaction([], DeskExercised("Maybe", new DamlContractId("buyer-1")));
-
-        var outcome = Project("Maybe", tx);
-
-        CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
-    }
-
-    [Fact]
-    public void Maybe_projects_an_absent_optional_to_no_contract_id_even_when_a_buyer_is_visible()
+    public void Maybe_returns_no_contract_id_for_an_absent_optional_even_when_a_buyer_is_visible()
     {
         var tx = Transaction([Created("buyer-unrelated", "Buyer")], DeskExercised("Maybe", DamlOptional.None));
 
         var outcome = Project("Maybe", tx);
 
         CaseOf(outcome).Should().Be("One");
-        SlotOf(outcome, "Buyer").Should().BeNull();
+        NullableResultOf(outcome).Should().BeNull();
     }
 
     [Fact]
-    public void Batch_projects_the_contract_id_component_of_every_listed_tuple_in_order()
+    public void Batch_returns_the_tuples_in_the_order_the_exercise_result_lists_them()
     {
         var tx = Transaction([], DeskExercised("Batch", new DamlList(
         [
@@ -348,7 +345,9 @@ public class ContractIdChoiceProjectorTests
         var outcome = Project("Batch", tx);
 
         CaseOf(outcome).Should().Be("One");
-        CidsOf(SlotOf(outcome, "Buyer")).Should().Equal("buyer-2", "buyer-1");
+        var batch = ((IEnumerable)ResultOf(outcome)).Cast<object>().ToList();
+        batch.Select(entry => CidOf(Component(entry, "_1"))).Should().Equal("buyer-2", "buyer-1");
+        batch.Select(entry => Component(entry, "_2")).Should().Equal(2L, 1L);
     }
 
     [Fact]
@@ -364,26 +363,26 @@ public class ContractIdChoiceProjectorTests
     }
 
     [Fact]
-    public void Offer_projects_an_omitted_trailing_optional_component_to_no_contract_id()
+    public void Offer_returns_an_empty_optional_for_an_omitted_trailing_optional_component()
     {
         var tx = Transaction([], DeskExercised("Offer", DamlRecord.Create(new DamlField("_1", new DamlContractId("buyer-1")))));
 
         var outcome = Project("Offer", tx);
 
         CaseOf(outcome).Should().Be("One");
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
-        SlotOf(outcome, "Seller").Should().BeNull();
+        CidOf(Component(ResultOf(outcome), "_1")).Should().Be("buyer-1");
+        HasValue(Component(ResultOf(outcome), "_2")).Should().BeFalse();
     }
 
     [Fact]
-    public void Offer_projects_a_present_trailing_optional_component_to_its_contract_id()
+    public void Offer_returns_the_contract_id_a_present_trailing_optional_component_carries()
     {
         var tx = Transaction([], DeskExercised("Offer", Pair(new DamlContractId("buyer-1"), DamlOptional.Some(new DamlContractId("seller-1")))));
 
         var outcome = Project("Offer", tx);
 
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
-        CidOf(SlotOf(outcome, "Seller")).Should().Be("seller-1");
+        CidOf(Component(ResultOf(outcome), "_1")).Should().Be("buyer-1");
+        CidOf(ValueOf(Component(ResultOf(outcome), "_2"))).Should().Be("seller-1");
     }
 
     [Fact]
@@ -407,16 +406,18 @@ public class ContractIdChoiceProjectorTests
     }
 
     [Fact]
-    public void Nested_projects_an_omitted_trailing_optional_of_an_inner_tuple_to_no_contract_id()
+    public void Nested_returns_an_empty_optional_for_an_omitted_trailing_optional_of_an_inner_tuple()
     {
         var inner = DamlRecord.Create(new DamlField("_1", new DamlContractId("half-1")));
         var tx = Transaction([], DeskExercised("Nested", Pair(new DamlContractId("buyer-1"), inner)));
 
         var outcome = Project("Nested", tx);
 
-        CidOf(SlotOf(outcome, "Buyer")).Should().Be("buyer-1");
-        CidOf(SlotOf(outcome, "Half")).Should().Be("half-1");
-        SlotOf(outcome, "Seller").Should().BeNull();
+        var result = ResultOf(outcome);
+        CidOf(Component(result, "_1")).Should().Be("buyer-1");
+        var innerTuple = Component(result, "_2");
+        CidOf(Component(innerTuple, "_1")).Should().Be("half-1");
+        HasValue(Component(innerTuple, "_2")).Should().BeFalse();
     }
 
     [Fact]
@@ -430,7 +431,7 @@ public class ContractIdChoiceProjectorTests
     }
 
     [Fact]
-    public void Roster_projects_each_listed_tuple_with_an_omitted_trailing_optional_component()
+    public void Roster_returns_each_listed_tuple_with_an_omitted_trailing_optional_component_empty()
     {
         var tx = Transaction([], DeskExercised("Roster", new DamlList(
         [
@@ -440,7 +441,9 @@ public class ContractIdChoiceProjectorTests
 
         var outcome = Project("Roster", tx);
 
-        CidsOf(SlotOf(outcome, "Buyer")).Should().Equal("buyer-1", "buyer-2");
-        CidOf(SlotOf(outcome, "Seller")).Should().Be("seller-2");
+        var roster = ((IEnumerable)ResultOf(outcome)).Cast<object>().ToList();
+        roster.Select(entry => CidOf(Component(entry, "_1"))).Should().Equal("buyer-1", "buyer-2");
+        HasValue(Component(roster[0], "_2")).Should().BeFalse();
+        CidOf(ValueOf(Component(roster[1], "_2"))).Should().Be("seller-2");
     }
 }

@@ -15,26 +15,26 @@ public sealed partial record Steward
     /// Choice argument type for Revise.
     /// </summary>
     public sealed record Revise(
-        [property: DamlFieldAttribute("revised")] string Revised
-    ) : IDamlRecord<Revise>
+        [property: global::Daml.Runtime.Data.DamlFieldAttribute("revised")] string Revised
+    ) : global::Daml.Runtime.Data.IDamlRecord<Revise>
     {
         /// <summary>Converts this value to a DamlRecord.</summary>
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("revised", new DamlText(Revised))
+        public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
+            global::Daml.Runtime.Data.DamlField.Create("revised", new global::Daml.Runtime.Data.DamlText(Revised))
         );
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
-        public static Revise FromRecord(DamlRecord record) => new Revise(
-            Revised: record.GetRequiredField("revised").As<DamlText>().Value
+        public static Revise FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Revise(
+            Revised: record.GetRequiredField("revised").As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
+        public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
         {
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-            return DamlRecord.Create(
-                DamlField.Create("revised", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "revised"), context.Field("revised")))
+            return global::Daml.Runtime.Data.DamlRecord.Create(
+                global::Daml.Runtime.Data.DamlField.Create("revised", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "revised"), context.Field("revised")))
             );
         }
 

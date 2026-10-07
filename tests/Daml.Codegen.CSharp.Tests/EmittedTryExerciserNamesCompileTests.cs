@@ -90,10 +90,10 @@ public class EmittedTryExerciserNamesCompileTests
                 internal static Task<ExerciseOutcome<ContractId<Vault>>> CreateKeyed(ILedgerWriter client, Vault vault) =>
                     client.TryCreateAsync(vault, new Party("alice"));
 
-                internal static Task<ExerciseOutcome<TransferResult>> ExerciseKeylessById(ILedgerWriter client, ContractId<Iou> iouId) =>
+                internal static Task<ExerciseOutcome<ContractId<Iou>>> ExerciseKeylessById(ILedgerWriter client, ContractId<Iou> iouId) =>
                     iouId.TryTransferAsync(client, new Party("owner"));
 
-                internal static Task<ExerciseOutcome<TransferResult>> ExerciseKeylessByContract(ILedgerWriter client, Contract<Iou> iou) =>
+                internal static Task<ExerciseOutcome<ContractId<Iou>>> ExerciseKeylessByContract(ILedgerWriter client, Contract<Iou> iou) =>
                     iou.TryTransferAsync(client);
 
                 internal static Task<ExerciseOutcome<string>> ExerciseValueReturning(ILedgerWriter client, ContractId<Iou> iouId) =>
@@ -102,22 +102,22 @@ public class EmittedTryExerciserNamesCompileTests
                 internal static Task<ExerciseOutcome<DamlUnit>> Archive(ILedgerWriter client, ContractId<Iou> iouId) =>
                     iouId.TryArchiveAsync(client, new Party("issuer"));
 
-                internal static Task<ExerciseOutcome<ReissueResult>> ExerciseKeyed(ILedgerWriter client, ContractId<Vault> vaultId) =>
+                internal static Task<ExerciseOutcome<ContractId<Vault>>> ExerciseKeyed(ILedgerWriter client, ContractId<Vault> vaultId) =>
                     vaultId.TryReissueAsync(client, new Party("alice"));
 
                 internal static Task<ExerciseOutcome<DamlUnit>> ExerciseInterface(ILedgerWriter client, ContractId<ICustody> custodyId) =>
                     custodyId.TryFreezeAsync(client, new Party("alice"));
 
-                internal static Task<ExerciseOutcome<CreateResult>> ExerciseChoiceNamedCreate(ILedgerWriter client, ContractId<Registry> registryId) =>
+                internal static Task<ExerciseOutcome<ContractId<Registry>>> ExerciseChoiceNamedCreate(ILedgerWriter client, ContractId<Registry> registryId) =>
                     registryId.TryCreateAsync(client, new Party("registrar"));
 
                 internal static Task<ExerciseOutcome<ContractId<Registry>>> CreateTemplateWithChoiceNamedCreate(ILedgerWriter client, Registry registry) =>
                     client.TryCreateAsync(registry);
 
-                internal static Task<ExerciseOutcome<RedeemResult>> ExerciseRedeem(ILedgerWriter client, ContractId<Registry> registryId) =>
+                internal static Task<ExerciseOutcome<ContractId<Registry>>> ExerciseRedeem(ILedgerWriter client, ContractId<Registry> registryId) =>
                     registryId.TryRedeemAsync(client, new Party("registrar"));
 
-                internal static Task<ExerciseOutcome<TryRedeemResult>> ExerciseChoiceNamedTryRedeem(ILedgerWriter client, ContractId<Registry> registryId) =>
+                internal static Task<ExerciseOutcome<ContractId<Registry>>> ExerciseChoiceNamedTryRedeem(ILedgerWriter client, ContractId<Registry> registryId) =>
                     registryId.TryTryRedeemAsync(client, new Party("registrar"));
             }
             """);

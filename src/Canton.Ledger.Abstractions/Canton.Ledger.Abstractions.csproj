@@ -13,7 +13,7 @@
     <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client" />
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client" />
     <InternalsVisibleTo Include="Canton.Ledger.Testing" />
-    <InternalsVisibleTo Include="Canton.Ledger.Pqs.Client.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Testing.Tests" />
   </ItemGroup>
 
   <ItemGroup>

@@ -74,7 +74,10 @@ The .NET side (`Daml.Codegen.CSharp`) parses the `IntermediateDar` protobuf into
 - **Choices** — nested types on their template (e.g. `Iou.Transfer`) with `ExerciseCommand` builders.
 - **Records, variants, enums** — sealed records implementing `IDamlRecord<TSelf>`, variant hierarchies implementing `IDamlVariant`, and C# `enum`s. Only types the DAR actually declares are emitted; placeholder records for unresolved types are not.
 - **Interfaces** — types implementing `IDamlInterface`, with `IHasView<TView>` and `IImplements<TInterface>` linking templates to the interfaces they implement. `IHasView<TView>` is a member-less marker; the interface exposes a static `View` witness of type `ViewDescriptor<TInterface, TView>` that a subscription passes to the client.
+- **A registration file per Daml package** — an internal `[ModuleInitializer]` that registers the package's templates, interfaces and choices with `GeneratedTypeReaders` when its module is first used. The JSON Ledger API client decodes generated types only through that registry.
 - Optionally a `.csproj`, so a DAR can be turned directly into a NuGet package.
+
+Every type reference in the emitted code is rooted at `global::`, so a Daml name cannot shadow a .NET or runtime type. A Daml name that clashes with a generated member is emitted with a trailing underscore and a warning, and two Daml names that make the generated types clash stop the run with an error naming both.
 
 ### Invocation
 
@@ -95,10 +98,10 @@ Its main areas:
 | `Daml.Runtime.Contracts` | `ITemplate`, `IDamlInterface`, `ContractId<T>`, `Contract<T>`, `Contract<T, TKey>`, `ContractKey<TKey>`, `KeyDescriptor<T, TKey>`, `ViewDescriptor<TInterface, TView>`, key/view/implements markers |
 | `Daml.Runtime.Data` | The `DamlValue` hierarchy (`DamlInt64`, `DamlNumeric`, `DamlText`, `DamlParty`, `DamlDate`, `DamlTimestamp`, `DamlContractId`, `DamlList`, `DamlOptional`, `DamlTextMap`, `DamlRecord`, `DamlVariant`, …), `Identifier`, and `DamlValueExtensions.FromDamlValue<T>` for unwrapping values to CLR types |
 | `Daml.Runtime.Commands` | Transport-agnostic `CreateCommand`, `ExerciseCommand`, `CreateAndExerciseCommand`, `CommandsSubmission`, `SubmitterInfo` |
-| `Daml.Runtime.Outcomes` | `ExerciseOutcome<T>` (`One` / `None` / `Many` and the error arms) and `DamlErrorCategory` |
+| `Daml.Runtime.Outcomes` | `ExerciseOutcome<T>` (`One` / `None` / `Many` and the error arms), `ExerciseOutcomeProjection` (reads a choice's result out of a committed transaction) and `DamlErrorCategory` |
 | `Daml.Runtime.Streams` | `ContractStreamEvent<T>` (created, archived, assigned, unassigned, checkpoint) and the ACS snapshot entries |
-| `Daml.Runtime.Serialization` | `DamlJsonSerializer` for Ledger API JSON |
-| `Daml.Runtime.Stdlib` | Daml standard-library mappings (`Tuple`, `Either`, `Optional<T>`, `Set`, `Map`, `NonEmpty`, …) |
+| `Daml.Runtime.Serialization` | `DamlJsonSerializer` for Ledger API JSON, `DamlLfJsonReader` for the schema-directed read of a Daml-LF JSON payload, and `GeneratedTypeReaders`, the registry generated packages fill |
+| `Daml.Runtime.Stdlib` | Daml standard-library mappings (`Tuple2` to `Tuple20`, `Either`, `Optional<T>`, `Set`, `Map`, `NonEmpty`, `Month`, `Ordering`, …) |
 
 Generated code targets these types; the clients in this repository accept and return them. The companion package `Daml.Ledger.Abstractions` defines the transport-agnostic `ILedgerClient` interface (writes, reads and streams: `ILedgerWriter`, `ILedgerReader`, `ILedgerStreamer`) that every ledger transport implements.
 
@@ -167,9 +170,9 @@ Authentication is abstracted behind `ITokenProvider` (`GetTokenAsync` → bearer
 
 A type-safe query client for the Participant Query Store, the SQL read model Canton ships alongside the participant. `PqsClient` queries PQS's PostgreSQL functions through Npgsql (`SELECT contract_id, payload FROM active(@typeId) …`) and decodes each contract's JSON payload into the same generated binding types used on the write path, through the generated Daml-LF JSON reader.
 
-The read *surface* — `IPqsClient` with `Filter`/`PqsFilter`, `PqsPage` and `InterfaceContract<TInterface, TView>` — is declared in `Canton.Ledger.Abstractions` alongside `ICantonLedgerClient`, `IAdminClient` and `ITokenProvider`, so `Canton.Ledger.Testing` fakes every client surface while depending on nothing but the neutral packages. The filter cases stay `internal` to the declaring assembly, so `Npgsql` never crosses the package boundary: the SQL renderer accumulates parameters into a plain `ICollection<(string Name, string Value)>` and `PqsClient` binds them to a real `NpgsqlCommand` at execution time.
+The read *surface* — `IPqsClient` with `Filter`/`PqsFilter`, `PqsPage` and `InterfaceContract<TInterface, TView>` — is declared in `Canton.Ledger.Abstractions` alongside `ICantonLedgerClient`, `IAdminClient` and `ITokenProvider`, so `Canton.Ledger.Testing` fakes every client surface while depending on nothing but the neutral packages. The filter is an `internal` predicate tree built by `Filter.Field` / `Filter.Where`, so `Npgsql` never crosses the package boundary: `Canton.Ledger.Pqs.Client` renders the tree to parameterized SQL, accumulating parameters into a plain `ICollection<(string Name, string Value)>` that `PqsClient` binds to a real `NpgsqlCommand` at execution time, and `Canton.Ledger.Testing` evaluates the same tree in memory against staged contracts.
 
-Filters are built from C# expressions — `Filter.Field<Agreement>(a => a.Initiator, party)` composed with `Filter.And` / `Filter.Or` — and translated to parameterized SQL, so field names come from the generated bindings and values are never string-interpolated into SQL.
+Filters are built from C# expressions — `Filter.Field<Agreement>(a => a.Initiator, party)` composed with `Filter.And` / `Filter.Or` — and translated to parameterized SQL, so field names come from the generated bindings and values are never string-interpolated into SQL. `FakePqsClient` interprets the same filters in memory with the same three-valued semantics, so a unit test gets back only the staged contracts a live PQS would return.
 
 ## Observability and testing
 
@@ -207,5 +210,5 @@ The read paths mirror it:
 ## Versioning and dependencies
 
 - **One version line.** Every published package in the repository carries the same version (`<Version>` in `Directory.Build.props`) and is released from one tag.
-- **Canton protos** are pinned by `CantonVersion` in `Directory.Build.props` — currently `3.5.18`; bumping it re-targets the whole stub layer at the next build. The same pin drives the vendored JSON Ledger API spec behind `Canton.Ledger.Rest`, so both transports track one Canton version, and that version is a Canton 3.5 release: the library supports Canton 3.5 only. See the [cross-version matrix](cross-version-matrix.md) for the Canton releases the clients are exercised against.
+- **Canton protos** are pinned by `CantonVersion` in `Directory.Build.props` — currently `3.5.19`; bumping it re-targets the whole stub layer at the next build. The same pin drives the vendored JSON Ledger API spec behind `Canton.Ledger.Rest`, so both transports track one Canton version, and that version is a Canton 3.5 release: the library supports Canton 3.5 only. See the [cross-version matrix](cross-version-matrix.md) for the Canton releases the clients are exercised against.
 - All third-party package versions are managed centrally (NuGet central package management); see `Directory.Packages.props` for the authoritative list.

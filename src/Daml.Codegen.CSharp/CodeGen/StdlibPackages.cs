@@ -39,6 +39,7 @@ internal static class StdlibPackages
     public static string? MapStdlibType(string module, string typeName) => (module, typeName) switch
     {
         ("DA.Date.Types", "DayOfWeek") => "DayOfWeek",
+        ("DA.Date.Types", "Month") => "Month",
         ("DA.Time.Types", "RelTime") => "RelTime",
         ("DA.Types", "Tuple2") => "Tuple2",
         ("DA.Types", "Tuple3") => "Tuple3",
@@ -47,7 +48,7 @@ internal static class StdlibPackages
         ("DA.NonEmpty.Types", "NonEmpty") => "NonEmpty",
         ("DA.Map.Types", "Map") => "Map",
         ("DA.Internal.Map", "Map") => "Map",
-        _ => null,
+        _ => StdlibRuntimeInventory.Generated.Contains((module, typeName)) ? Identifiers.Sanitize(typeName) : null,
     };
 
     /// <summary>
@@ -81,7 +82,7 @@ internal static class StdlibPackages
     /// a type <c>Tuple2</c>; without the package check the codegen would
     /// route those through <c>Daml.Runtime.Stdlib.*</c> and emit broken code.
     /// </summary>
-    internal static bool IsStdlibTypeRef(ICrossPackageResolver resolver, DamlTypeRef typeRef, bool parametric) =>
+    internal static bool IsStdlibTypeRef(DarCrossPackageResolver resolver, DamlTypeRef typeRef, bool parametric) =>
         IsInStdlibPackage(resolver, typeRef)
         && (parametric
             ? IsParametricStdlibType(typeRef.Module, typeRef.Name)
@@ -91,7 +92,7 @@ internal static class StdlibPackages
     /// Returns true if <paramref name="typeRef"/>'s package resolves to a stdlib
     /// package or a metadata-less placeholder package.
     /// </summary>
-    internal static bool IsInStdlibPackage(ICrossPackageResolver resolver, DamlTypeRef typeRef)
+    internal static bool IsInStdlibPackage(DarCrossPackageResolver resolver, DamlTypeRef typeRef)
     {
         if (string.IsNullOrEmpty(typeRef.PackageId))
         {
@@ -107,15 +108,15 @@ internal static class StdlibPackages
     /// namespace the emitted code for that field type needs, classifying stdlib refs
     /// via <paramref name="resolver"/>. Shared by the choice-exercise and
     /// data/template emit paths so both require an identical namespace set. The type runs
-    /// through <see cref="OptionalRepresentation.Rewrite(DamlType, DamlPackage, ICrossPackageResolver)"/>
+    /// through <see cref="OptionalRepresentation.Rewrite(DamlType, DamlPackage, DarCrossPackageResolver)"/>
     /// first, so the walk sees the same representation the emitter will, rather than
     /// deciding a second time which Optionals need the runtime wrapper.
     /// </summary>
     internal static void RequireForFieldType(
-        ICrossPackageResolver resolver, DamlPackage localPackage, IndentWriter indent, DamlType type) =>
+        DarCrossPackageResolver resolver, DamlPackage localPackage, IndentWriter indent, DamlType type) =>
         RequireForRewrittenType(resolver, indent, OptionalRepresentation.Rewrite(type, localPackage, resolver));
 
-    private static void RequireForRewrittenType(ICrossPackageResolver resolver, IndentWriter indent, DamlType type)
+    private static void RequireForRewrittenType(DarCrossPackageResolver resolver, IndentWriter indent, DamlType type)
     {
         switch (type)
         {
@@ -175,7 +176,7 @@ internal static class StdlibPackages
                 indent.Require(RuntimeNamespaces.Stdlib);
                 break;
             case DamlTypeApp { Base: DamlTypeRef typeRef } app
-                when IsStdlibTypeRef(resolver, typeRef, parametric: true):
+                when IsStdlibTypeRef(resolver, typeRef, parametric: false):
                 indent.Require(RuntimeNamespaces.Stdlib);
                 foreach (var arg in app.Arguments)
                 {

@@ -16,6 +16,7 @@ using WireInterfaceFilter = Canton.Ledger.Rest.Client.Raw.InterfaceFilter;
 using WireTemplateFilter = Canton.Ledger.Rest.Client.Raw.TemplateFilter;
 using WireTransactionFormat = Canton.Ledger.Rest.Client.Raw.TransactionFormat;
 using WireUpdateFormat = Canton.Ledger.Rest.Client.Raw.UpdateFormat;
+using WireWildcardFilter = Canton.Ledger.Rest.Client.Raw.WildcardFilter;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -100,9 +101,12 @@ internal static class RestSubscribeRequestBuilder
         BuildEventFormat<T>(submitter);
 
     public static WireUpdateFormat BuildTransactionUpdateFormat(RuntimeCommands.SubmitterInfo submitter) =>
+        BuildTransactionUpdateFormat(BuildTransactionFormat(submitter));
+
+    public static WireUpdateFormat BuildTransactionUpdateFormat(WireTransactionFormat transactionFormat) =>
         new()
         {
-            IncludeTransactions = BuildTransactionFormat(submitter),
+            IncludeTransactions = transactionFormat,
         };
 
     public static WireTransactionFormat BuildTransactionFormat(RuntimeCommands.SubmitterInfo submitter) =>
@@ -124,6 +128,28 @@ internal static class RestSubscribeRequestBuilder
         {
             Verbose = true,
             FiltersByParty = BuildFiltersByParty(submitter, () => BuildFilters<T>(includeDisclosure)),
+        };
+
+    public static WireEventFormat BuildDisclosureEventFormat(RuntimeCommands.SubmitterInfo submitter) =>
+        new()
+        {
+            Verbose = true,
+            FiltersByParty = BuildFiltersByParty(submitter, BuildWildcardBlobFilters),
+        };
+
+    private static WireFilters BuildWildcardBlobFilters() =>
+        new()
+        {
+            Cumulative =
+            [
+                new WireCumulativeFilter
+                {
+                    IdentifierFilter = new WireIdentifierFilter
+                    {
+                        WildcardFilter = new WireWildcardFilter { IncludeCreatedEventBlob = true },
+                    },
+                },
+            ],
         };
 
     private static Dictionary<string, WireFilters> BuildFiltersByParty(

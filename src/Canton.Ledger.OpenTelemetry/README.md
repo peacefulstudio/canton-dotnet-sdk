@@ -7,7 +7,7 @@ The source names come from `Canton.Ledger.Kernel`, which is this package's only 
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.OpenTelemetry --version 0.6.0-preview.3
+dotnet add package Canton.Ledger.OpenTelemetry --version 0.6.0-preview.4
 ```
 
 ## Key Types

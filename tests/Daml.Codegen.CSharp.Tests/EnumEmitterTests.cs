@@ -42,9 +42,9 @@ public class EnumEmitterTests
         var dataType = new DamlDataType { Name = name, Definition = enumDef };
         var options = Options(generateXmlDocs);
         var context = PackageEmitContext.ForPackage(Package(dataType), options, isMainPackage: true).Single();
-        var emitter = new EnumEmitter(context, options);
+        var emitter = new EnumEmitter(options);
         var sb = new StringBuilder();
-        emitter.WriteEnumType(new IndentWriter(sb), dataType, enumDef);
+        emitter.WriteEnumType(new IndentWriter(sb), context, dataType, enumDef);
         return sb.ToString();
     }
 
@@ -65,8 +65,8 @@ public class EnumEmitterTests
     {
         var output = EmitEnum("Status", ["Pending", "Active"]);
 
-        output.Should().Contain("public static DamlEnum ToDamlEnum(this Status value)");
-        output.Should().Contain("public static Status FromDamlEnum(DamlEnum value)");
+        output.Should().Contain("public static global::Daml.Runtime.Data.DamlEnum ToDamlEnum(this global::Test.Package.Main.Status value)");
+        output.Should().Contain("public static global::Test.Package.Main.Status FromDamlEnum(global::Daml.Runtime.Data.DamlEnum value)");
         output.Should().NotContain("ToRecord");
         output.Should().NotContain("FromRecord");
     }
@@ -76,10 +76,10 @@ public class EnumEmitterTests
     {
         var output = EmitEnum("Status", ["Pending", "Active"]);
 
-        output.Should().Contain("Status.Pending => DamlEnum.Create(\"Pending\"),");
-        output.Should().Contain("Status.Active => DamlEnum.Create(\"Active\"),");
-        output.Should().Contain("\"Pending\" => Status.Pending,");
-        output.Should().Contain("\"Active\" => Status.Active,");
+        output.Should().Contain("global::Test.Package.Main.Status.Pending => global::Daml.Runtime.Data.DamlEnum.Create(\"Pending\"),");
+        output.Should().Contain("global::Test.Package.Main.Status.Active => global::Daml.Runtime.Data.DamlEnum.Create(\"Active\"),");
+        output.Should().Contain("\"Pending\" => global::Test.Package.Main.Status.Pending,");
+        output.Should().Contain("\"Active\" => global::Test.Package.Main.Status.Active,");
     }
 
     [Fact]

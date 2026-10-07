@@ -23,26 +23,26 @@ public abstract record Slot<TA> where TA : notnull
     public abstract string Tag { get; }
 
     /// <summary>Converts to a DamlVariant.</summary>
-    public abstract DamlVariant ToVariant(Func<TA, DamlValue> convertTA);
+    public abstract global::Daml.Runtime.Data.DamlVariant ToVariant(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA);
 
-    /// <summary>Reconstructs a Slot by dispatching on the DamlVariant constructor tag.</summary>
-    public static Slot<TA> FromVariant(DamlVariant variant, Func<DamlValue, TA> convertTA) =>
+    /// <summary>Reconstructs a Slot by dispatching on the DamlVariant constructor tag. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
+    public static Slot<TA> FromVariant(global::Daml.Runtime.Data.DamlVariant variant, global::System.Func<global::Daml.Runtime.Data.DamlValue, TA> convertTA, global::Daml.Runtime.Data.DamlValue? absentTA) =>
         variant.Constructor switch
         {
             "Filled" => new Filled(convertTA(variant.Value)),
             "Vacant" => new Vacant(),
-            _ => throw new ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown Slot constructor")
+            _ => throw new global::System.ArgumentOutOfRangeException(nameof(variant), variant.Constructor, "Unknown Slot constructor")
         };
 
-    /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection.</summary>
+    /// <summary>Decodes a Daml-LF JSON variant directly into a DamlVariant, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public static DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context, global::Daml.Runtime.Serialization.DamlLfElementReader readTA)
+    public static global::Daml.Runtime.Data.DamlVariant __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context, global::Daml.Runtime.Serialization.DamlLfElementReader readTA, global::Daml.Runtime.Data.DamlValue? absentTA)
     {
         var tag = global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadVariantTag(json, context);
         return tag switch
         {
-            "Filled" => DamlVariant.Create("Filled", readTA(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
-            "Vacant" => DamlVariant.Create("Vacant", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "Filled" => global::Daml.Runtime.Data.DamlVariant.Create("Filled", readTA(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
+            "Vacant" => global::Daml.Runtime.Data.DamlVariant.Create("Vacant", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireVariantValue(json, context), context.Field("value"))),
             _ => throw global::Daml.Runtime.Serialization.DamlLfJsonDecoders.UnknownConstructor("variant constructor", tag, context, ExpectedConstructors)
         };
     }
@@ -56,7 +56,7 @@ public abstract record Slot<TA> where TA : notnull
         public override string Tag => "Filled";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant(Func<TA, DamlValue> convertTA) => DamlVariant.Create("Filled", convertTA(Value));
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlVariant.Create("Filled", convertTA(Value));
     }
 
     /// <summary>Vacant constructor (no arguments).</summary>
@@ -66,7 +66,7 @@ public abstract record Slot<TA> where TA : notnull
         public override string Tag => "Vacant";
 
         /// <inheritdoc />
-        public override DamlVariant ToVariant(Func<TA, DamlValue> convertTA) => DamlVariant.Create("Vacant", DamlUnit.Instance);
+        public override global::Daml.Runtime.Data.DamlVariant ToVariant(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlVariant.Create("Vacant", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
 
 }
