@@ -60,8 +60,8 @@ The `--generate-project` flag creates a `.csproj` file with:
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
-    <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.4" />
-    <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.4" />
+    <PackageReference Include="Daml.Runtime" Version="0.6.0" />
+    <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0" />
   </ItemGroup>
 
 </Project>
@@ -119,8 +119,8 @@ dependency as a package, named after its Daml package name:
 <ItemGroup>
   <None Include="README.md" Pack="true" PackagePath="\" />
   <None Include="icon.png" Pack="true" PackagePath="\" />
-  <PackageReference Include="Daml.Runtime" Version="0.6.0-preview.4" />
-  <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0-preview.4" />
+  <PackageReference Include="Daml.Runtime" Version="0.6.0" />
+  <PackageReference Include="Daml.Ledger.Abstractions" Version="0.6.0" />
   <PackageReference Include="Daml.Finance" Version="2.0.0.*-*" />
   <PackageReference Include="Some.Library" Version="1.5.0.*-*" />
 </ItemGroup>

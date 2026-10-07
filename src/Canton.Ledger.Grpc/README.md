@@ -5,7 +5,7 @@ Generated gRPC client stubs for the Canton Ledger API, part of the [Canton .NET 
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Grpc --version 0.6.0-preview.4
+dotnet add package Canton.Ledger.Grpc --version 0.6.0
 ```
 
 ## Overview

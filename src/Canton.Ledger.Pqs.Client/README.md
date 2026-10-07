@@ -13,7 +13,7 @@ The query surface itself — `IPqsClient`, the `Filter`/`PqsFilter` DSL, `PqsPag
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Pqs.Client --version 0.6.0-preview.4
+dotnet add package Canton.Ledger.Pqs.Client --version 0.6.0
 ```
 
 ## Usage

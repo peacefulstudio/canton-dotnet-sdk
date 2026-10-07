@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/peacefulstudio/canton-dotnet-sdk/actions/workflows/ci.yaml/badge.svg)](https://github.com/peacefulstudio/canton-dotnet-sdk/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/v/release/peacefulstudio/canton-dotnet-sdk?label=latest%20stable)](https://github.com/peacefulstudio/canton-dotnet-sdk/releases/latest)
-[![latest preview](https://img.shields.io/github/v/release/peacefulstudio/canton-dotnet-sdk?include_prereleases&label=latest%20preview)](https://github.com/peacefulstudio/canton-dotnet-sdk/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![.NET](https://img.shields.io/badge/.NET-10.0-white.svg)](https://dotnet.microsoft.com/)
 
@@ -54,7 +53,7 @@ SDK components your project uses (`components:` replaces the `sdk-version:` key)
 
 ```yaml
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.6.0-preview.4
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.6.0
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -75,9 +74,9 @@ helpers. The checked-in output is in
 ### 2. Connect, submit and read
 
 ```bash
-dotnet add package Daml.Runtime --version 0.6.0-preview.4
-dotnet add package Daml.Ledger.Abstractions --version 0.6.0-preview.4
-dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0-preview.4
+dotnet add package Daml.Runtime --version 0.6.0
+dotnet add package Daml.Ledger.Abstractions --version 0.6.0
+dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0
 dotnet add package Microsoft.Extensions.DependencyInjection
 ```
 

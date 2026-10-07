@@ -36,6 +36,12 @@ because they are versioned in lockstep:
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-07
+
+### Changed
+
+- **`0.6.0` is the first stable release.** It contains exactly the code of `0.6.0-preview.4`; only the version, the install pins and the documentation wording differ. It targets Canton 3.5 (3.5.19), and every package moves to `0.6.0` together. Upgrade from `0.6.0-preview.4` by changing the version.
+
 ## [0.6.0-preview.4] — 2026-10-06
 
 ### Added
@@ -3611,7 +3617,8 @@ the GitHub Packages NuGet feed
 (`nuget.pkg.github.com/peacefulstudio`) during development and have
 since been pruned. They are not supported.
 
-[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.4...HEAD
+[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.4...v0.6.0
 [0.6.0-preview.4]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.3...v0.6.0-preview.4
 [0.6.0-preview.3]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.2...v0.6.0-preview.3
 [0.6.0-preview.2]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.1...v0.6.0-preview.2

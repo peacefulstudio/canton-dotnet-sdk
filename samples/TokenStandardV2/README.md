@@ -46,10 +46,9 @@ rather than pinning a specific minor/patch. Against the default
 published to nuget.org. Against `NuGet.local-feed.config`, CI packs the in-progress build into a
 private `local-feed`, and that config's
 package-source mapping resolves every `Splice.*` / `Daml.*` package **only**
-from that feed — so the float resolves whatever this repo just packed — a
-`-preview.N` build today or a stable `M.m.p` build at GA — which keeps the V2
+from that feed — so the float resolves whatever this repo just packed — which keeps the V2
 compile-gate stable across the repo's own version bumps instead of breaking
-each time `Directory.Build.props` moves to a new preview minor.
+each time `Directory.Build.props` moves to a new minor.
 
 ## Why it references the whole V2 family
 
