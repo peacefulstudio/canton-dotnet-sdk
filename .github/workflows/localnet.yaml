@@ -27,6 +27,11 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 90
     steps:
+      - name: Enable git long paths on Windows
+        if: runner.os == 'Windows'
+        # actions/checkout overrides HOME before its own global git config changes, so only --system is in effect during the checkout
+        run: git config --system core.longpaths true
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
