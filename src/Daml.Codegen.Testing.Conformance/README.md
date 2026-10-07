@@ -6,7 +6,7 @@ Consumers (typically ledger-client integration test suites) round-trip these typ
 participant to prove codegen output works end-to-end. Not for production use.
 
 ```bash
-dotnet add package Daml.Codegen.Testing.Conformance --version 0.6.0-preview.4
+dotnet add package Daml.Codegen.Testing.Conformance --version 0.6.0
 ```
 
 `ConformanceCorpus.OpenDar()` returns the embedded rich-types DAR to upload to a

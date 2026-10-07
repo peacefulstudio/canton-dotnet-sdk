@@ -9,7 +9,7 @@ Reach for this package only when you need an endpoint the adapter does not surfa
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Rest --version 0.6.0-preview.4
+dotnet add package Canton.Ledger.Rest --version 0.6.0
 ```
 
 ## Related Packages

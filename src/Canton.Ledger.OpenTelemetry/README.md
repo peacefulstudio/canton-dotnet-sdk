@@ -7,7 +7,7 @@ The source names come from `Canton.Ledger.Kernel`, which is this package's only 
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.OpenTelemetry --version 0.6.0-preview.4
+dotnet add package Canton.Ledger.OpenTelemetry --version 0.6.0
 ```
 
 ## Key Types
@@ -55,4 +55,4 @@ or `Canton:Ledger:EmitPartyAndContractSpanTags` set to `true` in configuration. 
 
 Every one of those custom names is a constant on `Canton.Ledger.Kernel.Telemetry.LedgerActivityTagNames`, with `All` over the whole set — name one from there rather than retyping it into a dashboard query, a sampling rule or a redaction filter.
 
-Telemetry shape is pre-1.0 and may change in any preview release.
+Telemetry shape is pre-1.0 and may change between releases.

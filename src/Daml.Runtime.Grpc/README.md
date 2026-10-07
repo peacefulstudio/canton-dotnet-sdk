@@ -5,7 +5,7 @@ Bidirectional conversion between `Daml.Runtime` value types and Canton Ledger AP
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime.Grpc --version 0.6.0-preview.4
+dotnet add package Daml.Runtime.Grpc --version 0.6.0
 ```
 
 ## Overview

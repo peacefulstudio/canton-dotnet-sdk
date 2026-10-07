@@ -5,7 +5,7 @@ HTTP client for the Canton Ledger API over the JSON Ledger API (`/v2/...`), part
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Rest.Client --version 0.6.0-preview.4
+dotnet add package Canton.Ledger.Rest.Client --version 0.6.0
 ```
 
 ## Key Types
