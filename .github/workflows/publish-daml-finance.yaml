@@ -7,6 +7,10 @@ on:
         description: 'Daml.Finance SDK release version (digital-asset/daml-finance sdk/<ver> tag).'
         required: true
         type: string
+      download_sha256:
+        description: 'SHA-256 of the upstream bundle tarball, pinned in versions.yaml. The publish fails when the download does not match.'
+        required: true
+        type: string
       codegen_cs_version:
         description: 'Version of ghcr.io/peacefulstudio/dpm-codegen-cs to pull. Empty = Directory.Build.props <Version>.'
         required: false
@@ -43,6 +47,7 @@ jobs:
     with:
       source_label: DamlFinance
       download_url: https://github.com/digital-asset/daml-finance/releases/download/sdk/${{ inputs.daml_finance_version }}/daml-finance-bundle-sdk-${{ inputs.daml_finance_version }}.tar.gz
+      download_sha256: ${{ inputs.download_sha256 }}
       dar_find_path: '*.dar'
       dar_patterns: |
         daml-finance-interface-types-common-v3-*

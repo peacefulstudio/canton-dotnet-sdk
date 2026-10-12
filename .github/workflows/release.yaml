@@ -39,6 +39,8 @@ jobs:
       codegen_cs_version: ${{ steps.r.outputs.codegen_cs_version }}
       splice_version: ${{ steps.r.outputs.splice_version }}
       daml_finance_version: ${{ steps.r.outputs.daml_finance_version }}
+      splice_sha256: ${{ steps.r.outputs.splice_sha256 }}
+      daml_finance_sha256: ${{ steps.r.outputs.daml_finance_sha256 }}
       daml_sdk_version: ${{ steps.r.outputs.daml_sdk_version }}
     steps:
       - name: Checkout the release tag
@@ -73,7 +75,9 @@ jobs:
           SPLICE="$(version_of splice)"
           FINANCE="$(version_of daml-finance)"
           DAML_SDK="$(version_of daml-sdk)"
-          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAML_SDK}"; do
+          SPLICE_SHA256="$(version_of splice-sha256)"
+          FINANCE_SHA256="$(version_of daml-finance-sha256)"
+          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAML_SDK}" "splice-sha256=${SPLICE_SHA256}" "daml-finance-sha256=${FINANCE_SHA256}"; do
             [ -n "${pair#*=}" ] || { echo "::error::versions.yaml has no '${pair%%=*}' entry"; exit 1; }
           done
           DRY="${DRY_RUN_INPUT:-false}"
@@ -89,6 +93,8 @@ jobs:
             echo "codegen_cs_version=${CGV}"
             echo "splice_version=${SPLICE}"
             echo "daml_finance_version=${FINANCE}"
+            echo "splice_sha256=${SPLICE_SHA256}"
+            echo "daml_finance_sha256=${FINANCE_SHA256}"
             echo "daml_sdk_version=${DAML_SDK}"
           } >> "$GITHUB_OUTPUT"
 
@@ -129,6 +135,7 @@ jobs:
     uses: ./.github/workflows/publish-splice.yaml
     with:
       splice_version: ${{ needs.resolve.outputs.splice_version }}
+      download_sha256: ${{ needs.resolve.outputs.splice_sha256 }}
       daml_sdk_version: ${{ needs.resolve.outputs.daml_sdk_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
       release_tag: ${{ needs.resolve.outputs.tag }}
@@ -142,6 +149,7 @@ jobs:
     uses: ./.github/workflows/publish-daml-finance.yaml
     with:
       daml_finance_version: ${{ needs.resolve.outputs.daml_finance_version }}
+      download_sha256: ${{ needs.resolve.outputs.daml_finance_sha256 }}
       daml_sdk_version: ${{ needs.resolve.outputs.daml_sdk_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
       release_tag: ${{ needs.resolve.outputs.tag }}

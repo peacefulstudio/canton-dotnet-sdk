@@ -11,6 +11,10 @@ on:
         description: 'Full URL to the source bundle tarball (the caller interpolates its own version).'
         required: true
         type: string
+      download_sha256:
+        description: 'Expected SHA-256 of the source bundle tarball; select-dars.sh refuses to extract a download that does not match.'
+        required: true
+        type: string
       dar_find_path:
         description: "find -path glob locating DARs inside the extracted tree, relative to ./extracted (e.g. '*/dars/*.dar' or '*.dar')."
         required: true
@@ -71,6 +75,7 @@ jobs:
     env:
       SOURCE_LABEL: ${{ inputs.source_label }}
       DOWNLOAD_URL: ${{ inputs.download_url }}
+      DOWNLOAD_SHA256: ${{ inputs.download_sha256 }}
       DAR_FIND_PATH: ${{ inputs.dar_find_path }}
       DAR_PATTERNS: ${{ inputs.dar_patterns }}
       COUNTER_VARIABLE_NAME: ${{ inputs.counter_variable }}

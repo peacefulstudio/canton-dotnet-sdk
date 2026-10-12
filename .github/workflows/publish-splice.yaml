@@ -7,6 +7,10 @@ on:
         description: 'Splice version (decentralized-canton-sync release tag, e.g. 0.6.11). No default — always pass the version explicitly.'
         required: true
         type: string
+      download_sha256:
+        description: 'SHA-256 of the upstream bundle tarball, pinned in versions.yaml. The publish fails when the download does not match.'
+        required: true
+        type: string
       codegen_cs_version:
         description: 'Version of ghcr.io/peacefulstudio/dpm-codegen-cs to pull. Empty = Directory.Build.props <Version>.'
         required: false
@@ -43,6 +47,7 @@ jobs:
     with:
       source_label: Splice
       download_url: https://github.com/digital-asset/decentralized-canton-sync/releases/download/v${{ inputs.splice_version }}/${{ inputs.splice_version }}_splice-node.tar.gz
+      download_sha256: ${{ inputs.download_sha256 }}
       dar_find_path: '*/dars/*.dar'
       dar_patterns: |
         splice-*
