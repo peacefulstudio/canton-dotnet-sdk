@@ -13,9 +13,8 @@ ships, from Digital Asset's SDK manifest
 (europe-docker.pkg.dev/da-images/public/sdk-manifests/open-source:<sdk>), and
 export them to \$GITHUB_ENV as DAMLC_VERSION and DAML_SCRIPT_VERSION.
 
-Fetches the manifest with oras when it is on PATH, otherwise with
-'dpm install <sdk>' and its cache. SDK_MANIFEST_DIR, when set, names a
-directory holding <sdk>.yaml and skips the fetch.
+Fetches the manifest with oras, which must be on PATH. SDK_MANIFEST_DIR, when
+set, names a directory holding <sdk>.yaml and skips the fetch.
 EOF
   exit "${1:-1}"
 }
@@ -32,15 +31,13 @@ fetch_manifest() {
   local destination="$1"
   if [ -n "${SDK_MANIFEST_DIR:-}" ]; then
     cp "$SDK_MANIFEST_DIR/$SDK_VERSION.yaml" "$destination"
-  elif command -v oras >/dev/null 2>&1; then
+  else
+    command -v oras >/dev/null 2>&1 || { echo "::error::oras is required on PATH to fetch the SDK manifest"; exit 1; }
     local pull_dir
     pull_dir="$(mktemp -d)"
     oras pull "europe-docker.pkg.dev/da-images/public/sdk-manifests/open-source:$SDK_VERSION" -o "$pull_dir" --no-tty >&2
     cp "$pull_dir/$SDK_VERSION.yaml" "$destination"
     rm -rf "$pull_dir"
-  else
-    dpm install "$SDK_VERSION" >&2
-    cp "$HOME/.dpm/cache/sdk/open-source/$SDK_VERSION.yaml" "$destination"
   fi
 }
 

@@ -59,4 +59,16 @@ expect "a manifest without daml-script fails loudly" 1 "lists no 'daml-script' c
 
 expect "a malformed SDK version is refused" 1 "must match" "3.5"
 
+unset SDK_MANIFEST_DIR
+mkdir -p "${work}/no-oras"
+for tool in mktemp awk cp rm dirname; do ln -s "$(command -v "${tool}")" "${work}/no-oras/${tool}"; done
+output="$(PATH="${work}/no-oras" "${BASH}" "${script}" 3.5.12 2>&1)"
+status=$?
+if [ "${status}" -ne 1 ] || [[ "${output}" != *"oras is required"* ]]; then
+  echo "FAIL missing oras is refused: status=${status} output=${output}"
+  failures=$((failures + 1))
+else
+  echo "ok   missing oras is refused"
+fi
+
 exit $((failures > 0 ? 1 : 0))
