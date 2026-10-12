@@ -12,8 +12,8 @@ on:
         required: false
         type: string
         default: ''
-      damlc_version:
-        description: 'damlc component version listed under daml.yaml components.'
+      daml_sdk_version:
+        description: 'Daml SDK version; the damlc and daml-script component tags it ships are read from its SDK manifest.'
         required: true
         type: string
       runtime_version:
@@ -55,7 +55,7 @@ jobs:
         daml-finance-instrument-token-v4-*
       counter_variable: DAML_FINANCE_RELEASE_COUNTERS
       codegen_cs_version: ${{ inputs.codegen_cs_version }}
-      damlc_version: ${{ inputs.damlc_version }}
+      daml_sdk_version: ${{ inputs.daml_sdk_version }}
       runtime_version: ${{ inputs.runtime_version }}
       package_license: ${{ inputs.package_license }}
       release_tag: ${{ inputs.release_tag }}
