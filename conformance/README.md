@@ -11,13 +11,13 @@ package name: two builds with different content need different names, or the sec
 build is rejected as `KNOWN_PACKAGE_VERSION` by a participant already holding the
 first. To grow the corpus (new type shapes), edit `RichTypes.daml`, then run one
 command, which re-derives the name, rebuilds the DAR and regenerates the shipped
-bindings:
+bindings and the pinned SHAs the determinism gate compares against (it reads this
+DAR):
 
-    scripts/rebuild-conformance-dar.sh --package richtypes --base richtypes
+    scripts/regenerate.sh rebuild-dar --package richtypes --base richtypes
 
-Commit the changed `daml.yaml`, DAR and `Generated/` tree together. Also refresh the
-pinned SHAs the determinism gate compares against
-(`scripts/codegen-determinism.sh --update`); it reads this DAR.
+Commit the changed `daml.yaml`, DAR, `Generated/` tree and `tests/determinism/shas/`
+together.
 A drift test reads the shipped DAR fresh and fails if a step was skipped.
 
 `RichRecord` covers the primitive, collection and nominal shapes; `TypeCorners`
@@ -28,7 +28,9 @@ directly inside an `Optional` (`maybeMaybeNote`) and one separated from its oute
 `Optional` by an intervening record (`nestedNote`), an `Optional` over a record's
 own type variable (`Crate`) and one carried by an `Either` arm (`noteOrRank`) —
 positions C# nullable syntax cannot spell, so they emit the `Optional<T>` wrapper
-instead — and the `Numeric` scale extremes 0 and 37. The `Holding` interface carries choices (`Describe`, `Reissue`, `Split`) as well as a
+instead — and the `Numeric` scale extremes 0 and 37. `ThreeDeepOptionals` carries an
+`Optional (Optional (Optional Text))` in `deepNote` and again in the trailing `tailDeepNote`,
+so a chain three levels deep is emitted and round-tripped end to end. The `Holding` interface carries choices (`Describe`, `Reissue`, `Split`) as well as a
 view, so the interface-choice emitter path is exercised through a real DAR rather
 than a synthetic package; `Split` is nonconsuming and returns `[ContractId Holding]`,
 so an interface choice whose result is itself a generic family is covered too.
@@ -113,10 +115,10 @@ quietly narrowing the evidence. It also carries a content-addressed package name
 (see above); rebuild its DAR, and refresh the `Generated/ContractKeys/` sources the
 package compiles, with one command:
 
-    scripts/rebuild-conformance-dar.sh --package contractkeys --base contractkeys
+    scripts/regenerate.sh rebuild-dar --package contractkeys --base contractkeys
 
-The determinism gate reads only `richtypes`, so `codegen-determinism.sh` does
-not need re-running for a contract-key-only change.
+The determinism gate reads only `richtypes`, so the determinism pins do not
+need refreshing for a contract-key-only change.
 
 The `crossmodulecollision` package is a codegen-drift regression
 fixture rather than a type-shape corpus: two modules (`CollisionA`,
@@ -130,11 +132,11 @@ DAR the same way:
       cp .daml/dist/crossmodulecollision-*.dar ./crossmodulecollision.dar
 
 That snapshot regenerates from its own vendored copy of this DAR, not from the
-one here, so a rebuild is only half the job: copy the result over
+one here, so run `scripts/regenerate.sh write` after a rebuild: it copies the
+result over
 `tests/Daml.Codegen.CSharp.Tests/Snapshots/cross-module-collision/cross-module-collision.dar`
-and refresh the snapshot (`scripts/refresh-snapshot.sh cross-module-collision`).
-Nothing enforces that the two copies agree — skip the copy and the snapshot goes
-on regenerating cleanly from the stale one.
+and refreshes the snapshot. `scripts/regenerate.sh check` fails when the two
+copies disagree.
 
 The `defaulttarget` package is a single boring template whose only job is
 to be compiled with **no `build-options:` block at all**. `damlc` picks a
@@ -154,6 +156,6 @@ Rebuild its DAR the same way:
       cp .daml/dist/defaulttarget-*.dar ./defaulttarget.dar
 
 Like `contractkeys`, rebuilding this DAR also requires refreshing the generated
-tree (`scripts/refresh-conformance.sh`). The determinism gate reads only
-`richtypes`, so `codegen-determinism.sh` does not need re-running for a
+tree (`scripts/regenerate.sh write --only conformance`). The determinism gate
+reads only `richtypes`, so the determinism pins do not need refreshing for a
 default-target-only change.

@@ -1,7 +1,9 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Net;
 using Canton.Ledger.Rest.Client.Raw;
+using Refit;
 using Xunit;
 
 #pragma warning disable CANTONREST001
@@ -9,11 +11,11 @@ using Xunit;
 namespace Canton.Ledger.Rest.Client.Integration.Tests;
 
 /// <summary>
-/// LocalNet conformance coverage for <see cref="IInteractiveSubmissionApi"/>. The proto-derived twin
-/// spells three of this route's query parameters in a way the participant does not read, and only the
-/// required one fails loudly: the two optional ones are dropped in silence, so a 200 alone proves
-/// nothing. Passing the synchronizer explicitly and asserting it comes back on the preference is what
-/// proves the participant parsed it rather than ignored it.
+/// LocalNet conformance coverage for <see cref="IInteractiveSubmissionApi"/>. Canton 3.6 disables
+/// <c>GET /v2/interactive-submission/preferred-package-version</c> by default and Canton 3.7 removes
+/// it, so a 3.6 participant answers it with a refusal rather than a package preference. The raw tier
+/// keeps the route for the releases that still serve it, and this suite pins the refusal a 3.6
+/// participant actually gives, so the day Canton changes it the lane says so.
 /// </summary>
 [Trait("Category", "Integration")]
 public class RestInteractiveSubmissionConformanceTests
@@ -21,7 +23,7 @@ public class RestInteractiveSubmissionConformanceTests
     private const string LocalnetPackageName = "splice-amulet";
 
     [Fact]
-    public async Task GetPreferredPackageVersion_resolves_a_package_scoped_to_the_synchronizer_it_was_given()
+    public async Task GetPreferredPackageVersion_on_a_participant_with_deprecated_endpoints_disabled_answers_400_DEPRECATED_API_DISABLED()
     {
         await using var lane = await RestConformanceLane.OpenAsync(TestContext.Current.CancellationToken);
         var party = await lane.Fixture.AllocatePartyAsync(
@@ -31,18 +33,15 @@ public class RestInteractiveSubmissionConformanceTests
             party.PartyId, TestContext.Current.CancellationToken));
         Assert.Equal("global", synchronizer.Alias);
 
-        var response = await lane.Api<IInteractiveSubmissionApi>().GetPreferredPackageVersion(
-            [party.PartyId],
-            LocalnetPackageName,
-            synchronizer.Id,
-            DateTimeOffset.UtcNow,
-            TestContext.Current.CancellationToken);
+        var refusal = await Assert.ThrowsAsync<ApiException>(() =>
+            lane.Api<IInteractiveSubmissionApi>().GetPreferredPackageVersion(
+                [party.PartyId],
+                LocalnetPackageName,
+                synchronizer.Id,
+                DateTimeOffset.UtcNow,
+                TestContext.Current.CancellationToken));
 
-        Assert.NotNull(response.PackagePreference);
-        Assert.Equal(LocalnetPackageName, response.PackagePreference.PackageReference.PackageName);
-        Assert.Equal(synchronizer.Id, response.PackagePreference.SynchronizerId);
-        Assert.False(
-            string.IsNullOrWhiteSpace(response.PackagePreference.PackageReference.PackageVersion),
-            "the participant resolved a preferred package with no version");
+        Assert.Equal(HttpStatusCode.BadRequest, refusal.StatusCode);
+        Assert.Contains("DEPRECATED_API_DISABLED", refusal.Content);
     }
 }

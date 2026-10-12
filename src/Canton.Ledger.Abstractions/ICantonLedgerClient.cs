@@ -696,8 +696,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// The contract id, template id and created event blob to attach to a submission, or
-    /// <see langword="null"/> when the contract is not visible to the <paramref name="submitter"/>, does not
-    /// exist, or has been archived. The disclosure's synchronizer id is left unset: the read reports only the
+    /// <see langword="null"/> when the participant answers <c>CONTRACT_EVENTS_NOT_FOUND</c>: the contract is not
+    /// visible to the <paramref name="submitter"/>, does not exist, or has been archived. The disclosure's synchronizer id is left unset: the read reports only the
     /// synchronizer that sequenced the creation, which differs from the contract's current assignment after a
     /// reassignment, so the participant's synchronizer router selects the synchronizer. When the current
     /// assignment matters, pin it with <see cref="RuntimeCommands.CommandsSubmission.WithSynchronizerId"/> or
@@ -705,7 +705,9 @@ public interface ICantonLedgerClient : ILedgerClient
     /// </returns>
     /// <exception cref="LedgerOperationException">
     /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
-    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// call, or answered with a body the client could not decode. Any other not-found rejection, such as
+    /// <c>UNSUPPORTED_CONTRACT_ID</c> for a contract id the participant cannot read, is a rejection too, not a
+    /// <see langword="null"/>. A read changes nothing, so
     /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
@@ -978,38 +980,6 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<PreferredPackages> GetPreferredPackagesAsync(
         IEnumerable<PackageVettingRequirement> requirements,
-        SynchronizerId? synchronizerId = null,
-        DateTimeOffset? vettingValidAt = null,
-        TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Resolves the preferred version of one package: the highest version that every participant
-    /// hosting <paramref name="parties"/> has vetted. Canton deprecates the underlying route for
-    /// removal in 3.6; prefer <see cref="GetPreferredPackagesAsync"/>.
-    /// </summary>
-    /// <param name="parties">The parties whose hosting participants must have vetted the package.</param>
-    /// <param name="packageName">The package name to resolve a preferred version for.</param>
-    /// <param name="synchronizerId">
-    /// The synchronizer whose topology state the vetting is resolved against, or <see langword="null"/>
-    /// to resolve against every synchronizer the participant is connected to.
-    /// </param>
-    /// <param name="vettingValidAt">
-    /// The time to compute vetting validity at, or <see langword="null"/> for the participant's current time.
-    /// </param>
-    /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
-    /// <returns>The preference, or <see langword="null"/> when no package satisfies the requirements.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="parties"/> or <paramref name="packageName"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
-    /// <exception cref="LedgerOperationException">
-    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
-    /// call, or answered with a body the client could not decode. A read changes nothing, so
-    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
-    /// </exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
-    Task<PackagePreference?> GetPreferredPackageVersionAsync(
-        IEnumerable<Party> parties,
-        string packageName,
         SynchronizerId? synchronizerId = null,
         DateTimeOffset? vettingValidAt = null,
         TimeSpan? timeout = null,

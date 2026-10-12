@@ -23,7 +23,7 @@ internal static class TailScenarios
         Transport writer,
         Party owner,
         int samples,
-        TimeSpan spacing,
+        JitteredPacing pacing,
         CancellationToken cancellationToken)
     {
         var board = new ArrivalBoard();
@@ -37,7 +37,7 @@ internal static class TailScenarios
         {
             var (delivery, submit) = await SampleAsync(
                     samples,
-                    spacing,
+                    pacing,
                     async token => (await Seed.CreateMarkerAsync(writer.Client, owner, token).ConfigureAwait(false)).Value,
                     board,
                     cancellationToken)
@@ -56,7 +56,7 @@ internal static class TailScenarios
         Transport transport,
         Party owner,
         int samples,
-        TimeSpan spacing,
+        JitteredPacing pacing,
         CancellationToken cancellationToken)
     {
         var board = new ArrivalBoard();
@@ -70,7 +70,7 @@ internal static class TailScenarios
         {
             var (delivery, submit) = await SampleAsync(
                     samples,
-                    spacing,
+                    pacing,
                     async token =>
                     {
                         var commandId = Guid.NewGuid().ToString("N");
@@ -96,7 +96,7 @@ internal static class TailScenarios
 
     private static async Task<(LatencySummary Delivery, LatencySummary Submit)> SampleAsync(
         int samples,
-        TimeSpan spacing,
+        JitteredPacing pacing,
         Func<CancellationToken, Task<string>> submit,
         ArrivalBoard board,
         CancellationToken cancellationToken)
@@ -115,7 +115,7 @@ internal static class TailScenarios
                 submitted.Add(Stopwatch.GetElapsedTime(start, submitReturned));
             }
 
-            await Task.Delay(spacing, cancellationToken).ConfigureAwait(false);
+            await pacing.PauseAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return (LatencySummary.Of(delivery), LatencySummary.Of(submitted));

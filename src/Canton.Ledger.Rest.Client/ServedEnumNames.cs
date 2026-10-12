@@ -45,6 +45,7 @@ internal static class ServedEnums
         {
             [HashingSchemeVersion.V2] = "HASHING_SCHEME_VERSION_V2",
             [HashingSchemeVersion.V3] = "HASHING_SCHEME_VERSION_V3",
+            [HashingSchemeVersion.V4] = "HASHING_SCHEME_VERSION_V4",
         });
 
     public static readonly ServedEnumNames<SignatureFormat> SignatureFormats = new(
@@ -64,6 +65,7 @@ internal static class ServedEnums
             [SigningAlgorithm.Ed25519] = "SIGNING_ALGORITHM_SPEC_ED25519",
             [SigningAlgorithm.EcDsaSha256] = "SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_256",
             [SigningAlgorithm.EcDsaSha384] = "SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384",
+            [SigningAlgorithm.MlDsa65] = "SIGNING_ALGORITHM_SPEC_ML_DSA_65",
         });
 
     public static readonly ServedEnumNames<SigningKeySpec> SigningKeySpecs = new(
@@ -74,6 +76,7 @@ internal static class ServedEnums
             [SigningKeySpec.EcP256] = "SIGNING_KEY_SPEC_EC_P256",
             [SigningKeySpec.EcP384] = "SIGNING_KEY_SPEC_EC_P384",
             [SigningKeySpec.EcSecp256k1] = "SIGNING_KEY_SPEC_EC_SECP256K1",
+            [SigningKeySpec.MlDsa65] = "SIGNING_KEY_SPEC_ML_DSA_65",
         });
 
     public static readonly ServedEnumNames<PublicKeyFormat> PublicKeyFormats = new(

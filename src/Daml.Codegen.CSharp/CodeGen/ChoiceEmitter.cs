@@ -305,11 +305,10 @@ internal sealed partial class ChoiceEmitter(
     /// Emits the <c>&lt;Choice&gt;Command(this ContractId&lt;TemplateName&gt; contractId, ...)</c>
     /// builder that constructs the choice's <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/>
     /// without submitting it. The single command builder shared by every generated
-    /// <c>Try&lt;Choice&gt;Async</c> exerciser — the create-projecting ContractId overloads (see
-    /// <c>WriteSingleChoiceAsyncExerciser</c> / <c>WriteSubmitterInfoChoiceAsyncExerciser</c>) and the
-    /// non-contract exerciser (see <c>WriteSingleNonContractChoiceAsyncExerciser</c>) alike — they
-    /// exercise the identical choice on the identical <c>ContractId&lt;T&gt;</c> type and therefore
-    /// build the identical command. Argument-less choices encode via
+    /// <c>Try&lt;Choice&gt;Async</c> exerciser of a template choice (see
+    /// <c>WriteExerciserOverloads</c>), whichever class it lands in — they exercise the identical
+    /// choice on the identical <c>ContractId&lt;T&gt;</c> type and therefore build the identical
+    /// command. Argument-less choices encode via
     /// <see cref="EmptyArgumentExpression"/>: the synthetic stdlib Archive argument becomes the
     /// empty record Canton's command preprocessor accepts, a genuine <c>Unit</c> argument stays
     /// <c>DamlUnit.Instance</c>.
@@ -319,56 +318,48 @@ internal sealed partial class ChoiceEmitter(
         DamlChoice choice,
         string templateClassName)
     {
-        var choiceName = SanitizeIdentifier(choice.Name);
-        var commandMethodName = $"{choiceName}Command";
         var argument = GetChoiceArgumentInfo(choice);
-        var hasArg = argument.HasArgument;
+        var exerciseCommand = TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseCommand);
 
-        if (options.GenerateXmlDocs)
-        {
-            indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Builds the <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> for the {choice.Name} choice on this contract id.");
-            indent.AppendLine("/// </summary>");
-            indent.AppendLine("/// <param name=\"contractId\">The contract on which to exercise the choice.</param>");
-            if (hasArg)
-            {
-                indent.AppendLine("/// <param name=\"argument\">The choice argument.</param>");
-            }
-        }
-
-        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseCommand)} {commandMethodName}(");
-        indent.Indent();
-        if (hasArg)
-        {
-            indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId,");
-            indent.AppendLine($"{argument.ParameterType(templateClassName)} argument)");
-        }
-        else
-        {
-            indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId)");
-        }
-        indent.Dedent();
-        indent.AppendLine("{");
-        indent.Indent();
-
-        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(contractId);");
-        if (hasArg)
-        {
-            indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(argument);");
-        }
-
-        var argExpr = hasArg ? "argument.ToRecord()" : EmptyArgumentExpression(choice);
-        indent.AppendLine($"return new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseCommand)}(");
-        indent.Indent();
-        indent.AppendLine($"{templateClassName}.TemplateId,");
-        indent.AppendLine("contractId,");
-        indent.AppendLine($"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),");
-        indent.AppendLine($"{argExpr});");
-        indent.Dedent();
-
-        indent.Dedent();
-        indent.AppendLine("}");
+        ChoiceCommandBuilderWriter.Write(indent, new ChoiceCommandBuilder(
+            CommandType: exerciseCommand,
+            Name: ExerciseMemberNames.Command(choice),
+            Docs: options.GenerateXmlDocs
+                ? new CommandBuilderDocs(
+                    Summary: [$"Builds the <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> for the {choice.Name} choice on this contract id."],
+                    ReceiverParameter: "<param name=\"contractId\">The contract on which to exercise the choice.</param>",
+                    Remarks: [])
+                : null,
+            ReceiverParameter: $"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{templateClassName}> contractId",
+            ArgumentParameterType: argument.HasArgument ? argument.ParameterType(templateClassName) : null,
+            NullGuardedParameters: GuardedParameters("contractId", argument.HasArgument),
+            ReturnStatement: ReturnNew(
+                exerciseCommand,
+                $"{templateClassName}.TemplateId",
+                "contractId",
+                choice,
+                ArgumentExpression(choice, argument))));
     }
+
+    private static IReadOnlyList<string> GuardedParameters(string? receiver, bool guardsArgument) =>
+        [.. new[] { receiver, guardsArgument ? "argument" : null }.OfType<string>()];
+
+    private string ArgumentExpression(DamlChoice choice, ChoiceArgumentInfo argument) =>
+        argument.HasArgument ? "argument.ToRecord()" : EmptyArgumentExpression(choice);
+
+    private static IReadOnlyList<string> ReturnNew(
+        string commandType,
+        string templateId,
+        string receiverExpression,
+        DamlChoice choice,
+        string argumentExpression) =>
+    [
+        $"return new {commandType}(",
+        $"{templateId},",
+        $"{receiverExpression},",
+        $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),",
+        $"{argumentExpression});",
+    ];
 
     /// <summary>
     /// Emits one <c>&lt;Choice&gt;ByKeyCommand</c> builder per choice on
@@ -409,66 +400,35 @@ internal sealed partial class ChoiceEmitter(
         string templateClassName,
         DamlType keyType)
     {
-        var choiceName = SanitizeIdentifier(choice.Name);
         var argument = GetChoiceArgumentInfo(choice);
-        var hasArg = argument.HasArgument;
-        var csharpKeyType = mapper.MapType(keyType);
+        var exerciseByKeyCommand = TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseByKeyCommand);
 
         indent.Require(RuntimeNamespaces.Commands);
         StdlibPackages.RequireForFieldType(resolver, context.Package, indent, keyType);
 
-        if (options.GenerateXmlDocs)
-        {
-            indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Builds the <see cref=\"global::Daml.Runtime.Commands.ExerciseByKeyCommand\"/> for the {choice.Name} choice on the contract carrying this key.");
-            indent.AppendLine("/// </summary>");
-            indent.AppendLine("/// <param name=\"key\">The contract key to exercise the choice against.</param>");
-            if (hasArg)
-            {
-                indent.AppendLine("/// <param name=\"argument\">The choice argument.</param>");
-            }
-            indent.AppendLine("/// <remarks>");
-            indent.AppendLine("/// Contract keys are not unique: several active contracts may carry the same key, and");
-            indent.AppendLine("/// the ledger resolves this command against a first match by an order it only partly");
-            indent.AppendLine("/// guarantees. Keeping a key unique is the application's responsibility.");
-            indent.AppendLine("/// </remarks>");
-        }
-
-        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseByKeyCommand)} {choiceName}ByKeyCommand(");
-        indent.Indent();
-        if (hasArg)
-        {
-            indent.AppendLine($"{csharpKeyType} key,");
-            indent.AppendLine($"{argument.ParameterType(templateClassName)} argument)");
-        }
-        else
-        {
-            indent.AppendLine($"{csharpKeyType} key)");
-        }
-        indent.Dedent();
-        indent.AppendLine("{");
-        indent.Indent();
-
-        if (mapper.MapsToReferenceType(keyType))
-        {
-            indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(key);");
-        }
-        if (hasArg)
-        {
-            indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(argument);");
-        }
-
-        var argExpr = hasArg ? "argument.ToRecord()" : EmptyArgumentExpression(choice);
-        indent.AppendLine($"return new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseByKeyCommand)}(");
-        indent.Indent();
-        indent.AppendLine($"{templateClassName}.TemplateId,");
-        indent.AppendLine($"{mapper.ToValue(keyType, "key")},");
-        indent.AppendLine($"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),");
-        indent.AppendLine($"{argExpr});");
-        indent.Dedent();
-
-        indent.Dedent();
-        indent.AppendLine("}");
+        ChoiceCommandBuilderWriter.Write(indent, new ChoiceCommandBuilder(
+            CommandType: exerciseByKeyCommand,
+            Name: ExerciseMemberNames.ByKeyCommand(choice),
+            Docs: options.GenerateXmlDocs
+                ? new CommandBuilderDocs(
+                    Summary: [$"Builds the <see cref=\"global::Daml.Runtime.Commands.ExerciseByKeyCommand\"/> for the {choice.Name} choice on the contract carrying this key."],
+                    ReceiverParameter: "<param name=\"key\">The contract key to exercise the choice against.</param>",
+                    Remarks:
+                    [
+                        "Contract keys are not unique: several active contracts may carry the same key, and",
+                        "the ledger resolves this command against a first match by an order it only partly",
+                        "guarantees. Keeping a key unique is the application's responsibility.",
+                    ])
+                : null,
+            ReceiverParameter: $"{mapper.MapType(keyType)} key",
+            ArgumentParameterType: argument.HasArgument ? argument.ParameterType(templateClassName) : null,
+            NullGuardedParameters: GuardedParameters(mapper.MapsToReferenceType(keyType) ? "key" : null, argument.HasArgument),
+            ReturnStatement: ReturnNew(
+                exerciseByKeyCommand,
+                $"{templateClassName}.TemplateId",
+                mapper.ToValue(keyType, "key"),
+                choice,
+                ArgumentExpression(choice, argument))));
     }
 
     private static bool IsStdlibPackage(string packageName) => StdlibPackages.IsStdlibPackage(packageName);

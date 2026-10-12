@@ -141,6 +141,11 @@ internal sealed record WireResponseVariant(
                 return new Com.Daml.Ledger.Api.V2.Identifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" };
             }
 
+            if (field.FieldType == FieldType.Enum && field.EnumType.ClrType == typeof(Com.Daml.Ledger.Api.V2.Interactive.HashingSchemeVersion))
+            {
+                return Com.Daml.Ledger.Api.V2.Interactive.HashingSchemeVersion.V2;
+            }
+
             return field.Name switch
             {
                 "create_arguments" => LedgerClientTestFixtures.OwnerArgumentsFor("alice::ns1"),

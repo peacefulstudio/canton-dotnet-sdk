@@ -188,19 +188,16 @@ public abstract record InterfaceAcsSnapshotEntry<TInterface, TView>
         /// </remarks>
         /// <param name="other">The value to compare against.</param>
         /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
-        public bool Equals(StreamError? other) =>
-            other is not null
-            && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
-            && Message == other.Message
-            && Category == other.Category
-            && ErrorId == other.ErrorId;
+        public bool Equals(StreamError? other) => other is not null && Fault == other.Fault;
 
         /// <summary>
         /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
         /// <see cref="Equals(StreamError)"/>.
         /// </summary>
         /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>.</returns>
-        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, ErrorId);
+        public override int GetHashCode() => Fault.GetHashCode();
+
+        private StreamErrorFault Fault => new(Status, Message, Category, ErrorId);
     }
 }
 

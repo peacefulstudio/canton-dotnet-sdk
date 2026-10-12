@@ -19,6 +19,8 @@ public class ServedInt64SiteCoverageTests
     [Theory]
     [InlineData("JsTrafficReport.consumedCost")]
     [InlineData("JsTrafficReport.offset")]
+    [InlineData("GetAccountResponse.balance")]
+    [InlineData("UpdateAccountRequest.balanceDelta")]
     public void SitesNeitherReshapedNorExempt_reports_an_int64_the_tables_and_the_exemption_sets_both_miss(
         string servedSite)
         => ServedInt64SiteCoverage.SitesNeitherReshapedNorExempt([servedSite]).Should().Equal(servedSite);
@@ -43,5 +45,22 @@ public class ServedInt64SiteCoverageTests
 
     [Fact]
     public void ExemptedSites_names_every_site_the_classifier_lets_through_unreshaped()
-        => ServedInt64SiteCoverage.ExemptedSites().Should().Contain("Duration.seconds");
+        => ServedInt64SiteCoverage.ExemptedSites().Should().BeEquivalentTo(
+        [
+            "CompletionStreamRequest.beginExclusive",
+            "GetActiveContractsPageRequest.activeAtOffset",
+            "GetActiveContractsRequest.activeAtOffset",
+            "GetCompletionsRequest.beginExclusive",
+            "GetTransactionByOffsetRequest.offset",
+            "GetUpdateByOffsetRequest.offset",
+            "GetUpdatesPageRequest.beginOffsetExclusive",
+            "GetUpdatesPageRequest.endOffsetInclusive",
+            "GetUpdatesRequest.beginExclusive",
+            "GetUpdatesRequest.endInclusive",
+            "DeduplicationOffset.value",
+            "DeduplicationOffset1.value",
+            "DeduplicationOffset2.value",
+            "Duration.seconds",
+            "JsTransactionTree.offset",
+        ]);
 }

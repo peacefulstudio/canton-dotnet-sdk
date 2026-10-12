@@ -27,6 +27,8 @@ Back to the [README](../../README.md).
 - Composable `Filter.Or` / `Filter.And` combinators
 - OpenTelemetry tracing via `ActivitySource`
 
+The PQS client is tested against PQS 3.6.0, the first PQS built for Canton 3.6, reading a Canton 3.6 participant.
+
 ### Client kernel (`Canton.Ledger.Kernel`)
 - `Authentication`: OAuth2 client-credentials flow with thread-safe TTL token caching and automatic refresh
 - Static token and unauthenticated modes behind a single `ITokenProvider` abstraction
@@ -102,7 +104,7 @@ catch (LedgerOperationException ex) when (ex.CommitState == CommitState.NotCommi
 
 ## Reading a Disclosure
 
-`GetDisclosureAsync<T>(contractId, submitter)` returns the data that discloses a contract explicitly, or `null` when the submitter cannot see it, it does not exist or it is archived. `T` may be a template or an interface:
+`GetDisclosureAsync<T>(contractId, submitter)` returns the data that discloses a contract explicitly, or `null` when the participant answers `CONTRACT_EVENTS_NOT_FOUND`: the submitter cannot see the contract, it does not exist or it is archived. Any other not-found rejection, such as `UNSUPPORTED_CONTRACT_ID`, throws `LedgerOperationException`. `T` may be a template or an interface:
 
 ```csharp
 var disclosure = await ledgerClient.GetDisclosureAsync(contractId, owner);
@@ -220,10 +222,12 @@ services.AddCantonStaticAuth("eyJ...");
       "Domain": "my-tenant.eu.auth0.com",
       "ClientId": "my-client-id",
       "ClientSecret": "my-client-secret",
-      "Audience": "https://canton.network/"
+      "Audience": "https://daml.com/jwt/aud/participant/<participant-id>"
     }
   }
 }
 ```
+
+`Audience`, when set, must equal the participant's `target-audience`; by default Canton accepts `https://daml.com/jwt/aud/participant/<participant-id>`. Leave it unset only if your identity provider stamps that audience into the token itself.
 
 When no `ITokenProvider` is registered, the clients run unauthenticated (`ITokenProvider.None`) and log a warning at construction. See the [`Canton.Ledger.Kernel` README](../../src/Canton.Ledger.Kernel/README.md) for the full options reference, including custom token endpoints (e.g. Keycloak).

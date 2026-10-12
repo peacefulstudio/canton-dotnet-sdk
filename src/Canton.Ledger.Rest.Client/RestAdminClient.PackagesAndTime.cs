@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Kernel.Wire;
 using Daml.Ledger.Abstractions;
 
 namespace Canton.Ledger.Rest.Client;
@@ -31,7 +32,8 @@ internal sealed partial class RestAdminClient
                 {
                     null or Raw.GetPackageStatusResponsePackageStatus.PACKAGE_STATUS_UNSPECIFIED => PackageStatus.Unspecified,
                     Raw.GetPackageStatusResponsePackageStatus.PACKAGE_STATUS_REGISTERED => PackageStatus.Registered,
-                    _ => PackageStatus.Unrecognized,
+                    var unknown => throw MalformedResponse.WithDetail(
+                        $"The participant sent package status {unknown}, which this SDK version does not know."),
                 },
                 timeout: null,
                 cancellationToken),

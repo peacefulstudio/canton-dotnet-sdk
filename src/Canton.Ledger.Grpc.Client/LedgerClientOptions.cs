@@ -96,7 +96,8 @@ public sealed class LedgerClientOptions : IValidatableObject
     /// success outcome. The mapping applies only when this pipeline actually retried the submission —
     /// a first-attempt <c>DUPLICATE_COMMAND</c> from a caller-chosen <c>command_id</c> is a genuine
     /// caller error and stays a <c>DamlError</c>, as does a retried rejection whose metadata carries
-    /// no usable <c>completion_offset</c> or whose point read fails.
+    /// no usable <c>completion_offset</c> or reports <c>accepted</c> as <c>false</c>, or whose point
+    /// read fails.
     /// </remarks>
     public RetryOptions Retry { get; set; } = new();
 

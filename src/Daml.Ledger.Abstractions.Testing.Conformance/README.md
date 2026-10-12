@@ -18,7 +18,7 @@ required.
 ## Installation
 
 ```bash
-dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.6.0
+dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.7.0-preview.1
 ```
 
 A transport package subclasses it, supplying a client factory and the

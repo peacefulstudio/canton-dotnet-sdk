@@ -1,7 +1,6 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Globalization;
 using System.Text.Json.Nodes;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Wire;
@@ -19,7 +18,6 @@ internal sealed partial class RestLedgerClient
     private const string ExecuteSubmissionAndWaitForTransactionPath =
         "/v2/interactive-submission/executeAndWaitForTransaction";
     private const string PreferredPackagesPath = "/v2/interactive-submission/preferred-packages";
-    private const string PreferredPackageVersionPath = "/v2/interactive-submission/preferred-package-version";
 
     /// <inheritdoc />
     /// <remarks>
@@ -163,42 +161,6 @@ internal sealed partial class RestLedgerClient
             cancellationToken);
     }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// Sent as <c>GET /v2/interactive-submission/preferred-package-version</c> with the query
-    /// parameter names the participant reads — <c>package-name</c>, <c>synchronizer-id</c> and
-    /// <c>vetting_valid_at</c> — rather than the ones its specification derives, which it rejects or
-    /// silently discards.
-    /// </remarks>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="parties"/> or <paramref name="packageName"/> is <see langword="null"/>.
-    /// </exception>
-    public Task<PackagePreference?> GetPreferredPackageVersionAsync(
-        IEnumerable<Party> parties,
-        string packageName,
-        SynchronizerId? synchronizerId = null,
-        DateTimeOffset? vettingValidAt = null,
-        TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(parties);
-        ArgumentNullException.ThrowIfNull(packageName);
-
-        return _calls.SendAsync<Raw.GetPreferredPackageVersionResponse, PackagePreference?>(
-            new RestCall(
-                HttpMethod.Get, PreferredPackageVersionQuery(parties, packageName, synchronizerId, vettingValidAt),
-                Body: null, MissingBody("preferred package version"), MalformedBody("preferred package version"),
-                LedgerCallKind.Read),
-            body => body.PackagePreference is { } preference
-                ? new PackagePreference(
-                    ToPackageReference(preference.PackageReference
-                        ?? throw MalformedResponse.MissingRequiredField("The package preference carries no package reference")),
-                    ToSynchronizerId(preference.SynchronizerId))
-                : null,
-            timeout,
-            cancellationToken);
-    }
-
     private ServedPrepareSubmissionRequest BuildPrepareSubmissionRequest(
         RuntimeCommands.CommandsSubmission submission)
     {
@@ -254,26 +216,6 @@ internal sealed partial class RestLedgerClient
         string.IsNullOrEmpty(synchronizerId)
             ? throw MalformedResponse.MissingRequiredField("The response carries no synchronizerId")
             : new SynchronizerId(synchronizerId);
-
-    private static string PreferredPackageVersionQuery(
-        IEnumerable<Party> parties,
-        string packageName,
-        SynchronizerId? synchronizerId,
-        DateTimeOffset? vettingValidAt)
-    {
-        var query = parties.Select(party => $"parties={Uri.EscapeDataString(party.Value)}").ToList();
-        query.Add($"package-name={Uri.EscapeDataString(packageName)}");
-        if (synchronizerId is { } synchronizer)
-        {
-            query.Add($"synchronizer-id={Uri.EscapeDataString(synchronizer.Value)}");
-        }
-        if (vettingValidAt is { } validAt)
-        {
-            query.Add($"vetting_valid_at={Uri.EscapeDataString(validAt.ToString("O", CultureInfo.InvariantCulture))}");
-        }
-
-        return $"{PreferredPackageVersionPath}?{string.Join('&', query)}";
-    }
 
     private static RestCall Execute(
         string path, ServedExecuteSubmissionRequest body, string subject, LedgerCallKind kind) =>

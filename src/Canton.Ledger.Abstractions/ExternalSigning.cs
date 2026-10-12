@@ -5,7 +5,8 @@ namespace Canton.Ledger.Abstractions;
 
 /// <summary>
 /// How the bytes of a <see cref="LedgerSignature"/> are laid out. Numeric values equal the Ledger
-/// API wire values, so a value this SDK version does not name survives a round trip unchanged.
+/// API wire values. A value this SDK version does not name is refused with an
+/// <see cref="ArgumentException"/> before any request is sent.
 /// </summary>
 public enum SignatureFormat
 {
@@ -36,6 +37,12 @@ public enum SigningAlgorithm
 
     /// <summary>ECDSA over SHA-384.</summary>
     EcDsaSha384 = 3,
+
+    /// <summary>
+    /// ML-DSA-65, the post-quantum signature algorithm Canton 3.6 adds. It is experimental
+    /// upstream: a participant accepts it only when it runs with <c>crypto.enable-experimental</c>.
+    /// </summary>
+    MlDsa65 = 4,
 }
 
 /// <summary>
@@ -55,6 +62,12 @@ public enum SigningKeySpec
 
     /// <summary>secp256k1.</summary>
     EcSecp256k1 = 4,
+
+    /// <summary>
+    /// ML-DSA-65, the post-quantum key specification Canton 3.6 adds. It is experimental
+    /// upstream: a participant accepts it only when it runs with <c>crypto.enable-experimental</c>.
+    /// </summary>
+    MlDsa65 = 5,
 }
 
 /// <summary>

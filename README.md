@@ -53,7 +53,7 @@ SDK components your project uses (`components:` replaces the `sdk-version:` key)
 
 ```yaml
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.6.0
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.0-preview.1
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -74,9 +74,9 @@ helpers. The checked-in output is in
 ### 2. Connect, submit and read
 
 ```bash
-dotnet add package Daml.Runtime --version 0.6.0
-dotnet add package Daml.Ledger.Abstractions --version 0.6.0
-dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0
+dotnet add package Daml.Runtime --version 0.7.0-preview.1
+dotnet add package Daml.Ledger.Abstractions --version 0.7.0-preview.1
+dotnet add package Canton.Ledger.Grpc.Client --version 0.7.0-preview.1
 dotnet add package Microsoft.Extensions.DependencyInjection
 ```
 
@@ -166,7 +166,7 @@ Each package also has its own README under [`src/`](src/), such as
 
 Active and pre-1.0: under SemVer 0.x, any release may change the public API without a major-version
 bump (see the [CHANGELOG](CHANGELOG.md)). CI builds and tests on Ubuntu, Windows and macOS, on amd64
-and arm64, against Canton 3.5.x; see [status and roadmap](docs/public/status-and-roadmap.md) and
+and arm64, against Canton 3.6.x; see [status and roadmap](docs/public/status-and-roadmap.md) and
 [Canton versions](docs/public/cross-version-matrix.md).
 
 ## Contributing

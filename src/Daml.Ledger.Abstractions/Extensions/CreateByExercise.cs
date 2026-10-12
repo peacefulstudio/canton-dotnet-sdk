@@ -114,7 +114,9 @@ public static class CreateByExercise
             .TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
-        return outcome.ResultOrThrow(
+        return OutcomeUnwrapPolicy.Value(
+            outcome,
+            ValueIntent.RequireOne,
             "TryCreateOneByExerciseAsync",
             static () => $"Exercising the choice created no {typeof(TTemplate).Name}; expected exactly one.",
             static count => $"Exercising the choice created {count} {typeof(TTemplate).Name} contracts; expected exactly one. Use CreateManyByExerciseAsync to collect them.",
@@ -149,7 +151,9 @@ public static class CreateByExercise
             .TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
-        return outcome.ResultOrThrow(
+        return OutcomeUnwrapPolicy.Value(
+            outcome,
+            ValueIntent.RequireOne,
             "TryCreateManyByExerciseAsync",
             static () => $"Exercising the choice yielded no result (None) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",
             static count => $"Exercising the choice yielded Many ({count}) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",

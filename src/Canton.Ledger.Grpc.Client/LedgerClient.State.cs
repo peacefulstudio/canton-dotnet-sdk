@@ -52,7 +52,7 @@ internal sealed partial class LedgerClient
             "GetConnectedSynchronizers",
             (headers, deadline, token) => _stateService.GetConnectedSynchronizersAsync(request, headers, deadline, token),
             response => response.ConnectedSynchronizers
-                .Select(s => new ConnectedSynchronizer(s.SynchronizerAlias, s.SynchronizerId, MapPermission(s.Permission)))
+                .Select(s => new ConnectedSynchronizer(s.SynchronizerAlias, s.SynchronizerId, GrpcEnumMaps.SynchronizerPermissions.FromWire(s.Permission)))
                 .ToList(),
             cancellationToken,
             timeout: timeout,
@@ -64,15 +64,6 @@ internal sealed partial class LedgerClient
                     activity?.SetTag(LedgerActivityTagNames.CantonParticipantId, participantId);
             });
     }
-
-    private static SynchronizerPermissionLevel MapPermission(ParticipantPermission permission) => permission switch
-    {
-        ParticipantPermission.Unspecified => SynchronizerPermissionLevel.Unspecified,
-        ParticipantPermission.Submission => SynchronizerPermissionLevel.Submission,
-        ParticipantPermission.Confirmation => SynchronizerPermissionLevel.Confirmation,
-        ParticipantPermission.Observation => SynchronizerPermissionLevel.Observation,
-        _ => SynchronizerPermissionLevel.Unrecognized,
-    };
 
     /// <inheritdoc />
     public Task<string> GetLedgerApiVersionAsync(

@@ -374,7 +374,10 @@ namespace Canton.Ledger.Rest.Client.Raw
         /// 
         /// Can be accessed by any Ledger API client with a valid token when Ledger API authorization is enabled.
         /// 
-        /// Provided for backwards compatibility, it will be removed in the Canton version 3.4.0
+        /// Deprecated since Canton 3.4: disabled by default since Canton 3.6 (re-enable temporarily with
+        /// `canton.participants.&lt;participant&gt;.features.deprecated.enable-deprecated-endpoints-34 = true`)
+        /// and will be removed in Canton 3.7.
+        /// Use GetPreferredPackages instead.
         /// </remarks>
         /// <param name="parties">
         /// The parties whose participants' vetting state should be considered when resolving the preferred package.
@@ -421,8 +424,6 @@ namespace Canton.Ledger.Rest.Client.Raw
         /// a `FAILED_PRECONDITION` error will be returned.
         /// 
         /// Can be accessed by any Ledger API client with a valid token when Ledger API authorization is enabled.
-        /// 
-        /// Experimental API: this endpoint is not guaranteed to provide backwards compatibility in future releases
         /// </remarks>
         /// <param name="body">body parameter</param>
         /// <param name="cancellationToken">The cancellation token to cancel the request.</param>
@@ -593,6 +594,10 @@ namespace Canton.Ledger.Rest.Client.Raw
         Task<AllocatePartyResponse> AllocateParty([Body] AllocatePartyRequest body, CancellationToken cancellationToken = default);
 
         /// <remarks>
+        /// Alpha 3.3: Endpoint to allocate a new external party on a synchronizer
+        /// 
+        /// Expected to be stable in 3.5
+        /// 
         /// The external party must be hosted (at least) on this node with either confirmation or observation permissions
         /// It can optionally be hosted on other nodes (then called a multi-hosted party).
         /// If hosted on additional nodes, explicit authorization of the hosting relationship must be performed on those nodes
@@ -612,6 +617,10 @@ namespace Canton.Ledger.Rest.Client.Raw
         Task<AllocateExternalPartyResponse> AllocateExternalParty([Body] AllocateExternalPartyRequest body, CancellationToken cancellationToken = default);
 
         /// <remarks>
+        /// Alpha 3.3: Convenience endpoint to generate topology transactions for external signing
+        /// 
+        /// Expected to be stable in 3.5
+        /// 
         /// You may use this endpoint to generate the common external topology transactions
         /// which can be signed externally and uploaded as part of the allocate party process
         /// 
@@ -753,12 +762,20 @@ namespace Canton.Ledger.Rest.Client.Raw
         /// Get the current ledger end.
         /// Subscriptions started with the returned offset will serve events after this RPC was called.
         /// </remarks>
+        /// <param name="synchronizer_id">
+        /// Provide synchronizer_times for the specified synchronizers in the response.
+        /// If none are specified, only offset will be present in the response.
+        /// If the request includes a synchronizer for which no updates were observed, it will be omitted in the output.
+        /// If the request includes a synchronizer that participant was never connected to, it will be omitted in the output.
+        /// 
+        /// Optional: can be empty
+        /// </param>
         /// <param name="cancellationToken">The cancellation token to cancel the request.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">Thrown when the request returns a non-success status code.</exception>
         [Headers("Accept: application/json")]
         [Get("/v2/state/ledger-end")]
-        Task<GetLedgerEndResponse> GetLedgerEnd(CancellationToken cancellationToken = default);
+        Task<GetLedgerEndResponse> GetLedgerEnd([Query(CollectionFormat.Multi)] IEnumerable<string>? synchronizer_id = default, CancellationToken cancellationToken = default);
 
     }
 
@@ -1093,11 +1110,12 @@ namespace Canton.Ledger.Rest.Client.Raw
         public string SynchronizerId { get; set; }
 
         /// <summary>
-        /// Each corresponding assigned and unassigned event has the same reassignment_counter. This strictly increases
-        /// <br/> with each unassign command for the same contract. Creation of the contract corresponds to reassignment_counter
-        /// <br/> equals zero.
-        /// <br/> This field will be the reassignment_counter of the latest observable activation event on this synchronizer, which is
-        /// <br/> before the active_at_offset.
+        /// The reassignment counter of this event.
+        /// <br/>
+        /// <br/> Reassignment counters strictly increase with each unassign command for the same contract. Creation
+        /// <br/> of the contract corresponds to a reassignment_counter equal to zero.
+        /// <br/> This field will be the reassignment_counter of the latest observable activation event on this synchronizer,
+        /// <br/> which is before the active_at_offset.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -1556,9 +1574,10 @@ namespace Canton.Ledger.Rest.Client.Raw
         public string Submitter { get; set; }
 
         /// <summary>
-        /// Each corresponding assigned and unassigned event has the same reassignment_counter. This strictly increases
-        /// <br/> with each unassign command for the same contract. Creation of the contract corresponds to reassignment_counter
-        /// <br/> equals zero.
+        /// The reassignment counter associated with this assignment on the target synchronizer.
+        /// <br/>
+        /// <br/> Reassignment counters strictly increase with each unassign command for the same contract.
+        /// <br/> Creation of the contract corresponds to reassignment_counter equal to zero.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -1937,6 +1956,24 @@ namespace Canton.Ledger.Rest.Client.Raw
         /// </summary>
         [JsonPropertyName("paidTrafficCost")]
         public string PaidTrafficCost { get; set; }
+
+        /// <summary>
+        /// The transaction hash signed by the external party for prepared transactions
+        /// <br/> that were submitted using `InteractiveSubmissionService.ExecuteSubmission`
+        /// <br/> or one of its variants.
+        /// <br/>
+        /// <br/> Use this to correlate prepared transactions with their execution result
+        /// <br/> on the *same participant* that executed the transaction.
+        /// <br/>
+        /// <br/> Not available for:
+        /// <br/>
+        /// <br/> - transactions executed on Canton versions prior to 3.5
+        /// <br/> - transactions of internal parties submitted using `CommandSubmissionService.Submit` and its variants
+        /// <br/>
+        /// <br/> Optional: can be empty
+        /// </summary>
+        [JsonPropertyName("transactionHash")]
+        public string TransactionHash { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -3119,7 +3156,9 @@ namespace Canton.Ledger.Rest.Client.Raw
         public string UserId { get; set; }
 
         /// <summary>
-        /// The hashing scheme version used when building the hash
+        /// The hashing scheme version used when building the hash.
+        /// <br/> HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+        /// <br/> rejected on synchronizers running older protocol versions.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -3236,7 +3275,9 @@ public ExecuteSubmissionAndWaitForTransactionRequestHashingSchemeVersion? Hashin
         public string UserId { get; set; }
 
         /// <summary>
-        /// The hashing scheme version used when building the hash
+        /// The hashing scheme version used when building the hash.
+        /// <br/> HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+        /// <br/> rejected on synchronizers running older protocol versions.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -3349,7 +3390,9 @@ public ExecuteSubmissionAndWaitRequestHashingSchemeVersion? HashingSchemeVersion
         public string UserId { get; set; }
 
         /// <summary>
-        /// The hashing scheme version used when building the hash
+        /// The hashing scheme version used when building the hash.
+        /// <br/> HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+        /// <br/> rejected on synchronizers running older protocol versions.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -3503,6 +3546,19 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// </summary>
         [JsonPropertyName("byKey")]
         public bool? ByKey { get; set; }
+
+        /// <summary>
+        /// Can only be populated from lf_version dev.
+        /// <br/>
+        /// <br/> Results of external calls made during this exercise.
+        /// <br/> These results are carried for external-call replay and validation.
+        /// <br/> They are encoded into the prepared transaction hash starting with
+        /// <br/> HASHING_SCHEME_VERSION_V4.
+        /// <br/>
+        /// <br/> Optional: can be empty
+        /// </summary>
+        [JsonPropertyName("externalCallResults")]
+        public ICollection<ExternalCallResult> ExternalCallResults { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -3864,6 +3920,66 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// </summary>
         [JsonPropertyName("supported")]
         public bool? Supported { get; set; }
+
+        private IDictionary<string, object> _additionalProperties;
+
+        [JsonExtensionData]
+        public IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// Result of an external call made during transaction execution.
+    /// <br/> External calls are deterministic calls to participant extension services.
+    /// <br/> Results are stored in the transaction and replayed during validation.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ExternalCallResult
+    {
+
+        /// <summary>
+        /// Extension service identifier.
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("extensionId")]
+        public string ExtensionId { get; set; }
+
+        /// <summary>
+        /// Function identifier within the extension.
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("functionId")]
+        public string FunctionId { get; set; }
+
+        /// <summary>
+        /// Extension configuration hash bytes.
+        /// <br/>
+        /// <br/> Required: must be non-empty
+        /// </summary>
+        [JsonPropertyName("config")]
+        public string Config { get; set; }
+
+        /// <summary>
+        /// Input data sent to the extension.
+        /// <br/>
+        /// <br/> Required: must be non-empty
+        /// </summary>
+        [JsonPropertyName("input")]
+        public string Input { get; set; }
+
+        /// <summary>
+        /// Output data returned by the extension.
+        /// <br/>
+        /// <br/> Required: must be non-empty
+        /// </summary>
+        [JsonPropertyName("output")]
+        public string Output { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -4738,6 +4854,15 @@ public GetConnectedSynchronizersResponse_ConnectedSynchronizerPermission? Permis
         [JsonPropertyName("offset")]
         public string Offset { get; set; }
 
+        /// <summary>
+        /// Final record times observed by this participant for each of the requested synchronizers.
+        /// <br/> If there is no connection to a sequencer, corresponding record time can be arbitrarily far back in the past.
+        /// <br/>
+        /// <br/> Optional: can be empty
+        /// </summary>
+        [JsonPropertyName("synchronizerTimes")]
+        public ICollection<SynchronizerTime> SynchronizerTimes { get; set; }
+
         private IDictionary<string, object> _additionalProperties;
 
         [JsonExtensionData]
@@ -4818,7 +4943,7 @@ public GetPackageStatusResponsePackageStatus? PackageStatus { get; set; }
 
         /// <summary>
         /// Identifier of the participant, which SHOULD be globally unique.
-        /// <br/> Must be a valid LedgerString (as describe in ``value.proto``).
+        /// <br/> Must be a valid ParticipantIdStrings (as describe in ``value.proto``).
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -6016,7 +6141,11 @@ public GetPackageStatusResponsePackageStatus? PackageStatus { get; set; }
 
         /// <summary>
         /// Pagination token to retrieve the next page.
-        /// <br/> Empty string if there are no further results.
+        /// <br/> Empty string once there are no further results.
+        /// <br/>
+        /// <br/> ``PackageMetadataFilter`` is applied after ``TopologyStateFilter`` has already produced a page,
+        /// <br/> so that page can end up empty even when it has a next token. Keep following the token until
+        /// <br/> there's no token left.
         /// <br/>
         /// <br/> Optional
         /// </summary>
@@ -7055,6 +7184,8 @@ public ParticipantAuthorizationOnboardingParticipantPermission? ParticipantPermi
         /// <summary>
         /// The hashing scheme version to be used when building the hash.
         /// <br/> Defaults to HASHING_SCHEME_VERSION_V2.
+        /// <br/> HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+        /// <br/> rejected on synchronizers running older protocol versions.
         /// <br/>
         /// <br/> Optional
         /// </summary>
@@ -7107,7 +7238,9 @@ public PrepareSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         public string PreparedTransactionHash { get; set; }
 
         /// <summary>
-        /// The hashing scheme version used when building the hash
+        /// The hashing scheme version used when building the hash.
+        /// <br/> HASHING_SCHEME_VERSION_V4 is only returned for synchronizers running protocol version 36 or
+        /// <br/> later.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -7775,6 +7908,12 @@ public PrepareSubmissionResponseHashingSchemeVersion? HashingSchemeVersion { get
         [JsonPropertyName("CanExecuteAsAnyParty")]
         public Right_CanExecuteAsAnyParty CanExecuteAsAnyParty { get; set; }
 
+        /// <summary>
+        /// The user can act as any party on a participant.
+        /// </summary>
+        [JsonPropertyName("CanActAsAnyParty")]
+        public Right_CanActAsAnyParty CanActAsAnyParty { get; set; }
+
         private IDictionary<string, object> _additionalProperties;
 
         [JsonExtensionData]
@@ -7797,6 +7936,25 @@ public PrepareSubmissionResponseHashingSchemeVersion? HashingSchemeVersion { get
         /// </summary>
         [JsonPropertyName("party")]
         public string Party { get; set; }
+
+        private IDictionary<string, object> _additionalProperties;
+
+        [JsonExtensionData]
+        public IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// The right of a user to authorize commands as any party on a participant.
+    /// <br/> Its utility is predominantly for users that act on behalf of many parties.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Right_CanActAsAnyParty
+    {
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -8754,7 +8912,8 @@ public SigningPublicKeyKeySpec? KeySpec { get; set; }
         public System.DateTimeOffset? RecordTime { get; set; }
 
         /// <summary>
-        /// For transaction externally signed, contains the external transaction hash
+        /// Deprecated: please use ``transaction_hash`` which has the same value.
+        /// <br/> For transaction externally signed, contains the external transaction hash
         /// <br/> signed by the external party. Can be used to correlate an external submission with a committed transaction.
         /// <br/>
         /// <br/> Optional: can be empty
@@ -8776,6 +8935,24 @@ public SigningPublicKeyKeySpec? KeySpec { get; set; }
         /// </summary>
         [JsonPropertyName("paidTrafficCost")]
         public string PaidTrafficCost { get; set; }
+
+        /// <summary>
+        /// The transaction hash signed by the external party for prepared transactions
+        /// <br/> that were submitted using `InteractiveSubmissionService.ExecuteSubmission`
+        /// <br/> or one of its variants.
+        /// <br/>
+        /// <br/> Use this to correlate prepared transactions with their execution result
+        /// <br/> on the *same participant* that executed the transaction.
+        /// <br/>
+        /// <br/> Not available for:
+        /// <br/>
+        /// <br/> - transactions executed on Canton versions prior to 3.6
+        /// <br/> - transactions of internal parties submitted using `CommandSubmissionService.Submit` and its variants
+        /// <br/>
+        /// <br/> Optional: can be empty
+        /// </summary>
+        [JsonPropertyName("transactionHash")]
+        public string TransactionHash { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -8929,9 +9106,10 @@ public TransactionFormatTransactionShape? TransactionShape { get; set; }
         public string Submitter { get; set; }
 
         /// <summary>
-        /// Each corresponding assigned and unassigned event has the same reassignment_counter. This strictly increases
-        /// <br/> with each unassign command for the same contract. Creation of the contract corresponds to reassignment_counter
-        /// <br/> equals zero.
+        /// The reassignment counter associated with this unassignment on the source synchronizer.
+        /// <br/>
+        /// <br/> Reassignment counters strictly increase with each unassign command for the same contract.
+        /// <br/> Creation of the contract corresponds to reassignment_counter equal to zero.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -9729,6 +9907,7 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
     /// <br/> - NameStrings are strings with length &lt;= 1000 that match the regexp ``[A-Za-z\$_][A-Za-z0-9\$_]*``.
     /// <br/> - PackageIdStrings are strings with length &lt;= 64 that match the regexp ``[A-Za-z0-9\-_ ]+``.
     /// <br/> - PartyIdStrings are strings with length &lt;= 255 that match the regexp ``[A-Za-z0-9:\-_ ]+``.
+    /// <br/> - ParticipantIdStrings are strings with length &lt;= 255 that match the regexp ``[A-Za-z0-9:\-_ ]+``.
     /// <br/> - LedgerStrings are strings with length &lt;= 255 that match the regexp ``[A-Za-z0-9#:\-_/ ]+``.
     /// <br/> - UserIdStrings are strings with length &lt;= 128 that match the regexp ``[a-zA-Z0-9@^$.!`\-#+'~_|:]+``.
     /// </summary>
@@ -10231,6 +10410,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
         [System.Runtime.Serialization.EnumMember(Value = @"SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384")]
         SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384 = 3,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"SIGNING_ALGORITHM_SPEC_ML_DSA_65")]
+        SIGNING_ALGORITHM_SPEC_ML_DSA_65 = 4,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10246,6 +10428,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
 
         [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V3")]
         HASHING_SCHEME_VERSION_V3 = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V4")]
+        HASHING_SCHEME_VERSION_V4 = 3,
 
     }
 
@@ -10263,6 +10448,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
         [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V3")]
         HASHING_SCHEME_VERSION_V3 = 2,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V4")]
+        HASHING_SCHEME_VERSION_V4 = 3,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10278,6 +10466,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
 
         [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V3")]
         HASHING_SCHEME_VERSION_V3 = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V4")]
+        HASHING_SCHEME_VERSION_V4 = 3,
 
     }
 
@@ -10394,6 +10585,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
         [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V3")]
         HASHING_SCHEME_VERSION_V3 = 2,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V4")]
+        HASHING_SCHEME_VERSION_V4 = 3,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10409,6 +10603,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
 
         [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V3")]
         HASHING_SCHEME_VERSION_V3 = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HASHING_SCHEME_VERSION_V4")]
+        HASHING_SCHEME_VERSION_V4 = 3,
 
     }
 
@@ -10451,6 +10648,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
         [System.Runtime.Serialization.EnumMember(Value = @"SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384")]
         SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384 = 3,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"SIGNING_ALGORITHM_SPEC_ML_DSA_65")]
+        SIGNING_ALGORITHM_SPEC_ML_DSA_65 = 4,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -10491,6 +10691,9 @@ public UploadDarFileRequestVettingChange? VettingChange { get; set; }
 
         [System.Runtime.Serialization.EnumMember(Value = @"SIGNING_KEY_SPEC_EC_SECP256K1")]
         SIGNING_KEY_SPEC_EC_SECP256K1 = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SIGNING_KEY_SPEC_ML_DSA_65")]
+        SIGNING_KEY_SPEC_ML_DSA_65 = 5,
 
     }
 

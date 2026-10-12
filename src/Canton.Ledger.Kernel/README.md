@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Kernel --version 0.6.0
+dotnet add package Canton.Ledger.Kernel --version 0.7.0-preview.1
 ```
 
 ## Key Types
@@ -34,11 +34,13 @@ services.AddCantonAuth(configuration.GetSection("Canton:Auth"));
       "Domain": "dev-peaceful.eu.auth0.com",
       "ClientId": "my-client-id",
       "ClientSecret": "my-client-secret",
-      "Audience": "https://canton.network/"
+      "Audience": "https://daml.com/jwt/aud/participant/<participant-id>"
     }
   }
 }
 ```
+
+`Audience`, when set, must equal the participant's `target-audience`; by default Canton accepts `https://daml.com/jwt/aud/participant/<participant-id>`. Leave it unset only if your identity provider stamps that audience into the token itself.
 
 `Domain` accepts either a bare hostname (e.g. `dev-peaceful.eu.auth0.com`) or an absolute https URL (e.g. `https://auth.example.com`, or `https://auth.example.com/tenant-a` for per-tenant subpaths). If `Domain` is a bare hostname, it is treated as `https://{hostname}`. If it is an absolute URL, that URL is used as the base. In both cases, `/oauth/token` is appended, preserving any existing path (`https://auth.example.com/tenant-a` → `https://auth.example.com/tenant-a/oauth/token`). Userinfo, query, and fragments are rejected. `ClientCredentialsProvider` caches tokens until `expires_in - SafetyMargin` (default 30s) and concurrent callers share a single HTTP request during refresh.
 
@@ -72,7 +74,7 @@ services.AddCantonAuth(options =>
     options.Domain = "https://auth.example.com";
     options.ClientId = "my-client-id";
     options.ClientSecret = "my-client-secret";
-    options.Audience = "https://canton.network/";
+    options.Audience = "https://daml.com/jwt/aud/participant/<participant-id>";
 });
 ```
 

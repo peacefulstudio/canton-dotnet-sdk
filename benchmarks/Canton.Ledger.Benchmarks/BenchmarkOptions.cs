@@ -14,13 +14,19 @@ internal sealed record BenchmarkOptions
 
     public int Concurrency { get; init; } = 16;
 
-    public int Repetitions { get; init; } = 5;
+    public int Repetitions { get; init; } = 30;
+
+    public int ReadWarmupMs { get; init; } = 3000;
+
+    public int ReadWindowMs { get; init; } = 10000;
 
     public int LatencySamples { get; init; } = 200;
 
     public int TailSamples { get; init; } = 50;
 
     public int TailSpacingMs { get; init; } = 500;
+
+    public int PacingJitterMs { get; init; } = 500;
 
     public IReadOnlyList<int> RestIdleWindowsMs { get; init; } = [250];
 
@@ -57,6 +63,9 @@ internal sealed record BenchmarkOptions
                 "--latency-samples" => options with { LatencySamples = Int(value) },
                 "--tail-samples" => options with { TailSamples = Int(value) },
                 "--tail-spacing-ms" => options with { TailSpacingMs = Int(value) },
+                "--pacing-jitter-ms" => options with { PacingJitterMs = Int(value) },
+                "--read-warmup-ms" => options with { ReadWarmupMs = Int(value) },
+                "--read-window-ms" => options with { ReadWindowMs = Int(value) },
                 "--rest-idle-windows-ms" => options with { RestIdleWindowsMs = IntList(value) },
                 "--acs-contracts" => options with { AcsContracts = Int(value) },
                 "--pqs-lag-samples" => options with { PqsLagSamples = Int(value) },

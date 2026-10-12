@@ -18,18 +18,21 @@ internal sealed partial class ChoiceEmitter
     /// generated descriptor to the runtime's Exercise-result projection
     /// (<c>ExerciseOutcomeProjection.ProjectChoiceResult</c>), which locates the exercised event,
     /// decodes it through the descriptor's <c>ResultDecoder</c>, and owns the no-event diagnostic.
+    /// Shared by template and interface choices: <paramref name="ownerTypeName"/> names the type
+    /// that declares the descriptor, and the runtime matches an interface choice's event on the
+    /// interface id.
     /// </summary>
     private void WriteExerciseProjector(
         IndentWriter indent,
         DamlChoice choice,
-        string templateClassName)
+        string ownerTypeName)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
         var returnTypeName = mapper.MapType(choice.ReturnType);
 
-        indent.AppendLine($"private static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}> Project{choiceName}Result({TypeReferenceQualifier.Qualify(RuntimeTypeNames.TransactionResult)} tx, string contractId) =>");
+        indent.AppendLine($"private static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnTypeName}> {ExerciseMemberNames.Projector(choice)}({TypeReferenceQualifier.Qualify(RuntimeTypeNames.TransactionResult)} tx, string contractId) =>");
         indent.Indent();
-        indent.AppendLine($"tx.ProjectChoiceResult({templateClassName}.Choice{choiceName}, contractId);");
+        indent.AppendLine($"tx.ProjectChoiceResult({ownerTypeName}.Choice{choiceName}, contractId);");
         indent.Dedent();
     }
 }

@@ -556,11 +556,6 @@ public enum HashFunction
 {
     /// <summary>SHA-256.</summary>
     Sha256,
-
-    /// <summary>
-    /// A hash function reported by the participant that this SDK version does not recognise.
-    /// </summary>
-    Unrecognized,
 }
 
 /// <summary>
@@ -644,4 +639,11 @@ public abstract record UserRight
     /// Intended for users that perform interactive submissions on behalf of many parties.
     /// </summary>
     public sealed record ExecuteAsAnyParty : UserRight;
+
+    /// <summary>
+    /// Right to act as any party on the participant, so a user can authorize commands on behalf of
+    /// many parties. Only a participant administrator can grant it. A participant older than
+    /// Canton 3.6 refuses to grant it.
+    /// </summary>
+    public sealed record ActAsAnyParty : UserRight;
 }

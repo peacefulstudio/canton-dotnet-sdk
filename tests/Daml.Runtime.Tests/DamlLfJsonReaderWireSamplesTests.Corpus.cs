@@ -89,20 +89,29 @@ public partial class DamlLfJsonReaderWireSamplesTests
         }
     }
 
-    public static TheoryData<string> AcceptedNestedOptionalCandidates
+    public static TheoryData<string> AcceptedNestedOptionalCandidates => NestedOptionalCandidates(accepted: true);
+
+    public static TheoryData<string> RejectedNestedOptionalCandidates => NestedOptionalCandidates(accepted: false);
+
+    public static TheoryData<string> NestedOptionalCandidatesOnCapture => NestedOptionalCandidates(accepted: null);
+
+    private static TheoryData<string> NestedOptionalCandidates(bool? accepted)
     {
-        get
+        using var document = LoadWireSample(NestedOptionalProbe);
+        var candidates = new TheoryData<string>();
+        foreach (var candidate in document.RootElement.GetProperty("response").EnumerateObject())
         {
-            using var document = LoadWireSample(NestedOptionalProbe);
-            var candidates = new TheoryData<string>();
-            foreach (var candidate in document.RootElement.GetProperty("response").EnumerateObject())
-            {
-                if (candidate.Value.GetProperty("accepted").GetBoolean())
-                    candidates.Add(candidate.Name);
-            }
-            return candidates;
+            if (accepted is null || candidate.Value.GetProperty("accepted").GetBoolean() == accepted)
+                candidates.Add(candidate.Name);
         }
+        return candidates;
     }
+
+    internal static JsonElement SentNestedOptionalCandidate(JsonDocument capture, string candidate) =>
+        capture.RootElement.GetProperty("response").GetProperty(candidate).GetProperty("sent");
+
+    internal static bool ParticipantAccepted(JsonDocument capture, string candidate) =>
+        capture.RootElement.GetProperty("response").GetProperty(candidate).GetProperty("accepted").GetBoolean();
 
     internal static DamlOptionalChain ReadOptionalOptionalText(JsonElement json) =>
         DamlLfJsonDecoders.ReadOptionalChain(

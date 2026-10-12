@@ -155,6 +155,22 @@ public sealed class RestCallEnvelopeTests : IDisposable
     }
 
     [Theory]
+    [MemberData(nameof(EnvelopedOperations))]
+    public async Task Enveloped_operation_keeps_a_non_success_response_as_an_HttpRequestException_carrying_its_status(
+        string operation)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.ServiceUnavailable,
+            """{"code": 14, "message": "participant unavailable"}""");
+
+        var failure = await InvokeAsync(ClientWith(transport), operation);
+
+        var source = failure.SourceException.Should().BeOfType<HttpRequestException>().Subject;
+        source.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        source.Message.Should().Be("Response status code does not indicate success: 503 (Service Unavailable).");
+    }
+
+    [Theory]
     [MemberData(nameof(RedactedAuthFailures))]
     public async Task Enveloped_operation_carries_the_recovered_Category_when_the_participant_redacted_the_error_info(
         string operation, HttpStatusCode statusCode, int grpcCodeValue, DamlErrorCategory expected)
@@ -239,7 +255,6 @@ public sealed class RestCallEnvelopeTests : IDisposable
 
     [Theory]
     [InlineData("Read", CommitState.NotCommitted, "NoResponse")]
-    [InlineData("AcceptedOnlyWrite", CommitState.Unknown, "UndecodableBody")]
     [InlineData("EffectAppliedWrite", CommitState.Committed, "UndecodableBody")]
     public async Task SendAsync_reports_a_success_body_that_fails_in_transit_with_the_commit_state_of_the_calls_kind(
         string kindName, CommitState expected, string expectedStatusName)
@@ -292,7 +307,6 @@ public sealed class RestCallEnvelopeTests : IDisposable
 
     [Theory]
     [InlineData("Read", CommitState.NotCommitted)]
-    [InlineData("AcceptedOnlyWrite", CommitState.Unknown)]
     [InlineData("EffectAppliedWrite", CommitState.Committed)]
     public async Task SendAsync_reports_a_success_body_the_projection_cannot_read_with_the_commit_state_of_the_calls_kind(
         string kindName, CommitState expected)
@@ -308,7 +322,6 @@ public sealed class RestCallEnvelopeTests : IDisposable
     }
 
     [Theory]
-    [InlineData("AcceptedOnlyWrite", CommitState.Unknown)]
     [InlineData("EffectAppliedWrite", CommitState.Committed)]
     public async Task SendAsync_reports_whatever_a_write_projection_raised_after_a_success_response_as_unreadable(
         string kindName, CommitState expected)
@@ -324,7 +337,6 @@ public sealed class RestCallEnvelopeTests : IDisposable
     }
 
     [Theory]
-    [InlineData("AcceptedOnlyWrite", CommitState.Unknown)]
     [InlineData("EffectAppliedWrite", CommitState.Committed)]
     public async Task SendAsync_reports_a_TimeoutException_raised_after_a_success_response_as_unreadable_not_as_no_response(
         string kindName, CommitState expected)
@@ -354,10 +366,41 @@ public sealed class RestCallEnvelopeTests : IDisposable
         (await act.Should().ThrowAsync<TimeoutException>()).Which.Should().BeSameAs(raised);
     }
 
-    [Fact]
-    public async Task SendAsync_lets_a_read_projection_exception_that_is_not_a_decode_failure_propagate()
+    public static TheoryData<Exception> ReadProjectionExceptionsTheDecoderContractClassifiesAsUndecodable() =>
+        new()
+        {
+            new InvalidCastException("boom"),
+            new NotSupportedException("Unknown right kind served by the participant."),
+            new ArgumentException("boom"),
+            new ArgumentOutOfRangeException("boom"),
+            new InvalidOperationException("boom"),
+        };
+
+    [Theory]
+    [MemberData(nameof(ReadProjectionExceptionsTheDecoderContractClassifiesAsUndecodable))]
+    public async Task SendAsync_reports_a_read_projection_exception_the_gRPC_decoder_contract_wraps_as_UndecodableBody_that_did_not_commit(
+        Exception raised)
     {
-        var raised = new InvalidCastException("boom");
+        var thrown = await ThrownBySendAsync("Read", _ => throw raised);
+
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Be($"malformed prefix: {raised.Message}");
+        thrown.InnerException.Should().BeSameAs(raised);
+    }
+
+    public static TheoryData<Exception> ReadProjectionExceptionsThatAreNotWireValueFailures() =>
+        new()
+        {
+            new KeyNotFoundException("boom"),
+            NullDereference(),
+            new ProjectionRefusalException("the caller asked for a template this contract is not"),
+        };
+
+    [Theory]
+    [MemberData(nameof(ReadProjectionExceptionsThatAreNotWireValueFailures))]
+    public async Task SendAsync_lets_a_read_projection_exception_that_is_not_a_wire_value_failure_propagate(Exception raised)
+    {
         var envelope = EnvelopeServing(HttpStatusCode.OK, "{}");
 
         var act = () => envelope.SendAsync<Raw.SubmitAndWaitForTransactionResponse, string>(
@@ -366,7 +409,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
             timeout: null,
             TestContext.Current.CancellationToken);
 
-        (await act.Should().ThrowAsync<InvalidCastException>()).Which.Should().BeSameAs(raised);
+        (await act.Should().ThrowAsync<Exception>()).Which.Should().BeSameAs(raised);
     }
 
     [Theory]
@@ -517,7 +560,8 @@ public sealed class RestCallEnvelopeTests : IDisposable
     private static async Task<CallFailure> ThrownAsync<TResult>(Func<Task<TResult>> operation)
     {
         var thrown = await operation.Should().ThrowAsync<LedgerOperationException>();
-        return new CallFailure(thrown.Which.Status, thrown.Which.Message, thrown.Which.Category);
+        return new CallFailure(
+            thrown.Which.Status, thrown.Which.Message, thrown.Which.Category, SourceException: thrown.Which.InnerException);
     }
 
     private static CallFailure Reported<TResult>(ExerciseOutcome<TResult> outcome)
@@ -529,7 +573,8 @@ public sealed class RestCallEnvelopeTests : IDisposable
         }
 
         var infraError = outcome.Should().BeOfType<ExerciseOutcome<TResult>.InfraError>().Subject;
-        return new CallFailure(infraError.Status, infraError.Message, infraError.Category);
+        return new CallFailure(
+            infraError.Status, infraError.Message, infraError.Category, SourceException: infraError.SourceException);
     }
 
     private static RuntimeCommands.CommandsSubmission Submission() =>

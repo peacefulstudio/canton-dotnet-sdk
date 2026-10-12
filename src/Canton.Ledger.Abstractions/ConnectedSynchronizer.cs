@@ -28,9 +28,4 @@ public enum SynchronizerPermissionLevel
 
     /// <summary>The participant can only observe transactions.</summary>
     Observation,
-
-    /// <summary>
-    /// A permission reported by the participant that this SDK version does not recognise.
-    /// </summary>
-    Unrecognized,
 }

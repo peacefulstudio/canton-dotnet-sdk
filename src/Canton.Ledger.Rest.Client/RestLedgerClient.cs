@@ -572,20 +572,19 @@ internal sealed partial class RestLedgerClient
         var message = failure is HttpRequestException ? failure.Message : WindowTimedOutMessage;
 
         LogStreamWindowFailed(_logger, new TransportStatus.NoResponse(), message);
-        return StreamFault.FromTransport(
-            new TransportStatus.NoResponse(), message, category: null, errorId: null, sourceException: failure);
+        return new LedgerCallEnding.Unanswered(message, failure).ToStreamFault();
     }
 
     private async Task<StreamFault> WindowFaultAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        var parsed = await RestErrorParser.ParseAsync(response, cancellationToken).ConfigureAwait(false);
-        var message = response.StatusCode == HttpStatusCode.RequestEntityTooLarge
-            ? parsed.Message + WindowLimitHint
-            : parsed.Message;
+        var rejection = await RestErrorParser.ReadRejectionAsync(response, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
+        {
+            rejection = rejection with { Error = rejection.Error.WithMessage(rejection.Error.Message + WindowLimitHint) };
+        }
 
-        LogStreamWindowFailed(_logger, parsed.Status, message);
-        return StreamFault.FromTransport(
-            parsed.Status, message, parsed.ClassifiedCategory, parsed.ReportedErrorId, sourceException: null);
+        LogStreamWindowFailed(_logger, rejection.Error.Status, rejection.Error.Message);
+        return rejection.ToStreamFault();
     }
 
     /// <summary>
@@ -807,9 +806,10 @@ internal sealed partial class RestLedgerClient
             body => NonEmptyOrNull(body.Transaction?.UpdateId),
             timeout,
             cancellationToken,
-            (duplicate, token) => ResolveRetriedDuplicateAsync(
+            (verdict, duplicate, token) => ResolveRetriedDuplicateAsync(
                 requestBody.Commands.CommandId,
                 transactionFormat ?? PointReadFormatOf(submission),
+                verdict,
                 duplicate,
                 project,
                 token));

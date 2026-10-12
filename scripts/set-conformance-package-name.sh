@@ -35,7 +35,7 @@ works per package name, so two builds with different content need different
 names. Package version is untouched.
 
 Run 'dpm build' after this to produce a DAR whose main package id reflects
-the new name, then scripts/refresh-conformance.sh to regenerate the bindings.
+the new name, then scripts/regenerate.sh write --only conformance to regenerate the bindings.
 EOF
   exit "${1:-1}"
 }

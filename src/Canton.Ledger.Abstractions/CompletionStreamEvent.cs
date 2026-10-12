@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json.Serialization;
 using Daml.Runtime;
 using Daml.Runtime.Outcomes;
 
@@ -103,12 +104,32 @@ public abstract record CompletionStreamEvent
     /// fourth slot, so a caller reads the code the same way on either stream.</param>
     /// <param name="SourceException">The transport exception that ended the stream, or
     /// <c>null</c> when the fault was carried in-band rather than thrown. Mirrors
-    /// <c>ContractStreamEvent&lt;T&gt;.StreamError.SourceException</c>; weighed by
-    /// reference in equality, as the upstream shape is.</param>
+    /// <c>ContractStreamEvent&lt;T&gt;.StreamError.SourceException</c>. A diagnostic only:
+    /// excluded from <see cref="Equals(StreamError)"/> and <see cref="GetHashCode"/>, and
+    /// carries <see cref="JsonIgnoreAttribute"/> so the <see cref="System.Text.Json"/> round
+    /// trip omits it rather than throwing on a caught exception's
+    /// <see cref="Exception.TargetSite"/>. A read restores it as <see langword="null"/>.</param>
     public sealed record StreamError(
         TransportStatus Status,
         string Message,
         DamlErrorCategory? Category = null,
         string? ErrorId = null,
-        Exception? SourceException = null) : CompletionStreamEvent;
+        [property: JsonIgnore] Exception? SourceException = null) : CompletionStreamEvent
+    {
+        /// <summary>
+        /// Compares two stream errors by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>, ignoring <see cref="SourceException"/>.
+        /// </summary>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member other than <see cref="SourceException"/> is equal.</returns>
+        public bool Equals(StreamError? other) => other is not null && Fault == other.Fault;
+
+        /// <summary>
+        /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
+        /// <see cref="Equals(StreamError)"/>.
+        /// </summary>
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ErrorId"/>.</returns>
+        public override int GetHashCode() => Fault.GetHashCode();
+
+        private StreamErrorFault Fault => new(Status, Message, Category, ErrorId);
+    }
 }

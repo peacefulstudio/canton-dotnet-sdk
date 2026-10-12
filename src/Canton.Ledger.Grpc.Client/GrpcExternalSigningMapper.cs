@@ -12,18 +12,18 @@ internal static class GrpcExternalSigningMapper
     internal static Wire.Signature ToWire(LedgerSignature signature) =>
         new()
         {
-            Format = (Wire.SignatureFormat)(int)signature.Format,
+            Format = GrpcEnumMaps.SignatureFormats.ToWire(signature.Format, nameof(signature)),
             Signature_ = ByteString.CopyFrom(signature.Bytes.Span),
             SignedBy = signature.SignedBy,
-            SigningAlgorithmSpec = (Wire.SigningAlgorithmSpec)(int)signature.Algorithm,
+            SigningAlgorithmSpec = GrpcEnumMaps.SigningAlgorithms.ToWire(signature.Algorithm, nameof(signature)),
         };
 
     internal static Wire.SigningPublicKey ToWire(SigningPublicKey key) =>
         new()
         {
-            Format = (Wire.CryptoKeyFormat)(int)key.Format,
+            Format = GrpcEnumMaps.PublicKeyFormats.ToWire(key.Format, nameof(key)),
             KeyData = ByteString.CopyFrom(key.KeyData.Span),
-            KeySpec = (Wire.SigningKeySpec)(int)key.KeySpec,
+            KeySpec = GrpcEnumMaps.SigningKeySpecs.ToWire(key.KeySpec, nameof(key)),
         };
 
     internal static PackageReference FromWire(Wire.PackageReference reference) =>

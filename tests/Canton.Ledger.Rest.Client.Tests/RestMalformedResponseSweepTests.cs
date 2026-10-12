@@ -126,6 +126,18 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
     {
         (_, MalformedField.BodyUnreadable) => "{ not json",
 
+        ("GetPartiesAsync(2)", MalformedField.PartyEmpty) =>
+            """{"partyDetails":[{"party":"","isLocal":true}]}""",
+        ("ListKnownPartiesAsync(1)", MalformedField.PartyEmpty) =>
+            """{"partyDetails":[{"party":"","isLocal":true}],"nextPageToken":""}""",
+        ("ListUsersAsync(1)", MalformedField.PrimaryPartyWhitespace) =>
+            """{"users":[{"id":"u","primaryParty":" "}],"nextPageToken":""}""",
+        ("ListVettedPackagesAsync(2)", MalformedField.SynchronizerIdEmpty) =>
+            """{"vettedPackages":[{"packages":[{"packageId":"p","packageName":"n","packageVersion":"1"}],"participantId":"x","synchronizerId":""}],"nextPageToken":""}""",
+
+        ("ListUserRightsAsync(2)", MalformedField.UnknownOneofArm) =>
+            """{"rights":[{"kind":{"CanActAsEveryParty":{"value":{}}}}]}""",
+
         ("GetLedgerEndAsync(2)", MalformedField.OffsetNegative) => """{"offset": "-1"}""",
         ("GetLedgerEndAsync(2)", MalformedField.OffsetNonNumeric) => """{"offset": "not-an-offset"}""",
         ("GetLatestPrunedOffsetsAsync(2)", MalformedField.OffsetNegative) =>
@@ -154,16 +166,14 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
 
         ("PrepareSubmissionAsync(3)", MalformedField.ResultMissing) =>
             """{"preparedTransactionHash": "3q2+7w==", "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V2"}""",
+        ("PrepareSubmissionAsync(3)", MalformedField.EnumValueUnknown) =>
+            """{"preparedTransaction": "CgM=", "preparedTransactionHash": "3q2+7w==", "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V99"}""",
         ("PrepareSubmissionAsync(3)" or "EstimateTrafficCostAsync(3)", MalformedField.TimestampOutOfRange) =>
             PreparedWithCostEstimation("""{"estimationTimestamp": "99999-01-01T00:00:00Z"}"""),
         ("EstimateTrafficCostAsync(3)", MalformedField.CostOutOfRange) =>
             PreparedWithCostEstimation("""{"totalTrafficCostEstimation": "9223372036854775808"}"""),
 
         ("GetPreferredPackagesAsync(5)", MalformedField.SynchronizerIdMissing) => """{"packageReferences": []}""",
-        ("GetPreferredPackageVersionAsync(6)", MalformedField.SynchronizerIdMissing) =>
-            """{"packagePreference": {"packageReference": {"packageId": "pkg-1", "packageName": "pkg", "packageVersion": "1.0.0"}}}""",
-        ("GetPreferredPackageVersionAsync(6)", MalformedField.PackageReferenceMissing) =>
-            """{"packagePreference": {"synchronizerId": "sync::a"}}""",
 
         _ => throw new NotSupportedException($"No REST body is built for {entryPoint} with {field}."),
     };

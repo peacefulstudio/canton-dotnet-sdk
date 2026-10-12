@@ -404,7 +404,7 @@ internal sealed partial class RestLedgerClient
             var variant = response.Update?.Reassignment is not null
                 ? "Reassignment"
                 : response.Update?.TopologyTransaction is not null ? "TopologyTransaction" : "Unknown";
-            throw new InvalidOperationException(
+            throw new ProjectionRefusalException(
                 $"Update at {lookupDescription} is a {variant}, not a Transaction; "
                 + "point reads only project transaction-shaped updates.");
         }
@@ -458,6 +458,7 @@ internal sealed partial class RestLedgerClient
             => SynchronizerPermissionLevel.Confirmation,
         Raw.GetConnectedSynchronizersResponse_ConnectedSynchronizerPermission.PARTICIPANT_PERMISSION_OBSERVATION
             => SynchronizerPermissionLevel.Observation,
-        _ => SynchronizerPermissionLevel.Unrecognized,
+        var unknown => throw MalformedResponse.WithDetail(
+            $"The participant sent synchronizer permission {unknown}, which this SDK version does not know."),
     };
 }

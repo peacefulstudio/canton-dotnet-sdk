@@ -10,6 +10,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Canton.Ledger.Abstractions" />
     <InternalsVisibleTo Include="Canton.Ledger.Kernel" />
+    <InternalsVisibleTo Include="Daml.Ledger.Abstractions.Tests" />
   </ItemGroup>
 
   <ItemGroup>

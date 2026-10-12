@@ -160,23 +160,25 @@ public partial class DamlLfJsonReaderWireSamplesTests
             .Should().Be(DamlOptionalChain.Some(DamlOptionalChain.Some(new DamlText("deep"))));
     }
 
-    [Fact]
-    public void ReadRecord_should_reject_every_nested_optional_encoding_the_participant_rejected()
+    [Theory]
+    [MemberData(nameof(NestedOptionalCandidatesOnCapture))]
+    public void ReadRecord_should_accept_or_reject_each_nested_optional_encoding_as_the_participant_did(string candidate)
     {
-        var rejected = new[]
-        {
-            ("null", "Expected JSON Array at 'NestedNoteHolder.nestedNote' but found Null"),
-            ("[null]", "Expected JSON Array at 'NestedNoteHolder.nestedNote[0]' but found Null"),
-            ("""["deep"]""", "Expected JSON Array at 'NestedNoteHolder.nestedNote[0]' but found String"),
-        };
+        using var capture = LoadWireSample(NestedOptionalProbe);
+        var sent = SentNestedOptionalCandidate(capture, candidate);
+        var accepted = ParticipantAccepted(capture, candidate);
 
-        foreach (var (encoding, message) in rejected)
-        {
-            var act = () => DamlLfJsonReader.ReadRecord<NestedNoteHolder>(
-                """{"nestedNote":""" + encoding + "}");
+        var act = () => DamlLfJsonReader.ReadRecord<NestedNoteHolder>(
+            """{"nestedNote":""" + sent.GetRawText() + "}");
 
-            act.Should().Throw<JsonException>($"the participant rejected {encoding} with HTTP 500")
-                .WithMessage(message);
+        if (accepted)
+        {
+            act.Should().NotThrow($"the participant accepted and echoed candidate '{candidate}'");
+        }
+        else
+        {
+            act.Should().Throw<JsonException>($"the participant rejected candidate '{candidate}' with HTTP 500")
+                .Which.Message.Should().StartWith("Expected JSON Array at 'NestedNoteHolder.nestedNote");
         }
     }
 

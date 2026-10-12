@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --version 0.6.0
+dotnet add package Daml.Runtime --version 0.7.0-preview.1
 ```
 
 ## Usage
@@ -352,6 +352,14 @@ generated generic; and nested inside another Optional, where `T??` does not exis
 `Some None` would collapse into `None`. A chain is uniform — every level rides the
 wrapper, none of it rides C# nullability — which is why `Optional (Optional Text)` is
 `Optional<Optional<string>>` rather than `Optional<string>?`.
+
+Generated generic records and variants constrain every type parameter `where TA : notnull`.
+That constraint is what keeps a field typed by a type variable from being an `Optional`: left
+unconstrained, `NullabilityInfoContext` reports such a field as nullable at every
+reference-type instantiation, so `Box<string>` and `Box<string?>` would look the same, while an
+interface-constrained parameter (`where T : ITemplate`) reports unknown at a reference-type
+instantiation. It is also why an `Optional` type argument is `Box<Optional<string>>`, since
+`Box<string?>` raises the CS8714 nullability warning (an error under warnings-as-errors).
 
 The type-argument case has one exception, and it fails the run rather than emitting: where
 the generic's own declaration already wraps that type parameter in an `Optional`, as

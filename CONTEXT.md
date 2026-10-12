@@ -143,6 +143,10 @@ It *calls* the mapper for every type fragment and *reads* — does not own — t
 choice-argument metadata. Which flavour a choice gets is decided by the pure
 `ChoiceEmitter.ReturnsContractIds` predicate over its return type, unit-tested directly; both
 flavours project the result through the descriptor, so no result record is synthesised.
+Which `Try<Choice>Async` overloads a choice gets, and in which class, is decided once per choice by
+the pure `ChoiceExercisePlanner` from `PartyAnalysis` (the receiver is a contract id or a fetched
+contract; the submitter is `SubmitterInfo`, the named controllers or the payload parties); the
+return flavour survives only as that placement. One writer renders every overload.
 Distinct from `SubmissionExtensionsEmitter`: creating a contract is not exercising a choice.
 _Avoid_: "choice helper", "the exercise writer", "the async wrapper generator", "choice-arg owner"
 

@@ -3,7 +3,7 @@
 
 using System.Diagnostics;
 using Canton.Ledger.Kernel.Streams;
-using Daml.Runtime.Outcomes;
+using Canton.Ledger.Kernel.Wire;
 using Grpc.Core;
 
 namespace Canton.Ledger.Grpc.Client;
@@ -52,13 +52,6 @@ internal readonly record struct StreamMoveResult
         if (Fault is not { } fault) return null;
 
         activity.RecordGrpcError(fault);
-        var parsed = DamlErrorParser.Parse(fault);
-
-        return StreamFault.FromTransport(
-            new TransportStatus.Grpc((GrpcStatusCode)fault.StatusCode),
-            string.IsNullOrEmpty(fault.Status.Detail) ? fault.Message : fault.Status.Detail,
-            parsed.ClassifiedCategory,
-            parsed.ReportedErrorId,
-            fault);
+        return RpcCallEnding.StreamFaulted(fault).ToStreamFault();
     }
 }

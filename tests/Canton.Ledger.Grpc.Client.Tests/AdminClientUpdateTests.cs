@@ -309,6 +309,27 @@ public sealed class AdminClientUpdateTests : IDisposable
             "cmd-1", CommandState.Pending, new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.Zero), null, "sync::1220"));
     }
 
+    [Theory]
+    [InlineData(1, CommandState.Pending)]
+    [InlineData(2, CommandState.Succeeded)]
+    [InlineData(3, CommandState.Failed)]
+    public async Task GetCommandStatus_maps_the_wire_state(int wireState, CommandState expected)
+    {
+        _commandInspectionService
+            .GetCommandStatusAsync(Arg.Any<GetCommandStatusRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(UnaryResponse(new GetCommandStatusResponse
+            {
+                CommandStatus =
+                {
+                    new Com.Daml.Ledger.Api.V2.Admin.CommandStatus { State = (Com.Daml.Ledger.Api.V2.Admin.CommandState)wireState },
+                },
+            }));
+
+        var result = await CreateClient().GetCommandStatusAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().ContainSingle().Which.State.Should().Be(expected);
+    }
+
     [Fact]
     public async Task GetCommandStatus_rejects_a_negative_limit()
     {

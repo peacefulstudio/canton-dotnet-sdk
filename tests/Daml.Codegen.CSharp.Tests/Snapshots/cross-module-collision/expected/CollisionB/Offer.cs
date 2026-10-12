@@ -28,10 +28,10 @@ public sealed partial record Offer(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Offer>, global::Daml.Runtime.Data.IDamlRecord<Offer>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("5a7215d354b1b18068c2f264b60dcab8d8a0df37b02c7fcb19d1f051333d75d1", "CollisionB", "Offer");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("9414f712310d27d4016c88e5e09a61e7ee7bc086ea838d3f6d02d28821b1e6ba", "CollisionB", "Offer");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "5a7215d354b1b18068c2f264b60dcab8d8a0df37b02c7fcb19d1f051333d75d1";
+    public static string PackageId => "9414f712310d27d4016c88e5e09a61e7ee7bc086ea838d3f6d02d28821b1e6ba";
 
     /// <summary>Gets the package name.</summary>
     public static string PackageName => "crossmodulecollision";

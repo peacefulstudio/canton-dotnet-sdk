@@ -38,7 +38,9 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// Retry differs from the gRPC pipeline in one deliberate, consumer-visible way. A participant
     /// that answers with a status code — 429, 503, a gateway 5xx — is <em>not</em> retried: on HTTP
     /// that is a response rather than an exception, and the kernel's transient-failure predicate
-    /// classifies exceptions only.
+    /// classifies exceptions only. For example, Canton 3.6 classifies
+    /// <c>INDEX_DB_SQL_NETWORK_TIMEOUT_ERROR</c> as transient: the gRPC client retries it as
+    /// <c>UNAVAILABLE</c>, while this client surfaces the HTTP 503.
     /// <para>
     /// As in the gRPC client, a retried submission rejected as <c>DUPLICATE_COMMAND</c> because its
     /// first attempt already committed is resolved to success by reading the committed transaction

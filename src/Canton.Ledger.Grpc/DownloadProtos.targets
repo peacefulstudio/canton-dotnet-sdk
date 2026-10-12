@@ -13,7 +13,7 @@
     <ProtoSourceDir>$(MSBuildThisFileDirectory)Proto</ProtoSourceDir>
 
     <!-- Maven artifact versions -->
-    <GoogleCommonProtosVersion>2.58.0</GoogleCommonProtosVersion>
+    <GoogleCommonProtosVersion>2.78.0</GoogleCommonProtosVersion>
 
     <!-- Pinned SHA-256 checksums for each downloaded JAR. Verified before unzip to
          protect against supply-chain tampering. Hashes were obtained by
@@ -22,9 +22,9 @@
          When bumping CantonVersion or GoogleCommonProtosVersion, refresh all three in
          the same commit: curl -sL <jar-url> | shasum -a 256, cross-checked against
          <jar-url>.sha1 from Maven Central. -->
-    <LedgerApiProtoHash>00e6cf36b19a81ffa0a7e5ed9a91fb28f5654e574f7f74981e97dcfa9f594c7f</LedgerApiProtoHash>
-    <LedgerApiValueProtoHash>e9b9e2ef2ebc8d0a498e610d9d4a2750edfcee68becef0fdbdda9c80bdd2c694</LedgerApiValueProtoHash>
-    <GoogleCommonProtosHash>f8640af546c0afe26477fc5e946a7f455a1afebfc73d021b0c8a5034b8e67152</GoogleCommonProtosHash>
+    <LedgerApiProtoHash>7ec399a4cc2fcc565d24c80a0aa6c02d55e0b49d9fdf28fca12abcc683d17916</LedgerApiProtoHash>
+    <LedgerApiValueProtoHash>b14d19b85cb8250f5aca52d4cfd137fe75a58c7a795d7894406b62c91414d9d8</LedgerApiValueProtoHash>
+    <GoogleCommonProtosHash>31048b6ce4bf3e68776e3e7adb4c7a133964fa170c135fea0a9d4e09ea33b221</GoogleCommonProtosHash>
 
     <!-- Maven Central URLs -->
     <MavenCentralBase>https://repo1.maven.org/maven2</MavenCentralBase>

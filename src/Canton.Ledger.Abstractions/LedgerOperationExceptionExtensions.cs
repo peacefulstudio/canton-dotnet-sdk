@@ -14,7 +14,7 @@ namespace Canton.Ledger.Abstractions;
 /// </summary>
 public static class LedgerOperationExceptionExtensions
 {
-    internal const string OperationDataKey = "Canton.Ledger.Operation";
+    internal const string OperationDataKey = OutcomeUnwrapPolicy.OperationDataKey;
 
     /// <summary>Extension members for <see cref="LedgerOperationException"/>.</summary>
     extension(LedgerOperationException exception)
@@ -26,13 +26,5 @@ public static class LedgerOperationExceptionExtensions
         /// operation context (e.g. by the upstream throwing wrappers).
         /// </summary>
         public string? Operation => exception.Data[OperationDataKey] as string;
-    }
-
-    internal static LedgerOperationException WithOperation(
-        this LedgerOperationException exception,
-        string operationName)
-    {
-        exception.Data[OperationDataKey] = operationName;
-        return exception;
     }
 }

@@ -44,15 +44,15 @@ generated headers carry no `#pragma warning disable CS8019`.
 
 ## Refreshing the snapshot
 
-`scripts/refresh-snapshot.sh` regenerates `intermediate.binpb` from the vendored
+`scripts/regenerate.sh write --only snapshots` regenerates `intermediate.binpb` from the vendored
 DAR with a JVM helper assembled from the working tree's sources, then
 regenerates the `expected/` tree from that proto with the current codegen
-source. Pass `--skip-binpb` to keep the vendored proto and refresh only
+source. Pass `--keep-protos` to keep the vendored proto and refresh only
 `expected/`. Run it from the repo root (POSIX shell; on Windows, use WSL or Git
 Bash):
 
 ```bash
-scripts/refresh-snapshot.sh splice-amulet-name-service
+scripts/regenerate.sh write --only snapshots --snapshot splice-amulet-name-service
 ```
 
 ## The vendored inputs

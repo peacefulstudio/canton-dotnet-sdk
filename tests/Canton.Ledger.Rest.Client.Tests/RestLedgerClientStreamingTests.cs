@@ -279,6 +279,27 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
     }
 
     [Fact]
+    public async Task SubscribeActiveAsync_keeps_a_non_success_window_as_an_HttpRequestException_on_the_StreamError()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.ServiceUnavailable, """{"code": 14, "message": "participant unavailable"}""");
+        var client = ClientWith(transport);
+
+        var entries = new List<AcsSnapshotEntry<TestTemplate>>();
+        await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(1), cancellationToken: TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        var error = entries.Should().ContainSingle().Subject
+            .Should().BeOfType<AcsSnapshotEntry<TestTemplate>.StreamError>().Subject;
+        var source = error.SourceException.Should().BeOfType<HttpRequestException>().Subject;
+        source.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        source.Message.Should().Be("Response status code does not indicate success: 503 (Service Unavailable).");
+    }
+
+    [Fact]
     public async Task SubscribeActiveAsync_ends_with_a_terminal_StreamError_on_a_structured_error_response()
     {
         var transport = new RecordingHttpHandler().WithResponse(

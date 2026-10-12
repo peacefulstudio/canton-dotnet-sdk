@@ -28,13 +28,13 @@ public sealed partial record Registration(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasKey<Registration, global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>>, global::Daml.Runtime.Contracts.IHasChoices<Registration>, global::Daml.Runtime.Data.IDamlRecord<Registration>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Registration");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5", "ContractKeys", "Registration");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
+    public static string PackageId => "33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "contractkeys-h4fd930e5658f";
+    public static string PackageName => "contractkeys-hb3f04acc1cbd";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);

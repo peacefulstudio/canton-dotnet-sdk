@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Globalization;
+using Canton.Ledger.Kernel.Wire;
 using Daml.Runtime.Outcomes;
 using Microsoft.Extensions.Logging;
 
@@ -12,12 +13,13 @@ internal sealed partial class RestLedgerClient
     private async Task<ExerciseOutcome<TProjection>> ResolveRetriedDuplicateAsync<TProjection>(
         string commandId,
         Raw.TransactionFormat? pointReadFormat,
-        ExerciseOutcome<TProjection>.DamlError duplicate,
+        RetriedDuplicateVerdict verdict,
+        ExerciseOutcome<TProjection> duplicate,
         Func<Raw.Transaction, TProjection> project,
         CancellationToken cancellationToken)
     {
         if (pointReadFormat is null
-            || !RetriedDuplicateCommand.TryReadCompletionOffset(duplicate.Metadata, out var completionOffset))
+            || verdict is not RetriedDuplicateVerdict.CommittedAt { CompletionOffset: var completionOffset })
         {
             LogRetriedDuplicateUnresolved(_logger, commandId);
             return duplicate;

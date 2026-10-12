@@ -57,7 +57,7 @@ internal static class RestMarkerMatcher<TMarker>
     {
         if (!IsInterface)
         {
-            throw new InvalidOperationException(
+            throw new ProjectionRefusalException(
                 $"{typeof(TMarker).FullName} is not a Daml interface marker; interface views only apply to IDamlInterface markers.");
         }
 

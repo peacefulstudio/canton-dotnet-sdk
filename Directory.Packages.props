@@ -12,10 +12,7 @@
          ignore (.github/dependabot.yaml). See GoogleProtobufFileDescriptorCacheRegressionTests
          for the guard. -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
-    <!-- Grpc.Tools >= 2.69.0 ships a linux_arm64 protoc that segfaults (grpc/grpc#38538;
-         fix attempt grpc/grpc#41994 shipped in 2.81.x without resolving it); 2.68.1 is the
-         last release whose linux_arm64 protoc works. Bump only when grpc/grpc#38538 is closed. -->
-    <PackageVersion Include="Grpc.Tools" Version="2.68.1" />
+    <PackageVersion Include="Grpc.Tools" Version="2.84.0" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
@@ -30,7 +27,7 @@
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="Polly.Core" Version="8.8.0" />
     <PackageVersion Include="Refit" Version="16.3.0" />
-    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.8.4.2" />
+    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.9.0.2" />
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
@@ -38,8 +35,8 @@
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <!-- Conformance kit -->
-    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.1" />
-    <PackageVersion Include="xunit.v3.assert" Version="4.0.1" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3.assert" Version="4.0.2" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
   </ItemGroup>
 </Project>

@@ -15,11 +15,14 @@ internal static class BenchmarkSuite
         var latencies = new List<LatencyResult>();
         var throughputs = new List<ThroughputResult>();
         var notes = new List<string>();
+        var readSampling = ReadSampling.From(options);
+        var jitter = TimeSpan.FromMilliseconds(options.PacingJitterMs);
 
         foreach (var transport in ledger.Transports)
         {
             Progress($"warming up {transport.Name}");
-            await SubmitScenarios.SequentialLatencyAsync(transport, ledger.Owner, options.WarmupCommands, cancellationToken)
+            await SubmitScenarios.SequentialLatencyAsync(
+                    transport, ledger.Owner, options.WarmupCommands, JitteredPacing.NoPause, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -48,7 +51,7 @@ internal static class BenchmarkSuite
                 transport.Name,
                 "events/s",
                 await ReadScenarios.UpdateStreamReplayAsync(
-                        transport, ledger.Owner, seedFrom, seedTo, seeded, options.Repetitions, cancellationToken)
+                        transport, ledger.Owner, seedFrom, seedTo, seeded, readSampling, cancellationToken)
                     .ConfigureAwait(false)));
         }
 
@@ -65,7 +68,7 @@ internal static class BenchmarkSuite
                 transport.Name,
                 "contracts/s",
                 await ReadScenarios.ActiveContractSnapshotAsync(
-                        transport, ledger.SnapshotOwner, snapshotAt, options.AcsContracts, options.Repetitions, cancellationToken)
+                        transport, ledger.SnapshotOwner, snapshotAt, options.AcsContracts, readSampling, cancellationToken)
                     .ConfigureAwait(false)));
         }
 
@@ -77,7 +80,7 @@ internal static class BenchmarkSuite
                 transport.Name,
                 "contracts/s",
                 await ReadScenarios.ActiveContractSnapshotAsync(
-                        transport, ledger.Owner, seedTo, active, options.Repetitions, cancellationToken)
+                        transport, ledger.Owner, seedTo, active, readSampling, cancellationToken)
                     .ConfigureAwait(false)));
         }
 
@@ -87,7 +90,8 @@ internal static class BenchmarkSuite
             latencies.Add(new LatencyResult(
                 "Submit-and-wait (sequential)",
                 transport.Name,
-                await SubmitScenarios.SequentialLatencyAsync(transport, ledger.Owner, options.LatencySamples, cancellationToken)
+                await SubmitScenarios.SequentialLatencyAsync(
+                        transport, ledger.Owner, options.LatencySamples, new JitteredPacing(TimeSpan.Zero, jitter), cancellationToken)
                     .ConfigureAwait(false)));
         }
 
@@ -97,7 +101,7 @@ internal static class BenchmarkSuite
         {
             Progress($"completion stream latency over {transport.Name}");
             var completion = await TailScenarios.CompletionTailAsync(
-                    transport, ledger.Owner, options.TailSamples, spacing, cancellationToken)
+                    transport, ledger.Owner, options.TailSamples, new JitteredPacing(spacing, jitter), cancellationToken)
                 .ConfigureAwait(false);
             latencies.Add(new LatencyResult("Submit → completion on the completion stream", transport.Name, completion.Delivery));
             NoteReopens(notes, "completion stream", transport, completion);
@@ -107,7 +111,7 @@ internal static class BenchmarkSuite
         {
             Progress($"live update tail latency over {transport.Name}");
             var tail = await TailScenarios.UpdateTailAsync(
-                    transport, ledger.Grpc, ledger.Owner, options.TailSamples, spacing, cancellationToken)
+                    transport, ledger.Grpc, ledger.Owner, options.TailSamples, new JitteredPacing(spacing, jitter), cancellationToken)
                 .ConfigureAwait(false);
             latencies.Add(new LatencyResult("Submit → created event on a live update tail", transport.Name, tail.Delivery));
             NoteReopens(notes, "live update tail", transport, tail);
@@ -119,7 +123,8 @@ internal static class BenchmarkSuite
             latencies.Add(new LatencyResult(
                 "Submit → contract visible in PQS",
                 "PQS",
-                await PqsScenarios.ProjectionLagAsync(pqs, ledger.Grpc, ledger.Operator, options.PqsLagSamples, cancellationToken)
+                await PqsScenarios.ProjectionLagAsync(
+                        pqs, ledger.Grpc, ledger.Operator, options.PqsLagSamples, new JitteredPacing(TimeSpan.Zero, jitter), cancellationToken)
                     .ConfigureAwait(false)));
 
             Progress("PQS paged query");
@@ -128,7 +133,7 @@ internal static class BenchmarkSuite
                 "PQS",
                 "rows/s",
                 await PqsScenarios.PagedQueryAsync(
-                        pqs, ledger.Grpc, ledger.Operator, options.PqsRows, options.Concurrency, options.Repetitions, cancellationToken)
+                        pqs, ledger.Grpc, ledger.Operator, options.PqsRows, options.Concurrency, readSampling, cancellationToken)
                     .ConfigureAwait(false)));
         }
         else

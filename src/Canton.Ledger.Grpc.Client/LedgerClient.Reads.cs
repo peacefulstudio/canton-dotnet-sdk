@@ -59,7 +59,7 @@ internal sealed partial class LedgerClient
         }
         catch (Exception decodeFailure) when (MalformedResponse.IsWireDecodeFailure(decodeFailure))
         {
-            throw decodeFailure.ToUndecodableBodyException(LedgerCallKind.Read);
+            throw RpcCallEnding.Undecodable(decodeFailure).ToException(LedgerCallKind.Read);
         }
     }
 
@@ -119,15 +119,17 @@ internal sealed partial class LedgerClient
                     activity?.SetTag(LedgerActivityTagNames.DamlContractId, contractId.Value);
                     activity.SetSubmitterTags(submitter, _options);
                 },
-                isExpectedFailure: IsNotFound).ConfigureAwait(false);
+                isExpectedFailure: IsContractEventsNotFound).ConfigureAwait(false);
         }
-        catch (RpcException notFound) when (IsNotFound(notFound))
+        catch (RpcException notFound) when (IsContractEventsNotFound(notFound))
         {
             return null;
         }
     }
 
-    private static bool IsNotFound(RpcException exception) => exception.StatusCode == StatusCode.NotFound;
+    private static bool IsContractEventsNotFound(RpcException exception) =>
+        exception.StatusCode == StatusCode.NotFound
+        && DamlErrorParser.Parse(exception) is ParsedLedgerError.Structured { ErrorId: "CONTRACT_EVENTS_NOT_FOUND" };
 
     /// <inheritdoc />
     public Task<AcsPage<T>> GetActiveContractsPageAsync<T>(

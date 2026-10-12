@@ -18,7 +18,7 @@ namespace Daml.Codegen.CSharp.Tests;
 /// guarantee the in-process snapshot drift tests already provide. Unlike the
 /// snapshot fixtures, the expected tree here is the live sample in the repo,
 /// located relative to the repo root, so the showcase itself is what gets
-/// guarded. Refresh with <c>scripts/refresh-quickstart-sample.sh</c>.
+/// guarded. Refresh with <c>scripts/regenerate.sh write --only quickstart</c>.
 /// </summary>
 public class QuickstartSampleDriftTests
 {
@@ -61,7 +61,7 @@ public class QuickstartSampleDriftTests
 
         var refreshHint =
             "The committed Quickstart sample drifted from current codegen output. If the change is " +
-            "intentional, refresh it with scripts/refresh-quickstart-sample.sh and re-commit; " +
+            "intentional, refresh it with scripts/regenerate.sh write --only quickstart and re-commit; " +
             "if not, fix the codegen.";
 
         actualFiles.Should().NotBeEmpty(
@@ -81,7 +81,7 @@ public class QuickstartSampleDriftTests
             if (!actualBytes.SequenceEqual(committedBytes))
             {
                 var diff = UnifiedDiff.Render(committedBytes, actualBytes)
-                    ?? "(files differ only in BOM or line-ending encoding — re-run scripts/refresh-quickstart-sample.sh to normalise)";
+                    ?? "(files differ only in BOM or line-ending encoding — re-run scripts/regenerate.sh write --only quickstart to normalise)";
                 throw new Xunit.Sdk.XunitException(
                     $"`{actual.RelativePath}` does not match the committed Quickstart sample byte-for-byte.\n\n" +
                     $"{diff}\n{refreshHint}");

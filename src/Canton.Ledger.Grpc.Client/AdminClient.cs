@@ -28,8 +28,6 @@ using VettedPackagesChange = Canton.Ledger.Abstractions.VettedPackagesChange;
 using WireIdentityProviderConfig = Com.Daml.Ledger.Api.V2.Admin.IdentityProviderConfig;
 using WireVettedPackages = Com.Daml.Ledger.Api.V2.VettedPackages;
 using WireVettedPackagesChange = Com.Daml.Ledger.Api.V2.Admin.VettedPackagesChange;
-using WireHashFunction = Com.Daml.Ledger.Api.V2.HashFunction;
-using WirePackageStatus = Com.Daml.Ledger.Api.V2.PackageStatus;
 
 namespace Canton.Ledger.Grpc.Client;
 
@@ -602,18 +600,10 @@ internal sealed partial class AdminClient : IAdminClient
         _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown command state."),
     };
 
-    private static CommandState FromProtoCommandState(Com.Daml.Ledger.Api.V2.Admin.CommandState state) => state switch
-    {
-        Com.Daml.Ledger.Api.V2.Admin.CommandState.Pending => CommandState.Pending,
-        Com.Daml.Ledger.Api.V2.Admin.CommandState.Succeeded => CommandState.Succeeded,
-        Com.Daml.Ledger.Api.V2.Admin.CommandState.Failed => CommandState.Failed,
-        _ => CommandState.Unspecified,
-    };
-
     private static CommandStatus FromProtoCommandStatus(Com.Daml.Ledger.Api.V2.Admin.CommandStatus status) =>
         MalformedResponse.Decoding(status, present => new CommandStatus(
             present.Completion?.CommandId ?? string.Empty,
-            FromProtoCommandState(present.State),
+            GrpcEnumMaps.ReportedCommandStates.FromWire(present.State),
             present.Started?.ToDateTimeOffset(),
             present.Completed?.ToDateTimeOffset(),
             present.SynchronizerId));
@@ -902,7 +892,7 @@ internal sealed partial class AdminClient : IAdminClient
             response => new PackageArchive(
                 response.ArchivePayload.Memory,
                 response.Hash,
-                MapHashFunction(response.HashFunction)),
+                GrpcEnumMaps.HashFunctions.FromWire(response.HashFunction)),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId));
     }
@@ -929,17 +919,10 @@ internal sealed partial class AdminClient : IAdminClient
             PackageService.Descriptor,
             "GetPackageStatus",
             (headers, deadline, token) => _packageService.GetPackageStatusAsync(new GetPackageStatusRequest { PackageId = packageId }, headers, deadline, token),
-            response => MapPackageStatus(response.PackageStatus),
+            response => GrpcEnumMaps.PackageStatuses.FromWire(response.PackageStatus),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.DamlPackageId, packageId));
     }
-
-    private static PackageStatus MapPackageStatus(WirePackageStatus status) => status switch
-    {
-        WirePackageStatus.Unspecified => PackageStatus.Unspecified,
-        WirePackageStatus.Registered => PackageStatus.Registered,
-        _ => PackageStatus.Unrecognized,
-    };
 
     /// <inheritdoc />
     public Task<DateTimeOffset> GetTimeAsync(CancellationToken cancellationToken = default) =>
@@ -975,12 +958,6 @@ internal sealed partial class AdminClient : IAdminClient
             cancellationToken,
             replayable: false);
     }
-
-    private static HashFunction MapHashFunction(WireHashFunction hashFunction) => hashFunction switch
-    {
-        WireHashFunction.Sha256 => HashFunction.Sha256,
-        _ => HashFunction.Unrecognized,
-    };
 
     /// <inheritdoc />
     public Task<IReadOnlyList<VettedPackage>> ListVettedPackagesAsync(
@@ -1158,7 +1135,7 @@ internal sealed partial class AdminClient : IAdminClient
     [LoggerMessage(Level = LogLevel.Information, Message = "DAR file validated ({DarSize} bytes)")]
     private static partial void LogDarValidated(ILogger logger, int darSize);
 
-    private static bool IsNotFound(RpcException exception) => exception.StatusCode == StatusCode.NotFound;
+    private static bool IsNotFound(RpcException exception) => RpcCallEnding.ReportsAbsence(exception);
 
     private static void ThrowIfNullOrEmpty(byte[] darFile)
     {
@@ -1176,6 +1153,7 @@ internal sealed partial class AdminClient : IAdminClient
         UserRight.ReadAsAnyParty => new Right { CanReadAsAnyParty = new Right.Types.CanReadAsAnyParty() },
         UserRight.ExecuteAs executeAs => new Right { CanExecuteAs = new Right.Types.CanExecuteAs { Party = executeAs.Party.Value } },
         UserRight.ExecuteAsAnyParty => new Right { CanExecuteAsAnyParty = new Right.Types.CanExecuteAsAnyParty() },
+        UserRight.ActAsAnyParty => new Right { CanActAsAnyParty = new Right.Types.CanActAsAnyParty() },
         _ => throw new NotSupportedException($"Unknown right type: {right.GetType().Name}")
     };
 
@@ -1189,6 +1167,7 @@ internal sealed partial class AdminClient : IAdminClient
             Right.KindOneofCase.CanReadAsAnyParty => new UserRight.ReadAsAnyParty(),
             Right.KindOneofCase.CanExecuteAs => new UserRight.ExecuteAs(new Party(present.CanExecuteAs.Party)),
             Right.KindOneofCase.CanExecuteAsAnyParty => new UserRight.ExecuteAsAnyParty(),
+            Right.KindOneofCase.CanActAsAnyParty => new UserRight.ActAsAnyParty(),
             _ => throw new NotSupportedException($"Unknown right kind: {present.KindCase}")
         });
 

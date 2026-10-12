@@ -46,6 +46,16 @@ public sealed class RightSerializationTests
     }
 
     [Fact]
+    public void Right_nests_an_act_as_any_party_right_under_kind()
+    {
+        var right = new Right { Kind = new RightKind { CanActAsAnyParty = new Right_CanActAsAnyParty() } };
+
+        var json = JsonSerializer.Serialize(right, RestRefitSettings.SerializerOptions);
+
+        json.Should().Be("""{"kind":{"CanActAsAnyParty":{"value":{}}}}""");
+    }
+
+    [Fact]
     public void Right_reads_a_served_read_as_right_through_kind()
     {
         var right = JsonSerializer.Deserialize<Right>(

@@ -30,10 +30,10 @@ public sealed partial record Iou(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Iou>, global::Daml.Runtime.Data.IDamlRecord<Iou>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("61d1c8472218a119a9e73167b9e9af82bfed91bf5ae5a89a82da27c10ea7f763", "Iou", "Iou");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("de23f94dcf17ffbbdc361d499d9830d1c6e9121de0885e6a050ebc8ec2df1adb", "Iou", "Iou");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "61d1c8472218a119a9e73167b9e9af82bfed91bf5ae5a89a82da27c10ea7f763";
+    public static string PackageId => "de23f94dcf17ffbbdc361d499d9830d1c6e9121de0885e6a050ebc8ec2df1adb";
 
     /// <summary>Gets the package name.</summary>
     public static string PackageName => "quickstart";

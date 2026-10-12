@@ -315,7 +315,7 @@ public sealed class DamlPrimitiveCatalogTests
         shippedBinpbs.Should().HaveCount(13,
             "the repo ships exactly one intermediate.binpb per snapshot family (12) plus the Quickstart " +
             "sample; the conformance corpus intermediates are SHA-pinned transients produced by " +
-            "scripts/codegen-determinism.sh, not shipped files");
+            "scripts/regenerate.sh, not shipped files");
 
         var violations = new List<string>();
         foreach (var path in shippedBinpbs)

@@ -79,14 +79,14 @@ internal sealed partial class RestLedgerClient
                 timeout,
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (LedgerOperationException rejection) when (IsStructuredResourceMissing(rejection))
+        catch (LedgerOperationException rejection) when (IsContractEventsNotFound(rejection))
         {
             return null;
         }
     }
 
-    private static bool IsStructuredResourceMissing(LedgerOperationException rejection) =>
-        rejection is { Category: DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, ErrorId: not null };
+    private static bool IsContractEventsNotFound(LedgerOperationException rejection) =>
+        rejection is { Category: DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, ErrorId: "CONTRACT_EVENTS_NOT_FOUND" };
 
     /// <inheritdoc />
     public async Task<AcsPage<T>> GetActiveContractsPageAsync<T>(

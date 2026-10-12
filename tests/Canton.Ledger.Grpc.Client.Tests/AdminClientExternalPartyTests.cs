@@ -103,6 +103,21 @@ public sealed class AdminClientExternalPartyTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_sends_the_ML_DSA_65_key_spec_as_wire_number_5()
+    {
+        GenerateExternalPartyTopologyRequest? captured = null;
+        StubGenerate(new GenerateExternalPartyTopologyResponse { PartyId = "carol::fp" }, r => captured = r);
+        var request = TopologyRequest() with
+        {
+            PublicKey = new SigningPublicKey(PublicKeyFormat.Raw, new byte[] { 4, 5, 6 }, SigningKeySpec.MlDsa65),
+        };
+
+        await CreateClient().GenerateExternalPartyTopologyAsync(request, Ct);
+
+        ((int)captured!.PublicKey.KeySpec).Should().Be(5);
+    }
+
+    [Fact]
     public async Task GenerateExternalPartyTopologyAsync_projects_the_response()
     {
         StubGenerate(new GenerateExternalPartyTopologyResponse

@@ -332,6 +332,37 @@ public abstract class LiveLedgerAdminParityTests : LedgerAdminParityTests
     }
 
     [Fact]
+    public async Task GrantUserRightsAsync_and_RevokeUserRightsAsync_move_ActAsAnyParty_in_and_out_of_the_listed_rights_of_a_created_user()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = AdminParityScenario.CreateUnique();
+        await using var lane = await OpenAdminAsync(scenario, cancellationToken);
+        var allocated = await lane.Capability.Admin.AllocatePartyAsync(
+            scenario.PartyHint, synchronizerId: lane.Capability.GlobalSynchronizerId, cancellationToken: cancellationToken);
+        var party = allocated.Party;
+        await lane.Capability.Admin.CreateUserAsync(
+            scenario.UserId, party, [new UserRight.ActAs(party)], cancellationToken);
+
+        try
+        {
+            await lane.Capability.Admin.GrantUserRightsAsync(
+                scenario.UserId, [new UserRight.ActAsAnyParty()], cancellationToken);
+            var afterGrant = await lane.Capability.Admin.ListUserRightsAsync(scenario.UserId, cancellationToken);
+
+            await lane.Capability.Admin.RevokeUserRightsAsync(
+                scenario.UserId, [new UserRight.ActAsAnyParty()], cancellationToken);
+            var afterRevoke = await lane.Capability.Admin.ListUserRightsAsync(scenario.UserId, cancellationToken);
+
+            afterGrant.Should().HaveCount(2).And.Contain(new UserRight.ActAs(party)).And.Contain(new UserRight.ActAsAnyParty());
+            afterRevoke.Should().Equal(new UserRight.ActAs(party));
+        }
+        finally
+        {
+            await lane.Capability.Admin.DeleteUserAsync(scenario.UserId, cancellationToken: CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task GetUserAsync_and_ListUserRightsAsync_resolve_an_empty_user_id_to_the_authenticated_user()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

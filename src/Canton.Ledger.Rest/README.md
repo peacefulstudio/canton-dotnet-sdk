@@ -9,7 +9,7 @@ Reach for this package only when you need an endpoint the adapter does not surfa
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Rest --version 0.6.0
+dotnet add package Canton.Ledger.Rest --version 0.7.0-preview.1
 ```
 
 ## Related Packages
@@ -50,16 +50,16 @@ extracted Maven protos against the upstream tree before exporting patches.
 Exactly the artifacts `src/Canton.Ledger.Grpc/DownloadProtos.targets` already fetches,
 SHA-256-pinned there:
 
-- `com.daml:ledger-api-proto:3.5.19` (`$(CantonVersion)`)
-- `com.daml:ledger-api-value-proto:3.5.19`
-- `com.google.api.grpc:proto-google-common-protos:2.58.0`
+- `com.daml:ledger-api-proto:3.6.1` (`$(CantonVersion)`)
+- `com.daml:ledger-api-value-proto:3.6.1`
+- `com.google.api.grpc:proto-google-common-protos:2.78.0`
 
 ### Patch set
 
-34 per-file patches under `spec/patches/`, mirroring the extracted proto layout. Zero new RPCs;
+36 per-file patches under `spec/patches/`, mirroring the extracted proto layout. Zero new RPCs;
 the content is of two kinds.
 
-**Transport metadata.** `option go_package` on all 34 files, `import "google/api/annotations.proto"`
+**Transport metadata.** `option go_package` on all 36 files, `import "google/api/annotations.proto"`
 plus `option (google.api.http)` on the 14 service protos — 52 annotated RPCs.
 
 **Wire-shape corrections.** This spec is derived from the protos, while the JSON Ledger API is
@@ -73,6 +73,11 @@ that message in a single field. That adds ten wrapper messages — `CompletionRe
 `ReassignmentCommand`, around their new wrapper field. Explicit `json_name` options pin every
 affected key to the served spelling. No arm is added, removed or retyped — the wrapper messages
 exist only to carry the nesting level the served document has and the protos do not.
+
+**Query-parameter names.** One `json_name` pins a query parameter rather than a body key:
+`GetLedgerEndRequest.synchronizer_id`, so `GET /v2/state/ledger-end` sends `synchronizer_id`, the
+name the participant reads. Without it the derived name is `synchronizerId`, which the participant
+does not read.
 
 Routes match the JSON Ledger API's own with **exactly one known verb deviation**:
 `StateService.GetActiveContractsPage` is annotated `POST /v2/state/active-contracts-page`,
@@ -103,7 +108,8 @@ in, treat it as upstream's stale intent rather than a schedule — measured agai
 removed in the Canton version 3.4.0"*, so the generated `<remarks>` on that endpoint repeats
 it. A `3.5.9` participant still routes `GET /v2/interactive-submission/preferred-package-version`
 — it answers `400` to a malformed query, where a route it does not have answers `404` — and
-its own served document redates the removal to Canton `3.6`.
+its own served document redates the removal to Canton `3.6`, which proved wrong too: Canton
+`3.6` disables the route by default (`DEPRECATED_API_DISABLED`) and Canton `3.7` removes it.
 
 Canton's tapir-generated served document, a separate artifact this package is not built from,
 has the same defect independently: its `3.5.9` copy repeats *"...removed in the Canton version
@@ -122,7 +128,7 @@ From the patched temp copy root, with `buf.yaml` and `buf.gen.yaml` from `spec/`
 alongside it:
 
 ```
-buf generate   # buf CLI 1.69.0 used for this export; plugin pin lives in spec/buf.gen.yaml
+buf generate   # buf CLI 1.73.0 used for this export; plugin pin lives in spec/buf.gen.yaml
 ```
 
 `spec/buf.gen.yaml` declares `version=@CantonVersion@` rather than a literal. The placeholder

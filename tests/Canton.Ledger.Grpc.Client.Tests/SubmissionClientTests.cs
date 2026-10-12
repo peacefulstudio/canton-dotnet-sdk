@@ -128,6 +128,33 @@ public class SubmissionClientTests
     }
 
     [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_keeps_a_retried_duplicate_the_participant_did_not_accept_without_touching_the_point_read()
+    {
+        _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(LedgerClientTestFixtures.MakeDamlRpcException(
+                "DUPLICATE_COMMAND",
+                "duplicate",
+                "InvalidGivenCurrentSystemStateResourceExists",
+                StatusCode.AlreadyExists,
+                new Dictionary<string, string> { ["accepted"] = "false", ["completion_offset"] = "42" })));
+        var pointReadInvoked = false;
+        var client = CreateClient(acsDeltaPointReadByOffset: (_, _, _) =>
+        {
+            pointReadInvoked = true;
+            return Task.FromException<TransactionResult>(new InvalidOperationException("unexpected"));
+        });
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
+            .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
+        pointReadInvoked.Should().BeFalse(
+            "a duplicate whose accepted metadata is \"false\" does not prove the first attempt committed");
+    }
+
+    [Fact]
     public async Task TrySubmitAndWaitForTransactionTreeAsync_resolves_a_retried_duplicate_through_the_injected_tree_point_read()
     {
         _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };

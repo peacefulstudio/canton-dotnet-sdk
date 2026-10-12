@@ -36,8 +36,9 @@ public class RestWireSiteCompletenessConformanceTests(ITestOutputHelper output)
         sites.Should().NotBeEmpty(
             "the int64 universe is discovered through the format the participant's own document "
             + "declares, so a document that stops declaring formats — or a reader that stops finding "
-            + "them — empties it and leaves the check below trivially satisfied. Canton 3.5.11 "
-            + "declares 42 of them directly on schema properties");
+            + "them — empties it and leaves the check below trivially satisfied. The Canton "
+            + "3.6.1 release document declares 44 of them directly on schema properties, and a "
+            + "participant with traffic enforcement off serves it without the two traffic-account sites");
 
         ServedInt64SiteCoverage.SitesNeitherReshapedNorExempt(sites).Should().BeEmpty(
             "the wire tables are opt-in by type — UseWireEncoding never visits a type they do not "

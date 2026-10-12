@@ -77,23 +77,6 @@ public sealed partial class FakeLedgerClient
             "preferred packages", nameof(GetPreferredPackagesAsync), "WithPreferredPackages"));
     }
 
-    /// <inheritdoc />
-    public Task<PackagePreference?> GetPreferredPackageVersionAsync(
-        IEnumerable<Party> parties,
-        string packageName,
-        SynchronizerId? synchronizerId = null,
-        DateTimeOffset? vettingValidAt = null,
-        TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(parties);
-        ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
-        return Answering(() => _interactive.PackagePreference is { } staged
-            ? staged.Preference
-            : throw StagingMissing(
-                "package preference", nameof(GetPreferredPackageVersionAsync), "WithPackagePreference"));
-    }
-
     private static void ValidateSigned(SignedSubmission submission)
     {
         ArgumentNullException.ThrowIfNull(submission);
@@ -103,18 +86,10 @@ public sealed partial class FakeLedgerClient
 
 /// <summary>
 /// The interactive-submission answers a <see cref="FakeLedgerClient"/> replays: the prepared
-/// submission, the two execute-and-wait results, and the package-preference answers.
+/// submission, the two execute-and-wait results, and the preferred packages.
 /// </summary>
 internal sealed record FakeInteractiveSurface(
     PreparedSubmission? PreparedSubmission,
     ExecutedSubmission? ExecutedSubmission,
     TransactionResult? ExecutedTransaction,
-    PreferredPackages? PreferredPackages,
-    StagedPackagePreference? PackagePreference);
-
-/// <summary>
-/// A staged package-preference answer, boxed so that staging "no package satisfies the
-/// requirements" is distinguishable from staging nothing at all.
-/// </summary>
-/// <param name="Preference">The preference to reply with, or <see langword="null"/> when no package satisfies.</param>
-internal sealed record StagedPackagePreference(PackagePreference? Preference);
+    PreferredPackages? PreferredPackages);

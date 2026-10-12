@@ -35,19 +35,19 @@ public interface IStewardship : global::Daml.Runtime.Contracts.IDamlInterface, g
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Stewardship");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5", "ContractKeys", "Stewardship");
 
     /// <summary>Gets the package ID.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5";
 
     /// <summary>Gets the package name.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "contractkeys-h4fd930e5658f";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "contractkeys-hb3f04acc1cbd";
 
     /// <summary>Gets the package version.</summary>
     static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f", "ContractKeys", "Stewardship"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "contractkeys-h4fd930e5658f");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5", "ContractKeys", "Stewardship"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "contractkeys-hb3f04acc1cbd");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static global::Daml.Runtime.Contracts.ViewDescriptor<IStewardship, global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView> View { get; } = new();
