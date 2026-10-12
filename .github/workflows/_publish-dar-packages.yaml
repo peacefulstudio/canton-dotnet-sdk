@@ -28,8 +28,8 @@ on:
         required: false
         type: string
         default: ''
-      damlc_version:
-        description: 'damlc component version listed under daml.yaml components.'
+      daml_sdk_version:
+        description: 'Daml SDK version; the damlc and daml-script component tags it ships are read from its SDK manifest.'
         required: true
         type: string
       runtime_version:
@@ -74,7 +74,7 @@ jobs:
       DAR_PATTERNS: ${{ inputs.dar_patterns }}
       COUNTER_VARIABLE_NAME: ${{ inputs.counter_variable }}
       CODEGEN_CS_VERSION_INPUT: ${{ inputs.codegen_cs_version }}
-      DAMLC_VERSION_INPUT: ${{ inputs.damlc_version }}
+      DAML_SDK_VERSION_INPUT: ${{ inputs.daml_sdk_version }}
       RUNTIME_VERSION_INPUT: ${{ inputs.runtime_version }}
       PACKAGE_LICENSE_INPUT: ${{ inputs.package_license }}
 
@@ -118,6 +118,9 @@ jobs:
         id: resolve
         run: .github/scripts/resolve-inputs.sh
 
+      - name: Resolve the damlc and daml-script components the Daml SDK ships
+        run: .github/scripts/resolve-sdk-components.sh "${DAML_SDK_VERSION}"
+
       - name: Write daml.yaml with opt-in components
         run: |
           set -euo pipefail
@@ -125,7 +128,7 @@ jobs:
           cat > dpm-workspace/daml.yaml <<EOF
           components:
             - damlc:${DAMLC_VERSION}
-            - daml-script:${DAMLC_VERSION}
+            - daml-script:${DAML_SCRIPT_VERSION}
             - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:${CODEGEN_CS_VERSION}
           EOF
           echo "Written daml.yaml:"

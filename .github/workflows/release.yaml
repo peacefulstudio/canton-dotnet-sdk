@@ -39,7 +39,7 @@ jobs:
       codegen_cs_version: ${{ steps.r.outputs.codegen_cs_version }}
       splice_version: ${{ steps.r.outputs.splice_version }}
       daml_finance_version: ${{ steps.r.outputs.daml_finance_version }}
-      damlc_version: ${{ steps.r.outputs.damlc_version }}
+      daml_sdk_version: ${{ steps.r.outputs.daml_sdk_version }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -72,8 +72,8 @@ jobs:
           version_of() { awk -F': *' -v key="$1" '$1 == key { gsub(/["'"'"' ]/, "", $2); print $2 }' versions.yaml; }
           SPLICE="$(version_of splice)"
           FINANCE="$(version_of daml-finance)"
-          DAMLC="$(version_of damlc)"
-          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "damlc=${DAMLC}"; do
+          DAML_SDK="$(version_of daml-sdk)"
+          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAML_SDK}"; do
             [ -n "${pair#*=}" ] || { echo "::error::versions.yaml has no '${pair%%=*}' entry"; exit 1; }
           done
           DRY="${DRY_RUN_INPUT:-false}"
@@ -89,7 +89,7 @@ jobs:
             echo "codegen_cs_version=${CGV}"
             echo "splice_version=${SPLICE}"
             echo "daml_finance_version=${FINANCE}"
-            echo "damlc_version=${DAMLC}"
+            echo "daml_sdk_version=${DAML_SDK}"
           } >> "$GITHUB_OUTPUT"
 
   draft-bootstrap:
@@ -129,7 +129,7 @@ jobs:
     uses: ./.github/workflows/publish-splice.yaml
     with:
       splice_version: ${{ needs.resolve.outputs.splice_version }}
-      damlc_version: ${{ needs.resolve.outputs.damlc_version }}
+      daml_sdk_version: ${{ needs.resolve.outputs.daml_sdk_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
       release_tag: ${{ needs.resolve.outputs.tag }}
     secrets: inherit
@@ -142,7 +142,7 @@ jobs:
     uses: ./.github/workflows/publish-daml-finance.yaml
     with:
       daml_finance_version: ${{ needs.resolve.outputs.daml_finance_version }}
-      damlc_version: ${{ needs.resolve.outputs.damlc_version }}
+      daml_sdk_version: ${{ needs.resolve.outputs.daml_sdk_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
       release_tag: ${{ needs.resolve.outputs.tag }}
     secrets: inherit
