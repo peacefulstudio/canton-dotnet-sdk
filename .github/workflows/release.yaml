@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: ''
+      damlc_version:
+        description: 'damlc and daml-script component version the DAR legs pack with. Empty = the damlc entry in versions.yaml at the tag.'
+        required: false
+        type: string
+        default: ''
 
 permissions: {}
 
@@ -51,6 +56,7 @@ jobs:
           VERSION_INPUT: ${{ inputs.version }}
           DRY_RUN_INPUT: ${{ inputs.dry_run }}
           CODEGEN_CS_INPUT: ${{ inputs.codegen_cs_version }}
+          DAMLC_INPUT: ${{ inputs.damlc_version }}
           OCI_PUBLISH_ENABLED: ${{ vars.OCI_PUBLISH_ENABLED }}
         run: |
           set -euo pipefail
@@ -72,10 +78,12 @@ jobs:
           version_of() { awk -F': *' -v key="$1" '$1 == key { gsub(/["'"'"' ]/, "", $2); print $2 }' versions.yaml; }
           SPLICE="$(version_of splice)"
           FINANCE="$(version_of daml-finance)"
-          DAMLC="$(version_of daml-sdk)"
-          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAMLC}"; do
+          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}"; do
             [ -n "${pair#*=}" ] || { echo "::error::versions.yaml has no '${pair%%=*}' entry"; exit 1; }
           done
+          DAMLC="${DAMLC_INPUT:-}"
+          [ -n "${DAMLC}" ] || DAMLC="$(version_of damlc)"
+          [ -n "${DAMLC}" ] || { echo "::error::no damlc_version input and versions.yaml has no 'damlc' entry"; exit 1; }
           DRY="${DRY_RUN_INPUT:-false}"
           if [ "${DRY}" != "true" ] && [ "${OCI_PUBLISH_ENABLED:-}" != "true" ]; then
             echo "::error::repository variable OCI_PUBLISH_ENABLED is not 'true'; every OCI check (oracle, smoke tests, stock-dpm pull) would be skipped while the workflow still reports success, so the release is refused"; exit 1
