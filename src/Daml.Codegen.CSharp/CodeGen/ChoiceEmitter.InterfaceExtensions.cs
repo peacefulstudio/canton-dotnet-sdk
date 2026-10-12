@@ -97,9 +97,9 @@ internal sealed partial class ChoiceEmitter
 
         var extensionsClassName = $"{interfaceName}Extensions";
 
-        var emittable = iface.Choices.ToList();
+        var plans = iface.Choices.Select(ChoiceExercisePlanner.PlanInterfaceChoice).ToList();
 
-        if (emittable.Count == 0)
+        if (plans.Count == 0)
         {
             return;
         }
@@ -110,19 +110,19 @@ internal sealed partial class ChoiceEmitter
         indent.AppendLine("{");
         indent.Indent();
 
-        for (var i = 0; i < emittable.Count; i++)
+        for (var i = 0; i < plans.Count; i++)
         {
             if (i > 0)
             {
                 indent.AppendLine();
             }
-            WriteInterfaceChoiceExtensionMethod(indent, emittable[i], interfaceName);
+            WriteInterfaceChoiceExtensionMethod(indent, plans[i], interfaceName);
         }
 
-        foreach (var choice in emittable)
+        foreach (var plan in plans)
         {
             indent.AppendLine();
-            WriteInterfaceChoiceExerciseProjector(indent, choice, interfaceName);
+            WriteExerciseProjector(indent, plan.Choice, interfaceName);
         }
 
         indent.Dedent();
@@ -131,160 +131,43 @@ internal sealed partial class ChoiceEmitter
 
     private void WriteInterfaceChoiceExtensionMethod(
         IndentWriter indent,
-        DamlChoice choice,
+        ChoiceExercisePlan plan,
         string interfaceName)
     {
-        var choiceName = SanitizeIdentifier(choice.Name);
-        var commandMethodName = $"{choiceName}Command";
-        var methodName = $"Try{choiceName}Async";
+        ChoiceCommandBuilderWriter.Write(indent, InterfaceCommandBuilder(plan.Choice, interfaceName));
+        indent.AppendLine();
+        WriteExerciserOverloads(indent, InterfaceExerciserSite(plan, interfaceName));
+    }
+
+    private ChoiceCommandBuilder InterfaceCommandBuilder(DamlChoice choice, string interfaceName)
+    {
         var (argTypeName, hasArg) = ResolveInterfaceChoiceArgType(choice);
-        var requiresArgumentNullCheck = hasArg && choice.ArgumentType is DamlTypeRef;
+        var exerciseCommand = TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseCommand);
         var argExpr = hasArg
             ? mapper.ToValue(choice.ArgumentType, "argument")
             : EmptyArgumentExpression(choice);
 
-        WriteInterfaceChoiceCommandBuilder(indent, choice, interfaceName, commandMethodName, argTypeName, hasArg, requiresArgumentNullCheck, argExpr);
-        indent.AppendLine();
-        WriteInterfaceChoiceAsyncMethod(indent, choice, commandMethodName, methodName, argTypeName, hasArg, interfaceName, SubmitterInfoParameter());
-    }
-
-    private void WriteInterfaceChoiceCommandBuilder(
-        IndentWriter indent,
-        DamlChoice choice,
-        string interfaceName,
-        string commandMethodName,
-        string argTypeName,
-        bool hasArg,
-        bool requiresArgumentNullCheck,
-        string argExpr)
-    {
-        if (options.GenerateXmlDocs)
-        {
-            indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Builds the interface-typed <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> for the <c>{choice.Name}</c> choice on this contract id.");
-            indent.AppendLine("/// The wire-level <c>template_id</c> slot carries the interface id — Canton's");
-            indent.AppendLine("/// ledger API resolves the concrete implementing template at the participant.");
-            indent.AppendLine("/// </summary>");
-            indent.AppendLine("/// <param name=\"contractId\">The interface-typed contract id to exercise on.</param>");
-            if (hasArg)
-            {
-                indent.AppendLine("/// <param name=\"argument\">The choice argument.</param>");
-            }
-        }
-
-        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseCommand)} {commandMethodName}(");
-        indent.Indent();
-        if (hasArg)
-        {
-            indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{interfaceName}> contractId,");
-            indent.AppendLine($"{argTypeName} argument)");
-        }
-        else
-        {
-            indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{interfaceName}> contractId)");
-        }
-        indent.Dedent();
-        indent.AppendLine("{");
-        indent.Indent();
-        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(contractId);");
-        if (requiresArgumentNullCheck)
-        {
-            indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(argument);");
-        }
-        indent.AppendLine($"return {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseCommand)}.For<{interfaceName}>(contractId, new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"), {argExpr});");
-        indent.Dedent();
-        indent.AppendLine("}");
-    }
-
-    /// <remarks>
-    /// The emitted signature mirrors the concrete-template non-contract async exerciser
-    /// (<see cref="WriteSingleNonContractChoiceAsyncExerciser"/>): it submits the command, then
-    /// runs <see cref="Daml.Runtime.Outcomes.ExerciseOutcomeProjection.ProjectCommitted{TProjected}"/>
-    /// over the committed transaction using a per-choice projector
-    /// (<see cref="WriteInterfaceChoiceExerciseProjector"/>) that hands the choice descriptor
-    /// <see cref="WriteInterfaceChoiceDescriptor"/> emits to the runtime, so the returned
-    /// <c>ExerciseOutcome&lt;TResult&gt;</c> is typed to the choice's actual return type rather
-    /// than the implementing template's.
-    /// </remarks>
-    private void WriteInterfaceChoiceAsyncMethod(
-        IndentWriter indent,
-        DamlChoice choice,
-        string commandMethodName,
-        string methodName,
-        string argTypeName,
-        bool hasArg,
-        string interfaceName,
-        ChoiceSubmitterParameter submitter)
-    {
-        var choiceName = SanitizeIdentifier(choice.Name);
-        var returnType = mapper.MapType(choice.ReturnType);
-
-        if (options.GenerateXmlDocs)
-        {
-            indent.AppendLine("/// <summary>");
-            indent.AppendLine($"/// Exercises the <c>{choice.Name}</c> interface choice on this contract id, submitting the");
-            indent.AppendLine("/// resulting <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> through");
-            indent.AppendLine("/// <see cref=\"global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync\"/>");
-            indent.AppendLine($"/// and decoding the committed result through <c>Choice{choiceName}.ResultDecoder</c>.");
-            indent.AppendLine("/// </summary>");
-            indent.AppendLine("/// <param name=\"contractId\">The interface-typed contract id to exercise on.</param>");
-            indent.AppendLine("/// <param name=\"client\">The ledger client.</param>");
-            if (hasArg)
-            {
-                indent.AppendLine("/// <param name=\"argument\">The choice argument.</param>");
-            }
-            indent.AppendLine($"/// <param name=\"{submitter.Name}\">{submitter.DocSummary}</param>");
-            WriteSubmissionParameterDocs(indent);
-        }
-
-        indent.AppendLine($"public static async global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnType}>> {methodName}(");
-        indent.Indent();
-        indent.AppendLine($"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{interfaceName}> contractId,");
-        indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ILedgerWriter)} client,");
-        if (hasArg)
-        {
-            indent.AppendLine($"{argTypeName} argument,");
-        }
-        indent.AppendLine($"{submitter.TypeName} {submitter.Name},");
-        WriteSubmissionParametersAndCloseSignature(indent);
-        indent.Dedent();
-        indent.AppendLine("{");
-        indent.Indent();
-
-        indent.AppendLine("global::System.ArgumentNullException.ThrowIfNull(client);");
-        indent.AppendLine();
-
-        indent.AppendLine(hasArg
-            ? $"var command = contractId.{commandMethodName}(argument);"
-            : $"var command = contractId.{commandMethodName}();");
-        indent.AppendLine();
-        indent.AppendLine($"var outcome = await client.TrySubmitSingleAsync(command, {submitter.Name}, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);");
-        indent.AppendLine();
-        indent.AppendLine($"return outcome.ProjectCommitted(tx => Project{choiceName}Result(tx, contractId.Value));");
-
-        indent.Dedent();
-        indent.AppendLine("}");
-    }
-
-    /// <summary>
-    /// Emits the private <c>Project&lt;Choice&gt;Result</c> hand-off: it passes the choice's
-    /// generated descriptor to the runtime's Exercise-result projection
-    /// (<c>ExerciseOutcomeProjection.ProjectChoiceResult</c>), which matches the exercised event on
-    /// the interface id, decodes it through the descriptor's <c>ResultDecoder</c>, and owns the
-    /// no-event diagnostic.
-    /// </summary>
-    private void WriteInterfaceChoiceExerciseProjector(
-        IndentWriter indent,
-        DamlChoice choice,
-        string interfaceName)
-    {
-        var choiceName = SanitizeIdentifier(choice.Name);
-        var returnType = mapper.MapType(choice.ReturnType);
-
-        indent.AppendLine($"private static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{returnType}> Project{choiceName}Result({TypeReferenceQualifier.Qualify(RuntimeTypeNames.TransactionResult)} tx, string contractId) =>");
-        indent.Indent();
-        indent.AppendLine($"tx.ProjectChoiceResult({interfaceName}.Choice{choiceName}, contractId);");
-        indent.Dedent();
+        return new ChoiceCommandBuilder(
+            CommandType: exerciseCommand,
+            Name: ExerciseMemberNames.Command(choice),
+            Docs: options.GenerateXmlDocs
+                ? new CommandBuilderDocs(
+                    Summary:
+                    [
+                        $"Builds the interface-typed <see cref=\"global::Daml.Runtime.Commands.ExerciseCommand\"/> for the <c>{choice.Name}</c> choice on this contract id.",
+                        "The wire-level <c>template_id</c> slot carries the interface id — Canton's",
+                        "ledger API resolves the concrete implementing template at the participant.",
+                    ],
+                    ReceiverParameter: "<param name=\"contractId\">The interface-typed contract id to exercise on.</param>",
+                    Remarks: [])
+                : null,
+            ReceiverParameter: $"this {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{interfaceName}> contractId",
+            ArgumentParameterType: hasArg ? argTypeName : null,
+            NullGuardedParameters: GuardedParameters("contractId", hasArg && choice.ArgumentType is DamlTypeRef),
+            ReturnStatement:
+            [
+                $"return {exerciseCommand}.For<{interfaceName}>(contractId, new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"), {argExpr});",
+            ]);
     }
 
     private (string TypeName, bool HasArg) ResolveInterfaceChoiceArgType(DamlChoice choice)

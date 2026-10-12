@@ -641,7 +641,8 @@ public sealed class AdminClientTests : IDisposable
                 new Right { IdentityProviderAdmin = new Right.Types.IdentityProviderAdmin() },
                 new Right { CanReadAsAnyParty = new Right.Types.CanReadAsAnyParty() },
                 new Right { CanExecuteAs = new Right.Types.CanExecuteAs { Party = "party::carol" } },
-                new Right { CanExecuteAsAnyParty = new Right.Types.CanExecuteAsAnyParty() }
+                new Right { CanExecuteAsAnyParty = new Right.Types.CanExecuteAsAnyParty() },
+                new Right { CanActAsAnyParty = new Right.Types.CanActAsAnyParty() }
             }
         };
 
@@ -666,7 +667,8 @@ public sealed class AdminClientTests : IDisposable
             new UserRight.IdentityProviderAdmin(),
             new UserRight.ReadAsAnyParty(),
             new UserRight.ExecuteAs(new Party("party::carol")),
-            new UserRight.ExecuteAsAnyParty());
+            new UserRight.ExecuteAsAnyParty(),
+            new UserRight.ActAsAnyParty());
     }
 
     [Fact]
@@ -735,7 +737,8 @@ public sealed class AdminClientTests : IDisposable
         { new UserRight.IdentityProviderAdmin(), new Right { IdentityProviderAdmin = new Right.Types.IdentityProviderAdmin() } },
         { new UserRight.ReadAsAnyParty(), new Right { CanReadAsAnyParty = new Right.Types.CanReadAsAnyParty() } },
         { new UserRight.ExecuteAs(new Party("party::carol")), new Right { CanExecuteAs = new Right.Types.CanExecuteAs { Party = "party::carol" } } },
-        { new UserRight.ExecuteAsAnyParty(), new Right { CanExecuteAsAnyParty = new Right.Types.CanExecuteAsAnyParty() } }
+        { new UserRight.ExecuteAsAnyParty(), new Right { CanExecuteAsAnyParty = new Right.Types.CanExecuteAsAnyParty() } },
+        { new UserRight.ActAsAnyParty(), new Right { CanActAsAnyParty = new Right.Types.CanActAsAnyParty() } }
     };
 
     [Theory]
@@ -743,6 +746,21 @@ public sealed class AdminClientTests : IDisposable
     public void ToProtoRight_converts_each_UserRight_kind_to_its_proto_case(UserRight right, Right expectedProto)
     {
         AdminClient.ToProtoRight(right).Should().Be(expectedProto);
+    }
+
+    [Fact]
+    public void FromProtoRight_decodes_the_act_as_any_party_right_from_its_literal_wire_bytes()
+    {
+        var right = Right.Parser.ParseFrom(new byte[] { 0x42, 0x00 });
+
+        AdminClient.FromProtoRight(right).Should().Be(new UserRight.ActAsAnyParty());
+    }
+
+    [Fact]
+    public void ToProtoRight_encodes_the_act_as_any_party_right_to_its_literal_wire_bytes()
+    {
+        AdminClient.ToProtoRight(new UserRight.ActAsAnyParty()).ToByteArray()
+            .Should().Equal(new byte[] { 0x42, 0x00 });
     }
 
     [Fact]
@@ -909,28 +927,24 @@ public sealed class AdminClientTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPackage_maps_unrecognized_hash_function_to_Unrecognized_fallback()
+    public async Task GetPackage_maps_wire_hash_function_0_to_Sha256()
     {
-        var response = new GetPackageResponse
-        {
-            ArchivePayload = ByteString.CopyFrom(new byte[] { 0x01 }),
-            Hash = "pkg-id-1",
-            HashFunction = (WireHashFunction)42
-        };
-
         _packageService
             .GetPackageAsync(
                 Arg.Any<GetPackageRequest>(),
                 Arg.Any<Metadata>(),
                 Arg.Any<DateTime?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(UnaryResponse(response));
+            .Returns(UnaryResponse(new GetPackageResponse
+            {
+                ArchivePayload = ByteString.CopyFrom(new byte[] { 0x01 }),
+                Hash = "pkg-id-1",
+                HashFunction = (WireHashFunction)0,
+            }));
 
-        var client = CreateClient();
+        var result = await CreateClient().GetPackageAsync("pkg-id-1", TestContext.Current.CancellationToken);
 
-        var result = await client.GetPackageAsync("pkg-id-1", TestContext.Current.CancellationToken);
-
-        result.HashFunction.Should().Be(HashFunction.Unrecognized);
+        result.HashFunction.Should().Be(HashFunction.Sha256);
     }
 
     [Fact]

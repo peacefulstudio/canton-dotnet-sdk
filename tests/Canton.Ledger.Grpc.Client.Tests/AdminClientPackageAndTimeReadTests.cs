@@ -92,10 +92,9 @@ public sealed class AdminClientPackageAndTimeReadTests : IDisposable
     }
 
     [Theory]
-    [InlineData(WirePackageStatus.Registered, PackageStatus.Registered)]
-    [InlineData(WirePackageStatus.Unspecified, PackageStatus.Unspecified)]
-    [InlineData((WirePackageStatus)42, PackageStatus.Unrecognized)]
-    public async Task GetPackageStatus_maps_the_wire_status(WirePackageStatus wire, PackageStatus expected)
+    [InlineData(1, PackageStatus.Registered)]
+    [InlineData(0, PackageStatus.Unspecified)]
+    public async Task GetPackageStatus_maps_the_wire_status(int wire, PackageStatus expected)
     {
         GetPackageStatusRequest? captured = null;
         _packageService
@@ -104,7 +103,7 @@ public sealed class AdminClientPackageAndTimeReadTests : IDisposable
                 Arg.Any<Metadata>(),
                 Arg.Any<DateTime?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(UnaryResponse(new GetPackageStatusResponse { PackageStatus = wire }));
+            .Returns(UnaryResponse(new GetPackageStatusResponse { PackageStatus = (WirePackageStatus)wire }));
 
         var result = await CreateClient().GetPackageStatusAsync("pkg-id-1", TestContext.Current.CancellationToken);
 

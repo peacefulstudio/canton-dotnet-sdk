@@ -269,45 +269,6 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPreferredPackageVersionAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_preference_has_no_synchronizer_id()
-    {
-        _interactiveService
-            .GetPreferredPackageVersionAsync(Arg.Any<Interactive.GetPreferredPackageVersionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(Answered(new Interactive.GetPreferredPackageVersionResponse
-            {
-                PackagePreference = new Interactive.PackagePreference
-                {
-                    PackageReference = new Com.Daml.Ledger.Api.V2.PackageReference { PackageId = "pkg-1", PackageName = "pkg", PackageVersion = "1.0.0" },
-                },
-            }));
-
-        var act = () => CreateClient().GetPreferredPackageVersionAsync([Alice], "pkg", cancellationToken: TestContext.Current.CancellationToken);
-
-        await AssertUndecodable(
-            act,
-            CommitState.NotCommitted,
-            "the participant returned a package preference without a synchronizer id, though the Ledger API marks the field as required.");
-    }
-
-    [Fact]
-    public async Task GetPreferredPackageVersionAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_preference_has_no_package_reference()
-    {
-        _interactiveService
-            .GetPreferredPackageVersionAsync(Arg.Any<Interactive.GetPreferredPackageVersionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(Answered(new Interactive.GetPreferredPackageVersionResponse
-            {
-                PackagePreference = new Interactive.PackagePreference { SynchronizerId = "sync::a" },
-            }));
-
-        var act = () => CreateClient().GetPreferredPackageVersionAsync([Alice], "pkg", cancellationToken: TestContext.Current.CancellationToken);
-
-        await AssertUndecodable(
-            act,
-            CommitState.NotCommitted,
-            "the package preference has no package_reference, though the Ledger API marks the field as required.");
-    }
-
-    [Fact]
     public async Task EstimateTrafficCostAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_a_cost_exceeds_the_signed_range()
     {
         _interactiveService
@@ -474,12 +435,39 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
         await AssertUndecodableContractId(act);
     }
 
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_permission_is_a_value_the_sdk_does_not_know()
+    {
+        _stateService
+            .GetConnectedSynchronizersAsync(Arg.Any<GetConnectedSynchronizersRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Answered(new GetConnectedSynchronizersResponse
+            {
+                ConnectedSynchronizers =
+                {
+                    new GetConnectedSynchronizersResponse.Types.ConnectedSynchronizer
+                    {
+                        SynchronizerAlias = "global",
+                        SynchronizerId = "sync::global",
+                        Permission = (ParticipantPermission)99,
+                    },
+                },
+            }));
+
+        var act = () => CreateClient().GetConnectedSynchronizersAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await AssertUndecodable(
+            act,
+            CommitState.NotCommitted,
+            "The participant sent ParticipantPermission value 99, which this SDK version does not know.");
+    }
+
     private void StubPrepareSubmission(Interactive.CostEstimation estimation) =>
         _interactiveService
             .PrepareSubmissionAsync(Arg.Any<Interactive.PrepareSubmissionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(Answered(new Interactive.PrepareSubmissionResponse
             {
                 PreparedTransaction = new Interactive.PreparedTransaction(),
+                HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
                 CostEstimation = estimation,
             }));
 

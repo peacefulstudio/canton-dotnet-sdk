@@ -29,10 +29,10 @@ public sealed partial record Note(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Note>, global::Daml.Runtime.Data.IDamlRecord<Note>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("47653650113a3f03de4e970a2133a3e36e7443b8966fd5f4b5f509bef6b6ac25", "DefaultTarget", "Note");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("f83e9558896c9112d83eb1631da8c97b4404ba1437ffc6f165692711f24c6ee8", "DefaultTarget", "Note");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "47653650113a3f03de4e970a2133a3e36e7443b8966fd5f4b5f509bef6b6ac25";
+    public static string PackageId => "f83e9558896c9112d83eb1631da8c97b4404ba1437ffc6f165692711f24c6ee8";
 
     /// <summary>Gets the package name.</summary>
     public static string PackageName => "defaulttarget";

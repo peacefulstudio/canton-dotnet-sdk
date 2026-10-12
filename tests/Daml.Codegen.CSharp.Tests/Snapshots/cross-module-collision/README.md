@@ -22,22 +22,22 @@ compiles but sends the wrong argument to the ledger — and this snapshot fails.
 `intermediate.binpb` is the canonical codegen input for the drift test. It is
 generated from the vendored `cross-module-collision.dar`, which is maintained
 as a copy of `conformance/crossmodulecollision/crossmodulecollision.dar` (Daml
-source in `conformance/crossmodulecollision`). Nothing enforces that the two
-stay equal, so keeping them in step is a maintenance obligation: after a corpus
-change, rebuild the DAR (`cd conformance/crossmodulecollision && dpm build && cp
-.daml/dist/crossmodulecollision-*.dar ./crossmodulecollision.dar`), copy it
-over the vendored `cross-module-collision.dar`, and run the refresh below. Skip
-the copy and the snapshot keeps regenerating cleanly from the stale vendored
-DAR, which is exactly the staleness this snapshot's gate cannot see.
+source in `conformance/crossmodulecollision`). `scripts/regenerate.sh write`
+copies the conformance DAR over the vendored one before decoding it, and
+`scripts/regenerate.sh check` fails when the two differ, so the snapshot cannot
+keep regenerating cleanly from a stale vendored DAR. After a corpus change,
+rebuild the DAR (`cd conformance/crossmodulecollision && dpm build && cp
+.daml/dist/crossmodulecollision-*.dar ./crossmodulecollision.dar`) and run
+`scripts/regenerate.sh write`.
 
 ## Refreshing the snapshot
 
-`scripts/refresh-snapshot.sh` regenerates `intermediate.binpb` from the
+`scripts/regenerate.sh write --only snapshots` regenerates `intermediate.binpb` from the
 vendored DAR with a JVM helper assembled from the working tree's sources, then
 regenerates the `expected/` tree from that proto with the current codegen
 source. Run it from the repo root (POSIX shell; on Windows, use WSL or Git
 Bash):
 
 ```bash
-scripts/refresh-snapshot.sh cross-module-collision
+scripts/regenerate.sh write --only snapshots --snapshot cross-module-collision
 ```

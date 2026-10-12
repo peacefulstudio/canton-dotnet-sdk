@@ -517,10 +517,16 @@ public class DamlJsonSerializerStructuralTests
         },
     };
 
-    [Fact]
-    public void Serialize_should_never_emit_a_nested_optional_encoding_the_participant_rejected()
+    [Theory]
+    [MemberData(
+        nameof(DamlLfJsonReaderWireSamplesTests.RejectedNestedOptionalCandidates),
+        MemberType = typeof(DamlLfJsonReaderWireSamplesTests))]
+    public void Serialize_should_never_emit_a_nested_optional_encoding_the_participant_rejected(string candidate)
     {
-        var rejected = new[] { "null", "[null]", """["deep"]""" };
+        using var capture = DamlLfJsonReaderWireSamplesTests.LoadWireSample(
+            DamlLfJsonReaderWireSamplesTests.NestedOptionalProbe);
+        var rejected = JsonNode.Parse(
+            DamlLfJsonReaderWireSamplesTests.SentNestedOptionalCandidate(capture, candidate).GetRawText());
 
         var emitted = new[]
         {
@@ -532,7 +538,8 @@ public class DamlJsonSerializerStructuralTests
 
         emitted.Should().HaveCount(3,
             "a shorter array would satisfy the disjointness below without serializing anything");
-        emitted.Should().NotIntersectWith(rejected,
-            "the participant answered HTTP 500 to each of these forms in a nested position");
+        emitted.Select(json => JsonNode.DeepEquals(JsonNode.Parse(json), rejected))
+            .Should().AllBeEquivalentTo(false,
+                $"the participant answered HTTP 500 to candidate '{candidate}' in a nested position");
     }
 }

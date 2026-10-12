@@ -16,7 +16,7 @@ internal static class PqsScenarios
     private static readonly TimeSpan ProjectionTimeout = TimeSpan.FromMinutes(5);
 
     public static async Task<LatencySummary> ProjectionLagAsync(
-        IPqsClient pqs, Transport writer, Party issuer, int samples, CancellationToken cancellationToken)
+        IPqsClient pqs, Transport writer, Party issuer, int samples, JitteredPacing pacing, CancellationToken cancellationToken)
     {
         var lags = new List<TimeSpan>(samples);
         for (var i = 0; i < samples; i++)
@@ -25,6 +25,7 @@ internal static class PqsScenarios
             var contractId = await Seed.CreateAssetAsync(writer.Client, issuer, cancellationToken).ConfigureAwait(false);
             await AwaitProjectionAsync(pqs, contractId, cancellationToken).ConfigureAwait(false);
             lags.Add(Stopwatch.GetElapsedTime(start));
+            await pacing.PauseAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return LatencySummary.Of(lags);
@@ -36,7 +37,7 @@ internal static class PqsScenarios
         Party issuer,
         int rows,
         int concurrency,
-        int repetitions,
+        ReadSampling sampling,
         CancellationToken cancellationToken)
     {
         var seeded = new ConcurrentBag<ContractId<Asset>>();
@@ -52,18 +53,18 @@ internal static class PqsScenarios
         }
 
         var page = new PqsPage(rows);
-        var elapsed = new List<TimeSpan>(repetitions);
-        for (var repetition = 0; repetition < repetitions; repetition++)
-        {
-            var start = Stopwatch.GetTimestamp();
-            var contracts = await pqs.QueryAsync<Asset>(page, cancellationToken).ConfigureAwait(false);
-            elapsed.Add(Stopwatch.GetElapsedTime(start));
-            if (contracts.Count != rows)
-            {
-                throw new InvalidOperationException($"PQS page returned {contracts.Count} rows where {rows} were requested");
-            }
-        }
-
+        var (elapsed, _) = await WarmedRepetitions.MeasureAsync(
+                sampling,
+                async token =>
+                {
+                    var contracts = await pqs.QueryAsync<Asset>(page, token).ConfigureAwait(false);
+                    if (contracts.Count != rows)
+                    {
+                        throw new InvalidOperationException($"PQS page returned {contracts.Count} rows where {rows} were requested");
+                    }
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
         return ThroughputSummary.Of(rows, elapsed);
     }
 

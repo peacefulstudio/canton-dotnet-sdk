@@ -33,7 +33,6 @@ public sealed class RestCallKindFailureContractTests : IDisposable
         nameof(RestLedgerClient.EstimateTrafficCostAsync),
         nameof(RestLedgerClient.PrepareSubmissionAsync),
         nameof(RestLedgerClient.GetPreferredPackagesAsync),
-        nameof(RestLedgerClient.GetPreferredPackageVersionAsync),
         nameof(RestAdminClient.GetParticipantIdAsync),
         nameof(RestAdminClient.ListPackagesAsync),
         nameof(RestAdminClient.GetPackageStatusAsync),
@@ -429,8 +428,6 @@ public sealed class RestCallKindFailureContractTests : IDisposable
             nameof(RestLedgerClient.PrepareSubmissionAsync) => ledger.PrepareSubmissionAsync(Submission(), cancellationToken: token),
             nameof(RestLedgerClient.GetPreferredPackagesAsync) => ledger.GetPreferredPackagesAsync(
                 [new PackageVettingRequirement([Alice], "pkg-name")], cancellationToken: token),
-            nameof(RestLedgerClient.GetPreferredPackageVersionAsync) =>
-                ledger.GetPreferredPackageVersionAsync([Alice], "pkg-name", cancellationToken: token),
             nameof(RestLedgerClient.GetLedgerEndAsync) => ledger.GetLedgerEndAsync(cancellationToken: token),
             nameof(RestLedgerClient.GetConnectedSynchronizersAsync) =>
                 ledger.GetConnectedSynchronizersAsync(cancellationToken: token),

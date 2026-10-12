@@ -1,12 +1,12 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
-ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scalaVersion := "2.13.18"
 ThisBuild / organization := "studio.peaceful.daml.codegen"
 ThisBuild / version      := sys.env.get("DAML_DAR_TO_PROTO_VERSION").map(_.trim).filter(_.nonEmpty).getOrElse("0.0.0-dev")
 
 resolvers += "Daml" at "https://repo1.maven.org/maven2/"
 
-lazy val damlLfArchiveVersion = "3.5.9"
+lazy val damlLfArchiveVersion = "3.5.12"
 
 lazy val jvmHelper = (project in file("."))
   .settings(
@@ -23,7 +23,7 @@ lazy val jvmHelper = (project in file("."))
     libraryDependencies ++= Seq(
       "com.daml" %% "daml-lf-archive" % damlLfArchiveVersion,
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "org.scalatest" %% "scalatest" % "3.2.19" % Test
+      "org.scalatest" %% "scalatest" % "3.2.20" % Test
     ),
     assembly / mainClass := Some("studio.peaceful.daml.codegen.helper.Decode"),
     assembly / assemblyJarName := "daml-dar-to-proto.jar",

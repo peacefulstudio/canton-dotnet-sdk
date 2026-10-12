@@ -62,7 +62,7 @@ internal static class LiveTransports
             services.GetRequiredService<IVersionServiceApi>(), cancellationToken));
 
     internal static Task<CapabilityLane<PreferredPackagesCapability>> OpenPreferredPackagesAsync(
-        LiveTransport transport, PackageLookup lookup, string partyHint, CancellationToken cancellationToken) =>
+        LiveTransport transport, string partyHint, CancellationToken cancellationToken) =>
         LiveLane.OpenAsync(
             transport.SkipMessage,
             transport.BuildServices,
@@ -73,13 +73,10 @@ internal static class LiveTransports
                 var party = await context.Fixture.AllocatePartyAsync(partyHint, cancellationToken: ct)
                     .ConfigureAwait(false);
                 await context.ActAsRights.GrantAsync(party.PartyId, ct).ConfigureAwait(false);
-                var packageName = lookup == PackageLookup.UploadedPackage
-                    ? Daml.Codegen.Testing.Conformance.RichTypes.Marker.PackageName
-                    : $"no-such-package-{Guid.NewGuid():N}";
                 return new PreferredPackagesCapability(
                     context.Services.GetRequiredService<ICantonLedgerClient>(),
                     new Party(party.PartyId),
-                    packageName);
+                    Daml.Codegen.Testing.Conformance.RichTypes.Marker.PackageName);
             },
             cancellationToken);
 

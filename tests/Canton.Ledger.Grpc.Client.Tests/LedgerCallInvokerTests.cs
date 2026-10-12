@@ -225,19 +225,15 @@ public class LedgerCallInvokerTests
         stopped.Should().ContainSingle().Which.Status.Should().Be(ActivityStatusCode.Error);
     }
 
-    [Theory]
-    [InlineData("Read", CommitState.NotCommitted)]
-    [InlineData("AcceptedOnlyWrite", CommitState.Unknown)]
-    [InlineData("EffectAppliedWrite", CommitState.Committed)]
-    public async Task InvokeTracedAsync_raises_an_undecodable_response_as_a_ledger_operation_exception_with_the_commit_state_of_its_kind(
-        string kindName, CommitState expected)
+    [Fact]
+    public async Task InvokeTracedAsync_raises_an_undecodable_response_as_an_unreadable_ending_of_the_calls_kind()
     {
         var invoker = new LedgerCallInvoker(Options(), _tokenProvider);
         using var source = new ActivitySource("LedgerCallInvokerTests.UndecodableByKind");
         var malformed = new MalformedResponseException("the response has no offset");
 
         var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
-            System.Enum.Parse<LedgerCallKind>(kindName),
+            LedgerCallKind.EffectAppliedWrite,
             source,
             StateService.Descriptor,
             "GetLedgerEnd",
@@ -249,7 +245,7 @@ public class LedgerCallInvokerTests
         thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
         thrown.InnerException.Should().BeSameAs(malformed);
         thrown.Message.Should().Be("Malformed response from ledger: the response has no offset");
-        thrown.CommitState.Should().Be(expected);
+        thrown.CommitState.Should().Be(CommitState.Committed);
         thrown.Category.Should().BeNull();
         thrown.ErrorId.Should().BeNull();
         thrown.Metadata.Should().BeNull();

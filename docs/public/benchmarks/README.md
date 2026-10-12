@@ -19,7 +19,7 @@ All contracts are `Marker` or `Asset` instances from the pinned conformance DAR 
 | Submit → contract visible in PQS | From a gRPC create until `ExistsAsync` sees the contract (polled every 10 ms) | PQS |
 | Paged template query | One `QueryAsync<Asset>` page of `--pqs-rows` rows | PQS |
 
-Each read-throughput scenario runs `--repetitions` times. The table reports the median and the best repetition. Each tail scenario sends a few warm-up samples that are not counted, then samples one command at a time with `--tail-spacing-ms` between samples. If a stream ends with an in-band `StreamError`, it is reopened from its last offset, and the report records that in its run notes.
+Each read-throughput scenario first repeats its read for `--read-warmup-ms` (default 3000 ms) without timing it, then times reads back to back for `--read-window-ms` (default 10000 ms) and at least `--repetitions` reads (default 30). On a shared virtual machine the same read runs at two speeds, about 2.5x apart, in stretches of 50 to 500 ms. Thirty reads took about 0.1 s, fell inside one stretch and reported whichever speed held at that moment. A 10-second window spans many stretches. The table reports the median and the best repetition. Each tail scenario sends a few warm-up samples that are not counted, then samples one command at a time. Every sequential latency scenario pauses between samples for a random time: `--tail-spacing-ms` for the tails, nothing for the others, plus a uniform draw of up to `--pacing-jitter-ms` (default 500 ms). LocalNet delivers results on a fixed wall-clock grid of about 120 ms. A fixed pause would start every submission at the same point on that grid and put a whole run one grid step high or low. If a stream ends with an in-band `StreamError`, it is reopened from its last offset, and the report records that in its run notes.
 
 ## Results
 
@@ -74,9 +74,9 @@ The maintainers run this harness weekly in CI against a LocalNet and compare all
    dotnet run -c Release --project benchmarks/Canton.Ledger.Benchmarks -- --output benchmark-results
    ```
 
-   The run writes `results.json` and `results.md` to the output directory and prints the Markdown to stdout. Flags: `--warmup`, `--seed-contracts`, `--concurrency`, `--repetitions`, `--latency-samples`, `--tail-samples`, `--tail-spacing-ms`, `--rest-idle-windows-ms` (comma-separated), `--acs-contracts`, `--pqs-lag-samples`, `--pqs-rows`, `--commit`, `--runner`.
+   The run writes `results.json` and `results.md` to the output directory and prints the Markdown to stdout. Flags: `--warmup`, `--seed-contracts`, `--concurrency`, `--repetitions`, `--read-warmup-ms`, `--read-window-ms`, `--latency-samples`, `--tail-samples`, `--tail-spacing-ms`, `--pacing-jitter-ms`, `--rest-idle-windows-ms` (comma-separated), `--acs-contracts`, `--pqs-lag-samples`, `--pqs-rows`, `--commit`, `--runner`.
 
-A run with the parameters above takes about 7 minutes. Each run allocates fresh parties, so repeated runs on the same LocalNet don't read each other's contracts. PQS scenarios are the exception, as the caveats below explain.
+A run with the parameters above takes about 8 minutes. Each run allocates fresh parties, so repeated runs on the same LocalNet don't read each other's contracts. PQS scenarios are the exception, as the caveats below explain.
 
 ## Caveats
 

@@ -64,7 +64,6 @@ public class FakeLedgerClientThrowingCallFailureTests
                 client.ExecuteSubmissionAndWaitForTransactionAsync(Signed(), Submitter),
             ["GetPreferredPackagesAsync"] = client =>
                 client.GetPreferredPackagesAsync([new PackageVettingRequirement([Alice], "pkg-name")]),
-            ["GetPreferredPackageVersionAsync"] = client => client.GetPreferredPackageVersionAsync([Alice], "pkg-name"),
         };
 
     private static readonly IReadOnlyDictionary<string, Func<FakeLedgerClient, object>> GuardedMembers =

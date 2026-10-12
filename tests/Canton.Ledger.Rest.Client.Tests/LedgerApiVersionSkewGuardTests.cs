@@ -10,19 +10,20 @@ namespace Canton.Ledger.Rest.Client.Tests;
 public class LedgerApiVersionSkewGuardTests
 {
     [Theory]
-    [InlineData("3.5.9")]
-    [InlineData("3.5.0")]
-    [InlineData("3.5.20-snapshot.20260101.0")]
+    [InlineData("3.6.1")]
+    [InlineData("3.6.0")]
+    [InlineData("3.6.2-snapshot.20261001.0")]
     public void Classify_accepts_a_participant_on_an_accepted_canton_minor(string reportedVersion)
         => Classify(reportedVersion).Should().Be(Verdict.Supported);
 
     [Theory]
+    [InlineData("3.5.19")]
+    [InlineData("3.5.9")]
     [InlineData("3.4.11")]
-    [InlineData("3.4.9")]
     [InlineData("3.3.0")]
-    [InlineData("3.6.0")]
-    [InlineData("3.7.1-snapshot.20260101.0")]
-    [InlineData("4.5.9")]
+    [InlineData("3.7.0")]
+    [InlineData("3.7.1-snapshot.20261001.0")]
+    [InlineData("4.6.1")]
     public void Classify_rejects_a_participant_outside_the_accepted_canton_minors(string reportedVersion)
         => Classify(reportedVersion).Should().Be(Verdict.Unsupported);
 
@@ -31,7 +32,7 @@ public class LedgerApiVersionSkewGuardTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("not-a-version")]
-    [InlineData("v3.5.9")]
+    [InlineData("v3.6.1")]
     public void Classify_rejects_a_version_it_cannot_parse(string? reportedVersion)
         => Classify(reportedVersion).Should().Be(Verdict.Unparseable);
 

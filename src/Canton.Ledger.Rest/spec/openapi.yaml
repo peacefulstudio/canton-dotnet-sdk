@@ -4,7 +4,7 @@
 openapi: 3.0.3
 info:
     title: Canton Ledger API (proto-derived)
-    version: 3.5.19
+    version: 3.6.1
 paths:
     /v2/commands/async/submit:
         post:
@@ -511,7 +511,10 @@ paths:
 
                  Can be accessed by any Ledger API client with a valid token when Ledger API authorization is enabled.
 
-                 Provided for backwards compatibility, it will be removed in the Canton version 3.4.0
+                 Deprecated since Canton 3.4: disabled by default since Canton 3.6 (re-enable temporarily with
+                 `canton.participants.<participant>.features.deprecated.enable-deprecated-endpoints-34 = true`)
+                 and will be removed in Canton 3.7.
+                 Use GetPreferredPackages instead.
             operationId: InteractiveSubmissionService_GetPreferredPackageVersion
             parameters:
                 - name: parties
@@ -584,8 +587,6 @@ paths:
                  a `FAILED_PRECONDITION` error will be returned.
 
                  Can be accessed by any Ledger API client with a valid token when Ledger API authorization is enabled.
-
-                 Experimental API: this endpoint is not guaranteed to provide backwards compatibility in future releases
             operationId: InteractiveSubmissionService_GetPreferredPackages
             requestBody:
                 content:
@@ -874,7 +875,11 @@ paths:
             tags:
                 - PartyManagementService
             description: |-
-                The external party must be hosted (at least) on this node with either confirmation or observation permissions
+                Alpha 3.3: Endpoint to allocate a new external party on a synchronizer
+
+                 Expected to be stable in 3.5
+
+                 The external party must be hosted (at least) on this node with either confirmation or observation permissions
                  It can optionally be hosted on other nodes (then called a multi-hosted party).
                  If hosted on additional nodes, explicit authorization of the hosting relationship must be performed on those nodes
                  before the party can be used.
@@ -908,7 +913,11 @@ paths:
             tags:
                 - PartyManagementService
             description: |-
-                You may use this endpoint to generate the common external topology transactions
+                Alpha 3.3: Convenience endpoint to generate topology transactions for external signing
+
+                 Expected to be stable in 3.5
+
+                 You may use this endpoint to generate the common external topology transactions
                  which can be signed externally and uploaded as part of the allocate party process
 
                  Note that this request will create a normal namespace using the same key for the
@@ -1168,6 +1177,20 @@ paths:
                 Get the current ledger end.
                  Subscriptions started with the returned offset will serve events after this RPC was called.
             operationId: StateService_GetLedgerEnd
+            parameters:
+                - name: synchronizer_id
+                  in: query
+                  description: |-
+                    Provide synchronizer_times for the specified synchronizers in the response.
+                     If none are specified, only offset will be present in the response.
+                     If the request includes a synchronizer for which no updates were observed, it will be omitted in the output.
+                     If the request includes a synchronizer that participant was never connected to, it will be omitted in the output.
+
+                     Optional: can be empty
+                  schema:
+                    type: array
+                    items:
+                        type: string
             responses:
                 "200":
                     description: OK
@@ -1666,11 +1689,12 @@ components:
                 reassignmentCounter:
                     type: string
                     description: |-
-                        Each corresponding assigned and unassigned event has the same reassignment_counter. This strictly increases
-                         with each unassign command for the same contract. Creation of the contract corresponds to reassignment_counter
-                         equals zero.
-                         This field will be the reassignment_counter of the latest observable activation event on this synchronizer, which is
-                         before the active_at_offset.
+                        The reassignment counter of this event.
+
+                         Reassignment counters strictly increase with each unassign command for the same contract. Creation
+                         of the contract corresponds to a reassignment_counter equal to zero.
+                         This field will be the reassignment_counter of the latest observable activation event on this synchronizer,
+                         which is before the active_at_offset.
 
                          Required
         AllocateExternalPartyRequest:
@@ -1963,9 +1987,10 @@ components:
                 reassignmentCounter:
                     type: string
                     description: |-
-                        Each corresponding assigned and unassigned event has the same reassignment_counter. This strictly increases
-                         with each unassign command for the same contract. Creation of the contract corresponds to reassignment_counter
-                         equals zero.
+                        The reassignment counter associated with this assignment on the target synchronizer.
+
+                         Reassignment counters strictly increase with each unassign command for the same contract.
+                         Creation of the contract corresponds to reassignment_counter equal to zero.
 
                          Required
                 createdEvent:
@@ -2263,6 +2288,23 @@ components:
                          The cost reported here is the one paid for ordering the confirmation request.
 
                          Optional
+                transactionHash:
+                    type: string
+                    description: |-
+                        The transaction hash signed by the external party for prepared transactions
+                         that were submitted using `InteractiveSubmissionService.ExecuteSubmission`
+                         or one of its variants.
+
+                         Use this to correlate prepared transactions with their execution result
+                         on the *same participant* that executed the transaction.
+
+                         Not available for:
+
+                         - transactions executed on Canton versions prior to 3.5
+                         - transactions of internal parties submitted using `CommandSubmissionService.Submit` and its variants
+
+                         Optional: can be empty
+                    format: bytes
             description: 'A completion represents the status of a submitted command on the ledger: it can be successful or failed.'
         CompletionResponse:
             type: object
@@ -2391,6 +2433,7 @@ components:
                             - SIGNING_ALGORITHM_SPEC_ED25519
                             - SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_256
                             - SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384
+                            - SIGNING_ALGORITHM_SPEC_ML_DSA_65
                         type: string
                         format: enum
                     description: |-
@@ -2995,9 +3038,12 @@ components:
                         - HASHING_SCHEME_VERSION_UNSPECIFIED
                         - HASHING_SCHEME_VERSION_V2
                         - HASHING_SCHEME_VERSION_V3
+                        - HASHING_SCHEME_VERSION_V4
                     type: string
                     description: |-
-                        The hashing scheme version used when building the hash
+                        The hashing scheme version used when building the hash.
+                         HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+                         rejected on synchronizers running older protocol versions.
 
                          Required
                     format: enum
@@ -3081,9 +3127,12 @@ components:
                         - HASHING_SCHEME_VERSION_UNSPECIFIED
                         - HASHING_SCHEME_VERSION_V2
                         - HASHING_SCHEME_VERSION_V3
+                        - HASHING_SCHEME_VERSION_V4
                     type: string
                     description: |-
-                        The hashing scheme version used when building the hash
+                        The hashing scheme version used when building the hash.
+                         HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+                         rejected on synchronizers running older protocol versions.
 
                          Required
                     format: enum
@@ -3161,9 +3210,12 @@ components:
                         - HASHING_SCHEME_VERSION_UNSPECIFIED
                         - HASHING_SCHEME_VERSION_V2
                         - HASHING_SCHEME_VERSION_V3
+                        - HASHING_SCHEME_VERSION_V4
                     type: string
                     description: |-
-                        The hashing scheme version used when building the hash
+                        The hashing scheme version used when building the hash.
+                         HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+                         rejected on synchronizers running older protocol versions.
 
                          Required
                     format: enum
@@ -3259,6 +3311,19 @@ components:
                         Can only be true from lf_version >= 2
 
                          Required
+                externalCallResults:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalCallResult'
+                    description: |-
+                        Can only be populated from lf_version dev.
+
+                         Results of external calls made during this exercise.
+                         These results are carried for external-call replay and validation.
+                         They are encoded into the prepared transaction hash starting with
+                         HASHING_SCHEME_VERSION_V4.
+
+                         Optional: can be empty
             description: Exercise node
         ExerciseByKeyCommand:
             type: object
@@ -3498,6 +3563,46 @@ components:
                     type: boolean
                     description: Required
             description: Ledger is in the static time mode and exposes a time service.
+        ExternalCallResult:
+            type: object
+            properties:
+                extensionId:
+                    type: string
+                    description: |-
+                        Extension service identifier.
+
+                         Required
+                functionId:
+                    type: string
+                    description: |-
+                        Function identifier within the extension.
+
+                         Required
+                config:
+                    type: string
+                    description: |-
+                        Extension configuration hash bytes.
+
+                         Required: must be non-empty
+                    format: bytes
+                input:
+                    type: string
+                    description: |-
+                        Input data sent to the extension.
+
+                         Required: must be non-empty
+                    format: bytes
+                output:
+                    type: string
+                    description: |-
+                        Output data returned by the extension.
+
+                         Required: must be non-empty
+                    format: bytes
+            description: |-
+                Result of an external call made during transaction execution.
+                 External calls are deterministic calls to participant extension services.
+                 Results are stored in the transaction and replayed during validation.
         FeaturesDescriptor:
             type: object
             properties:
@@ -4041,6 +4146,15 @@ components:
                          If positive, the absolute offset of the ledger as viewed by the participant.
 
                          Optional
+                synchronizerTimes:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SynchronizerTime'
+                    description: |-
+                        Final record times observed by this participant for each of the requested synchronizers.
+                         If there is no connection to a sequencer, corresponding record time can be arbitrarily far back in the past.
+
+                         Optional: can be empty
         GetPackageResponse:
             type: object
             properties:
@@ -4087,7 +4201,7 @@ components:
                     type: string
                     description: |-
                         Identifier of the participant, which SHOULD be globally unique.
-                         Must be a valid LedgerString (as describe in ``value.proto``).
+                         Must be a valid ParticipantIdStrings (as describe in ``value.proto``).
 
                          Required
         GetPartiesResponse:
@@ -4791,7 +4905,11 @@ components:
                     type: string
                     description: |-
                         Pagination token to retrieve the next page.
-                         Empty string if there are no further results.
+                         Empty string once there are no further results.
+
+                         ``PackageMetadataFilter`` is applied after ``TopologyStateFilter`` has already produced a page,
+                         so that page can end up empty even when it has a next token. Keep following the token until
+                         there's no token left.
 
                          Optional
         Metadata:
@@ -5408,10 +5526,13 @@ components:
                         - HASHING_SCHEME_VERSION_UNSPECIFIED
                         - HASHING_SCHEME_VERSION_V2
                         - HASHING_SCHEME_VERSION_V3
+                        - HASHING_SCHEME_VERSION_V4
                     type: string
                     description: |-
                         The hashing scheme version to be used when building the hash.
                          Defaults to HASHING_SCHEME_VERSION_V2.
+                         HASHING_SCHEME_VERSION_V4 requires a synchronizer running protocol version 36 or later and is
+                         rejected on synchronizers running older protocol versions.
 
                          Optional
                     format: enum
@@ -5450,9 +5571,12 @@ components:
                         - HASHING_SCHEME_VERSION_UNSPECIFIED
                         - HASHING_SCHEME_VERSION_V2
                         - HASHING_SCHEME_VERSION_V3
+                        - HASHING_SCHEME_VERSION_V4
                     type: string
                     description: |-
-                        The hashing scheme version used when building the hash
+                        The hashing scheme version used when building the hash.
+                         HASHING_SCHEME_VERSION_V4 is only returned for synchronizers running protocol version 36 or
+                         later.
 
                          Required
                     format: enum
@@ -5831,6 +5955,10 @@ components:
                     allOf:
                         - $ref: '#/components/schemas/Right_CanExecuteAsAnyParty'
                     description: The user can prepare and execute submissions as any party on a participant.
+                CanActAsAnyParty:
+                    allOf:
+                        - $ref: '#/components/schemas/Right_CanActAsAnyParty'
+                    description: The user can act as any party on a participant.
             description: Selects which right a ``Right`` grants.
         Right_CanActAs:
             type: object
@@ -5841,6 +5969,12 @@ components:
                         The right to authorize commands for this party.
 
                          Required
+        Right_CanActAsAnyParty:
+            type: object
+            properties: {}
+            description: |-
+                The right of a user to authorize commands as any party on a participant.
+                 Its utility is predominantly for users that act on behalf of many parties.
         Right_CanExecuteAs:
             type: object
             properties:
@@ -5925,6 +6059,7 @@ components:
                         - SIGNING_ALGORITHM_SPEC_ED25519
                         - SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_256
                         - SIGNING_ALGORITHM_SPEC_EC_DSA_SHA_384
+                        - SIGNING_ALGORITHM_SPEC_ML_DSA_65
                     type: string
                     description: |-
                         The signing algorithm specification used to produce this signature
@@ -5960,6 +6095,7 @@ components:
                         - SIGNING_KEY_SPEC_EC_P256
                         - SIGNING_KEY_SPEC_EC_P384
                         - SIGNING_KEY_SPEC_EC_SECP256K1
+                        - SIGNING_KEY_SPEC_ML_DSA_65
                     type: string
                     description: |-
                         The key specification
@@ -6362,7 +6498,8 @@ components:
                 externalTransactionHash:
                     type: string
                     description: |-
-                        For transaction externally signed, contains the external transaction hash
+                        Deprecated: please use ``transaction_hash`` which has the same value.
+                         For transaction externally signed, contains the external transaction hash
                          signed by the external party. Can be used to correlate an external submission with a committed transaction.
 
                          Optional: can be empty
@@ -6380,6 +6517,23 @@ components:
                          - returned as part of a query filtering for a non submitting party
 
                          Optional
+                transactionHash:
+                    type: string
+                    description: |-
+                        The transaction hash signed by the external party for prepared transactions
+                         that were submitted using `InteractiveSubmissionService.ExecuteSubmission`
+                         or one of its variants.
+
+                         Use this to correlate prepared transactions with their execution result
+                         on the *same participant* that executed the transaction.
+
+                         Not available for:
+
+                         - transactions executed on Canton versions prior to 3.6
+                         - transactions of internal parties submitted using `CommandSubmissionService.Submit` and its variants
+
+                         Optional: can be empty
+                    format: bytes
             description: Filtered view of an on-ledger transaction's create and archive events.
         TransactionFormat:
             type: object
@@ -6477,9 +6631,10 @@ components:
                 reassignmentCounter:
                     type: string
                     description: |-
-                        Each corresponding assigned and unassigned event has the same reassignment_counter. This strictly increases
-                         with each unassign command for the same contract. Creation of the contract corresponds to reassignment_counter
-                         equals zero.
+                        The reassignment counter associated with this unassignment on the source synchronizer.
+
+                         Reassignment counters strictly increase with each unassign command for the same contract.
+                         Creation of the contract corresponds to reassignment_counter equal to zero.
 
                          Required
                 assignmentExclusivity:
@@ -7053,6 +7208,7 @@ components:
                  - NameStrings are strings with length <= 1000 that match the regexp ``[A-Za-z\$_][A-Za-z0-9\$_]*``.
                  - PackageIdStrings are strings with length <= 64 that match the regexp ``[A-Za-z0-9\-_ ]+``.
                  - PartyIdStrings are strings with length <= 255 that match the regexp ``[A-Za-z0-9:\-_ ]+``.
+                 - ParticipantIdStrings are strings with length <= 255 that match the regexp ``[A-Za-z0-9:\-_ ]+``.
                  - LedgerStrings are strings with length <= 255 that match the regexp ``[A-Za-z0-9#:\-_/ ]+``.
                  - UserIdStrings are strings with length <= 128 that match the regexp ``[a-zA-Z0-9@^$.!`\-#+'~_|:]+``.
         Variant:

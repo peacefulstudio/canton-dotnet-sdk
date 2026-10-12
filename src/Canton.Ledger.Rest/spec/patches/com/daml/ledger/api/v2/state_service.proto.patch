@@ -1,7 +1,7 @@
 --- a/com/daml/ledger/api/v2/state_service.proto
 +++ b/com/daml/ledger/api/v2/state_service.proto
-@@ -8,7 +8,9 @@ package com.daml.ledger.api.v2;
- import "com/daml/ledger/api/v2/event.proto";
+@@ -9,7 +9,9 @@
+ import "com/daml/ledger/api/v2/offset_checkpoint.proto";
  import "com/daml/ledger/api/v2/reassignment.proto";
  import "com/daml/ledger/api/v2/transaction_filter.proto";
 +import "google/api/annotations.proto";
@@ -10,7 +10,7 @@
  option csharp_namespace = "Com.Daml.Ledger.Api.V2";
  option java_outer_classname = "StateServiceOuterClass";
  option java_package = "com.daml.ledger.api.v2";
-@@ -20,24 +22,46 @@ service StateService {
+@@ -21,24 +23,46 @@
    // the client SHOULD begin streaming updates from the update service,
    // starting at the GetActiveContractsRequest.active_at_offset specified in this request.
    // Clients SHOULD NOT assume that the set of active contracts they receive reflects the state at the ledger end.
@@ -62,7 +62,7 @@
  }
  
  // If the given offset is different than the ledger end, and there are (un)assignments in-flight at the given offset,
-@@ -134,24 +158,7 @@ message GetActiveContractsResponse {
+@@ -135,25 +159,8 @@
    // ``TransactionFilter`` in the query.
    //
    // Required
@@ -74,7 +74,8 @@
 -    // synchronizer, but already archived on another.
 -    // There will be one such message for each synchronizer the contract is active on.
 -    ActiveContract active_contract = 2;
--
++  ContractEntry contract_entry = 2 [json_name = "contractEntry"];
+ 
 -    // Included iff the unassigned event was before or at the active_at_offset, but there was no corresponding
 -    // assigned event before or at the active_at_offset.
 -    IncompleteUnassigned incomplete_unassigned = 3;
@@ -84,11 +85,11 @@
 -    // unassigned event before or at the active_at_offset.
 -    IncompleteAssigned incomplete_assigned = 4;
 -  }
-+  ContractEntry contract_entry = 2 [json_name = "contractEntry"];
- 
+-
    // Opaque representation of a continuation token which can be used in the request to bypass the already processed part
    // of the active contracts snapshot.
-@@ -179,6 +186,28 @@ message GetActiveContractsPageResponse {
+   // Only populated for the streaming ``GetActiveContracts`` rpc call.
+@@ -180,6 +187,28 @@
    optional bytes next_page_token = 3;
  }
  
@@ -117,3 +118,12 @@
  message ActiveContract {
    // The event as it appeared in the context of its last update (i.e. daml transaction or
    // reassignment). In particular, the last offset, node_id pair is preserved.
+@@ -291,7 +320,7 @@
+   // If the request includes a synchronizer that participant was never connected to, it will be omitted in the output.
+   //
+   // Optional: can be empty
+-  repeated string synchronizer_id = 1;
++  repeated string synchronizer_id = 1 [json_name = "synchronizer_id"];
+ }
+ 
+ message GetLedgerEndResponse {

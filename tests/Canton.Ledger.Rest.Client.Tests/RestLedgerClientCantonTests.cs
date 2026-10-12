@@ -248,7 +248,8 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         thrown.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.Conflict));
         thrown.Category.Should().Be(DamlErrorCategory.ContentionOnSharedResources);
         thrown.ErrorId.Should().Be("STALE_STREAM_AUTHORIZATION");
-        thrown.InnerException.Should().BeNull();
+        thrown.InnerException.Should().BeOfType<HttpRequestException>()
+            .Which.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -357,6 +358,21 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
         thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
         thrown.Which.InnerException.Should().BeOfType<JsonException>();
+    }
+
+    [Fact]
+    public async Task GetConnectedSynchronizersAsync_reports_a_numeric_permission_outside_the_vendored_enum_as_an_undecodable_body()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"connectedSynchronizers": [{"synchronizerAlias": "a", "synchronizerId": "a::id", "permission": 99}]}""");
+        var client = ClientWith(transport);
+
+        var act = () => client.GetConnectedSynchronizersAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]

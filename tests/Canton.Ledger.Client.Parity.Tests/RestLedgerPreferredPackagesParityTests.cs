@@ -9,7 +9,7 @@ namespace Canton.Ledger.Client.Parity.Tests;
 public sealed class RestLedgerPreferredPackagesParityTests : LedgerPreferredPackagesParityTests
 {
     protected override Task<CapabilityLane<PreferredPackagesCapability>> OpenPreferredPackagesAsync(
-        PackageLookup lookup, CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken) =>
         LiveTransports.OpenPreferredPackagesAsync(
-            LiveTransports.Rest, lookup, "rest-preferred-packages", cancellationToken);
+            LiveTransports.Rest, "rest-preferred-packages", cancellationToken);
 }

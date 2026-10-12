@@ -61,7 +61,6 @@ public static class EntryPointInvocations
         "ExecuteSubmissionAndWaitForTransactionAsync(4)" => ledger.ExecuteSubmissionAndWaitForTransactionAsync(Signed(preparedTransaction), Submitter, cancellationToken: cancellationToken),
         "GetPreferredPackagesAsync(5)" => ledger.GetPreferredPackagesAsync(
             [new PackageVettingRequirement([Alice], "pkg")], cancellationToken: cancellationToken),
-        "GetPreferredPackageVersionAsync(6)" => ledger.GetPreferredPackageVersionAsync([Alice], "pkg", cancellationToken: cancellationToken),
         "GetParticipantIdAsync(1)" => admin.GetParticipantIdAsync(cancellationToken),
         "AllocatePartyAsync(3)" => admin.AllocatePartyAsync("alice", cancellationToken: cancellationToken),
         "GenerateExternalPartyTopologyAsync(2)" => admin.GenerateExternalPartyTopologyAsync(

@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Abstractions --version 0.6.0
+dotnet add package Canton.Ledger.Abstractions --version 0.7.0-preview.1
 ```
 
 ## Key Types
@@ -19,7 +19,7 @@ dotnet add package Canton.Ledger.Abstractions --version 0.6.0
 | `SynchronizerTime` | The synchronizer id and record time a completion was sequenced at |
 | `ConnectedSynchronizer` | A synchronizer the participant is connected to (`SynchronizerAlias`, `SynchronizerId`, `Permission`) |
 | `TrafficCostEstimate` | What a participant estimates a submission would consume in synchronizer traffic, in bytes (`EstimatedAt`, `ConfirmationRequestCost`, `ConfirmationResponseCost`, `TotalCost`) — the one shape both transports' `EstimateTrafficCostAsync` project into |
-| `SynchronizerPermissionLevel` | The permission a participant holds on a connected synchronizer (`Unspecified`/`Submission`/`Confirmation`/`Observation`/`Unrecognized`) |
+| `SynchronizerPermissionLevel` | The permission a participant holds on a connected synchronizer (`Unspecified`/`Submission`/`Confirmation`/`Observation`) |
 | `IReassignmentCommand` | Marker for a single reassignment command — an `UnassignCommand` or an `AssignCommand` |
 | `UnassignCommand` | Unassigns a contract from its source synchronizer, naming both endpoints |
 | `AssignCommand` | Completes a reassignment on the target synchronizer, referencing the unassigned event's `reassignment_id` |
@@ -27,10 +27,10 @@ dotnet add package Canton.Ledger.Abstractions --version 0.6.0
 | `IAdminClient` | The Canton participant administration surface — party allocation and lookup, user and user-right management, package listing/download/vetting, DAR upload and validation |
 | `PartyDetails` | A party known to the participant (`Party`, `IsLocal`) |
 | `UserDetails` | A user on the participant (`UserId`, `PrimaryParty`) |
-| `UserRight` | A right granted to a user — `ActAs`, `ReadAs`, `ParticipantAdmin`, `IdentityProviderAdmin`, `ReadAsAnyParty`, `ExecuteAs`, `ExecuteAsAnyParty` |
+| `UserRight` | A right granted to a user — `ActAs`, `ReadAs`, `ParticipantAdmin`, `IdentityProviderAdmin`, `ReadAsAnyParty`, `ExecuteAs`, `ExecuteAsAnyParty`, `ActAsAnyParty` |
 | `PackageDetails` | A Daml-LF package known to the participant (`PackageId`, `Name`, `Version`, `PackageSize`, `KnownSince`) |
 | `PackageArchive` | A downloaded package archive — the `daml_lf` payload with its hash and `HashFunction` |
-| `HashFunction` | The hash function a `PackageArchive.Hash` was computed with (`Sha256`/`Unrecognized`) |
+| `HashFunction` | The hash function a `PackageArchive.Hash` was computed with (`Sha256`) |
 | `VettedPackage` | A package vetted on a participant and synchronizer |
 | `PackageIdResolver` / `Identifier.ForPackageName` | Package-name addressing: `ForPackageName` builds the `#<package-name>:<module>:<entity>` identifier Canton resolves per request, and `PackageIdResolver` caches the package id of a name's highest known version over any `IAdminClient` |
 | `ParsedLedgerError` | A participant error decoded from the `google.rpc.Status` payload (category, error id, message, `ErrorInfo` metadata, the `TransportStatus` the transport reported), in the one shape both clients produce; `MapCategory` is the single classifier turning the wire `category` into a `DamlErrorCategory` |

@@ -184,6 +184,15 @@ public class LedgerErrorClassificationParityTests
                 DamlErrorCategory.Unknown,
                 "SOMETHING_NEW"),
 
+            ["a stale stream authorization the participant clears on a fresh stream"] = new(
+                () => TypedFailure(
+                    StatusCode.Aborted, "STALE_STREAM_AUTHORIZATION", "the user's rights changed", "2"),
+                () => JsonResponse(
+                    HttpStatusCode.Conflict,
+                    """{"code": "STALE_STREAM_AUTHORIZATION", "cause": "the user's rights changed", "errorCategory": 2}"""),
+                DamlErrorCategory.ContentionOnSharedResources,
+                "STALE_STREAM_AUTHORIZATION"),
+
             ["a failure whose status carries no error detail"] = new(
                 () => DetaillessFailure(StatusCode.Internal, "internal error"),
                 () => JsonResponse(

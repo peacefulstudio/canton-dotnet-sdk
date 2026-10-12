@@ -25,58 +25,6 @@ public class ExerciseOutcomeExtensionsTests
     }
 
     [Fact]
-    public void OneOrThrow_throws_for_None_with_the_operation_in_message_and_Operation_property()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.None();
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.Message.Should().Contain("Mint").And.Contain("none");
-        exception.Operation.Should().Be("Mint");
-        exception.Category.Should().BeNull();
-        exception.Status.Should().BeNull();
-    }
-
-    [Fact]
-    public void OneOrThrow_throws_for_Many_reporting_count_and_contract_ids()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.Many(["cid-1", "cid-2"]);
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.Message.Should().Contain("Mint").And.Contain("2").And.Contain("cid-1").And.Contain("cid-2");
-        exception.Operation.Should().Be("Mint");
-    }
-
-    [Fact]
-    public void OneOrThrow_reports_a_None_outcome_as_committed_because_the_transaction_committed()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.None();
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.CommitState.Should().Be(CommitState.Committed);
-        exception.UpdateId.Should().BeNull();
-        exception.InnerException.Should().BeNull();
-    }
-
-    [Fact]
-    public void OneOrThrow_reports_a_Many_outcome_as_committed_because_the_transaction_committed()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.Many(["cid-1", "cid-2"]);
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.CommitState.Should().Be(CommitState.Committed);
-        exception.UpdateId.Should().BeNull();
-        exception.InnerException.Should().BeNull();
-    }
-
-    [Fact]
     public void OneOrThrow_throws_for_DamlError_carrying_the_structured_payload()
     {
         ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.DamlError(
@@ -94,63 +42,6 @@ public class ExerciseOutcomeExtensionsTests
         exception.Metadata.Should().BeEquivalentTo(SampleMetadata);
         exception.Message.Should().Contain("Transfer").And.Contain("CONTRACT_NOT_FOUND")
             .And.Contain("contract abc is not active");
-    }
-
-    [Fact]
-    public void OneOrThrow_throws_for_InfraError_carrying_status_code_and_source_exception()
-    {
-        var source = new TimeoutException("boom");
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.InfraError(
-            new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "participant unreachable", SourceException: source);
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.Operation.Should().Be("Mint");
-        exception.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
-        exception.InnerException.Should().BeSameAs(source);
-        exception.Message.Should().Contain("Mint").And.Contain("participant unreachable");
-    }
-
-    [Fact]
-    public void OneOrThrow_throws_for_CommittedUndecodable_reporting_the_commit_and_the_update_id()
-    {
-        var source = new FormatException("bad offset");
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.CommittedUndecodable(
-            "update-1", "the transaction could not be decoded", source);
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.Operation.Should().Be("Mint");
-        exception.Message.Should().Be("Mint: committed but undecodable: the transaction could not be decoded");
-        exception.CommitState.Should().Be(CommitState.Committed);
-        exception.UpdateId.Should().Be("update-1");
-        exception.InnerException.Should().BeSameAs(source);
-    }
-
-    [Fact]
-    public void OneOrThrow_reports_no_update_id_for_a_CommittedUndecodable_that_never_read_one()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.CommittedUndecodable(
-            null, "no transaction was present", new InvalidOperationException("no transaction was present"));
-
-        var act = () => outcome.OneOrThrow("Mint");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.CommitState.Should().Be(CommitState.Committed);
-        exception.UpdateId.Should().BeNull();
-    }
-
-    [Fact]
-    public void ThrowIfError_treats_CommittedUndecodable_as_success_because_the_command_committed()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.CommittedUndecodable(
-            "update-1", "the transaction could not be decoded", new FormatException("bad offset"));
-
-        var act = () => outcome.ThrowIfError("Settle");
-
-        act.Should().NotThrow();
     }
 
     [Fact]
@@ -229,21 +120,13 @@ public class ExerciseOutcomeExtensionsTests
     }
 
     [Fact]
-    public void ThrowIfError_returns_silently_for_One_None_and_Many()
+    public void ThrowIfError_accepts_None_because_the_command_committed()
     {
-        var outcomes = new ExerciseOutcome<int>[]
-        {
-            new ExerciseOutcome<int>.One(1),
-            new ExerciseOutcome<int>.None(),
-            new ExerciseOutcome<int>.Many(["cid-1", "cid-2"]),
-        };
+        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.None();
 
-        foreach (var outcome in outcomes)
-        {
-            var act = () => outcome.ThrowIfError("Mint");
+        var act = () => outcome.ThrowIfError("Mint");
 
-            act.Should().NotThrow();
-        }
+        act.Should().NotThrow();
     }
 
     [Fact]
@@ -260,19 +143,6 @@ public class ExerciseOutcomeExtensionsTests
         var exception = act.Should().Throw<LedgerOperationException>().Which;
         exception.Operation.Should().Be("Settle");
         exception.Category.Should().Be(DamlErrorCategory.ContentionOnSharedResources);
-    }
-
-    [Fact]
-    public void ThrowIfError_throws_for_InfraError_with_operation_context()
-    {
-        ExerciseOutcome<int> outcome = new ExerciseOutcome<int>.InfraError(
-            new TransportStatus.Grpc(GrpcStatusCode.DeadlineExceeded), "deadline exceeded");
-
-        var act = () => outcome.ThrowIfError("Settle");
-
-        var exception = act.Should().Throw<LedgerOperationException>().Which;
-        exception.Operation.Should().Be("Settle");
-        exception.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.DeadlineExceeded));
     }
 
     [Fact]

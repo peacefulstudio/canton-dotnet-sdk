@@ -14,6 +14,9 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using NSubstitute;
 using Xunit;
+using WireCommandState = Com.Daml.Ledger.Api.V2.Admin.CommandState;
+using WireHashFunction = Com.Daml.Ledger.Api.V2.HashFunction;
+using WirePackageStatus = Com.Daml.Ledger.Api.V2.PackageStatus;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
 
@@ -415,6 +418,50 @@ public sealed class AdminClientFailureContractTests : IDisposable
         var act = () => CreateClient().GetCommandStatusAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         await AssertUndecodableRead(act);
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_status_is_a_value_the_sdk_does_not_know()
+    {
+        _vettingService
+            .GetPackageStatusAsync(Arg.Any<GetPackageStatusRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Answered(new GetPackageStatusResponse { PackageStatus = (WirePackageStatus)42 }));
+
+        var act = () => CreateClient().GetPackageStatusAsync("pkg-id-1", TestContext.Current.CancellationToken);
+
+        var thrown = await AssertUndecodableRead(act);
+        thrown.Message.Should().Be("Malformed response from ledger: The participant sent PackageStatus value 42, which this SDK version does not know.");
+    }
+
+    [Fact]
+    public async Task GetPackageAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_hash_function_is_a_value_the_sdk_does_not_know()
+    {
+        _vettingService
+            .GetPackageAsync(Arg.Any<GetPackageRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Answered(new GetPackageResponse { Hash = "pkg-id-1", HashFunction = (WireHashFunction)99 }));
+
+        var act = () => CreateClient().GetPackageAsync("pkg-id-1", TestContext.Current.CancellationToken);
+
+        var thrown = await AssertUndecodableRead(act);
+        thrown.Message.Should().Be("Malformed response from ledger: The participant sent HashFunction value 99, which this SDK version does not know.");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(99)]
+    public async Task GetCommandStatusAsync_raises_an_undecodable_body_failure_that_did_not_commit_when_the_state_is_unspecified_or_unknown(int wireState)
+    {
+        _commandInspectionService
+            .GetCommandStatusAsync(Arg.Any<GetCommandStatusRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Answered(new GetCommandStatusResponse
+            {
+                CommandStatus = { new Com.Daml.Ledger.Api.V2.Admin.CommandStatus { State = (WireCommandState)wireState } },
+            }));
+
+        var act = () => CreateClient().GetCommandStatusAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = await AssertUndecodableRead(act);
+        thrown.Message.Should().Be($"Malformed response from ledger: The participant sent CommandState value {wireState}, which this SDK version does not know.");
     }
 
     [Fact]

@@ -99,13 +99,14 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
         HashingSchemeVersion version = HashingSchemeVersion.V2,
         RuntimeCommands.DeduplicationPeriod? deduplicationPeriod = null,
         RuntimeCommands.MinLedgerTime? minLedgerTime = null,
-        SignatureFormat format = SignatureFormat.Der) =>
+        SignatureFormat format = SignatureFormat.Der,
+        SigningAlgorithm algorithm = SigningAlgorithm.EcDsaSha256) =>
         new(
             Prepared(version),
             [
                 new PartySignatures(
                     Alice,
-                    [new LedgerSignature(format, new byte[] { 0x01, 0x02, 0x03 }, "fingerprint-1", SigningAlgorithm.EcDsaSha256)]),
+                    [new LedgerSignature(format, new byte[] { 0x01, 0x02, 0x03 }, "fingerprint-1", algorithm)]),
             ],
             "sub-1",
             deduplicationPeriod,
@@ -271,6 +272,24 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
+    public async Task PrepareSubmissionAsync_projects_the_served_name_HASHING_SCHEME_VERSION_V4_to_the_V4_member()
+    {
+        var client = ClientWith(TransportServing(
+            """
+            {
+              "preparedTransaction": "CgM=",
+              "preparedTransactionHash": "3q2+7w==",
+              "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V4"
+            }
+            """));
+
+        var prepared = await client.PrepareSubmissionAsync(
+            SingleCreateSubmission(), cancellationToken: TestContext.Current.CancellationToken);
+
+        prepared.HashingSchemeVersion.Should().Be(HashingSchemeVersion.V4);
+    }
+
+    [Fact]
     public async Task PrepareSubmissionAsync_fails_as_undecodable_when_the_prepared_transaction_is_missing()
     {
         var client = ClientWith(TransportServing(
@@ -340,6 +359,33 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteSubmissionAsync_posts_the_V4_hashing_scheme_as_HASHING_SCHEME_VERSION_V4()
+    {
+        var transport = TransportServing("{}");
+        var client = ClientWith(transport);
+
+        await client.ExecuteSubmissionAsync(
+            Signed(version: HashingSchemeVersion.V4), cancellationToken: TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("hashingSchemeVersion").GetString().Should().Be("HASHING_SCHEME_VERSION_V4");
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_posts_the_ML_DSA_65_algorithm_as_SIGNING_ALGORITHM_SPEC_ML_DSA_65()
+    {
+        var transport = TransportServing("{}");
+        var client = ClientWith(transport);
+
+        await client.ExecuteSubmissionAsync(
+            Signed(algorithm: SigningAlgorithm.MlDsa65), cancellationToken: TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("partySignatures").GetProperty("signatures")[0].GetProperty("signatures")[0]
+            .GetProperty("signingAlgorithmSpec").GetString().Should().Be("SIGNING_ALGORITHM_SPEC_ML_DSA_65");
+    }
+
+    [Fact]
     public async Task ExecuteSubmissionAsync_nests_a_duration_deduplication_period_and_omits_unset_optionals()
     {
         var transport = TransportServing("{}");
@@ -383,6 +429,20 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
 
         (await act.Should().ThrowAsync<ArgumentException>())
             .Which.Message.Should().Contain("SignatureFormat value 99");
+        transport.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_rejects_a_signing_algorithm_the_served_API_has_no_name_for_before_sending()
+    {
+        var transport = TransportServing("{}");
+        var client = ClientWith(transport);
+
+        var act = () => client.ExecuteSubmissionAsync(
+            Signed(algorithm: (SigningAlgorithm)99), cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ArgumentException>())
+            .Which.Message.Should().Contain("SigningAlgorithm value 99");
         transport.Requests.Should().BeEmpty();
     }
 
@@ -564,70 +624,33 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPreferredPackageVersionAsync_gets_with_the_query_names_the_participant_reads_and_projects_the_preference()
+    public async Task GetPreferredPackagesAsync_raises_NO_PREFERRED_PACKAGES_FOUND_instead_of_an_empty_result_when_no_version_is_vetted()
     {
-        var transport = TransportServing(
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.BadRequest,
             """
             {
-              "packagePreference": {
-                "packageReference": {"packageId": "pkg-1", "packageName": "holding", "packageVersion": "1.2.0"},
-                "synchronizerId": "sync::ns1"
-              }
+              "code": "NO_PREFERRED_PACKAGES_FOUND",
+              "cause": "No synchronizer satisfies the vetting requirements",
+              "correlationId": null,
+              "traceId": null,
+              "context": {},
+              "resources": [],
+              "errorCategory": 9,
+              "grpcCodeValue": 9,
+              "retryInfo": null,
+              "definiteAnswer": null
             }
             """);
         var client = ClientWith(transport);
 
-        var preference = await client.GetPreferredPackageVersionAsync(
-            [new Party("alice::ns1"), new Party("bob::ns1")],
-            "holding",
-            new SynchronizerId("sync::ns1"),
-            new DateTimeOffset(2026, 8, 14, 9, 30, 0, TimeSpan.Zero),
-            cancellationToken: TestContext.Current.CancellationToken);
+        var act = () => client.GetPreferredPackagesAsync(
+            [new PackageVettingRequirement([Alice], "unvetted-pkg")], cancellationToken: TestContext.Current.CancellationToken);
 
-        preference.Should().Be(new PackagePreference(
-            new PackageReference("pkg-1", "holding", "1.2.0"), new SynchronizerId("sync::ns1")));
-        transport.LastRequest!.Method.Should().Be(HttpMethod.Get);
-        transport.LastRequest.RequestUri!.PathAndQuery.Should().Be(
-            "/v2/interactive-submission/preferred-package-version"
-            + "?parties=alice%3A%3Ans1&parties=bob%3A%3Ans1&package-name=holding"
-            + "&synchronizer-id=sync%3A%3Ans1&vetting_valid_at=2026-08-14T09%3A30%3A00.0000000%2B00%3A00");
-    }
-
-    [Fact]
-    public async Task GetPreferredPackageVersionAsync_leaves_the_optional_query_parameters_out_when_unset()
-    {
-        var transport = TransportServing("{}");
-        var client = ClientWith(transport);
-
-        await client.GetPreferredPackageVersionAsync(
-            [Alice], "holding", cancellationToken: TestContext.Current.CancellationToken);
-
-        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be(
-            "/v2/interactive-submission/preferred-package-version?parties=party%3A%3Aalice&package-name=holding");
-    }
-
-    [Fact]
-    public async Task GetPreferredPackageVersionAsync_returns_null_when_no_package_satisfies_the_requirement()
-    {
-        var client = ClientWith(TransportServing("{}"));
-
-        var preference = await client.GetPreferredPackageVersionAsync(
-            [Alice], "holding", cancellationToken: TestContext.Current.CancellationToken);
-
-        preference.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task GetPreferredPackageVersionAsync_is_replayed_by_the_opt_in_retry_pipeline()
-    {
-        var transport = TransportFailingAfterSend();
-        var client = RetryingClientWith(transport);
-
-        var act = () => client.GetPreferredPackageVersionAsync(
-            [Alice], "holding", cancellationToken: TestContext.Current.CancellationToken);
-
-        await act.Should().ThrowAsync<LedgerOperationException>();
-        transport.Requests.Should().HaveCount(4);
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("NO_PREFERRED_PACKAGES_FOUND");
+        thrown.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateOther);
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]
@@ -646,10 +669,6 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
                 null!, new RuntimeCommands.SubmitterInfo(Alice), cancellationToken: cancellationToken))
             .Should().ThrowAsync<ArgumentNullException>();
         await FluentActions.Awaiting(() => client.GetPreferredPackagesAsync(null!, cancellationToken: cancellationToken))
-            .Should().ThrowAsync<ArgumentNullException>();
-        await FluentActions.Awaiting(() => client.GetPreferredPackageVersionAsync(null!, "holding", cancellationToken: cancellationToken))
-            .Should().ThrowAsync<ArgumentNullException>();
-        await FluentActions.Awaiting(() => client.GetPreferredPackageVersionAsync([Alice], null!, cancellationToken: cancellationToken))
             .Should().ThrowAsync<ArgumentNullException>();
     }
 }

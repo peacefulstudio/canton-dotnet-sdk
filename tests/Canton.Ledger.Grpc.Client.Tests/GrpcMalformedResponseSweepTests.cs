@@ -9,6 +9,7 @@ using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using XunitRecord = Xunit.Record;
 using Xunit;
+using Admin = Com.Daml.Ledger.Api.V2.Admin;
 using Interactive = Com.Daml.Ledger.Api.V2.Interactive;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
 using ProtoExercisedEvent = Com.Daml.Ledger.Api.V2.ExercisedEvent;
@@ -68,6 +69,21 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
 
     private static IMessage ResponseMalformedIn(string entryPoint, MalformedField field) => (entryPoint, field) switch
     {
+        ("GetPartiesAsync(2)", MalformedField.PartyEmpty) =>
+            new Admin.GetPartiesResponse { PartyDetails = { new Admin.PartyDetails { Party = string.Empty, IsLocal = true } } },
+        ("ListKnownPartiesAsync(1)", MalformedField.PartyEmpty) =>
+            new Admin.ListKnownPartiesResponse { PartyDetails = { new Admin.PartyDetails { Party = string.Empty, IsLocal = true } } },
+        ("ListUsersAsync(1)", MalformedField.PrimaryPartyWhitespace) =>
+            new Admin.ListUsersResponse { Users = { new Admin.User { Id = "u", PrimaryParty = " " } } },
+        ("ListVettedPackagesAsync(2)", MalformedField.SynchronizerIdEmpty) =>
+            new ListVettedPackagesResponse
+            {
+                VettedPackages = { new VettedPackages { Packages = { new VettedPackage { PackageId = "p" } } } },
+            },
+
+        ("ListUserRightsAsync(2)", MalformedField.UnknownOneofArm) =>
+            Admin.ListUserRightsResponse.Parser.ParseFrom([0x0A, 0x03, 0x9A, 0x06, 0x00]),
+
         ("GetLedgerEndAsync(2)", MalformedField.OffsetNegative) => new GetLedgerEndResponse { Offset = -1 },
         ("GetLatestPrunedOffsetsAsync(2)", MalformedField.OffsetNegative) =>
             new GetLatestPrunedOffsetsResponse { ParticipantPrunedUpToInclusive = -1 },
@@ -97,6 +113,11 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
         },
 
         ("PrepareSubmissionAsync(3)", MalformedField.ResultMissing) => new Interactive.PrepareSubmissionResponse(),
+        ("PrepareSubmissionAsync(3)", MalformedField.EnumValueUnknown) => new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            HashingSchemeVersion = (Interactive.HashingSchemeVersion)99,
+        },
         ("PrepareSubmissionAsync(3)" or "EstimateTrafficCostAsync(3)", MalformedField.TimestampOutOfRange) =>
             PreparedWith(new Interactive.CostEstimation { EstimationTimestamp = new Timestamp { Seconds = long.MaxValue } }),
         ("EstimateTrafficCostAsync(3)", MalformedField.CostOutOfRange) =>
@@ -104,10 +125,6 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
 
         ("GetPreferredPackagesAsync(5)", MalformedField.SynchronizerIdMissing) =>
             new Interactive.GetPreferredPackagesResponse(),
-        ("GetPreferredPackageVersionAsync(6)", MalformedField.SynchronizerIdMissing) =>
-            PreferenceOf(new Interactive.PackagePreference { PackageReference = PackageReference() }),
-        ("GetPreferredPackageVersionAsync(6)", MalformedField.PackageReferenceMissing) =>
-            PreferenceOf(new Interactive.PackagePreference { SynchronizerId = "sync::a" }),
 
         _ => throw new NotSupportedException($"No gRPC response is built for {entryPoint} with {field}."),
     };
@@ -178,12 +195,7 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
     private static Interactive.PrepareSubmissionResponse PreparedWith(Interactive.CostEstimation estimation) => new()
     {
         PreparedTransaction = new Interactive.PreparedTransaction(),
+        HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
         CostEstimation = estimation,
     };
-
-    private static Interactive.GetPreferredPackageVersionResponse PreferenceOf(Interactive.PackagePreference preference) =>
-        new() { PackagePreference = preference };
-
-    private static PackageReference PackageReference() =>
-        new() { PackageId = "pkg-1", PackageName = "pkg", PackageVersion = "1.0.0" };
 }

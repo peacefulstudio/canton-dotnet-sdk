@@ -13,7 +13,7 @@ public static partial class LedgerApiVersionSkewGuard
     internal static string VendoredSpecCantonVersion => ReadCantonVersionPin();
 
     internal static IReadOnlySet<string> AcceptedCantonMinors { get; } =
-        new HashSet<string>(StringComparer.Ordinal) { "3.5" };
+        new HashSet<string>(StringComparer.Ordinal) { "3.6" };
 
     private static string ReadCantonVersionPin()
     {

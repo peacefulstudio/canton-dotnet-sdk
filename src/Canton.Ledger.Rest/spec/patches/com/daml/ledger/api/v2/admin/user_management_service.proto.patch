@@ -1,6 +1,6 @@
 --- a/com/daml/ledger/api/v2/admin/user_management_service.proto
 +++ b/com/daml/ledger/api/v2/admin/user_management_service.proto
-@@ -6,8 +6,10 @@ syntax = "proto3";
+@@ -6,8 +6,10 @@
  package com.daml.ledger.api.v2.admin;
  
  import "com/daml/ledger/api/v2/admin/object_meta.proto";
@@ -11,7 +11,7 @@
  option csharp_namespace = "Com.Daml.Ledger.Api.V2.Admin";
  option java_outer_classname = "UserManagementServiceOuterClass";
  option java_package = "com.daml.ledger.api.v2.admin";
-@@ -42,33 +44,74 @@ option java_package = "com.daml.ledger.api.v2.admin";
+@@ -42,33 +44,74 @@
  // In order to grant or revoke user rights use ``GrantRights' and ``RevokeRights`` RPCs.
  service UserManagementService {
    // Create a new user.
@@ -95,8 +95,8 @@
  }
  
  // Users and rights
-@@ -167,21 +210,26 @@ message Right {
-   message CanExecuteAsAnyParty {}
+@@ -171,23 +214,28 @@
+   message CanActAsAnyParty {}
  
    // Required
 +  RightKind kind = 1 [json_name = "kind"];
@@ -126,6 +126,9 @@
      // The user can prepare and execute submissions as any party on a participant.
 -    CanExecuteAsAnyParty can_execute_as_any_party = 7;
 +    Right.CanExecuteAsAnyParty can_execute_as_any_party = 7 [json_name = "CanExecuteAsAnyParty"];
+     // The user can act as any party on a participant.
+-    CanActAsAnyParty can_act_as_any_party = 8;
++    Right.CanActAsAnyParty can_act_as_any_party = 8 [json_name = "CanActAsAnyParty"];
    }
  }
  

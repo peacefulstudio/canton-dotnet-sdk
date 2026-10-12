@@ -252,11 +252,11 @@ internal sealed class LedgerCallInvoker
         catch (RpcException ex)
         {
             activity.RecordGrpcError(ex);
-            throw DamlErrorParser.Parse(ex).ToException(kind, ex);
+            throw RpcCallEnding.Rejected(ex).ToException(kind);
         }
         catch (Exception decodeFailure) when (receipt.ResponseReceived && MalformedResponse.IsWireDecodeFailure(decodeFailure))
         {
-            var undecodable = decodeFailure.ToUndecodableBodyException(kind);
+            var undecodable = RpcCallEnding.Undecodable(decodeFailure).ToException(kind);
             activity.RecordInfraError(new TransportStatus.UndecodableBody(), undecodable.Message);
             throw undecodable;
         }

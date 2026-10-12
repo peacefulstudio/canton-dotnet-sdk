@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
@@ -101,6 +102,23 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_posts_the_ML_DSA_65_key_spec_as_SIGNING_KEY_SPEC_ML_DSA_65()
+    {
+        var transport = TransportServing(ServedTopologyBody);
+        var client = ClientWith(transport);
+        var request = TopologyRequest() with
+        {
+            PublicKey = new SigningPublicKey(PublicKeyFormat.Raw, new byte[] { 0x30, 0x59 }, SigningKeySpec.MlDsa65),
+        };
+
+        await client.GenerateExternalPartyTopologyAsync(request, TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("publicKey").GetProperty("keySpec").GetString()
+            .Should().Be("SIGNING_KEY_SPEC_ML_DSA_65");
+    }
+
+    [Fact]
     public async Task GenerateExternalPartyTopologyAsync_sends_the_multi_hosting_options_when_set()
     {
         var transport = TransportServing(ServedTopologyBody);
@@ -177,6 +195,24 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
 
         (await act.Should().ThrowAsync<ArgumentException>())
             .Which.Message.Should().Contain("SigningKeySpec value 42");
+        transport.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_rejects_a_public_key_format_the_served_API_has_no_name_for_before_sending()
+    {
+        var transport = TransportServing(ServedTopologyBody);
+        var client = ClientWith(transport);
+
+        var act = () => client.GenerateExternalPartyTopologyAsync(
+            TopologyRequest() with
+            {
+                PublicKey = new SigningPublicKey((PublicKeyFormat)99, new byte[] { 0x30 }, SigningKeySpec.EcP256),
+            },
+            TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ArgumentException>())
+            .Which.Message.Should().Contain("PublicKeyFormat value 99");
         transport.Requests.Should().BeEmpty();
     }
 

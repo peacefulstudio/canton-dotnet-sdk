@@ -22,11 +22,12 @@ namespace Canton.Ledger.Rest.Client.Raw;
 /// reading a preferred package version.
 /// </summary>
 /// <remarks>
-/// The participant deprecates this route for removal in Canton 3.6 and directs callers to
-/// <see cref="IInteractiveSubmissionServiceApi.GetPreferredPackages"/>. That successor takes its
-/// vetting requirements as a request body rather than as query parameters and answers with a
-/// package preference per package name, so moving to it is a change of call shape, not a mechanical
-/// substitution of one member for another.
+/// Canton 3.6 disables this route by default and Canton 3.7 removes it; a 3.6 participant answers
+/// <c>DEPRECATED_API_DISABLED</c> unless its deprecated endpoints are re-enabled. The participant
+/// directs callers to <see cref="IInteractiveSubmissionServiceApi.GetPreferredPackages"/>. That
+/// successor takes its vetting requirements as a request body rather than as query parameters and
+/// answers with a package preference per package name, so moving to it is a change of call shape,
+/// not a mechanical substitution of one member for another.
 /// </remarks>
 [Experimental(CantonRestDiagnostics.ExperimentalDiagnosticId)]
 public interface IInteractiveSubmissionApi

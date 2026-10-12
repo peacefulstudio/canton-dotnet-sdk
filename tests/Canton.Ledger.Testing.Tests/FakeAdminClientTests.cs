@@ -201,6 +201,16 @@ public class FakeAdminClientTests
     }
 
     [Fact]
+    public async Task ListUserRightsAsync_returns_a_staged_ActAsAnyParty_right()
+    {
+        var client = FakeAdminClient.Create().WithUserRights("alice", new UserRight.ActAsAnyParty()).Build();
+
+        var result = await client.ListUserRightsAsync("alice", TestContext.Current.CancellationToken);
+
+        result.Should().Equal(new UserRight.ActAsAnyParty());
+    }
+
+    [Fact]
     public async Task ListUserRightsAsync_returns_null_for_unstaged_userId()
     {
         var client = FakeAdminClient.Create().WithUserRights("alice", new UserRight.ParticipantAdmin()).Build();

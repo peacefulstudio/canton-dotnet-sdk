@@ -28,7 +28,10 @@ public sealed class ClientCredentialsOptions : IValidatableObject
     public required string ClientSecret { get; set; }
 
     /// <summary>
-    /// OAuth2 audience (e.g. <c>https://canton.network/</c>). Optional.
+    /// OAuth2 audience sent with the token request. Optional. When set, it must equal the
+    /// participant's <c>target-audience</c> (by default Canton accepts
+    /// <c>https://daml.com/jwt/aud/participant/&lt;participant-id&gt;</c>). Leave it unset
+    /// only if your identity provider stamps that audience into the token itself.
     /// </summary>
     public string? Audience { get; set; }
 

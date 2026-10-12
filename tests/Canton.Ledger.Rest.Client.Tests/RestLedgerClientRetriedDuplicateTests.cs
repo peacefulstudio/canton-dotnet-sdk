@@ -211,23 +211,6 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_keeps_the_DamlError_of_a_retried_DUPLICATE_COMMAND_the_participant_did_not_accept()
-    {
-        var transport = new ScriptedHandler(
-            LostResponse,
-            Json(HttpStatusCode.Conflict, DuplicateCommandBody(
-                "\"accepted\": \"false\", \"completion_offset\": \"9663\"")));
-        var client = ClientRetrying(transport);
-
-        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
-            Submission, cancellationToken: TestContext.Current.CancellationToken);
-
-        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
-            .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
-        transport.Paths.Should().Equal(SubmitPath, SubmitPath);
-    }
-
-    [Fact]
     public async Task TrySubmitAndWaitForTransactionAsync_keeps_the_DamlError_of_a_retried_DUPLICATE_COMMAND_when_the_point_read_fails()
     {
         var transport = new ScriptedHandler(

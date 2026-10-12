@@ -71,6 +71,14 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
             () => new Metadata(),
             () => { });
 
+    private static AsyncUnaryCall<TResponse> Faulted<TResponse>(RpcException exception) =>
+        new(
+            Task.FromException<TResponse>(exception),
+            Task.FromResult(new Metadata()),
+            () => exception.Status,
+            () => new Metadata(),
+            () => { });
+
     private static RuntimeCommands.CommandsSubmission Submission() =>
         RuntimeCommands.CommandsSubmission
             .Single(new RuntimeCommands.CreateCommand(
@@ -80,7 +88,11 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
             .WithCommandId(new RuntimeCommands.CommandId("cmd-1"));
 
     private static Interactive.PrepareSubmissionResponse PreparedResponse() =>
-        new() { PreparedTransaction = new Interactive.PreparedTransaction() };
+        new()
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
+        };
 
     private static byte[] PreparedTransactionBytes() =>
         new Interactive.PreparedTransaction { Metadata = new Interactive.Metadata { TransactionUuid = "uuid-1" } }
@@ -90,18 +102,20 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         string submissionId = "sub-1",
         RuntimeCommands.DeduplicationPeriod? deduplication = null,
         RuntimeCommands.MinLedgerTime? minLedgerTime = null,
-        byte[]? preparedTransaction = null) =>
+        byte[]? preparedTransaction = null,
+        HashingSchemeVersion version = HashingSchemeVersion.V3,
+        SigningAlgorithm algorithm = SigningAlgorithm.EcDsaSha256) =>
         new(
             new PreparedSubmission(
                 preparedTransaction ?? PreparedTransactionBytes(),
                 new byte[] { 9, 9 },
-                HashingSchemeVersion.V3,
+                version,
                 null,
                 null),
             [
                 new PartySignatures(
                     Alice,
-                    [new LedgerSignature(SignatureFormat.Der, new byte[] { 1, 2, 3 }, "fp-1", SigningAlgorithm.EcDsaSha256)]),
+                    [new LedgerSignature(SignatureFormat.Der, new byte[] { 1, 2, 3 }, "fp-1", algorithm)]),
             ],
             submissionId,
             deduplication,
@@ -209,14 +223,54 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         StubPrepare(new Interactive.PrepareSubmissionResponse
         {
             PreparedTransaction = new Interactive.PreparedTransaction(),
-            HashingSchemeVersion = (Interactive.HashingSchemeVersion)9,
+            HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
         });
 
         var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
 
         result.HashingDetails.Should().BeNull();
         result.CostEstimate.Should().BeNull();
-        ((int)result.HashingSchemeVersion).Should().Be(9);
+        result.HashingSchemeVersion.Should().Be(HashingSchemeVersion.V2);
+    }
+
+    [Theory]
+    [InlineData(2, HashingSchemeVersion.V2)]
+    [InlineData(3, HashingSchemeVersion.V3)]
+    [InlineData(4, HashingSchemeVersion.V4)]
+    public async Task PrepareSubmissionAsync_maps_the_wire_hashing_scheme_version_to_the_public_member(
+        int wireValue, HashingSchemeVersion expected)
+    {
+        StubPrepare(new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            HashingSchemeVersion = (Interactive.HashingSchemeVersion)wireValue,
+        });
+
+        var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        result.HashingSchemeVersion.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(99)]
+    public async Task PrepareSubmissionAsync_rejects_a_wire_hashing_scheme_version_it_does_not_know_as_undecodable(
+        int wireValue)
+    {
+        StubPrepare(new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            HashingSchemeVersion = (Interactive.HashingSchemeVersion)wireValue,
+        });
+
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Contain($"HashingSchemeVersion value {wireValue}");
     }
 
     [Fact]
@@ -309,6 +363,29 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         signature.Signature_.ToByteArray().Should().Equal(1, 2, 3);
         signature.SignedBy.Should().Be("fp-1");
         signature.SigningAlgorithmSpec.Should().Be(Wire.SigningAlgorithmSpec.EcDsaSha256);
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_sends_hashing_scheme_version_4_as_wire_number_4()
+    {
+        Interactive.ExecuteSubmissionRequest? captured = null;
+        StubExecute(r => captured = r);
+
+        await CreateClient().ExecuteSubmissionAsync(Signed(version: HashingSchemeVersion.V4), cancellationToken: Ct);
+
+        ((int)captured!.HashingSchemeVersion).Should().Be(4);
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_sends_the_ML_DSA_65_signing_algorithm_as_wire_number_4()
+    {
+        Interactive.ExecuteSubmissionRequest? captured = null;
+        StubExecute(r => captured = r);
+
+        await CreateClient().ExecuteSubmissionAsync(Signed(algorithm: SigningAlgorithm.MlDsa65), cancellationToken: Ct);
+
+        var signature = captured!.PartySignatures.Signatures.Single().Signatures.Single();
+        ((int)signature.SigningAlgorithmSpec).Should().Be(4);
     }
 
     [Fact]
@@ -576,60 +653,24 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPreferredPackageVersionAsync_maps_the_request_and_projects_the_preference()
+    public async Task GetPreferredPackagesAsync_raises_NO_PREFERRED_PACKAGES_FOUND_instead_of_an_empty_result_when_no_version_is_vetted()
     {
-        Interactive.GetPreferredPackageVersionRequest? captured = null;
-        _service.GetPreferredPackageVersionAsync(
-                Arg.Do<Interactive.GetPreferredPackageVersionRequest>(r => captured = r),
-                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Ok(new Interactive.GetPreferredPackageVersionResponse
-            {
-                PackagePreference = new Interactive.PackagePreference
-                {
-                    PackageReference = new Wire.PackageReference { PackageId = "pid-2", PackageName = "my-pkg", PackageVersion = "1.2.3" },
-                    SynchronizerId = "sync::2",
-                },
-            }));
+        _service.GetPreferredPackagesAsync(
+                Arg.Any<Interactive.GetPreferredPackagesRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Faulted<Interactive.GetPreferredPackagesResponse>(CategorisedRpcException.WithCategory(
+                StatusCode.FailedPrecondition,
+                "NO_PREFERRED_PACKAGES_FOUND",
+                "No synchronizer satisfies the vetting requirements",
+                "9")));
 
-        var result = await CreateClient().GetPreferredPackageVersionAsync(
-            [Alice], "my-pkg", new SynchronizerId("sync::2"), cancellationToken: Ct);
+        var act = () => CreateClient().GetPreferredPackagesAsync(
+            [new PackageVettingRequirement([Alice], "unvetted-pkg")], cancellationToken: Ct);
 
-        captured!.PackageName.Should().Be("my-pkg");
-        captured.Parties.Should().Equal("alice::1220");
-        captured.SynchronizerId.Should().Be("sync::2");
-        result!.Package.Should().Be(new PackageReference("pid-2", "my-pkg", "1.2.3"));
-        result.SynchronizerId.Value.Should().Be("sync::2");
-    }
-
-    [Fact]
-    public async Task GetPreferredPackageVersionAsync_returns_null_when_the_response_has_no_preference()
-    {
-        _service.GetPreferredPackageVersionAsync(
-                Arg.Any<Interactive.GetPreferredPackageVersionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Ok(new Interactive.GetPreferredPackageVersionResponse()));
-
-        var result = await CreateClient().GetPreferredPackageVersionAsync([Alice], "my-pkg", cancellationToken: Ct);
-
-        result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task GetPreferredPackageVersionAsync_throws_ArgumentNullException_for_null_parties()
-    {
-        var act = () => CreateClient().GetPreferredPackageVersionAsync(null!, "my-pkg", cancellationToken: Ct);
-
-        await act.Should().ThrowAsync<ArgumentNullException>();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("  ")]
-    public async Task GetPreferredPackageVersionAsync_throws_ArgumentException_for_a_blank_package_name(string? packageName)
-    {
-        var act = () => CreateClient().GetPreferredPackageVersionAsync([Alice], packageName!, cancellationToken: Ct);
-
-        await act.Should().ThrowAsync<ArgumentException>();
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("NO_PREFERRED_PACKAGES_FOUND");
+        thrown.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateOther);
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.FailedPrecondition));
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     private void StubPrepare(Interactive.PrepareSubmissionResponse response) =>

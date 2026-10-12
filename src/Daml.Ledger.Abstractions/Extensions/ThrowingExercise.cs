@@ -67,35 +67,15 @@ public static class ThrowingExercise
         var outcome = await writer
             .TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
-        outcome.ThrowIfError(cancellationToken);
+        OutcomeUnwrapPolicy.Discard(outcome, DiscardIntent.RejectNone, "TrySubmitSingleAsync", cancellationToken);
     }
 
     private static T GetResultOrThrow<T>(this ExerciseOutcome<T> outcome, CancellationToken cancellationToken) =>
-        outcome.ResultOrThrow(
+        OutcomeUnwrapPolicy.Value(
+            outcome,
+            ValueIntent.RequireOne,
             "TryExerciseAsync",
             static () => "TryExerciseAsync returned no result (None); expected exactly one. Use TryExerciseAsync for structured handling.",
             static count => $"TryExerciseAsync returned Many ({count} results); use TryCreateManyByExerciseAsync to collect created contract ids, or inspect the TransactionResult directly.",
             cancellationToken);
-
-    private static void ThrowIfError<T>(this ExerciseOutcome<T> outcome, CancellationToken cancellationToken)
-    {
-        switch (outcome)
-        {
-            case ExerciseOutcome<T>.One:
-            case ExerciseOutcome<T>.Many:
-            case ExerciseOutcome<T>.CommittedUndecodable:
-                break;
-            case ExerciseOutcome<T>.None:
-                throw LedgerOperationException.CommittedWithoutDetail(
-                    "TrySubmitSingleAsync returned no transaction (None); the command committed, but produced no transaction. Use TrySubmitSingleAsync for the non-throwing path.");
-            case ExerciseOutcome<T>.DamlError e:
-                throw e.ToException();
-            case ExerciseOutcome<T>.InfraError e:
-                e.ThrowAsCancellationOrException(cancellationToken);
-                break;
-            default:
-                throw new LedgerOperationException(
-                    $"Unexpected outcome {outcome.GetType().Name} from TrySubmitSingleAsync.");
-        }
-    }
 }

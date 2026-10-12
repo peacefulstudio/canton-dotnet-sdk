@@ -41,23 +41,7 @@ public static class ExerciseOutcomeExtensions
         ArgumentNullException.ThrowIfNull(outcome);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
 
-        return outcome switch
-        {
-            ExerciseOutcome<T>.One one => one.Result,
-            ExerciseOutcome<T>.None => throw LedgerOperationException.CommittedWithoutDetail(
-                    $"{operationName}: expected exactly one result but the operation produced none (None).")
-                .WithOperation(operationName),
-            ExerciseOutcome<T>.Many many => throw LedgerOperationException.CommittedWithoutDetail(
-                    $"{operationName}: expected exactly one result but the operation produced {many.Count} " +
-                    $"(contract ids: {string.Join(", ", many.ContractIds)}).")
-                .WithOperation(operationName),
-            ExerciseOutcome<T>.DamlError damlError => throw damlError.ToException(operationName),
-            ExerciseOutcome<T>.InfraError infraError => throw infraError.ToException(operationName),
-            ExerciseOutcome<T>.CommittedUndecodable undecodable => throw undecodable.ToException(operationName),
-            _ => throw new LedgerOperationException(
-                    $"{operationName}: unexpected outcome {outcome.GetType().Name}.")
-                .WithOperation(operationName),
-        };
+        return OutcomeUnwrapPolicy.Value(outcome, ValueIntent.RequireOneForOperation, operationName);
     }
 
     /// <summary>
@@ -98,41 +82,6 @@ public static class ExerciseOutcomeExtensions
         ArgumentNullException.ThrowIfNull(outcome);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
 
-        switch (outcome)
-        {
-            case ExerciseOutcome<T>.DamlError damlError:
-                throw damlError.ToException(operationName);
-            case ExerciseOutcome<T>.InfraError infraError:
-                throw infraError.ToException(operationName);
-        }
+        OutcomeUnwrapPolicy.Discard(outcome, DiscardIntent.AcceptNone, operationName);
     }
-
-    private static LedgerOperationException ToException<T>(
-        this ExerciseOutcome<T>.DamlError error,
-        string operationName) =>
-        new LedgerOperationException(
-                $"{operationName}: Daml error [{error.Category}/{error.ErrorId}]: {error.Message}",
-                error.Category,
-                error.ErrorId,
-                error.Metadata)
-            .WithOperation(operationName);
-
-    private static LedgerOperationException ToException<T>(
-        this ExerciseOutcome<T>.InfraError error,
-        string operationName) =>
-        new LedgerOperationException(
-                $"{operationName}: infrastructure error [{error.Status}]: {error.Message}",
-                error.Status,
-                error.Category,
-                error.SourceException)
-            .WithOperation(operationName);
-
-    private static LedgerOperationException ToException<T>(
-        this ExerciseOutcome<T>.CommittedUndecodable error,
-        string operationName) =>
-        new LedgerOperationException(
-                $"{operationName}: committed but undecodable: {error.Message}",
-                error.UpdateId,
-                error.SourceException)
-            .WithOperation(operationName);
 }

@@ -310,10 +310,11 @@ public sealed class RestAdminClientTests : IDisposable
         new UserRight.ReadAsAnyParty(),
         new UserRight.ExecuteAs(new Party("carol::1220ef")),
         new UserRight.ExecuteAsAnyParty(),
+        new UserRight.ActAsAnyParty(),
     ];
 
     private const string EveryKindOfRightJson =
-        """[{"kind":{"CanActAs":{"value":{"party":"alice::1220ab"}}}},{"kind":{"CanReadAs":{"value":{"party":"bob::1220cd"}}}},{"kind":{"ParticipantAdmin":{"value":{}}}},{"kind":{"IdentityProviderAdmin":{"value":{}}}},{"kind":{"CanReadAsAnyParty":{"value":{}}}},{"kind":{"CanExecuteAs":{"value":{"party":"carol::1220ef"}}}},{"kind":{"CanExecuteAsAnyParty":{"value":{}}}}]""";
+        """[{"kind":{"CanActAs":{"value":{"party":"alice::1220ab"}}}},{"kind":{"CanReadAs":{"value":{"party":"bob::1220cd"}}}},{"kind":{"ParticipantAdmin":{"value":{}}}},{"kind":{"IdentityProviderAdmin":{"value":{}}}},{"kind":{"CanReadAsAnyParty":{"value":{}}}},{"kind":{"CanExecuteAs":{"value":{"party":"carol::1220ef"}}}},{"kind":{"CanExecuteAsAnyParty":{"value":{}}}},{"kind":{"CanActAsAnyParty":{"value":{}}}}]""";
 
     [Fact]
     public async Task GrantUserRightsAsync_posts_every_kind_of_right_to_the_users_rights_route()
@@ -341,6 +342,32 @@ public sealed class RestAdminClientTests : IDisposable
         transport.LastRequest.RequestUri!.PathAndQuery.Should().Be("/v2/users/carol/rights");
         transport.LastRequestBody.Should().Be(
             """{"userId":"carol","rights":[{"kind":{"CanReadAs":{"value":{"party":"bob::1220cd"}}}}]}""");
+    }
+
+    [Fact]
+    public async Task GrantUserRightsAsync_sends_the_act_as_any_party_right_as_the_literal_CanActAsAnyParty_arm()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"newlyGrantedRights": []}""");
+        IAdminClient client = ClientWith(transport);
+
+        await client.GrantUserRightsAsync(
+            "carol", [new UserRight.ActAsAnyParty()], TestContext.Current.CancellationToken);
+
+        transport.LastRequestBody.Should().Be(
+            """{"userId":"carol","rights":[{"kind":{"CanActAsAnyParty":{"value":{}}}}]}""");
+    }
+
+    [Fact]
+    public async Task RevokeUserRightsAsync_sends_the_act_as_any_party_right_as_the_literal_CanActAsAnyParty_arm()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"newlyRevokedRights": []}""");
+        IAdminClient client = ClientWith(transport);
+
+        await client.RevokeUserRightsAsync(
+            "carol", [new UserRight.ActAsAnyParty()], TestContext.Current.CancellationToken);
+
+        transport.LastRequestBody.Should().Be(
+            """{"userId":"carol","rights":[{"kind":{"CanActAsAnyParty":{"value":{}}}}]}""");
     }
 
     [Fact]
@@ -381,6 +408,18 @@ public sealed class RestAdminClientTests : IDisposable
         rights.Should().Equal(EveryKindOfRight);
         transport.LastRequest!.Method.Should().Be(HttpMethod.Get);
         transport.LastRequest.RequestUri!.PathAndQuery.Should().Be("/v2/users/carol%40example/rights");
+    }
+
+    [Fact]
+    public async Task ListUserRightsAsync_decodes_the_literal_act_as_any_party_arm_to_ActAsAnyParty()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, """{"rights":[{"kind":{"CanActAsAnyParty":{"value":{}}}}]}""");
+        IAdminClient client = ClientWith(transport);
+
+        var rights = await client.ListUserRightsAsync("carol", TestContext.Current.CancellationToken);
+
+        rights.Should().Equal(new UserRight.ActAsAnyParty());
     }
 
     [Fact]
@@ -472,6 +511,18 @@ public sealed class RestAdminClientTests : IDisposable
 
         status.Should().Be(expected);
         transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/packages/1220%20aa/status");
+    }
+
+    [Fact]
+    public async Task GetPackageStatusAsync_reports_a_numeric_status_outside_the_vendored_enum_as_an_undecodable_body()
+    {
+        IAdminClient client = ClientWith(new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"packageStatus": 42}"""));
+
+        var act = () => client.GetPackageStatusAsync("1220aa", TestContext.Current.CancellationToken);
+
+        var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
+        thrown.Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.Which.CommitState.Should().Be(CommitState.NotCommitted);
     }
 
     [Fact]

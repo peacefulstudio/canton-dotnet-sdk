@@ -23,7 +23,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 internal static class UntouchedBindingScenarios
 {
     private const string ConformanceAssemblyName = "Daml.Codegen.Testing.Conformance";
-    private const string RichTypesPackageId = "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
+    private const string RichTypesPackageId = "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
 
     private sealed record HoldingMarker : IDamlType
     {

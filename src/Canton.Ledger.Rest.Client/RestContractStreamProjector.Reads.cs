@@ -25,7 +25,7 @@ internal static partial class RestContractStreamProjector
         RestProjectionCore.RequireTemplateId(created.TemplateId, nameof(Raw.CreatedEvent), created.ContractId);
         if (!RestMarkerMatcher<T>.MatchesCreated(created) || !RestProjectionCore.TryResolvePayload<T, T>(created, out var payload))
         {
-            throw new InvalidOperationException(
+            throw new ProjectionRefusalException(
                 $"Contract '{created.ContractId}' is a {created.TemplateId.ModuleName}.{created.TemplateId.EntityName}, "
                 + $"which cannot be read as {typeof(T).Name}.");
         }
@@ -49,7 +49,7 @@ internal static partial class RestContractStreamProjector
                     RequireSynchronizer(response.Created.SynchronizerId, createdEvent.ContractId),
                     RestWireConversions.ParseOffset(createdEvent.Offset)).Event
                 as ContractStreamEvent<T>.Created
-                ?? throw new InvalidOperationException(
+                ?? throw new ProjectionRefusalException(
                     $"Contract '{createdEvent.ContractId}' cannot be read as {typeof(T).Name}: its interface view is unavailable.");
         }
 

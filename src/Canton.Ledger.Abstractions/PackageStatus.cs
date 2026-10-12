@@ -14,7 +14,4 @@ public enum PackageStatus
 
     /// <summary>The package is registered on the participant.</summary>
     Registered,
-
-    /// <summary>A status reported by the participant that this SDK version does not recognise.</summary>
-    Unrecognized,
 }

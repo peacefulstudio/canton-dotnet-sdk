@@ -27,6 +27,7 @@ public class AdminSurfaceRecordsAreSealedTests
         typeof(UserRight.ReadAsAnyParty),
         typeof(UserRight.ExecuteAs),
         typeof(UserRight.ExecuteAsAnyParty),
+        typeof(UserRight.ActAsAnyParty),
     };
 
     [Theory]

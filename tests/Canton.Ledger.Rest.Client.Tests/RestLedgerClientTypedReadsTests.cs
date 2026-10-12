@@ -177,7 +177,10 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
         var act = () => ClientWith(transport).GetContractAsync(
             new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
 
-        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage("*Module.Other*");
+        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
+        thrown.Which.Should().NotBeOfType<LedgerOperationException>();
+        thrown.Which.Message.Should().Be(
+            "Contract '00abc' is a Module.Other, which cannot be read as TypedReadTemplate.");
     }
 
     [Fact]
@@ -419,7 +422,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
     }
 
     [Fact]
-    public async Task GetDisclosureAsync_returns_null_when_the_participant_answers_NOT_FOUND()
+    public async Task GetDisclosureAsync_returns_null_when_the_participant_answers_404_with_error_id_CONTRACT_EVENTS_NOT_FOUND()
     {
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.NotFound, """{"code": "CONTRACT_EVENTS_NOT_FOUND", "cause": "no such contract", "grpcCodeValue": 5, "errorCategory": 11, "context": {}}""");
@@ -428,6 +431,60 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
             new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
 
         disclosure.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_404_with_error_id_UNSUPPORTED_CONTRACT_ID()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.NotFound, """{"code": "UNSUPPORTED_CONTRACT_ID", "cause": "unsupported contract id", "grpcCodeValue": 5, "errorCategory": 11, "context": {}}""");
+
+        var act = () => ClientWith(transport).GetDisclosureAsync(
+            new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("UNSUPPORTED_CONTRACT_ID");
+        thrown.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing);
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_404_with_error_id_CONTRACT_NOT_FOUND()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.NotFound, """{"code": "CONTRACT_NOT_FOUND", "cause": "no such contract", "grpcCodeValue": 5, "errorCategory": 11, "context": {}}""");
+
+        var act = () => ClientWith(transport).GetDisclosureAsync(
+            new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_404_with_another_error_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.NotFound, """{"code": "PACKAGE_NAMES_NOT_FOUND", "cause": "no such package name", "grpcCodeValue": 5, "errorCategory": 11, "context": {}}""");
+
+        var act = () => ClientWith(transport).GetDisclosureAsync(
+            new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("PACKAGE_NAMES_NOT_FOUND");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_404_without_an_error_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.NotFound, """{"cause": "no such contract", "grpcCodeValue": 5, "errorCategory": 11, "context": {}}""");
+
+        var act = () => ClientWith(transport).GetDisclosureAsync(
+            new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().BeNull();
     }
 
     [Fact]

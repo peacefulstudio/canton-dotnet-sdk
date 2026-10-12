@@ -113,9 +113,9 @@ internal sealed partial class RestAdminClient : IAdminClient
         var details = new List<PartyDetails>(parties.Count);
         foreach (var party in parties)
         {
-            details.AddRange(await _calls.SendAsync<Raw.GetPartiesResponse, IEnumerable<PartyDetails>>(
+            details.AddRange(await _calls.SendAsync<Raw.GetPartiesResponse, IReadOnlyList<PartyDetails>>(
                 Read($"{PartiesPath}/{Uri.EscapeDataString(party.Value)}", "party details"),
-                response => (response.PartyDetails ?? []).Select(FromWire),
+                response => (response.PartyDetails ?? []).Select(FromWire).ToList(),
                 timeout: null,
                 cancellationToken).ConfigureAwait(false));
         }
@@ -126,13 +126,12 @@ internal sealed partial class RestAdminClient : IAdminClient
     public Task<IReadOnlyList<PartyDetails>> ListKnownPartiesAsync(CancellationToken cancellationToken = default) =>
         TracedAsync(nameof(ListKnownPartiesAsync), () => FetchAllPagesAsync(
             "ListKnownParties",
-            pageToken => _calls.SendAsync<Raw.ListKnownPartiesResponse, Raw.ListKnownPartiesResponse>(
+            pageToken => _calls.SendAsync<Raw.ListKnownPartiesResponse, Page<PartyDetails>>(
                 Read(PagedPath(PartiesPath, pageToken), "known parties"),
-                response => response,
+                response => new Page<PartyDetails>(
+                    (response.PartyDetails ?? []).Select(FromWire).ToList(), response.NextPageToken),
                 timeout: null,
-                cancellationToken),
-            response => response.NextPageToken,
-            response => (response.PartyDetails ?? []).Select(FromWire)));
+                cancellationToken)));
 
     public Task<UserDetails> CreateUserAsync(
         string userId,
@@ -270,13 +269,12 @@ internal sealed partial class RestAdminClient : IAdminClient
     public Task<IReadOnlyList<UserDetails>> ListUsersAsync(CancellationToken cancellationToken = default) =>
         TracedAsync(nameof(ListUsersAsync), () => FetchAllPagesAsync(
             "ListUsers",
-            pageToken => _calls.SendAsync<Raw.ListUsersResponse, Raw.ListUsersResponse>(
+            pageToken => _calls.SendAsync<Raw.ListUsersResponse, Page<UserDetails>>(
                 Read(PagedPath(UsersPath, pageToken), "users"),
-                response => response,
+                response => new Page<UserDetails>(
+                    (response.Users ?? []).Select(FromWire).ToList(), response.NextPageToken),
                 timeout: null,
-                cancellationToken),
-            response => response.NextPageToken,
-            response => (response.Users ?? []).Select(FromWire)));
+                cancellationToken)));
 
     public Task<UserDetails> UpdateUserAsync(
         string userId,
@@ -569,7 +567,7 @@ internal sealed partial class RestAdminClient : IAdminClient
 
         return TracedAsync(nameof(ListVettedPackagesAsync), () => FetchAllPagesAsync(
             "ListVettedPackages",
-            pageToken => _calls.SendAsync<Raw.ListVettedPackagesResponse, Raw.ListVettedPackagesResponse>(
+            pageToken => _calls.SendAsync<Raw.ListVettedPackagesResponse, Page<VettedPackage>>(
                 new RestCall(
                     HttpMethod.Post,
                     VettedPackagesPath,
@@ -577,11 +575,10 @@ internal sealed partial class RestAdminClient : IAdminClient
                     MissingBody("vetted packages"),
                     MalformedBody("vetted packages"),
                     LedgerCallKind.Read),
-                response => response,
+                response => new Page<VettedPackage>(
+                    (response.VettedPackages ?? []).SelectMany(FromWire).ToList(), response.NextPageToken),
                 timeout: null,
-                cancellationToken),
-            response => response.NextPageToken,
-            response => (response.VettedPackages ?? []).SelectMany(FromWire)));
+                cancellationToken)));
     }
 
     private static Raw.ListVettedPackagesRequest VettedPackagesPage(Raw.PackageMetadataFilter? filter, string pageToken)
@@ -685,11 +682,11 @@ internal sealed partial class RestAdminClient : IAdminClient
         }
     }
 
-    private static async Task<IReadOnlyList<TItem>> FetchAllPagesAsync<TResponse, TItem>(
+    private sealed record Page<TItem>(IReadOnlyList<TItem> Items, string? NextPageToken);
+
+    private static async Task<IReadOnlyList<TItem>> FetchAllPagesAsync<TItem>(
         string operation,
-        Func<string, Task<TResponse>> fetchPage,
-        Func<TResponse, string?> readNextPageToken,
-        Func<TResponse, IEnumerable<TItem>> readItems)
+        Func<string, Task<Page<TItem>>> fetchPage)
     {
         var items = new List<TItem>();
         var pageToken = string.Empty;
@@ -700,7 +697,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         {
             var response = await fetchPage(pageToken).ConfigureAwait(false);
             fetchedPages++;
-            var nextPageToken = readNextPageToken(response) ?? string.Empty;
+            var nextPageToken = response.NextPageToken ?? string.Empty;
 
             if (nextPageToken.Length > 0 && !seenPageTokens.Add(nextPageToken))
             {
@@ -708,7 +705,7 @@ internal sealed partial class RestAdminClient : IAdminClient
                     $"{operation} pagination is not progressing: the server returned the page token '{nextPageToken}' that was already used earlier in this call.");
             }
 
-            items.AddRange(readItems(response));
+            items.AddRange(response.Items);
             pageToken = nextPageToken;
 
             if (pageToken.Length > 0 && fetchedPages >= MaxPagesPerPaginatedCall)
@@ -735,8 +732,7 @@ internal sealed partial class RestAdminClient : IAdminClient
     }
 
     private static bool IsNotFound(LedgerOperationException rejection) =>
-        rejection.Category is DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing
-        || rejection.Status is TransportStatus.Http { StatusCode: HttpStatusCode.NotFound };
+        LedgerCallOutcome.ReportsAbsence(rejection.Status, rejection.Category);
 
     private static RestCall Read(string path, string subject) =>
         new(HttpMethod.Get, path, Body: null, MissingBody(subject), MalformedBody(subject), LedgerCallKind.Read);
@@ -882,6 +878,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         { CanReadAsAnyParty: not null } => new UserRight.ReadAsAnyParty(),
         { CanExecuteAs: { } executeAs } => new UserRight.ExecuteAs(new Party(executeAs.Party)),
         { CanExecuteAsAnyParty: not null } => new UserRight.ExecuteAsAnyParty(),
+        { CanActAsAnyParty: not null } => new UserRight.ActAsAnyParty(),
         _ => throw new NotSupportedException("Unknown right kind served by the participant."),
     };
 
@@ -896,6 +893,7 @@ internal sealed partial class RestAdminClient : IAdminClient
             UserRight.ReadAsAnyParty => new Raw.RightKind { CanReadAsAnyParty = new Raw.Right_CanReadAsAnyParty() },
             UserRight.ExecuteAs executeAs => new Raw.RightKind { CanExecuteAs = new Raw.Right_CanExecuteAs { Party = executeAs.Party.Value } },
             UserRight.ExecuteAsAnyParty => new Raw.RightKind { CanExecuteAsAnyParty = new Raw.Right_CanExecuteAsAnyParty() },
+            UserRight.ActAsAnyParty => new Raw.RightKind { CanActAsAnyParty = new Raw.Right_CanActAsAnyParty() },
             _ => throw new NotSupportedException($"Unknown right type: {right.GetType().Name}"),
         },
     };

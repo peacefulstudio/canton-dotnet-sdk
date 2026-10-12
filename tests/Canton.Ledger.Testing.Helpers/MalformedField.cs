@@ -49,9 +49,6 @@ public enum MalformedField
     /// <summary>The response omits the synchronizer id it is documented to carry.</summary>
     SynchronizerIdMissing,
 
-    /// <summary>The response omits the package reference it is documented to carry.</summary>
-    PackageReferenceMissing,
-
     /// <summary>A create argument that lacks a field its template requires.</summary>
     CreateArgumentFieldMissing,
 
@@ -64,6 +61,21 @@ public enum MalformedField
     /// <summary>A traffic cost outside the range its signed integer type can carry.</summary>
     CostOutOfRange,
 
+    /// <summary>An enum value this SDK version does not name, such as hashing scheme version 99.</summary>
+    EnumValueUnknown,
+
     /// <summary>A success body that is not a readable document at all.</summary>
     BodyUnreadable,
+
+    /// <summary>A party detail carrying the empty string as its party, which no <c>Party</c> can carry.</summary>
+    PartyEmpty,
+
+    /// <summary>A user whose primary party is nothing but whitespace, which no <c>Party</c> can carry.</summary>
+    PrimaryPartyWhitespace,
+
+    /// <summary>A vetted-packages group carrying the empty string as its synchronizer id, which no <c>SynchronizerId</c> can carry.</summary>
+    SynchronizerIdEmpty,
+
+    /// <summary>A <c>oneof</c> whose set arm is one this client does not know, such as a user right newer than the vendored surface.</summary>
+    UnknownOneofArm,
 }

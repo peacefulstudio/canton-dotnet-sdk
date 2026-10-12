@@ -7,7 +7,7 @@
 
 namespace Daml.Codegen.Testing.Conformance.RichTypes;
 
-internal static class PackageRegistration_e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9
+internal static class PackageRegistration_e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68
 {
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()
@@ -28,6 +28,8 @@ internal static class PackageRegistration_e72ec259be271bedbcb0d33f19a47008de8329
         global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForChoices<global::Daml.Codegen.Testing.Conformance.RichTypes.OptionalTails>();
         global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForRecord<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>();
         global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForChoices<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>();
+        global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForRecord<global::Daml.Codegen.Testing.Conformance.RichTypes.ThreeDeepOptionals>();
+        global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForChoices<global::Daml.Codegen.Testing.Conformance.RichTypes.ThreeDeepOptionals>();
         global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForRecord<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>();
         global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForChoices<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>();
         global::Daml.Runtime.Serialization.GeneratedTypeReaders.ForRecord<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ephemeral>();

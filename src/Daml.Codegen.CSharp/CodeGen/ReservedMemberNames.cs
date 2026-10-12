@@ -113,7 +113,7 @@ internal static class ReservedMemberNames
             var choiceName = Identifiers.Sanitize(choice.Name);
             return template.Key is null
                 ? new[] { $"Choice{choiceName}" }
-                : [$"Choice{choiceName}", $"{choiceName}ByKeyCommand"];
+                : [$"Choice{choiceName}", ExerciseMemberNames.ByKeyCommand(choice)];
         });
 
     private static IReadOnlySet<string> Set(params IEnumerable<string>[] names) =>

@@ -13,17 +13,22 @@ internal sealed class CannedResponseCallInvoker(Func<Type, IMessage> respond) : 
     {
     }
 
+    internal List<string> RecordedCalls { get; } = [];
+
     internal static CannedResponseCallInvoker Answering(IMessage message) =>
         new(responseType => responseType == message.GetType() ? message : (IMessage)Activator.CreateInstance(responseType)!);
 
     public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(
-        Method<TRequest, TResponse> method, string? host, CallOptions options, TRequest request) =>
-        new(
+        Method<TRequest, TResponse> method, string? host, CallOptions options, TRequest request)
+    {
+        RecordedCalls.Add(method.FullName);
+        return new(
             Task.FromResult((TResponse)respond(typeof(TResponse))),
             Task.FromResult(new Metadata()),
             () => Status.DefaultSuccess,
             () => new Metadata(),
             () => { });
+    }
 
     public override TResponse BlockingUnaryCall<TRequest, TResponse>(
         Method<TRequest, TResponse> method, string? host, CallOptions options, TRequest request) =>

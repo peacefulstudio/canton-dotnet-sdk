@@ -59,6 +59,20 @@ internal static partial class GeneratedStjSampleTable
 
     private static Optional<Optional<string>> NoneOuter() => new Optional<Optional<string>>.None();
 
+    private static Optional<Optional<Optional<string>>> ThreeDeepSome(string value) =>
+        new Optional<Optional<Optional<string>>>.Some(
+            new Optional<Optional<string>>.Some(new Optional<string>.Some(value)));
+
+    private static Optional<Optional<Optional<string>>> ThreeDeepInnerNone() =>
+        new Optional<Optional<Optional<string>>>.Some(
+            new Optional<Optional<string>>.Some(new Optional<string>.None()));
+
+    private static Optional<Optional<Optional<string>>> ThreeDeepMiddleNone() =>
+        new Optional<Optional<Optional<string>>>.Some(new Optional<Optional<string>>.None());
+
+    private static Optional<Optional<Optional<string>>> ThreeDeepOuterNone() =>
+        new Optional<Optional<Optional<string>>>.None();
+
     private static void AddRichTypes(Dictionary<Type, object[]> samples)
     {
         samples[typeof(AnnotationView)] =
@@ -131,6 +145,11 @@ internal static partial class GeneratedStjSampleTable
         samples[typeof(Slot<long>)] = [new Slot<long>.Filled(11), new Slot<long>.Vacant()];
         samples[typeof(Split)] = [new Split(4)];
         samples[typeof(Suit)] = [Suit.Spades];
+        samples[typeof(ThreeDeepOptionals)] =
+        [
+            new ThreeDeepOptionals(Alice, ThreeDeepSome("deep"), ThreeDeepInnerNone()),
+            new ThreeDeepOptionals(Bob, ThreeDeepOuterNone(), ThreeDeepMiddleNone()),
+        ];
         samples[typeof(TrailingNote)] =
         [
             new TrailingNote("text", "remark"),

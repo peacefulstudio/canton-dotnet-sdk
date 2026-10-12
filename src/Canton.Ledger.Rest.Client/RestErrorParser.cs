@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Wire;
 using Daml.Runtime.Outcomes;
 using WireCantonError = Canton.Ledger.Rest.Client.Raw.JsCantonError;
 using WireStatus = Canton.Ledger.Rest.Client.Raw.Status;
@@ -88,6 +89,19 @@ internal static class RestErrorParser
             : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
         return RecoverAuthCategoryFromHttpStatus(Read(response, body, httpStatusCode), httpStatusCode);
+    }
+
+    internal static async Task<LedgerCallEnding.Rejected> ReadRejectionAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken, bool afterRetry = false) =>
+        new(await ParseAsync(response, cancellationToken).ConfigureAwait(false), NonSuccessStatus(response), afterRetry);
+
+    private static HttpRequestException NonSuccessStatus(HttpResponseMessage response)
+    {
+        var statusCode = ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture);
+        var message = string.IsNullOrEmpty(response.ReasonPhrase)
+            ? $"Response status code does not indicate success: {statusCode}."
+            : $"Response status code does not indicate success: {statusCode} ({response.ReasonPhrase}).";
+        return new HttpRequestException(message, inner: null, response.StatusCode);
     }
 
     private static ParsedLedgerError RecoverAuthCategoryFromHttpStatus(

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
-using System.Globalization;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
@@ -22,9 +21,6 @@ namespace Canton.Ledger.Grpc.Client;
 
 internal sealed partial class SubmissionClient
 {
-    private const string DuplicateCommandErrorId = "DUPLICATE_COMMAND";
-    private const string CompletionOffsetMetadataKey = "completion_offset";
-
     private readonly LedgerCallInvoker _invoker;
     private readonly CommandService.CommandServiceClient _commandService;
     private readonly CommandSubmissionService.CommandSubmissionServiceClient _commandSubmissionService;
@@ -197,10 +193,11 @@ internal sealed partial class SubmissionClient
                     catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
                     {
                         LogReassignmentResponseUndecodable(_logger, decodeFailure);
-                        return new ExerciseOutcome<ContractStreamEvent<T>>.CommittedUndecodable(
-                            UpdateIdOrNull(response.Reassignment?.UpdateId),
-                            $"Could not decode the reassignment in the ledger response: {decodeFailure.Message}",
-                            decodeFailure);
+                        return RpcCallEnding.CommittedUndecodable(
+                                $"Could not decode the reassignment in the ledger response: {decodeFailure.Message}",
+                                decodeFailure,
+                                response.Reassignment?.UpdateId)
+                            .ToOutcome<ContractStreamEvent<T>>();
                     }
 
                     return new ExerciseOutcome<ContractStreamEvent<T>>.One(projected);
@@ -212,7 +209,7 @@ internal sealed partial class SubmissionClient
                 catch (RpcException ex)
                 {
                     LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
-                    return ToFailureOutcome<ContractStreamEvent<T>>(ex);
+                    return RpcCallEnding.SubmissionRejected(ex, afterRetry: false).ToOutcome<ContractStreamEvent<T>>();
                 }
             },
             RecordOutcome,
@@ -352,10 +349,11 @@ internal sealed partial class SubmissionClient
             catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
             {
                 LogTransactionResponseUndecodable(_logger, decodeFailure);
-                return new ExerciseOutcome<TProjection>.CommittedUndecodable(
-                    UpdateIdOrNull(response.Transaction?.UpdateId),
-                    $"The command committed, but its transaction could not be decoded: {decodeFailure.Message}",
-                    decodeFailure);
+                return RpcCallEnding.CommittedUndecodable(
+                        $"The command committed, but its transaction could not be decoded: {decodeFailure.Message}",
+                        decodeFailure,
+                        response.Transaction?.UpdateId)
+                    .ToOutcome<TProjection>();
             }
 
             if (_logger.IsEnabled(LogLevel.Information))
@@ -372,20 +370,20 @@ internal sealed partial class SubmissionClient
         catch (RpcException ex)
         {
             LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
-            var outcome = ToFailureOutcome<TProjection>(ex);
-            if (attemptCount > 1
-                && outcome is ExerciseOutcome<TProjection>.DamlError { ErrorId: DuplicateCommandErrorId } duplicate)
-            {
-                return await ResolveRetriedDuplicateAsync(
-                    commands.CommandId, submitter, duplicate, pointReadByOffset, cancellationToken).ConfigureAwait(false);
-            }
-
-            return outcome;
+            var ending = RpcCallEnding.SubmissionRejected(ex, afterRetry: attemptCount > 1);
+            var outcome = ending.ToOutcome<TProjection>();
+            var verdict = ending.ToRetriedDuplicateVerdict();
+            return verdict is RetriedDuplicateVerdict.NotARetriedDuplicate
+                ? outcome
+                : await ResolveRetriedDuplicateAsync(
+                    commands.CommandId,
+                    submitter,
+                    verdict,
+                    outcome,
+                    pointReadByOffset,
+                    cancellationToken).ConfigureAwait(false);
         }
     }
-
-    private static string? UpdateIdOrNull(string? updateId) =>
-        string.IsNullOrEmpty(updateId) ? null : updateId;
 
     private static (int CreatedCount, int ArchivedCount) CountCreatedAndArchived(Transaction transaction)
     {
@@ -424,20 +422,6 @@ internal sealed partial class SubmissionClient
         LogChoiceExerciseFailed(_logger, command.Choice, command.ContractId);
     }
 
-    private static ExerciseOutcome<T> ToFailureOutcome<T>(RpcException exception) =>
-        DamlErrorParser.Parse(exception) switch
-        {
-            ParsedLedgerError.Structured structured => new ExerciseOutcome<T>.DamlError(
-                structured.Category, structured.ErrorId, structured.Message, structured.Metadata),
-            ParsedLedgerError.Unstructured unstructured => new ExerciseOutcome<T>.InfraError(
-                unstructured.Status,
-                exception.Status.Detail ?? exception.Message,
-                unstructured.Category,
-                exception),
-            var parsed => throw new InvalidOperationException(
-                $"Unhandled parsed ledger error: {parsed.GetType().Name}"),
-        };
-
     private static void RecordOutcome<T>(Activity? activity, ExerciseOutcome<T> outcome)
     {
         switch (outcome)
@@ -461,14 +445,13 @@ internal sealed partial class SubmissionClient
     private async Task<ExerciseOutcome<TProjection>> ResolveRetriedDuplicateAsync<TProjection>(
         string commandId,
         RuntimeCommands.SubmitterInfo? submitter,
-        ExerciseOutcome<TProjection>.DamlError duplicateError,
+        RetriedDuplicateVerdict verdict,
+        ExerciseOutcome<TProjection> duplicateError,
         Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TProjection>> pointReadByOffset,
         CancellationToken cancellationToken)
     {
         if (submitter is not { } dedupReader
-            || !duplicateError.Metadata.TryGetValue(CompletionOffsetMetadataKey, out var rawCompletionOffset)
-            || !long.TryParse(rawCompletionOffset, NumberStyles.Integer, CultureInfo.InvariantCulture, out var completionOffset)
-            || completionOffset <= 0)
+            || verdict is not RetriedDuplicateVerdict.CommittedAt { CompletionOffset: var completionOffset })
         {
             LogRetriedDuplicateUnresolved(_logger, commandId);
             return duplicateError;

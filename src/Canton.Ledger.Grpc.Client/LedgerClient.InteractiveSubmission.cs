@@ -139,51 +139,13 @@ internal sealed partial class LedgerClient
             timeout: timeout);
     }
 
-    /// <inheritdoc />
-    public Task<PackagePreference?> GetPreferredPackageVersionAsync(
-        IEnumerable<Party> parties,
-        string packageName,
-        SynchronizerId? synchronizerId = null,
-        DateTimeOffset? vettingValidAt = null,
-        TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(parties);
-        ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
-
-        var request = new Interactive.GetPreferredPackageVersionRequest
-        {
-            PackageName = packageName,
-            SynchronizerId = synchronizerId?.Value ?? string.Empty,
-            VettingValidAt = vettingValidAt is { } validAt ? Timestamp.FromDateTimeOffset(validAt) : null,
-        };
-        request.Parties.AddRange(parties.Select(party => party.Value));
-
-        return _invoker.InvokeTracedAsync<LedgerClient, Interactive.GetPreferredPackageVersionResponse, PackagePreference?>(
-            LedgerCallKind.Read,
-            LedgerCallInvoker.Source,
-            Interactive.InteractiveSubmissionService.Descriptor,
-            "GetPreferredPackageVersion",
-            (headers, deadline, token) => _interactiveSubmissionService.GetPreferredPackageVersionAsync(
-                request, headers, deadline, token),
-            response => response.PackagePreference is { } preference
-                ? new PackagePreference(
-                    GrpcExternalSigningMapper.FromWire(
-                        preference.PackageReference
-                        ?? throw MalformedResponse.MissingRequiredField("the package preference has no package_reference")),
-                    RequireSynchronizer(preference.SynchronizerId))
-                : null,
-            cancellationToken,
-            timeout: timeout);
-    }
-
     private static PreparedSubmission ProjectPreparedSubmission(Interactive.PrepareSubmissionResponse response) =>
         new(
             (response.PreparedTransaction
                 ?? throw MalformedResponse.MissingRequiredField("the participant prepared a submission without a prepared transaction"))
             .ToByteArray(),
             response.PreparedTransactionHash.Memory,
-            (HashingSchemeVersion)(int)response.HashingSchemeVersion,
+            GrpcEnumMaps.HashingSchemeVersions.FromWire(response.HashingSchemeVersion),
             response.HasHashingDetails ? response.HashingDetails : null,
             ProjectTrafficCostEstimate(response.CostEstimation));
 
@@ -272,7 +234,7 @@ internal sealed partial class LedgerClient
             ParsePreparedTransaction(submission.Prepared.PreparedTransaction),
             partySignatures,
             _options.UserId ?? string.Empty,
-            (Interactive.HashingSchemeVersion)(int)submission.Prepared.HashingSchemeVersion,
+            GrpcEnumMaps.HashingSchemeVersions.ToWire(submission.Prepared.HashingSchemeVersion, nameof(submission)),
             submission.MinLedgerTime is { } minLedgerTime ? ToWireMinLedgerTime(minLedgerTime) : null,
             (submission.DeduplicationPeriod as RuntimeCommands.DeduplicationPeriod.Offset)?.Start.Value,
             (submission.DeduplicationPeriod as RuntimeCommands.DeduplicationPeriod.Duration) is { } duration

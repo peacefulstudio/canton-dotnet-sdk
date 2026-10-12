@@ -296,16 +296,70 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
     }
 
     [Fact]
-    public async Task GetDisclosureAsync_returns_null_when_the_participant_answers_NOT_FOUND()
+    public async Task GetDisclosureAsync_returns_null_when_the_participant_answers_NOT_FOUND_with_error_id_CONTRACT_EVENTS_NOT_FOUND()
     {
-        _eventQueryService
-            .GetEventsByContractIdAsync(Arg.Any<GetEventsByContractIdRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(Faulted<GetEventsByContractIdResponse>(new RpcException(new Status(StatusCode.NotFound, "CONTRACT_EVENTS_NOT_FOUND"))));
+        StubEventsByContractIdFailure(
+            CategorisedRpcException.WithCategory(StatusCode.NotFound, "CONTRACT_EVENTS_NOT_FOUND", "no such contract", "11"));
 
         var disclosure = await CreateClient().GetDisclosureAsync(
             new ContractId<FooBar>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
 
         disclosure.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_NOT_FOUND_with_error_id_UNSUPPORTED_CONTRACT_ID()
+    {
+        StubEventsByContractIdFailure(
+            CategorisedRpcException.WithCategory(StatusCode.NotFound, "UNSUPPORTED_CONTRACT_ID", "unsupported contract id", "11"));
+
+        var act = () => CreateClient().GetDisclosureAsync(
+            new ContractId<FooBar>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("UNSUPPORTED_CONTRACT_ID");
+        thrown.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing);
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.NotFound));
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_NOT_FOUND_with_error_id_CONTRACT_NOT_FOUND()
+    {
+        StubEventsByContractIdFailure(
+            CategorisedRpcException.WithCategory(StatusCode.NotFound, "CONTRACT_NOT_FOUND", "no such contract", "11"));
+
+        var act = () => CreateClient().GetDisclosureAsync(
+            new ContractId<FooBar>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_NOT_FOUND_with_another_error_id()
+    {
+        StubEventsByContractIdFailure(
+            CategorisedRpcException.WithCategory(StatusCode.NotFound, "PACKAGE_NAMES_NOT_FOUND", "no such package name", "11"));
+
+        var act = () => CreateClient().GetDisclosureAsync(
+            new ContractId<FooBar>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("PACKAGE_NAMES_NOT_FOUND");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_throws_when_the_participant_answers_NOT_FOUND_without_an_error_id()
+    {
+        StubEventsByContractIdFailure(new RpcException(new Status(StatusCode.NotFound, "CONTRACT_NOT_FOUND")));
+
+        var act = () => CreateClient().GetDisclosureAsync(
+            new ContractId<FooBar>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().BeNull();
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.NotFound));
     }
 
     [Fact]
@@ -613,6 +667,11 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
                 Arg.Any<DateTime?>(),
                 Arg.Any<CancellationToken>())
             .Returns(Unary(response));
+
+    private void StubEventsByContractIdFailure(RpcException failure) =>
+        _eventQueryService
+            .GetEventsByContractIdAsync(Arg.Any<GetEventsByContractIdRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Faulted<GetEventsByContractIdResponse>(failure));
 
     private static GetEventsByContractIdResponse DisclosedCreated(string contractId)
     {

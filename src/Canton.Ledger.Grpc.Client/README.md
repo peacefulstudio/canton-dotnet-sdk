@@ -5,7 +5,7 @@ High-level gRPC client for the Canton Ledger API with integration to `Daml.Runti
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Grpc.Client --version 0.6.0
+dotnet add package Canton.Ledger.Grpc.Client --version 0.7.0-preview.1
 ```
 
 ## Key Types
@@ -30,7 +30,7 @@ Clients receive an `ITokenProvider` (from `Canton.Ledger.Abstractions`; the prov
 services.AddCantonLedger(configuration);
 ```
 
-Reads `Canton:Ledger` for client options, and registers a client-credentials `ITokenProvider` from `Canton:Auth` whenever that section has any populated value. Half-configured auth (e.g. `ClientSecret` without `ClientId`) then fails loudly at startup rather than silently falling back to unauthenticated. `Canton:Auth` keys mirror `ClientCredentialsOptions` (`ClientId`, `ClientSecret`, `Audience`, `Domain` or `TokenEndpoint`); in environment variables they appear as `Canton__Auth__ClientId` and so on.
+Reads `Canton:Ledger` for client options, and registers a client-credentials `ITokenProvider` from `Canton:Auth` whenever that section has any populated value. Half-configured auth (e.g. `ClientSecret` without `ClientId`) then fails loudly at startup rather than silently falling back to unauthenticated. `Canton:Auth` keys mirror `ClientCredentialsOptions` (`ClientId`, `ClientSecret`, `Audience`, `Domain` or `TokenEndpoint`); in environment variables they appear as `Canton__Auth__ClientId` and so on. When `Audience` is set, it must equal the participant's `target-audience` (by default Canton accepts `https://daml.com/jwt/aud/participant/<participant-id>`); leave it unset only if your identity provider stamps that audience into the token itself.
 
 ### 2. Client credentials (OAuth2) — explicit sections
 
@@ -125,7 +125,7 @@ catch (LedgerOperationException ex) when (ex.CommitState == CommitState.NotCommi
 
 ### Reading a Disclosure
 
-`GetDisclosureAsync<T>` reads, by contract id, the data needed to disclose a contract explicitly to another submitter. `T` may be a template or an interface, so a holding reached through `ContractId<IHolding>` works like any template. It returns `null` when the contract is not visible to the submitter, does not exist or is archived:
+`GetDisclosureAsync<T>` reads, by contract id, the data needed to disclose a contract explicitly to another submitter. `T` may be a template or an interface, so a holding reached through `ContractId<IHolding>` works like any template. It returns `null` when the participant answers `CONTRACT_EVENTS_NOT_FOUND`: the contract is not visible to the submitter, does not exist or is archived. Any other not-found rejection, such as `UNSUPPORTED_CONTRACT_ID`, throws `LedgerOperationException`:
 
 ```csharp
 var disclosure = await ledgerClient.GetDisclosureAsync(holdingId, submitter);

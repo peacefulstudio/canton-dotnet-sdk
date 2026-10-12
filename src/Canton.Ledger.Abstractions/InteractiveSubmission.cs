@@ -9,8 +9,9 @@ namespace Canton.Ledger.Abstractions;
 
 /// <summary>
 /// The version of the scheme the participant hashed a prepared transaction with. Numeric values
-/// equal the Ledger API wire values, so a version this SDK version does not name survives a round
-/// trip from <see cref="PreparedSubmission"/> to <see cref="SignedSubmission"/> unchanged.
+/// equal the Ledger API wire values. A version this SDK version does not name is refused on both
+/// transports: a participant response carrying one fails the call as undecodable, and a submission
+/// carrying one is rejected with an <see cref="ArgumentException"/> before any request is sent.
 /// </summary>
 public enum HashingSchemeVersion
 {
@@ -19,6 +20,12 @@ public enum HashingSchemeVersion
 
     /// <summary>Version 3.</summary>
     V3 = 3,
+
+    /// <summary>
+    /// Version 4, which Canton 3.6 adds. A participant returns it only for a synchronizer running
+    /// protocol version 36 or later.
+    /// </summary>
+    V4 = 4,
 }
 
 /// <summary>
@@ -110,10 +117,3 @@ public sealed record PackageVettingRequirement(IReadOnlyList<Party> Parties, str
 public sealed record PreferredPackages(
     IReadOnlyList<PackageReference> PackageReferences,
     SynchronizerId SynchronizerId);
-
-/// <summary>
-/// The preferred version of one package.
-/// </summary>
-/// <param name="Package">The preferred package.</param>
-/// <param name="SynchronizerId">The synchronizer the preference was resolved against.</param>
-public sealed record PackagePreference(PackageReference Package, SynchronizerId SynchronizerId);

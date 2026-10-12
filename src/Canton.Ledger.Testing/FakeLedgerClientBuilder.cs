@@ -43,7 +43,6 @@ public sealed partial class FakeLedgerClientBuilder
     private ExecutedSubmission? _executedSubmission;
     private TransactionResult? _executedTransaction;
     private PreferredPackages? _preferredPackages;
-    private StagedPackagePreference? _packagePreference;
     private LedgerOperationException? _throwingCallFailure;
 
     /// <summary>
@@ -449,19 +448,6 @@ public sealed partial class FakeLedgerClientBuilder
     }
 
     /// <summary>
-    /// Stages the answer <see cref="FakeLedgerClient.GetPreferredPackageVersionAsync"/> returns for
-    /// every request. Staging <see langword="null"/> replays a participant on which no package
-    /// satisfies the requirements, while leaving it unstaged makes that member throw.
-    /// </summary>
-    /// <param name="preference">The preference to reply with, or <see langword="null"/> for none.</param>
-    /// <returns>The same builder, for chaining.</returns>
-    public FakeLedgerClientBuilder WithPackagePreference(PackagePreference? preference)
-    {
-        _packagePreference = new StagedPackagePreference(preference);
-        return this;
-    }
-
-    /// <summary>
     /// Stages the failure every <em>throwing</em> member of the built <see cref="FakeLedgerClient"/>
     /// raises from its returned task, as the very instance staged, so a test can drive its handling of a
     /// failed call the way a real transport fails, without a participant. The throwing members are the
@@ -521,8 +507,7 @@ public sealed partial class FakeLedgerClientBuilder
             _preparedSubmission,
             _executedSubmission,
             _executedTransaction,
-            _preferredPackages,
-            _packagePreference),
+            _preferredPackages),
         new FakeInterfaceStreams(
             new Dictionary<Type, object>(_activeInterfaceContracts),
             new Dictionary<Type, object>(_interfaceEvents),

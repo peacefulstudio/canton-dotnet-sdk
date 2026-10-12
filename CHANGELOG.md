@@ -34,7 +34,39 @@ because they are versioned in lockstep:
 > sections below record internal development milestones whose packages were
 > never published to a public feed.
 
-## [Unreleased]
+## [0.7.0-preview.1] — 2026-10-11
+
+### Changed — BREAKING
+
+- **The SDK targets Canton 3.6.** The vendored gRPC protos and JSON Ledger API spec move to Canton 3.6.1, and the clients support Canton 3.6 only. If you're on Canton 3.5, stay on 0.6.x.
+- `GetPreferredPackageVersionAsync` is removed. Canton 3.6 disables its RPC by default and 3.7 deletes it. Use `GetPreferredPackagesAsync`: a package with no vetted version now surfaces as `LedgerOperationException` carrying `NO_PREFERRED_PACKAGES_FOUND`, not as `null`.
+  - `PackagePreference` and the test double's `FakeLedgerClientBuilder.WithPackagePreference` are removed with it.
+- **`IStateServiceApi.GetLedgerEnd` takes an optional synchronizer filter (Canton 3.6)** (`Canton.Ledger.Rest`). The parameterless overload is gone, and implementers of the interface must add the new member.
+- `PackageStatus.Unrecognized`, `HashFunction.Unrecognized` and `SynchronizerPermissionLevel.Unrecognized` are removed. A package status, hash function or synchronizer permission the client doesn't know now raises `LedgerOperationException` classified `UndecodableBody` on the gRPC client, as it already did on the JSON Ledger API client, which now also classifies a numeric value outside these enums that way instead of returning `Unrecognized`.
+- **The conformance packages are rebuilt on Daml SDK 3.5.12 and have new package ids** (`Daml.Codegen.Testing.Conformance`).
+  - `richtypes` moves from `richtypes-hf9ffaa5ee2ff` to `richtypes-hbefba41fabc8`, and `contractkeys` from `contractkeys-h4fd930e5658f` to `contractkeys-hb3f04acc1cbd`. The default-target package keeps its name and takes a new package id. The two names are content-addressed, and the hash covers the SDK version the package declares and the Daml sources, so the move to 3.5.12 and the new `ThreeDeepOptionals` template re-hash them. Every package id moves because the packages are rebuilt against the `daml-stdlib` that ships with SDK 3.5.12.
+  - `richtypes` gains the `ThreeDeepOptionals` template, whose `DeepNote` and `TailDeepNote` fields are `Optional<Optional<Optional<string>>>`, so a three-deep `Optional` chain is exercised through generated bindings.
+  - Every generated `PackageId` and `TemplateId` constant in the packages changes, and so does every `PackageName` constant in `richtypes` and `contractkeys`. The Daml-LF versions do not change: `richtypes` stays at 2.1, `contractkeys` at 2.3 and the default-target package at 2.2.
+  - **Update any assertion against a literal package name or id of these packages.**
+
+### Added
+
+- `UserRight.ActAsAnyParty`, Canton 3.6's right to act as any party on the participant. `ListUserRightsAsync` returns it, and `GrantUserRightsAsync` and `RevokeUserRightsAsync` send it, on both the gRPC and JSON Ledger API clients. A Canton 3.5 participant refuses the grant.
+- `HashingSchemeVersion.V4`, `SigningKeySpec.MlDsa65` and `SigningAlgorithm.MlDsa65`, the values Canton 3.6 adds to the interactive-submission and external-signing surfaces. Both clients decode a prepared submission's `V4` hashing scheme and send all three values. ML-DSA-65 is experimental upstream and needs `crypto.enable-experimental` on the participant; `V4` needs a synchronizer on protocol version 36.
+
+### Changed
+
+- **The gRPC client fails closed on an enum value it does not know, in both directions** (`Canton.Ledger.Grpc.Client`). The gRPC client raises `LedgerOperationException` classified `UndecodableBody` when the participant returns an enum value the client doesn't know, such as an unrecognised hashing scheme version from `PrepareSubmissionAsync`, instead of returning an undefined enum value. It also refuses to send an undefined `HashingSchemeVersion`, `SignatureFormat`, `SigningAlgorithm`, `SigningKeySpec` or `PublicKeyFormat`, throwing `ArgumentException` before the call, as the JSON Ledger API client already does.
+- `GetDisclosureAsync` returns `null` only when the participant reports `CONTRACT_EVENTS_NOT_FOUND`, its answer for a contract that is unknown, archived or not visible to the submitter. Any other not-found rejection, such as `UNSUPPORTED_CONTRACT_ID` for a contract id the participant can't read, now raises `LedgerOperationException`, on both the gRPC and JSON Ledger API clients.
+- The PQS client is tested against PQS 3.6.0, the first PQS built for Canton 3.6, reading a Canton 3.6 participant.
+- `Daml.Ledger.Abstractions.Testing.Conformance` now requires `xunit.v3.assert` and `xunit.v3.extensibility.core` 4.0.2 or later, up from 4.0.1. `Canton.Ledger.Grpc` now compiles Google's common protos 2.78.0, up from 2.58.0, which adds the `Google.Rpc.HttpRequest`, `Google.Rpc.HttpResponse` and `Google.Rpc.HttpHeader` types.
+
+### Fixed
+
+- `CompletionStreamEvent.StreamError` now compares and hashes like the other stream-error arms: `SourceException` is ignored, so two errors with the same `Status`, `Message`, `Category` and `ErrorId` are equal whichever exception each caught, and `System.Text.Json` omits `SourceException` from the written JSON instead of throwing `NotSupportedException` when a caught exception is attached.
+- The JSON Ledger API client keeps a non-success HTTP response as an `HttpRequestException` carrying its `StatusCode`, as the gRPC client keeps its `RpcException`. It is the `InnerException` of the `LedgerOperationException`, the `SourceException` of an `InfraError` outcome and the `SourceException` of a terminal `StreamError`, where all three were `null` before.
+- `GetCommandStatusAsync` on the gRPC client raises `LedgerOperationException` classified `UndecodableBody` when the participant returns an unspecified or unknown command state, instead of reporting it as `CommandState.Unspecified`, whose meaning is "every state" in a query.
+- **The JSON Ledger API client now raises `LedgerOperationException` with `Status = UndecodableBody` when a response holds a value it cannot project, such as a user right it does not know, instead of letting a raw `NotSupportedException` escape** (`Canton.Ledger.Rest.Client`). A read whose success body fails to project with an `ArgumentException`, `InvalidOperationException`, `InvalidCastException`, `NotSupportedException` or `JsonException` is reported with `CommitState.NotCommitted`, the same set of failures the gRPC client already reports this way. That includes `GetPartiesAsync`, `ListKnownPartiesAsync`, `ListUsersAsync` and `ListVettedPackagesAsync`, which used to let a raw `ArgumentException` escape for an empty party or synchronizer id. A read of a contract as a template it is not, and a point read of an update that is not a transaction, still raise their `InvalidOperationException`.
 
 ## [0.6.0] — 2026-10-07
 
@@ -145,7 +177,7 @@ because they are versioned in lockstep:
 
 - **A view record whose field is named like a choice argument or result type, including an enum, a variant or a generic type argument, or like a template that nests a choice argument, is now stamped with its interface marker** (`Daml.Codegen.CSharp`). Such a record, for example a view field `transferArg` beside a choice taking a `TransferArg`, was left unstamped and its marker was left without the mirrored view fields, although the generated code compiles: every decoder receiver is `global::`-rooted, so a mirrored property cannot shadow it. The record now implements the marker and the marker mirrors its fields. Regenerate your bindings.
 
-- **`Filter.Where` now accepts `==` and `!=` on an `Optional` enum field** (`Canton.Ledger.Abstractions`). A predicate such as `o => o.MaybeSide == Side.Buy`, with a literal, a captured `Side` or a captured `Side?`, threw `ArgumentException: Unsupported expression in a PQS filter: Convert 'Convert(o.MaybeSide, Nullable`1)'` while the same comparison on a non-enum Optional worked. It now renders `payload->>'maybeSide' = @p0`, and `!=` still matches a row whose field is `None`.
+- **`Filter.Where` now accepts `==` and `!=` on an `Optional` enum field** (`Canton.Ledger.Abstractions`). A predicate such as `o => o.MaybeSide == Side.Buy`, with a literal, a captured `Side` or a captured `Side?`, threw ``ArgumentException: Unsupported expression in a PQS filter: Convert 'Convert(o.MaybeSide, Nullable`1)'`` while the same comparison on a non-enum Optional worked. It now renders `payload->>'maybeSide' = @p0`, and `!=` still matches a row whose field is `None`.
 
 - **`EstimateTrafficCostAsync` on the JSON Ledger API client no longer fails with HTTP 400 on every call** (`Canton.Ledger.Rest.Client`). It sent an empty `estimateTrafficCost` object, which Canton 3.5.19 rejects (`Missing required field at 'estimateTrafficCost.disabled'` and `'estimateTrafficCost.expectedSignatures'`), so no REST caller could estimate traffic cost and an invalid submission reported that 400 instead of its Daml rejection. It now omits the field, which the participant treats as estimation enabled, and returns the same estimate as the gRPC client.
 
@@ -3617,7 +3649,7 @@ the GitHub Packages NuGet feed
 (`nuget.pkg.github.com/peacefulstudio`) during development and have
 since been pruned. They are not supported.
 
-[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0...HEAD
+[0.7.0-preview.1]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0...v0.7.0-preview.1
 [0.6.0]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.4...v0.6.0
 [0.6.0-preview.4]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.3...v0.6.0-preview.4
 [0.6.0-preview.3]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.2...v0.6.0-preview.3

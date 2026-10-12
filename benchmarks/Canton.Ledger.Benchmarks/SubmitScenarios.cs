@@ -9,7 +9,7 @@ namespace Canton.Ledger.Benchmarks;
 internal static class SubmitScenarios
 {
     public static async Task<LatencySummary> SequentialLatencyAsync(
-        Transport transport, Party owner, int samples, CancellationToken cancellationToken)
+        Transport transport, Party owner, int samples, JitteredPacing pacing, CancellationToken cancellationToken)
     {
         var latencies = new List<TimeSpan>(samples);
         for (var i = 0; i < samples; i++)
@@ -17,6 +17,7 @@ internal static class SubmitScenarios
             var start = Stopwatch.GetTimestamp();
             await Seed.CreateMarkerAsync(transport.Client, owner, cancellationToken).ConfigureAwait(false);
             latencies.Add(Stopwatch.GetElapsedTime(start));
+            await pacing.PauseAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return LatencySummary.Of(latencies);

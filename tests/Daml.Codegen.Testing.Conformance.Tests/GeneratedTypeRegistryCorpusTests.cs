@@ -14,9 +14,9 @@ namespace Daml.Codegen.Testing.Conformance.Tests;
 
 public class GeneratedTypeRegistryCorpusTests
 {
-    private const string RichTypesPackageId = "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
+    private const string RichTypesPackageId = "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
 
-    private const string ContractKeysPackageId = "b7b6d60afafa8eb2a7f8dddd2deac8487e29ecba72b468c1df993e0c7f8f069f";
+    private const string ContractKeysPackageId = "33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5";
 
     private static RegistryLookup<TValue>.Resolved ResolvedOf<TValue>(RegistryLookup<TValue> lookup) =>
         lookup.Should().BeOfType<RegistryLookup<TValue>.Resolved>().Subject;

@@ -25,7 +25,7 @@ public enum ConformancePackage
 
     /// <summary>
     /// A single template built with no Daml-LF target requested, so it carries whatever
-    /// version damlc emits by default (2.2 as of Daml SDK 3.5.2), which is what a scaffolded
+    /// version damlc emits by default (2.2 as of Daml SDK 3.5.12), which is what a scaffolded
     /// project hands the toolchain.
     /// </summary>
     DefaultTarget,

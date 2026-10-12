@@ -28,13 +28,13 @@ public sealed partial record TicketDesk(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<TicketDesk>, global::Daml.Runtime.Data.IDamlRecord<TicketDesk>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9", "SubmitShapes", "TicketDesk");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68", "SubmitShapes", "TicketDesk");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "e72ec259be271bedbcb0d33f19a47008de832963a569e5a04f1ed7b8efb434e9";
+    public static string PackageId => "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hf9ffaa5ee2ff";
+    public static string PackageName => "richtypes-hbefba41fabc8";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);

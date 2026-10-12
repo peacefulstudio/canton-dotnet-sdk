@@ -9,7 +9,7 @@ namespace Canton.Ledger.Client.Parity.Tests;
 public sealed class GrpcLedgerPreferredPackagesParityTests : LedgerPreferredPackagesParityTests
 {
     protected override Task<CapabilityLane<PreferredPackagesCapability>> OpenPreferredPackagesAsync(
-        PackageLookup lookup, CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken) =>
         LiveTransports.OpenPreferredPackagesAsync(
-            LiveTransports.Grpc, lookup, "grpc-preferred-packages", cancellationToken);
+            LiveTransports.Grpc, "grpc-preferred-packages", cancellationToken);
 }

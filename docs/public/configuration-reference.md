@@ -37,7 +37,7 @@ A fully configured `appsettings.json`:
       "Domain": "my-tenant.eu.auth0.com",
       "ClientId": "my-client-id",
       "ClientSecret": "my-client-secret",
-      "Audience": "https://canton.network/",
+      "Audience": "https://daml.com/jwt/aud/participant/<participant-id>",
       "Tls": {
         "ClientCertificatePkcs12Path": "/run/secrets/auth-client.p12",
         "ClientCertificatePkcs12Password": "change-me",
@@ -99,7 +99,7 @@ OAuth2 client-credentials token acquisition, with thread-safe TTL caching and au
 | `ClientSecret` | `string` | — (required) | OAuth2 client secret. |
 | `Domain` | `string?` | `null` | Identity-provider hostname (`my-tenant.eu.auth0.com`) or absolute http/https URL; `/oauth/token` is appended, preserving any existing path. At least one of `Domain` / `TokenEndpoint` must be set. Values already ending in `/oauth/token`, userinfo, query strings, and fragments are rejected. |
 | `TokenEndpoint` | `Uri?` | `null` | Explicit token endpoint; **takes precedence over `Domain`** when both are set. Use for providers that don't follow the `/oauth/token` convention (e.g. Keycloak's `/realms/{realm}/protocol/openid-connect/token`). |
-| `Audience` | `string?` | `null` | OAuth2 audience, e.g. `https://canton.network/`. |
+| `Audience` | `string?` | `null` | OAuth2 audience sent with the token request. When set, it must equal the participant's `target-audience` (by default Canton accepts `https://daml.com/jwt/aud/participant/<participant-id>`). Leave it unset only if your identity provider stamps that audience into the token itself. |
 | `AllowInsecureTokenEndpoint` | `bool` | `false` | Plaintext `http` token endpoints are rejected at validation time (the token request carries the client secret). Set `true` to opt in, e.g. against localhost during development; a warning is logged whenever a plaintext endpoint is used. This opt-in cannot be combined with configured `Tls`: TLS identity and trust settings require `https`. |
 | `SafetyMargin` | `TimeSpan` | `00:00:30` | How far before token expiry a refresh is triggered. Must not be negative. |
 | `TokenAcquisitionTimeout` | `TimeSpan` | `00:00:30` | Ceiling on a single token-acquisition HTTP request (token fetches are serialized behind one refresh lock). Must be positive. Governs only token acquisition — `LedgerClientOptions.Timeout` covers the gRPC call. |
