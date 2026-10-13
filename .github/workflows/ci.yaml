@@ -50,6 +50,10 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Self-test the source bundle download check
         run: .github/scripts/select-dars.test.sh
+      - name: Self-test the Daml SDK component resolution
+        run: .github/scripts/resolve-sdk-components.test.sh
+      - name: Self-test the dpm-codegen-cs digest pin
+        run: .github/scripts/resolve-codegen-cs-digest.test.sh
 
   intermediate-oracle:
     runs-on: ubuntu-latest

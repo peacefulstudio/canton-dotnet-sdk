@@ -16,8 +16,12 @@ on:
         required: false
         type: string
         default: ''
+      codegen_cs_digest:
+        description: 'Digest (sha256:<hex>) of the dpm-codegen-cs index to pull.'
+        required: true
+        type: string
       daml_sdk_version:
-        description: 'Daml SDK version; the damlc and daml-script component tags it ships are read from its SDK manifest.'
+        description: 'Daml SDK version; the damlc and daml-script component versions it ships are read from the SDK manifest pinned in versions.yaml.'
         required: true
         type: string
       runtime_version:
@@ -53,6 +57,7 @@ jobs:
         splice-*
       counter_variable: SPLICE_RELEASE_COUNTERS
       codegen_cs_version: ${{ inputs.codegen_cs_version }}
+      codegen_cs_digest: ${{ inputs.codegen_cs_digest }}
       daml_sdk_version: ${{ inputs.daml_sdk_version }}
       runtime_version: ${{ inputs.runtime_version }}
       package_license: ${{ inputs.package_license }}

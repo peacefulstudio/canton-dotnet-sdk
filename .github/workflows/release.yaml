@@ -77,7 +77,10 @@ jobs:
           DAML_SDK="$(version_of daml-sdk)"
           SPLICE_SHA256="$(version_of splice-sha256)"
           FINANCE_SHA256="$(version_of daml-finance-sha256)"
-          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAML_SDK}" "splice-sha256=${SPLICE_SHA256}" "daml-finance-sha256=${FINANCE_SHA256}"; do
+          DAML_SDK_SHA256="$(version_of daml-sdk-sha256)"
+          DAMLC_SHA256="$(version_of damlc-sha256)"
+          DAML_SCRIPT_SHA256="$(version_of daml-script-sha256)"
+          for pair in "splice=${SPLICE}" "daml-finance=${FINANCE}" "daml-sdk=${DAML_SDK}" "splice-sha256=${SPLICE_SHA256}" "daml-finance-sha256=${FINANCE_SHA256}" "daml-sdk-sha256=${DAML_SDK_SHA256}" "damlc-sha256=${DAMLC_SHA256}" "daml-script-sha256=${DAML_SCRIPT_SHA256}"; do
             [ -n "${pair#*=}" ] || { echo "::error::versions.yaml has no '${pair%%=*}' entry"; exit 1; }
           done
           DRY="${DRY_RUN_INPUT:-false}"
@@ -127,8 +130,32 @@ jobs:
       version: ${{ needs.resolve.outputs.version }}
       push: ${{ !fromJSON(needs.resolve.outputs.dry_run) }}
 
+  codegen-cs-digest:
+    needs: [resolve, oci-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+      - name: Setup oras
+        uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        with:
+          version: '1.3.1'
+      - name: Pin the dpm-codegen-cs digest (a dry run resolves the published tag now, not pinned to a build output)
+        id: digest
+        env:
+          CODEGEN_CS_VERSION: ${{ needs.resolve.outputs.codegen_cs_version }}
+          BUILT_INDEX_DIGEST: ${{ needs.oci-build.outputs.index_digest }}
+          DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+        run: .github/scripts/resolve-codegen-cs-digest.sh "${CODEGEN_CS_VERSION}" "${BUILT_INDEX_DIGEST}" "${DRY_RUN}"
+
   splice-pack:
-    needs: [resolve, nuget-pack, oci-build]
+    needs: [resolve, nuget-pack, oci-build, codegen-cs-digest]
     permissions:
       contents: write
       packages: read
@@ -138,11 +165,12 @@ jobs:
       download_sha256: ${{ needs.resolve.outputs.splice_sha256 }}
       daml_sdk_version: ${{ needs.resolve.outputs.daml_sdk_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
+      codegen_cs_digest: ${{ needs.codegen-cs-digest.outputs.digest }}
       release_tag: ${{ needs.resolve.outputs.tag }}
     secrets: inherit
 
   daml-finance-pack:
-    needs: [resolve, nuget-pack, oci-build]
+    needs: [resolve, nuget-pack, oci-build, codegen-cs-digest]
     permissions:
       contents: write
       packages: read
@@ -152,6 +180,7 @@ jobs:
       download_sha256: ${{ needs.resolve.outputs.daml_finance_sha256 }}
       daml_sdk_version: ${{ needs.resolve.outputs.daml_sdk_version }}
       codegen_cs_version: ${{ needs.resolve.outputs.codegen_cs_version }}
+      codegen_cs_digest: ${{ needs.codegen-cs-digest.outputs.digest }}
       release_tag: ${{ needs.resolve.outputs.tag }}
     secrets: inherit
 
@@ -176,7 +205,7 @@ jobs:
       tag: ${{ needs.resolve.outputs.tag }}
 
   complete:
-    needs: [resolve, nuget-pack, oci-build, splice-pack, daml-finance-pack, nuget-publish, publish-release]
+    needs: [resolve, nuget-pack, oci-build, codegen-cs-digest, splice-pack, daml-finance-pack, nuget-publish, publish-release]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -192,6 +221,7 @@ jobs:
             echo ""
             echo "- nuget-pack: ${{ needs.nuget-pack.result }}"
             echo "- oci-build: ${{ needs.oci-build.result }}"
+            echo "- codegen-cs-digest: ${{ needs.codegen-cs-digest.result }}"
             echo "- splice-pack: ${{ needs.splice-pack.result }}"
             echo "- daml-finance-pack: ${{ needs.daml-finance-pack.result }}"
             echo "- nuget-publish: ${{ needs.nuget-publish.result }}"

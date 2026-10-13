@@ -712,10 +712,10 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Install dpm 1.0.19 from GitHub release (oci:// component URIs need >= 1.0.12)
+      - name: Install dpm 1.0.22 from GitHub release (oci:// components pinned by digest need >= 1.0.22)
         env:
-          DPM_VERSION: '1.0.19'
-          DPM_SHA256: '36edd37025d6c1e8a72b5502234b6fea859be78950909733bc8a82bbb1c57798'
+          DPM_VERSION: '1.0.22'
+          DPM_SHA256: 'ebfdb2072e62e4b094f4cc1f9b221a5a6fd536644d88799da8e13bf936e088ff'
         run: |
           set -euo pipefail
           TARBALL="dpm-${DPM_VERSION}-linux-amd64.tar.gz"
