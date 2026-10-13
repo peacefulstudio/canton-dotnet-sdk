@@ -48,7 +48,7 @@ public static class CreateByExercise
         ArgumentNullException.ThrowIfNull(writer);
 
         var outcome = await writer
-            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
+            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, RequestingViewOf<TTemplate>(configure), cancellationToken)
             .ConfigureAwait(false);
 
         return outcome.ProjectCommitted(ProjectSingleCreated<TTemplate>);
@@ -82,7 +82,7 @@ public static class CreateByExercise
         ArgumentNullException.ThrowIfNull(writer);
 
         var outcome = await writer
-            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
+            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, RequestingViewOf<TTemplate>(configure), cancellationToken)
             .ConfigureAwait(false);
 
         return outcome.ProjectCommitted(
@@ -110,8 +110,9 @@ public static class CreateByExercise
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
+        var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
         var outcome = await writer
-            .TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
+            .TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
         return OutcomeUnwrapPolicy.Value(
@@ -120,6 +121,7 @@ public static class CreateByExercise
             "TryCreateOneByExerciseAsync",
             static () => $"Exercising the choice created no {typeof(TTemplate).Name}; expected exactly one.",
             static count => $"Exercising the choice created {count} {typeof(TTemplate).Name} contracts; expected exactly one. Use CreateManyByExerciseAsync to collect them.",
+            submittedCommandId,
             cancellationToken);
     }
 
@@ -147,8 +149,9 @@ public static class CreateByExercise
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
+        var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
         var outcome = await writer
-            .TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, commandId, timeout, configure, cancellationToken)
+            .TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
 
         return OutcomeUnwrapPolicy.Value(
@@ -157,8 +160,16 @@ public static class CreateByExercise
             "TryCreateManyByExerciseAsync",
             static () => $"Exercising the choice yielded no result (None) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",
             static count => $"Exercising the choice yielded Many ({count}) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",
+            submittedCommandId,
             cancellationToken);
     }
+
+    private static Func<CommandsSubmission, CommandsSubmission>? RequestingViewOf<T>(
+        Func<CommandsSubmission, CommandsSubmission>? configure)
+        where T : IDamlType =>
+        T.DamlTypeId.Kind == DamlTypeKind.Interface
+            ? submission => (configure is null ? submission : configure(submission))?.WithInterfaceViewRequest<T>()!
+            : configure;
 
     internal static ExerciseOutcome<ContractId<TTemplate>> ProjectSingleCreated<TTemplate>(TransactionResult result)
         where TTemplate : IDamlType

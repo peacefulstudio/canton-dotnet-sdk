@@ -147,7 +147,7 @@ public enum TemplateIdFormat
 
     /// <summary>
     /// The package-hash format (<c>{packageHash}:{moduleName}:{entityName}</c>),
-    /// expected by command submission over the Ledger API.
+    /// which pins one exact package version rather than resolving by package name.
     /// </summary>
     PackageHash,
 }
@@ -161,7 +161,7 @@ public static class TemplateExtensions
     /// Retrieves the fully qualified template identifier for the specified Daml template type.
     /// By default uses <see cref="TemplateIdFormat.PackageName"/>
     /// (<c>{packageName}:{moduleName}:{entityName}</c>), which is compatible with PQS queries;
-    /// pass <see cref="TemplateIdFormat.PackageHash"/> for Ledger API commands.
+    /// pass <see cref="TemplateIdFormat.PackageHash"/> to pin one exact package version.
     /// </summary>
     /// <typeparam name="T">The Daml template type implementing the <see cref="ITemplate"/> interface.</typeparam>
     /// <param name="format">The identifier format to produce.</param>

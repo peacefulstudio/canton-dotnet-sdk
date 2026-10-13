@@ -38,11 +38,13 @@ internal sealed partial class AdminClient
             PartyManagementService.Descriptor,
             "GenerateExternalPartyTopology",
             (headers, deadline, token) => _partyService.GenerateExternalPartyTopologyAsync(wireRequest, headers, deadline, token),
-            response => MalformedResponse.Decoding(response, generated => new ExternalPartyTopology(
-                new Party(generated.PartyId),
-                generated.PublicKeyFingerprint,
-                generated.TopologyTransactions.Select(transaction => transaction.Memory).ToList(),
-                generated.MultiHash.Memory)),
+            response => MalformedResponse.Decoding(response, generated => ExternalPartyTopologyVerifier.Verify(
+                request,
+                new ExternalPartyTopology(
+                    new Party(generated.PartyId),
+                    generated.PublicKeyFingerprint,
+                    generated.TopologyTransactions.Select(transaction => transaction.Memory).ToList(),
+                    generated.MultiHash.Memory))),
             cancellationToken,
             configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, request.PartyIdHint));
     }
@@ -55,6 +57,7 @@ internal sealed partial class AdminClient
         ArgumentNullException.ThrowIfNull(allocation);
         ArgumentNullException.ThrowIfNull(allocation.OnboardingTransactions);
         ArgumentNullException.ThrowIfNull(allocation.MultiHashSignatures);
+        var expectedParty = ExternalPartyTopologyVerifier.ExpectedPartyOf(allocation);
 
         var wireRequest = new AllocateExternalPartyRequest
         {
@@ -73,7 +76,9 @@ internal sealed partial class AdminClient
             PartyManagementService.Descriptor,
             "AllocateExternalParty",
             (headers, deadline, token) => _partyService.AllocateExternalPartyAsync(wireRequest, headers, deadline, token),
-            response => MalformedResponse.Decoding(response, allocated => new Party(allocated.PartyId)),
+            response => MalformedResponse.Decoding(
+                response,
+                allocated => ExternalPartyIdentity.VerifyAllocated(expectedParty, new Party(allocated.PartyId))),
             cancellationToken,
             replayable: false);
     }

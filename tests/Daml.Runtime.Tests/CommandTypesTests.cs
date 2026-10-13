@@ -151,6 +151,23 @@ public class CommandTypesTests
     }
 
     [Fact]
+    public void ExerciseCommand_For_carries_the_package_name_of_the_owning_template()
+    {
+        var command = ExerciseCommand.For(new ContractId<TestTemplate>("contract-123"), new ChoiceName("Archive"), DamlUnit.Instance);
+
+        command.PackageName.Should().Be("test-package-name");
+    }
+
+    [Fact]
+    public void ExerciseCommand_constructed_directly_names_no_package()
+    {
+        var command = new ExerciseCommand(
+            TestTemplate.TemplateId, new ContractId<TestTemplate>("contract-123"), new ChoiceName("Archive"), DamlUnit.Instance);
+
+        command.PackageName.Should().BeNull();
+    }
+
+    [Fact]
     public void ExerciseCommand_For_rejects_a_null_contract_id()
     {
         var act = () => ExerciseCommand.For<TestTemplate>(null!, new ChoiceName("Archive"), DamlUnit.Instance);

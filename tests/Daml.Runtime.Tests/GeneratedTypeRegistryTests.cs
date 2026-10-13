@@ -29,6 +29,18 @@ public class GeneratedTypeRegistryTests
         public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) => ReadNothing(json, context);
     }
 
+    private sealed record NamelessRecord : IDamlType, IDamlRecord<NamelessRecord>
+    {
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(
+            new Identifier("pkg-nameless", "Registry.Nameless", "NamelessRecord"), DamlTypeKind.Template, "");
+
+        public DamlRecord ToRecord() => DamlRecord.Create();
+
+        public static NamelessRecord FromRecord(DamlRecord record) => new();
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) => ReadNothing(json, context);
+    }
+
     private sealed record VersionOneRecord : IDamlType, IDamlRecord<VersionOneRecord>
     {
         public static DamlTypeDescriptor DamlTypeId { get; } = new(
@@ -154,7 +166,7 @@ public class GeneratedTypeRegistryTests
         var registry = new GeneratedTypeRegistry();
         registry.ForRecord<ExactRecord>();
 
-        var lookup = registry.FindRecordReader(new Identifier("pkg-other", "Registry.Exact", "ExactRecord"));
+        var lookup = registry.FindRecordReader(new Identifier("pkg-other", "Registry.Exact", "ExactRecord"), "ExactPackage");
 
         AssertResolved(lookup).DeclaringType.Should().Be<ExactRecord>();
     }
@@ -166,7 +178,7 @@ public class GeneratedTypeRegistryTests
         registry.ForRecord<VersionTwoRecord>();
         registry.ForRecord<VersionOneRecord>();
 
-        var lookup = registry.FindRecordReader(new Identifier("pkg-v3", "Registry.Versioned", "VersionedRecord"));
+        var lookup = registry.FindRecordReader(new Identifier("pkg-v3", "Registry.Versioned", "VersionedRecord"), "VersionedPackage");
 
         AssertAmbiguous(lookup).Candidates.Should().Equal(Prefix + "VersionOneRecord", Prefix + "VersionTwoRecord");
     }
@@ -205,10 +217,118 @@ public class GeneratedTypeRegistryTests
         registry.ForRecord<ExactRecord>();
 
         var exact = registry.FindRecordReader(new Identifier("pkg-exact", "Registry.Exact", "ExactRecord"));
-        var fallback = registry.FindRecordReader(new Identifier("pkg-other", "Registry.Exact", "ExactRecord"));
+        var fallback = registry.FindRecordReader(new Identifier("pkg-other", "Registry.Exact", "ExactRecord"), "ExactPackage");
 
         AssertResolved(exact).DeclaringType.Should().Be<ExactRecord>();
         AssertResolved(fallback).DeclaringType.Should().Be<ExactRecord>();
+    }
+
+    [Fact]
+    public void FindRecordReader_does_not_fall_back_when_the_caller_supplies_no_package_name()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForRecord<ExactRecord>();
+        var otherPackage = new Identifier("pkg-other", "Registry.Exact", "ExactRecord");
+
+        registry.FindRecordReader(otherPackage).Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
+        registry.FindRecordReader(otherPackage, null).Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
+        registry.FindRecordReader(otherPackage, "").Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
+    }
+
+    [Fact]
+    public void FindRecordReader_does_not_match_a_type_declared_with_an_empty_package_name_by_a_missing_or_empty_package_name()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForRecord<NamelessRecord>();
+        var otherPackage = new Identifier("pkg-other", "Registry.Nameless", "NamelessRecord");
+
+        registry.FindRecordReader(otherPackage, null).Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
+        registry.FindRecordReader(otherPackage, "").Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
+    }
+
+    [Fact]
+    public void FindRecordReader_does_not_fall_back_to_a_type_declared_under_another_package_name()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForRecord<ExactRecord>();
+
+        var lookup = registry.FindRecordReader(new Identifier("pkg-other", "Registry.Exact", "ExactRecord"), "SomeOtherPackage");
+
+        lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Missing>();
+    }
+
+    [Fact]
+    public void FindRecordReader_keeps_one_module_and_entity_declared_by_two_package_names_apart()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForRecord<FirstPackageAsset>();
+        registry.ForRecord<SecondPackageAsset>();
+        var unknownVersion = new Identifier("pkg-unknown", "Main", "Asset");
+
+        var first = registry.FindRecordReader(unknownVersion, "first-package");
+        var second = registry.FindRecordReader(unknownVersion, "second-package");
+
+        AssertResolved(first).DeclaringType.Should().Be<FirstPackageAsset>();
+        AssertResolved(second).DeclaringType.Should().Be<SecondPackageAsset>();
+    }
+
+    [Fact]
+    public void FindRecordReader_flags_a_package_name_fallback_and_not_an_exact_hit()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForRecord<ExactRecord>();
+
+        var exact = registry.FindRecordReader(new Identifier("pkg-exact", "Registry.Exact", "ExactRecord"), "ExactPackage");
+        var fallback = registry.FindRecordReader(new Identifier("pkg-other", "Registry.Exact", "ExactRecord"), "ExactPackage");
+
+        AssertResolved(exact).ViaPackageName.Should().BeFalse();
+        AssertResolved(fallback).ViaPackageName.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FindChoice_does_not_fall_back_without_a_package_name()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForChoices<ChoiceOwner>();
+
+        var lookup = registry.FindChoice(new Identifier("pkg-elsewhere", "Registry.Owner", "ChoiceOwner"), new ChoiceName("Alpha"));
+
+        lookup.Should().BeOfType<RegistryLookup<IChoice>.Missing>();
+    }
+
+    [Fact]
+    public void FindKeyDescriptor_does_not_fall_back_without_a_package_name()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForKey<DamlLfJsonDecodersTests.KeyedFakeTemplate, string>();
+
+        var lookup = registry.FindKeyDescriptor(new Identifier("keyed-fake-other", "WP1.Fakes", "KeyedFakeTemplate"));
+
+        lookup.Should().BeOfType<RegistryLookup<IKeyDescriptor>.Missing>();
+    }
+
+    private sealed record FirstPackageAsset : IDamlType, IDamlRecord<FirstPackageAsset>
+    {
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(
+            new Identifier("pkg-first-1", "Main", "Asset"), DamlTypeKind.Template, "first-package");
+
+        public DamlRecord ToRecord() => DamlRecord.Create();
+
+        public static FirstPackageAsset FromRecord(DamlRecord record) => new();
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) => ReadNothing(json, context);
+    }
+
+    private sealed record SecondPackageAsset : IDamlType, IDamlRecord<SecondPackageAsset>
+    {
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(
+            new Identifier("pkg-second-1", "Main", "Asset"), DamlTypeKind.Template, "second-package");
+
+        public DamlRecord ToRecord() => DamlRecord.Create();
+
+        public static SecondPackageAsset FromRecord(DamlRecord record) => new();
+
+        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) => ReadNothing(json, context);
     }
 
     [Fact]
@@ -252,7 +372,7 @@ public class GeneratedTypeRegistryTests
         registry.ForChoices<ChoiceOwner>();
 
         var exact = registry.FindChoice(new Identifier("pkg-owner", "Registry.Owner", "ChoiceOwner"), new ChoiceName("Gamma"));
-        var fallback = registry.FindChoice(new Identifier("pkg-elsewhere", "Registry.Owner", "ChoiceOwner"), new ChoiceName("Gamma"));
+        var fallback = registry.FindChoice(new Identifier("pkg-elsewhere", "Registry.Owner", "ChoiceOwner"), new ChoiceName("Gamma"), "OwnerPackage");
 
         exact.Should().BeOfType<RegistryLookup<IChoice>.Missing>();
         fallback.Should().BeOfType<RegistryLookup<IChoice>.Missing>();
@@ -265,7 +385,7 @@ public class GeneratedTypeRegistryTests
         registry.ForChoices<OwnerVersionOne>();
         registry.ForChoices<OwnerVersionTwo>();
 
-        var lookup = registry.FindChoice(new Identifier("pkg-owner-v3", "Registry.Owner", "VersionedOwner"), new ChoiceName("Added"));
+        var lookup = registry.FindChoice(new Identifier("pkg-owner-v3", "Registry.Owner", "VersionedOwner"), new ChoiceName("Added"), "OwnerPackage");
 
         AssertAmbiguous(lookup).Candidates.Should().Equal(Prefix + "OwnerVersionOne", Prefix + "OwnerVersionTwo");
     }
@@ -324,7 +444,7 @@ public class GeneratedTypeRegistryTests
         registry.ForKey<DamlLfJsonDecodersTests.KeyedFakeTemplate, string>();
 
         var exact = registry.FindKeyDescriptor(new Identifier("keyed-fake-pkg", "WP1.Fakes", "KeyedFakeTemplate"));
-        var fallback = registry.FindKeyDescriptor(new Identifier("keyed-fake-other", "WP1.Fakes", "KeyedFakeTemplate"));
+        var fallback = registry.FindKeyDescriptor(new Identifier("keyed-fake-other", "WP1.Fakes", "KeyedFakeTemplate"), "WP1FakesPackage");
         var absent = registry.FindKeyDescriptor(new Identifier("keyed-fake-pkg", "WP1.Fakes", "Nothing"));
 
         AssertResolved(exact).DeclaringType.Should().Be<DamlLfJsonDecodersTests.KeyedFakeTemplate>();

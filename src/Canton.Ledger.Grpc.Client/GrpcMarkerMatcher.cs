@@ -30,8 +30,8 @@ internal static class GrpcMarkerMatcher<TMarker>
 
     public static bool Matches(CreatedContract created) =>
         IsInterface
-            ? created.InterfaceIds.Any(id => IsModuleEntityMatch(id, MarkerIdentity))
-            : IsModuleEntityMatch(created.TemplateId, MarkerIdentity);
+            ? created.InterfaceIds.Any(id => MarkerMatch.Interface(MarkerDescriptor, id))
+            : MarkerMatch.Template(MarkerDescriptor, created.PackageName, created.TemplateId);
 
     public static ProtoIdentifier StreamFilterIdentifier() =>
         DamlValueConverter.ToProtoTemplateNameIdentifier(PackageName, MarkerIdentity);
@@ -43,7 +43,7 @@ internal static class GrpcMarkerMatcher<TMarker>
             return MatchesAnyImplementedInterface(created.InterfaceViews.Select(view => view.InterfaceId));
         }
 
-        return GrpcContractStreamProjector.IsTemplateMatch(created.TemplateId, MarkerIdentity);
+        return MatchesTemplate(created.PackageName, created.TemplateId);
     }
 
     public static bool MatchesProtoArchived(ProtoArchivedEvent archived)
@@ -53,7 +53,7 @@ internal static class GrpcMarkerMatcher<TMarker>
             return MatchesAnyImplementedInterface(archived.ImplementedInterfaces);
         }
 
-        return GrpcContractStreamProjector.IsTemplateMatch(archived.TemplateId, MarkerIdentity);
+        return MatchesTemplate(archived.PackageName, archived.TemplateId);
     }
 
     public static bool MatchesProtoExercised(ProtoExercisedEvent exercised)
@@ -63,7 +63,7 @@ internal static class GrpcMarkerMatcher<TMarker>
             return MatchesAnyImplementedInterface(exercised.ImplementedInterfaces);
         }
 
-        return GrpcContractStreamProjector.IsTemplateMatch(exercised.TemplateId, MarkerIdentity);
+        return MatchesTemplate(exercised.PackageName, exercised.TemplateId);
     }
 
     public static bool MatchesProtoUnassigned(UnassignedEvent unassigned)
@@ -73,7 +73,7 @@ internal static class GrpcMarkerMatcher<TMarker>
             return InterfaceReassignmentFilterSelectsUnassignedEventsServerSide;
         }
 
-        return GrpcContractStreamProjector.IsTemplateMatch(unassigned.TemplateId, MarkerIdentity);
+        return MatchesTemplate(unassigned.PackageName, unassigned.TemplateId);
     }
 
     public static bool TryGetInterfaceViewRecord(ProtoCreatedEvent created, out DamlRecord record)
@@ -86,7 +86,7 @@ internal static class GrpcMarkerMatcher<TMarker>
 
         foreach (var view in created.InterfaceViews)
         {
-            if (!GrpcContractStreamProjector.IsTemplateMatch(view.InterfaceId, MarkerIdentity)) continue;
+            if (!MatchesInterface(view.InterfaceId)) continue;
 
             if (view.ViewStatus is null || view.ViewStatus.Code != (int)Code.Ok || view.ViewValue is null)
             {
@@ -106,10 +106,18 @@ internal static class GrpcMarkerMatcher<TMarker>
     {
         foreach (var implemented in implementedInterfaces)
         {
-            if (GrpcContractStreamProjector.IsTemplateMatch(implemented, MarkerIdentity)) return true;
+            if (MatchesInterface(implemented)) return true;
         }
         return false;
     }
+
+    private static bool MatchesTemplate(string? packageName, ProtoIdentifier? templateId) =>
+        templateId is not null
+        && MarkerMatch.Template(MarkerDescriptor, packageName, templateId.ModuleName, templateId.EntityName);
+
+    private static bool MatchesInterface(ProtoIdentifier? interfaceId) =>
+        interfaceId is not null
+        && MarkerMatch.Interface(MarkerDescriptor, interfaceId.PackageId, interfaceId.ModuleName, interfaceId.EntityName);
 
     private static DamlTypeDescriptor ResolveMarkerDescriptor()
     {
@@ -122,7 +130,4 @@ internal static class GrpcMarkerMatcher<TMarker>
 
         return TMarker.DamlTypeId;
     }
-
-    private static bool IsModuleEntityMatch(RuntimeIdentifier candidate, RuntimeIdentifier expected) =>
-        GrpcContractStreamProjector.MatchesModuleEntity(candidate.ModuleName, candidate.EntityName, expected);
 }

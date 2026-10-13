@@ -238,6 +238,7 @@ public sealed class RestLedgerClientTests : IDisposable
                       "contractId": "00holding",
                       "nodeId": 0,
                       "acsDelta": true,
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "createArgument": {"owner": "party::alice"}
                     }
@@ -265,7 +266,52 @@ public sealed class RestLedgerClientTests : IDisposable
         commands.GetProperty("userId").GetString().Should().Be("test-user");
         commands.GetProperty("actAs")[0].GetString().Should().Be("party::alice");
         commands.GetProperty("commands")[0].GetProperty("CreateCommand").GetProperty("templateId")
-            .GetString().Should().Be("pkg:Module:LedgerClientTemplate");
+            .GetString().Should().Be("#pkg-name:Module:LedgerClientTemplate");
+    }
+
+    private static readonly DamlTypeDescriptor GadgetInterface = new(
+        new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"), DamlTypeKind.Interface, "gadget-package");
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_asks_for_the_requested_interface_views_and_records_them_on_the_result()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, """{"transaction": {"updateId": "upd-1", "commandId": "cmd-1", "offset": "7", "events": []}}""");
+        var client = ClientWith(transport, userId: "test-user");
+        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice)
+            .WithCommandId(new CommandId("cmd-1")) with { InterfaceViewRequests = [GadgetInterface] };
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result
+            .RequestedInterfaces.Should().Equal(new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"));
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        var cumulative = body.RootElement.GetProperty("transactionFormat").GetProperty("eventFormat")
+            .GetProperty("filtersByParty").GetProperty("party::alice").GetProperty("cumulative");
+        cumulative.GetArrayLength().Should().Be(2);
+        cumulative[0].GetProperty("identifierFilter").TryGetProperty("WildcardFilter", out _).Should().BeTrue();
+        var interfaceFilter = cumulative[1].GetProperty("identifierFilter").GetProperty("InterfaceFilter").GetProperty("value");
+        interfaceFilter.GetProperty("interfaceId").GetString().Should().Be("#gadget-package:Acme.Gadget:IGadget");
+        interfaceFilter.GetProperty("includeInterfaceView").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_records_no_requested_interface_without_a_request()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, """{"transaction": {"updateId": "upd-1", "commandId": "cmd-1", "offset": "7", "events": []}}""");
+        var client = ClientWith(transport, userId: "test-user");
+        var submission = CommandsSubmission.Single(CreateCommand.For(new TestTemplate()))
+            .WithActAs(Alice)
+            .WithCommandId(new CommandId("cmd-1"));
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result
+            .RequestedInterfaces.Should().BeEmpty();
     }
 
     [Fact]
@@ -432,6 +478,7 @@ public sealed class RestLedgerClientTests : IDisposable
                       "offset": "1",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "createArgument": {"owner": [null]}
                     }
@@ -607,6 +654,7 @@ public sealed class RestLedgerClientTests : IDisposable
                       "offset": "1",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "createArgument": {"owner": "party::alice"}
                     }
@@ -635,6 +683,7 @@ public sealed class RestLedgerClientTests : IDisposable
                 "ExercisedEvent": {
                   "offset": "1",
                   "contractId": "00holding",
+                  "packageName": "pkg-name",
                   "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                   "choice": "GetOwner",
                   "choiceArgument": {},
@@ -709,6 +758,7 @@ public sealed class RestLedgerClientTests : IDisposable
                 "ExercisedEvent": {
                   "offset": "1",
                   "contractId": "00holding",
+                  "packageName": "missing-pkg-name",
                   "templateId": {"packageId": "missing-pkg", "moduleName": "Missing.Module", "entityName": "Missing"},
                   "choice": "GetOwner",
                   "choiceArgument": {},
@@ -736,6 +786,7 @@ public sealed class RestLedgerClientTests : IDisposable
                   "contractId": "00holding",
                   "nodeId": 0,
                   "acsDelta": true,
+                  "packageName": "missing-pkg-name",
                   "templateId": {"packageId": "missing-pkg", "moduleName": "Missing.Module", "entityName": "Missing"},
                   "createArgument": {"owner": "party::alice"}
                 }
@@ -853,6 +904,7 @@ public sealed class RestLedgerClientTests : IDisposable
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "choice": "SplitHoldings",
                       "choiceArgument": {},
@@ -889,6 +941,7 @@ public sealed class RestLedgerClientTests : IDisposable
                 "ExercisedEvent": {
                   "offset": "1",
                   "contractId": "00holding",
+                  "packageName": "pkg-name",
                   "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                   "choice": "GetOwner",
                   "choiceArgument": {},
@@ -915,6 +968,7 @@ public sealed class RestLedgerClientTests : IDisposable
                   "offset": "1",
                   "acsDelta": true,
                   "contractId": "00holding",
+                  "packageName": "pkg-name",
                   "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                   "createArgument": {"owner": "party::alice"}
                 }
@@ -932,27 +986,34 @@ public sealed class RestLedgerClientTests : IDisposable
             "offset": "1",
             "events": [
               {"CreatedEvent": {"offset": "1", "nodeId": 0, "contractId": "00kept", "acsDelta": true,
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "createArgument": {"owner": "party::alice"}}},
               {"CreatedEvent": {"offset": "1", "nodeId": 1, "contractId": "00transient", "acsDelta": false,
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "createArgument": {"owner": "party::alice"}}},
               {"ExercisedEvent": {"offset": "1", "nodeId": 2, "lastDescendantNodeId": 2, "contractId": "00transient",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
                 "consuming": true, "acsDelta": false, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}},
               {"CreatedEvent": {"offset": "1", "nodeId": 3, "contractId": "00witnessed",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "createArgument": {"owner": "party::bob"}}},
               {"ExercisedEvent": {"offset": "1", "nodeId": 4, "lastDescendantNodeId": 4, "contractId": "00witnessed-target",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
                 "consuming": true, "acsDelta": false, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}},
               {"ExercisedEvent": {"offset": "1", "nodeId": 5, "lastDescendantNodeId": 5, "contractId": "00earlier",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
                 "consuming": true, "acsDelta": true, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}},
               {"ExercisedEvent": {"offset": "1", "nodeId": 6, "lastDescendantNodeId": 6, "contractId": "00holding",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                 "choice": "GetOwner", "choiceArgument": {}, "actingParties": ["party::alice"],
                 "consuming": false, "acsDelta": false, "witnessParties": ["party::alice"], "exerciseResult": "party::alice"}}
@@ -1036,7 +1097,7 @@ public sealed class RestLedgerClientTests : IDisposable
         commands.GetProperty("actAs")[0].GetString().Should().Be("party::alice");
         commands.GetProperty("workflowId").GetString().Should().Be("create-testtemplate");
         commands.GetProperty("commands")[0].GetProperty("CreateCommand").GetProperty("templateId")
-            .GetString().Should().Be("pkg:Module:LedgerClientTemplate");
+            .GetString().Should().Be("#pkg-name:Module:LedgerClientTemplate");
     }
 
     [Fact]
@@ -1138,6 +1199,7 @@ public sealed class RestLedgerClientTests : IDisposable
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "choice": "FindOwner",
                       "choiceArgument": {},
@@ -1177,6 +1239,7 @@ public sealed class RestLedgerClientTests : IDisposable
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "choice": "FindOwner",
                       "choiceArgument": {},
@@ -1218,6 +1281,7 @@ public sealed class RestLedgerClientTests : IDisposable
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "LedgerClientTemplate"},
                       "choice": "GetOwner",
                       "choiceArgument": {},

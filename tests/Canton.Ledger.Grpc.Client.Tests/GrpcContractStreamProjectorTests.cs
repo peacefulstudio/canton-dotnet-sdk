@@ -54,6 +54,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 21L,
@@ -84,6 +85,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = createdOffset,
@@ -114,6 +116,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00poison",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArgumentsWith("amount", poisonValue),
             Offset = 50L,
@@ -136,6 +139,7 @@ public class GrpcContractStreamProjectorTests
         var exercised = new ProtoExercisedEvent
         {
             ContractId = "00poison",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             Choice = "Accept",
             ChoiceArgument = poisonValue,
@@ -161,6 +165,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00poison",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArgumentsWith("amount", poisonValue),
             Offset = 60L,
@@ -190,6 +195,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00tmpl",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             CreateArguments = new ProtoRecord
             {
@@ -213,6 +219,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00badkey",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             ContractKey = UnsetSumValue(),
@@ -240,6 +247,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00unkeyed",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             CreateArguments = new ProtoRecord
             {
@@ -262,6 +270,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 85L,
@@ -298,6 +307,7 @@ public class GrpcContractStreamProjectorTests
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00holding",
+                    PackageName = "token-impl",
                     TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
                     CreateArguments = new ProtoRecord
                     {
@@ -434,6 +444,7 @@ public class GrpcContractStreamProjectorTests
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00holding",
+                    PackageName = "token-impl",
                     TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
                     CreateArguments = new ProtoRecord
                     {
@@ -468,6 +479,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = createdOffset,
@@ -522,6 +534,7 @@ public class GrpcContractStreamProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = createdOffset,
@@ -582,6 +595,7 @@ public class GrpcContractStreamProjectorTests
             Archived = new ProtoArchivedEvent
             {
                 ContractId = "00other",
+                PackageName = "other-package",
                 TemplateId = new ProtoIdentifier { PackageId = "other-pkg", ModuleName = "Other.Module", EntityName = "Other" },
                 Offset = 100L,
             },
@@ -613,6 +627,7 @@ public class GrpcContractStreamProjectorTests
             Unassigned = new UnassignedEvent
             {
                 ContractId = "00other",
+                PackageName = "other-package",
                 TemplateId = new ProtoIdentifier { PackageId = "other-pkg", ModuleName = "Other.Module", EntityName = "Other" },
                 Source = "sync-src",
                 Target = "sync-tgt",
@@ -652,6 +667,7 @@ public class GrpcContractStreamProjectorTests
             Created = new ProtoCreatedEvent
             {
                 ContractId = "00other",
+                PackageName = "other-package",
                 TemplateId = new ProtoIdentifier { PackageId = "other-pkg", ModuleName = "Other.Module", EntityName = "Other" },
                 CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                 Offset = 120L,
@@ -684,6 +700,7 @@ public class GrpcContractStreamProjectorTests
             Exercised = new ProtoExercisedEvent
             {
                 ContractId = "00other",
+                PackageName = "other-package",
                 TemplateId = new ProtoIdentifier { PackageId = "other-pkg", ModuleName = "Other.Module", EntityName = "Other" },
                 Choice = "Accept",
                 ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -723,6 +740,7 @@ public class GrpcContractStreamProjectorTests
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00other",
+                    PackageName = "other-package",
                     TemplateId = new ProtoIdentifier { PackageId = "other-pkg", ModuleName = "Other.Module", EntityName = "Other" },
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = 140L,
@@ -762,6 +780,7 @@ public class GrpcContractStreamProjectorTests
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00holding",
+                    PackageName = "token-impl",
                     TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = 42L,
@@ -822,6 +841,7 @@ public class GrpcContractStreamProjectorTests
             Created = new ProtoCreatedEvent
             {
                 ContractId = "00holding",
+                PackageName = "token-impl",
                 TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
                 Offset = 150L,
             },
@@ -867,6 +887,7 @@ public class GrpcContractStreamProjectorTests
     private static ProtoExercisedEvent MatchingExerciseWithUnitPayloads() => new()
     {
         ContractId = "00holding",
+        PackageName = "token-impl",
         TemplateId = new ProtoIdentifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
         Choice = "Transfer",
         ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -912,15 +933,15 @@ public class GrpcContractStreamProjectorTests
         {
             TransactionEventKind.Created => new Event
             {
-                Created = new ProtoCreatedEvent { ContractId = "00c", TemplateId = templateId, Offset = -1L },
+                Created = new ProtoCreatedEvent { ContractId = "00c", PackageName = "token-impl", TemplateId = templateId, Offset = -1L },
             },
             TransactionEventKind.Archived => new Event
             {
-                Archived = new ProtoArchivedEvent { ContractId = "00c", TemplateId = templateId, Offset = -1L },
+                Archived = new ProtoArchivedEvent { ContractId = "00c", PackageName = "token-impl", TemplateId = templateId, Offset = -1L },
             },
             _ => new Event
             {
-                Exercised = new ProtoExercisedEvent { ContractId = "00c", TemplateId = templateId, Choice = "Go", Offset = -1L },
+                Exercised = new ProtoExercisedEvent { ContractId = "00c", PackageName = "token-impl", TemplateId = templateId, Choice = "Go", Offset = -1L },
             },
         });
 

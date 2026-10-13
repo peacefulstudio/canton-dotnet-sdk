@@ -16,7 +16,10 @@ namespace Canton.Ledger.Abstractions;
 /// way — a fixed marker, then <see cref="Detail"/>. Catch the <c>LedgerOperationException</c> and read this
 /// from its <c>InnerException</c>. The JSON Ledger API client reports an unreadable body with the same
 /// <c>Status</c>, but its <c>InnerException</c> is whichever failure the read raised, so it can be a
-/// <c>JsonException</c> rather than this type.
+/// <c>JsonException</c> rather than this type. An external-party onboarding topology that decodes but
+/// is not the one requested is reported, on either transport, with this type as <c>InnerException</c>.
+/// On either transport, a prepared-transaction hash that is not the hash of the returned transaction
+/// is reported under the same <c>Status</c> with a <see cref="PreparedHashMismatchException"/> in its place.
 /// </remarks>
 public sealed class MalformedResponseException : InvalidOperationException
 {

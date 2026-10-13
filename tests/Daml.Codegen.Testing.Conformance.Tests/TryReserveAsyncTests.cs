@@ -30,7 +30,10 @@ public class TryReserveAsyncTests
             ExerciseResult: result,
             Consuming: false,
             ActingParties: [Patron],
-            WitnessParties: [Patron]);
+            WitnessParties: [Patron])
+        {
+            PackageName = "richtypes-ha8d30776aa45",
+        };
 
     private static CreatedContract TicketCreated(string contractId) =>
         new(
@@ -40,7 +43,10 @@ public class TryReserveAsyncTests
             Payload: DamlRecord.Create(),
             WitnessParties: [Patron],
             Signatories: [new Party("issuer")],
-            Observers: [Patron]);
+            Observers: [Patron])
+        {
+            PackageName = "richtypes-ha8d30776aa45",
+        };
 
     private static FakeLedgerClient ClientCommitting(
         IReadOnlyList<CreatedContract> created, params ExercisedEvent[] exercised) =>

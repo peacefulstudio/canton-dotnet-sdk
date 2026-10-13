@@ -92,7 +92,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.OK,
             """
-            {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
+            {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
             """);
         var client = ClientWith(transport);
 
@@ -145,7 +145,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.OK,
             """
-            {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "createdEventBlob": "CgsM", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
+            {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "createdEventBlob": "CgsM", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
             """);
         var client = ClientWith(transport);
 
@@ -169,7 +169,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.OK,
             """
-            {"activeContracts": [{"contractEntry": {"JsIncompleteUnassigned": {"createdEvent": {"offset": "10", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "unassignedEvent": {"contractId": "00holding", "source": "sync-1", "target": "sync-2", "offset": "11", "reassignmentId": "reassignment-1", "reassignmentCounter": "7"}}}}]}
+            {"activeContracts": [{"contractEntry": {"JsIncompleteUnassigned": {"createdEvent": {"offset": "10", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "unassignedEvent": {"contractId": "00holding", "source": "sync-1", "target": "sync-2", "offset": "11", "reassignmentId": "reassignment-1", "reassignmentCounter": "7"}}}}]}
             """);
         var client = ClientWith(transport);
 
@@ -219,7 +219,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
             .WithResponse(
                 HttpStatusCode.OK,
                 """
-                {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "not-a-number", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}}, "synchronizerId": "sync-1"}}}]}
+                {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "not-a-number", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}}, "synchronizerId": "sync-1"}}}]}
                 """)
             .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 5}""");
         var client = ClientWith(transport);
@@ -382,7 +382,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.OK,
             """
-            [{"update": {"Transaction": {"value": {"offset": "11", "synchronizerId": "sync-1", "events": [{"CreatedEvent": {"offset": "11", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}}]}}}},
+            [{"update": {"Transaction": {"value": {"offset": "11", "synchronizerId": "sync-1", "events": [{"CreatedEvent": {"offset": "11", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}}]}}}},
             {"update": {"OffsetCheckpoint": {"value": {"offset": "11"}}}}]
             """);
         var client = ClientWith(transport);
@@ -481,7 +481,7 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.OK,
             """
-            [{"update": {"Transaction": {"value": {"offset": "12", "synchronizerId": "sync-1", "events": [{"ExercisedEvent": {"offset": "12", "contractId": "00holding", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "choice": "Archive", "choiceArgument": {}, "actingParties": ["party::alice"], "consuming": true, "witnessParties": ["party::alice"], "exerciseResult": {}}}]}}}}]
+            [{"update": {"Transaction": {"value": {"offset": "12", "synchronizerId": "sync-1", "events": [{"ExercisedEvent": {"offset": "12", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "choice": "Archive", "choiceArgument": {}, "actingParties": ["party::alice"], "consuming": true, "witnessParties": ["party::alice"], "exerciseResult": {}}}]}}}}]
             """);
         var client = ClientWith(transport);
 

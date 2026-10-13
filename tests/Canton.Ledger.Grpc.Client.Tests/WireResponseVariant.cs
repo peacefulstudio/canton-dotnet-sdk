@@ -26,6 +26,13 @@ internal sealed record WireResponseVariant(
     int HoleOrdinal = -1,
     ScalarFill HoleScalars = ScalarFill.Default)
 {
+    private const string SweptExternalPartyKeyFingerprint = "12202019c27329ec57b2511862af8a7264f4e24ea67593d429f4b90a73becebf238d";
+    private const string EmptyPreparedTransactionV2Hash = "d5acdc7f600596f7f03c12ff6dda5c48c7f479bf1fa73de82ecfa62e9dbc61e3";
+    private const string SweptExternalPartyTopologyHex =
+        "0a8301080110011a7d4a7b0a4b616c6963653a3a313232303230313963323733323965633537623235313138363261663861373236"
+        + "346634653234656136373539336434323966346239306137336265636562663233386410011a180a145041523a3a6c6f63616c3a3a"
+        + "3132323066666666100232100a0c10041a01012a0301050430021001101e";
+    private const string SweptExternalPartyMultiHashHex = "12205225abfc283abf87dff8885ec5ff4181b64e983f4798a5d3bf397a9db20b5061";
     private const int MaxDepth = 6;
     private const int WholeResponseOneofRounds = 20;
     private const int HoleOneofRounds = 10;
@@ -146,9 +153,38 @@ internal sealed record WireResponseVariant(
                 return Com.Daml.Ledger.Api.V2.Interactive.HashingSchemeVersion.V2;
             }
 
+            if (field.ContainingType.ClrType == typeof(Com.Daml.Ledger.Api.V2.Interactive.PrepareSubmissionResponse))
+            {
+                return field.Name switch
+                {
+                    "prepared_transaction" => new Com.Daml.Ledger.Api.V2.Interactive.PreparedTransaction(),
+                    "prepared_transaction_hash" => ByteString.CopyFrom(Convert.FromHexString(EmptyPreparedTransactionV2Hash)),
+                    _ => null,
+                };
+            }
+
+            if (field.ContainingType.ClrType == typeof(Com.Daml.Ledger.Api.V2.Admin.GenerateExternalPartyTopologyResponse))
+            {
+                return field.Name switch
+                {
+                    "party_id" => "alice::" + SweptExternalPartyKeyFingerprint,
+                    "public_key_fingerprint" => SweptExternalPartyKeyFingerprint,
+                    "topology_transactions" => ByteString.CopyFrom(Convert.FromHexString(SweptExternalPartyTopologyHex)),
+                    "multi_hash" => ByteString.CopyFrom(Convert.FromHexString(SweptExternalPartyMultiHashHex)),
+                    _ => null,
+                };
+            }
+
+            if (field.ContainingType.ClrType == typeof(Com.Daml.Ledger.Api.V2.Admin.AllocateExternalPartyResponse)
+                && field.Name == "party_id")
+            {
+                return GoldenExternalPartyOnboarding.Party.Value;
+            }
+
             return field.Name switch
             {
                 "create_arguments" => LedgerClientTestFixtures.OwnerArgumentsFor("alice::ns1"),
+                "package_name" => "test-package",
                 "next_page_token" => field.FieldType == FieldType.Bytes ? ByteString.Empty : string.Empty,
                 _ => null,
             };

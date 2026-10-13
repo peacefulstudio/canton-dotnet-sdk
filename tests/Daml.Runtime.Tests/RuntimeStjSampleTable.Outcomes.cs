@@ -22,20 +22,29 @@ internal static partial class RuntimeStjSampleTable
         ];
         samples[typeof(ExerciseOutcome<string>)] =
         [
-            new ExerciseOutcome<string>.One("result"),
-            new ExerciseOutcome<string>.None(),
-            new ExerciseOutcome<string>.Many(Eq("00aa", "00bb")),
+            new ExerciseOutcome<string>.One("result") { CommandId = "cmd-1" },
+            new ExerciseOutcome<string>.None { CommandId = "cmd-1" },
+            new ExerciseOutcome<string>.Many(Eq("00aa", "00bb")) { CommandId = "cmd-1" },
             new ExerciseOutcome<string>.DamlError(
                 DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing,
                 "CONTRACT_NOT_FOUND",
                 "contract 00aa is gone",
-                new Dictionary<string, string> { ["contract"] = "00aa", ["category"] = "11" }),
+                new Dictionary<string, string> { ["contract"] = "00aa", ["category"] = "11" })
+            {
+                CommandId = "cmd-1",
+            },
             new ExerciseOutcome<string>.InfraError(
                 new TransportStatus.Grpc(GrpcStatusCode.Unavailable),
                 "node unreachable",
                 DamlErrorCategory.TransientServerFailure,
-                SampleSourceException),
-            new ExerciseOutcome<string>.CommittedUndecodable("update-1", "result did not decode", SampleSourceException),
+                SampleSourceException)
+            {
+                CommandId = "cmd-1",
+            },
+            new ExerciseOutcome<string>.CommittedUndecodable("update-1", "result did not decode", SampleSourceException)
+            {
+                CommandId = "cmd-1",
+            },
         ];
     }
 }

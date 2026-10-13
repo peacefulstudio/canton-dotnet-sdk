@@ -64,7 +64,10 @@ internal static class GrpcTransactionTreeProjector
             exercised.Consuming,
             LedgerWireConversions.ToPartyList(exercised.ActingParties),
             LedgerWireConversions.ToPartyList(exercised.WitnessParties),
-            children);
+            children)
+        {
+            PackageName = exercised.PackageName,
+        };
     }
 
     private static TreeEvent ToCreatedNode(Event evt, int nodeId)
@@ -97,6 +100,7 @@ internal static class GrpcTransactionTreeProjector
             GrpcValueDecoder.ToCreatedAt(created))
         {
             InterfaceIds = ToInterfaceIds(created),
+            PackageName = created.PackageName,
         };
     }
 

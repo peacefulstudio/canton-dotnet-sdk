@@ -37,7 +37,10 @@ public class TryReturnContractIdsAsyncTests
                         ExerciseResult: exerciseResult,
                         Consuming: false,
                         ActingParties: [Owner],
-                        WitnessParties: [Owner]),
+                        WitnessParties: [Owner])
+                    {
+                        PackageName = "richtypes-ha8d30776aa45",
+                    },
                 ],
             }));
 

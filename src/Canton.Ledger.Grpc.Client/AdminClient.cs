@@ -156,7 +156,8 @@ internal sealed partial class AdminClient : IAdminClient
             (headers, deadline, token) => _partyService.AllocatePartyAsync(request, headers, deadline, token),
             response => FromProtoPartyDetails(response.PartyDetails),
             cancellationToken,
-            configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, partyIdHint)).ConfigureAwait(false);
+            configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, partyIdHint),
+            replayable: false).ConfigureAwait(false);
 
         LogPartyAllocated(_logger, details.Party.Value);
         return details;
@@ -247,7 +248,8 @@ internal sealed partial class AdminClient : IAdminClient
             (headers, deadline, token) => _userService.CreateUserAsync(request, headers, deadline, token),
             response => FromProtoUser(response.User),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId)).ConfigureAwait(false);
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            replayable: false).ConfigureAwait(false);
 
         LogUserCreated(_logger, userId);
         return details;
@@ -316,7 +318,8 @@ internal sealed partial class AdminClient : IAdminClient
             "GrantUserRights",
             (headers, deadline, token) => _userService.GrantUserRightsAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId)).ConfigureAwait(false);
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            replayable: false).ConfigureAwait(false);
 
         LogRightsGranted(_logger, userId);
     }
@@ -351,7 +354,8 @@ internal sealed partial class AdminClient : IAdminClient
             "RevokeUserRights",
             (headers, deadline, token) => _userService.RevokeUserRightsAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId)).ConfigureAwait(false);
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            replayable: false).ConfigureAwait(false);
 
         LogRightsRevoked(_logger, userId);
     }
@@ -1083,7 +1087,8 @@ internal sealed partial class AdminClient : IAdminClient
             "UploadDarFile",
             (headers, deadline, token) => _packageManagementService.UploadDarFileAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonSubmissionId, submissionId)).ConfigureAwait(false);
+            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonSubmissionId, submissionId),
+            replayable: false).ConfigureAwait(false);
 
         LogDarUploaded(_logger, darFile.Length);
     }
@@ -1195,9 +1200,12 @@ internal sealed partial class AdminClient : IAdminClient
     /// <see cref="Canton.Ledger.Abstractions.ITokenProvider.None"/> sends no
     /// <c>authorization</c> header, and a caller-supplied <c>authorization</c> metadata entry wins
     /// over the resolved token. Unary calls carry the configured
-    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none
-    /// and run through the configured <see cref="LedgerClientOptions.Retry"/> pipeline, with auth
-    /// headers and deadline recomputed on each attempt; a caller-supplied deadline is kept verbatim.
+    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none;
+    /// a caller-supplied deadline is kept verbatim. The SDK cannot tell whether a raw call is
+    /// idempotent, so a unary call is sent exactly once even when
+    /// <see cref="LedgerClientOptions.Retry"/> is enabled. Start the call inside a
+    /// <see cref="Canton.Ledger.Kernel.Resilience.RawCallReplay.Allow"/> scope to run it through the
+    /// retry pipeline, with auth headers and deadline recomputed on each attempt.
     /// Streaming calls attach auth headers but carry no default deadline — a server stream may
     /// legitimately outlive any unary budget — and are never retried. Because retried unary calls
     /// only surface the winning attempt, <c>AsyncUnaryCall&lt;TResponse&gt;.ResponseHeadersAsync</c>

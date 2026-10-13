@@ -59,6 +59,7 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
                       "contractId": "00created",
                       "nodeId": 0,
                       "acsDelta": true,
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "RetriedTemplate"},
                       "createArgument": {"owner": "party::alice"}
                     }
@@ -145,14 +146,27 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
             .WithActAs(Alice)
             .WithCommandId(new RuntimeCommands.CommandId("cmd-1"));
 
-    private RestLedgerClient ClientRetrying(ScriptedHandler transport, bool retryEnabled = true)
+    private sealed class TokenProviderFailingAfterTheFirstToken(int tokensIssued = 1) : ITokenProvider
+    {
+        private int _calls;
+
+        public Task<string> GetTokenAsync(CancellationToken cancellationToken = default) =>
+            ++_calls <= tokensIssued
+                ? Task.FromResult("first-token")
+                : throw new HttpRequestException("the identity provider is unreachable");
+    }
+
+    private RestLedgerClient ClientRetrying(ScriptedHandler transport, bool retryEnabled = true, ITokenProvider? tokenProvider = null)
     {
         var options = new RestLedgerClientOptions
         {
             HttpAddress = "http://localhost:7575",
             Retry = new RetryOptions { Enabled = retryEnabled, MaxRetryAttempts = 1, Delay = TimeSpan.Zero },
         };
-        var pipeline = new RestRetryHandler(Options.Create(options)) { InnerHandler = transport };
+        HttpMessageHandler participant = tokenProvider is null
+            ? transport
+            : new BearerTokenHandler(tokenProvider) { InnerHandler = transport };
+        var pipeline = new RestRetryHandler(Options.Create(options)) { InnerHandler = participant };
         var factory = new StubHttpClientFactory(pipeline);
         _factories.Add(factory);
         return new RestLedgerClient(factory, Options.Create(options));
@@ -178,6 +192,92 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
         pointRead.RootElement.GetProperty("updateFormat").GetProperty("includeTransactions")
             .GetProperty("eventFormat").GetProperty("filtersByParty").EnumerateObject()
             .Select(party => party.Name).Should().Equal("party::alice");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reads_a_retried_duplicate_with_the_requested_interface_views_and_records_them()
+    {
+        var transport = new ScriptedHandler(
+            LostResponse,
+            Json(HttpStatusCode.Conflict, AcceptedDuplicate),
+            Json(HttpStatusCode.OK, TransactionAtOffset9663));
+        var client = ClientRetrying(transport);
+        var gadget = new DamlTypeDescriptor(
+            new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"), DamlTypeKind.Interface, "gadget-package");
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Submission with { InterfaceViewRequests = [gadget] },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>()
+            .Which.Result.RequestedInterfaces.Should().Equal(new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"));
+        using var pointRead = JsonDocument.Parse(transport.Bodies[2]);
+        var cumulative = pointRead.RootElement.GetProperty("updateFormat").GetProperty("includeTransactions")
+            .GetProperty("eventFormat").GetProperty("filtersByParty").GetProperty("party::alice")
+            .GetProperty("cumulative");
+        cumulative.GetArrayLength().Should().Be(2);
+        cumulative[1].GetProperty("identifierFilter").GetProperty("InterfaceFilter").GetProperty("value")
+            .GetProperty("interfaceId").GetString().Should().Be("#gadget-package:Acme.Gadget:IGadget");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_token_failure_on_a_retry_after_a_sent_attempt_as_Unknown()
+    {
+        var transport = new ScriptedHandler(LostResponse);
+        var client = ClientRetrying(transport, tokenProvider: new TokenProviderFailingAfterTheFirstToken());
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.NoResponse());
+        infraError.Message.Should().Be("connection reset");
+        infraError.SourceException.Should().BeOfType<HttpRequestException>();
+        transport.Paths.Should().Equal(SubmitPath);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_token_failure_on_the_first_attempt_as_NotCommitted_when_retry_is_enabled()
+    {
+        var transport = new ScriptedHandler();
+        var client = ClientRetrying(transport, tokenProvider: new TokenProviderFailingAfterTheFirstToken(tokensIssued: 0));
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.NoResponse());
+        infraError.SourceException.Should().BeOfType<TokenAcquisitionException>();
+        transport.Paths.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_token_failure_on_a_retry_after_a_sent_attempt_as_Unknown()
+    {
+        var transport = new ScriptedHandler(LostResponse);
+        var client = ClientRetrying(transport, tokenProvider: new TokenProviderFailingAfterTheFirstToken());
+
+        var act = () => client.SubmitAndWaitAsync(Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.InnerException.Should().BeOfType<HttpRequestException>();
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_token_failure_on_the_first_attempt_as_NotCommitted_when_retry_is_enabled()
+    {
+        var transport = new ScriptedHandler();
+        var client = ClientRetrying(transport, tokenProvider: new TokenProviderFailingAfterTheFirstToken(tokensIssued: 0));
+
+        var act = () => client.SubmitAndWaitAsync(Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<TokenAcquisitionException>();
+        transport.Paths.Should().BeEmpty();
     }
 
     [Fact]
@@ -208,6 +308,26 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
         outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
             .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
         transport.Paths.Should().Equal(SubmitPath, SubmitPath);
+    }
+
+    [Theory]
+    [InlineData("""{"update": {"Transaction": {"value": {"updateId": "upd-other", "commandId": "another-cmd", "offset": "9663", "events": []}}}}""")]
+    [InlineData("""{"update": {"Transaction": {"value": {"updateId": "upd-other", "offset": "9663", "events": []}}}}""")]
+    public async Task TrySubmitAndWaitForTransactionAsync_keeps_the_DamlError_of_a_retried_DUPLICATE_COMMAND_when_the_transaction_at_the_offset_is_not_this_commands(
+        string transactionAtOffset)
+    {
+        var transport = new ScriptedHandler(
+            LostResponse,
+            Json(HttpStatusCode.Conflict, AcceptedDuplicate),
+            Json(HttpStatusCode.OK, transactionAtOffset));
+        var client = ClientRetrying(transport);
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
+            .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
+        transport.Paths.Should().Equal(SubmitPath, SubmitPath, UpdateByOffsetPath);
     }
 
     [Fact]
@@ -292,10 +412,76 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
         var outcome = await client.TryCreateAsync(
             new CreatedTemplate(Alice),
             new RuntimeCommands.SubmitterInfo(new HashSet<Party> { Alice }, new HashSet<Party>()),
+            commandId: new RuntimeCommands.CommandId("cmd-1"),
             cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Should().BeOfType<ExerciseOutcome<ContractId<CreatedTemplate>>.One>()
             .Which.Result.Value.Should().Be("00created");
         transport.Paths.Should().Equal(SubmitPath, SubmitPath, UpdateByOffsetPath);
+    }
+
+    private const string ContractNotFoundBody =
+        """
+        {
+          "code": "CONTRACT_NOT_FOUND",
+          "cause": "Contract could not be found with id 00abc",
+          "context": {"definite_answer": "false"},
+          "errorCategory": 11,
+          "grpcCodeValue": 5
+        }
+        """;
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_retried_CONTRACT_NOT_FOUND_as_an_InfraError_because_the_lost_attempt_may_have_committed()
+    {
+        var transport = new ScriptedHandler(LostResponse, Json(HttpStatusCode.NotFound, ContractNotFoundBody));
+        var client = ClientRetrying(transport);
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.NotFound));
+        infraError.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing);
+        infraError.Message.Should().Be("Contract could not be found with id 00abc");
+        transport.Paths.Should().Equal(SubmitPath, SubmitPath);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_keeps_the_DamlError_of_a_CONTRACT_NOT_FOUND_answering_the_first_attempt()
+    {
+        var transport = new ScriptedHandler(Json(HttpStatusCode.NotFound, ContractNotFoundBody));
+        var client = ClientRetrying(transport);
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
+            .Which.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_retried_CONTRACT_NOT_FOUND_as_an_unknown_commit_state()
+    {
+        var transport = new ScriptedHandler(LostResponse, Json(HttpStatusCode.NotFound, ContractNotFoundBody));
+        var client = ClientRetrying(transport);
+
+        var act = () => client.SubmitAndWaitAsync(Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_CONTRACT_NOT_FOUND_answering_the_first_attempt_as_not_committed()
+    {
+        var transport = new ScriptedHandler(Json(HttpStatusCode.NotFound, ContractNotFoundBody));
+        var client = ClientRetrying(transport);
+
+        var act = () => client.SubmitAndWaitAsync(Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
     }
 }

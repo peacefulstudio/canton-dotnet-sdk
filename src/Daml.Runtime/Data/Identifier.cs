@@ -22,6 +22,9 @@ public sealed record Identifier(
     /// <summary>Returns the canonical <c>packageId:module:entity</c> form accepted by <see cref="Parse"/>.</summary>
     public override string ToString() => $"{PackageId}:{ModuleName}:{EntityName}";
 
+    internal Identifier AddressedByPackageName(string packageName) =>
+        PackageNames.IsPlaceholder(packageName) ? this : this with { PackageId = $"#{packageName}" };
+
     /// <summary>
     /// Parses an identifier from its string representation.
     /// </summary>

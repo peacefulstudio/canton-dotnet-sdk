@@ -44,7 +44,8 @@ public sealed partial class FakeLedgerClient
         return Task.FromResult(
             AdvancingLedgerEndOnCommit(
                 Staged<ExerciseOutcome<ContractStreamEvent<T>>>(
-                    _canton.ReassignmentResults, typeof(T), "reassignment outcome", $"WithReassignmentResult<{typeof(T).Name}>")));
+                    _canton.ReassignmentResults, typeof(T), "reassignment outcome", $"WithReassignmentResult<{typeof(T).Name}>")
+                    .WithCommandId(SentCommandId(submission.CommandId))));
     }
 
     /// <inheritdoc />
@@ -55,12 +56,11 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Task.FromResult(
-            AdvancingLedgerEndOnCommit(
-                _canton.TransactionTreeOutcome ?? throw StagingMissing(
-                    "transaction tree outcome",
-                    nameof(TrySubmitAndWaitForTransactionTreeAsync),
-                    "WithTransactionTree")));
+        var staged = _canton.TransactionTreeOutcome ?? throw StagingMissing(
+            "transaction tree outcome",
+            nameof(TrySubmitAndWaitForTransactionTreeAsync),
+            "WithTransactionTree");
+        return Task.FromResult(AdvancingLedgerEndOnCommit(staged.WithCommandId(SentCommandId(submission.CommandId))));
     }
 
     /// <inheritdoc />

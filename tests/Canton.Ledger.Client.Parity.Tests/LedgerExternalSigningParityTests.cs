@@ -7,6 +7,7 @@ using Canton.Ledger.Abstractions;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Xunit;
 
@@ -52,7 +53,6 @@ public sealed record ExternalSigningCapability(
 /// </remarks>
 public abstract class LedgerExternalSigningParityTests
 {
-    private const string GlobalSynchronizerAlias = "global";
     private static readonly TimeSpan CompletionBudget = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan StaleAuthorizationBackoff = TimeSpan.FromSeconds(2);
     private const int CompletionOpenAttempts = 4;
@@ -69,7 +69,7 @@ public abstract class LedgerExternalSigningParityTests
         await using var lane = await OpenExternalSigningAsync(scenario, cancellationToken);
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 
-        var (generated, allocated) = await OnboardAsync(lane.Capability, scenario, key, cancellationToken);
+        var (generated, allocated) = await ExternalSigningSteps.OnboardAsync(lane.Capability, scenario, key, cancellationToken);
         var known = await lane.Capability.Admin.ListKnownPartiesAsync(cancellationToken);
 
         allocated.Should().Be(generated.Party);
@@ -86,7 +86,7 @@ public abstract class LedgerExternalSigningParityTests
         var scenario = ExternalSigningScenario.CreateUnique();
         await using var lane = await OpenExternalSigningAsync(scenario, cancellationToken);
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var (generated, party) = await OnboardAsync(lane.Capability, scenario, key, cancellationToken);
+        var (generated, party) = await ExternalSigningSteps.OnboardAsync(lane.Capability, scenario, key, cancellationToken);
         await lane.Capability.GrantActAsAsync(party, cancellationToken);
 
         var signed = await PrepareAndSignAsync(lane.Capability.Client, party, key, generated, scenario, cancellationToken);
@@ -107,7 +107,7 @@ public abstract class LedgerExternalSigningParityTests
         var scenario = ExternalSigningScenario.CreateUnique();
         await using var lane = await OpenExternalSigningAsync(scenario, cancellationToken);
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var (generated, party) = await OnboardAsync(lane.Capability, scenario, key, cancellationToken);
+        var (generated, party) = await ExternalSigningSteps.OnboardAsync(lane.Capability, scenario, key, cancellationToken);
         await lane.Capability.GrantActAsAsync(party, cancellationToken);
 
         var signed = await PrepareAndSignAsync(lane.Capability.Client, party, key, generated, scenario, cancellationToken);
@@ -119,13 +119,41 @@ public abstract class LedgerExternalSigningParityTests
     }
 
     [Fact]
+    public async Task PrepareSubmissionAsync_returns_the_hash_of_an_exercise_it_prepared()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var scenario = ExternalSigningScenario.CreateUnique();
+        await using var lane = await OpenExternalSigningAsync(scenario, cancellationToken);
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var (generated, party) = await ExternalSigningSteps.OnboardAsync(lane.Capability, scenario, key, cancellationToken);
+        await lane.Capability.GrantActAsAsync(party, cancellationToken);
+        var client = lane.Capability.Client;
+        var markerCreate = await PrepareAndSignAsync(
+            client, party, key, generated, scenario with { SubmissionId = scenario.SubmissionId + "-create" }, cancellationToken);
+        var created = await client.ExecuteSubmissionAndWaitForTransactionAsync(
+            markerCreate, new SubmitterInfo(party), cancellationToken: cancellationToken);
+        var marker = created.CreatedContracts.First(contract => contract.TemplateId.EntityName == "Marker");
+
+        var prepared = await client.PrepareSubmissionAsync(
+            CommandsSubmission.Single(new ContractId<Marker>(marker.ContractId).ArchiveCommand())
+                .WithActAs(party)
+                .WithCommandId(new CommandId(Guid.NewGuid().ToString())),
+            cancellationToken: cancellationToken);
+        var executed = await client.ExecuteSubmissionAndWaitAsync(
+            Sign(prepared, party, key, generated, scenario), cancellationToken: cancellationToken);
+
+        ExternalSigningSteps.RecomputedHashHex(prepared).Should().Be(Convert.ToHexStringLower(prepared.Hash.Span));
+        executed.UpdateId.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public async Task ExecuteSubmissionAsync_is_accepted_and_its_completion_reaches_the_stream()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var scenario = ExternalSigningScenario.CreateUnique();
         await using var lane = await OpenExternalSigningAsync(scenario, cancellationToken);
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var (generated, party) = await OnboardAsync(lane.Capability, scenario, key, cancellationToken);
+        var (generated, party) = await ExternalSigningSteps.OnboardAsync(lane.Capability, scenario, key, cancellationToken);
         await lane.Capability.GrantActAsAsync(party, cancellationToken);
         var client = lane.Capability.Client;
         var signed = await PrepareAndSignAsync(client, party, key, generated, scenario, cancellationToken);
@@ -138,30 +166,6 @@ public abstract class LedgerExternalSigningParityTests
         accepted.Should().NotBeNull(
             "the participant echoes the execution's submission id on its accepted completion");
         accepted!.UpdateId.Should().NotBeNullOrWhiteSpace();
-    }
-
-    private static async Task<(ExternalPartyTopology Generated, Party Allocated)> OnboardAsync(
-        ExternalSigningCapability capability,
-        ExternalSigningScenario scenario,
-        ECDsa key,
-        CancellationToken cancellationToken)
-    {
-        var synchronizer = await ResolveSynchronizerAsync(capability.Client, cancellationToken);
-        var publicKey = new SigningPublicKey(
-            PublicKeyFormat.DerX509SubjectPublicKeyInfo, key.ExportSubjectPublicKeyInfo(), SigningKeySpec.EcP256);
-
-        var generated = await capability.Admin.GenerateExternalPartyTopologyAsync(
-            new ExternalPartyTopologyRequest(synchronizer, scenario.PartyHint, publicKey), cancellationToken);
-        var allocated = await capability.Admin.AllocateExternalPartyAsync(
-            new ExternalPartyAllocation(
-                synchronizer,
-                generated.TopologyTransactions
-                    .Select(transaction => new SignedTopologyTransaction(transaction, []))
-                    .ToList(),
-                [Sign(key, generated.MultiHash, generated.PublicKeyFingerprint)]),
-            cancellationToken);
-
-        return (generated, allocated);
     }
 
     private static async Task<SignedSubmission> PrepareAndSignAsync(
@@ -178,30 +182,22 @@ public abstract class LedgerExternalSigningParityTests
                 .WithCommandId(new CommandId(Guid.NewGuid().ToString())),
             cancellationToken: cancellationToken);
 
-        prepared.Hash.Length.Should().BeGreaterThan(0);
         prepared.PreparedTransaction.Length.Should().BeGreaterThan(0);
+        ExternalSigningSteps.RecomputedHashHex(prepared).Should().Be(Convert.ToHexStringLower(prepared.Hash.Span));
 
-        return new SignedSubmission(
+        return Sign(prepared, party, key, generated, scenario);
+    }
+
+    private static SignedSubmission Sign(
+        PreparedSubmission prepared,
+        Party party,
+        ECDsa key,
+        ExternalPartyTopology generated,
+        ExternalSigningScenario scenario) =>
+        new(
             prepared,
-            [new PartySignatures(party, [Sign(key, prepared.Hash, generated.PublicKeyFingerprint)])],
+            [new PartySignatures(party, [ExternalSigningSteps.Sign(key, prepared.Hash, generated.PublicKeyFingerprint)])],
             scenario.SubmissionId);
-    }
-
-    private static async Task<SynchronizerId> ResolveSynchronizerAsync(
-        ICantonLedgerClient client, CancellationToken cancellationToken)
-    {
-        var connected = await client.GetConnectedSynchronizersAsync(cancellationToken: cancellationToken);
-        var chosen = connected.FirstOrDefault(
-                synchronizer => synchronizer.SynchronizerAlias == GlobalSynchronizerAlias)
-            ?? connected[0];
-        return new SynchronizerId(chosen.SynchronizerId);
-    }
-
-    private static LedgerSignature Sign(ECDsa key, ReadOnlyMemory<byte> hash, string fingerprint) => new(
-        SignatureFormat.Der,
-        key.SignData(hash.Span, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence),
-        fingerprint,
-        SigningAlgorithm.EcDsaSha256);
 
     private static async Task<CompletionStreamEvent.CommandAccepted?> FindAcceptedCompletionAsync(
         CapabilityLane<ExternalSigningCapability> lane,

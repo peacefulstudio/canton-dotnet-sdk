@@ -9,7 +9,7 @@ internal abstract record RegistryLookup<TValue>
     {
     }
 
-    internal sealed record Resolved(TValue Value, Type DeclaringType) : RegistryLookup<TValue>;
+    internal sealed record Resolved(TValue Value, Type DeclaringType, bool ViaPackageName = false) : RegistryLookup<TValue>;
 
     internal sealed record Missing : RegistryLookup<TValue>;
 

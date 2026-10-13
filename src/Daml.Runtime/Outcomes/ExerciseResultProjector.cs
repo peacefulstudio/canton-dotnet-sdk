@@ -25,10 +25,16 @@ internal static class ExerciseResultProjector
     internal static ExerciseOutcome<TResult> ProjectCommandedExercise<TResult>(
         TransactionResult transaction,
         Identifier commandTarget,
+        string? commandTargetPackageName,
         ChoiceName choiceName,
         Func<ExercisedEvent, TResult> exercisedDecoder,
         string contractId) =>
-        Project(transaction, exercised => IsCommandedOn(exercised, commandTarget), choiceName, exercisedDecoder, contractId);
+        Project(
+            transaction,
+            exercised => IsCommandedOn(exercised, commandTarget, commandTargetPackageName),
+            choiceName,
+            exercisedDecoder,
+            contractId);
 
     private static ExerciseOutcome<TResult> Project<TResult>(
         TransactionResult transaction,
@@ -71,15 +77,23 @@ internal static class ExerciseResultProjector
     }
 
     private static bool IsOwnedBy(ExercisedEvent exercised, DamlTypeDescriptor owner) =>
-        Names(owner.Kind == DamlTypeKind.Interface ? exercised.InterfaceId : exercised.TemplateId, owner.Identifier);
+        owner.Kind == DamlTypeKind.Interface
+            ? exercised.InterfaceId is { } interfaceId && MarkerMatch.Interface(owner, interfaceId)
+            : MarkerMatch.Template(owner, exercised.PackageName, exercised.TemplateId);
 
-    private static bool IsCommandedOn(ExercisedEvent exercised, Identifier commandTarget) =>
-        Names(exercised.TemplateId, commandTarget) || Names(exercised.InterfaceId, commandTarget);
+    private static bool IsCommandedOn(ExercisedEvent exercised, Identifier commandTarget, string? commandTargetPackageName)
+    {
+        var target = new DamlTypeDescriptor(commandTarget, DamlTypeKind.Template, commandTargetPackageName ?? string.Empty);
+        var templateMatches = PackageNames.IsPlaceholder(commandTargetPackageName)
+            ? exercised.TemplateId.PackageId == commandTarget.PackageId && SameModuleAndEntity(exercised.TemplateId, commandTarget)
+            : MarkerMatch.Template(target, exercised.PackageName, exercised.TemplateId);
+        return templateMatches
+            || (exercised.InterfaceId is { } interfaceId && MarkerMatch.Interface(target, interfaceId));
+    }
 
-    private static bool Names(Identifier? exercisedOn, Identifier owner) =>
-        exercisedOn is { } identifier
-            && string.Equals(identifier.ModuleName, owner.ModuleName, StringComparison.Ordinal)
-            && string.Equals(identifier.EntityName, owner.EntityName, StringComparison.Ordinal);
+    private static bool SameModuleAndEntity(Identifier left, Identifier right) =>
+        string.Equals(left.ModuleName, right.ModuleName, StringComparison.Ordinal)
+        && string.Equals(left.EntityName, right.EntityName, StringComparison.Ordinal);
 
     private static string NoExercisedEventMessage(string? updateId, ChoiceName choiceName, string contractId) =>
         $"Submission succeeded but no '{choiceName.Value}' exercise on contract '{contractId}' was recorded on {DescribeTransaction(updateId)}. " +

@@ -214,7 +214,8 @@ public sealed class FakeAdminClientBuilder
 
     /// <summary>
     /// Stages the party <see cref="FakeAdminClient.AllocateExternalPartyAsync"/> returns for every
-    /// allocation. Like <see cref="WithAllocatedParty"/>, it does not make the party appear in the
+    /// allocation, whatever onboarding transactions it carries. Like
+    /// <see cref="WithAllocatedParty"/>, it does not make the party appear in the
     /// <see cref="WithParties"/> list.
     /// </summary>
     /// <returns>The same builder, for chaining.</returns>

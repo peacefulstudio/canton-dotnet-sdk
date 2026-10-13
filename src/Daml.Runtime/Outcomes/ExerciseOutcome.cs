@@ -39,7 +39,9 @@ namespace Daml.Runtime.Outcomes;
 ///   <typeparamref name="T"/> values.</item>
 ///   <item><see cref="DamlError"/> — structured Canton/Daml error decoded from a transport-level trailer
 ///   (gRPC <c>grpc-status-details-bin</c>, JSON error body, etc.).</item>
-///   <item><see cref="InfraError"/> — transport-level failure with no structured Canton error attached.</item>
+///   <item><see cref="InfraError"/> — transport-level failure with no structured Canton error attached, or a
+///   structured rejection of a write the retry pipeline re-sent (other than <c>DUPLICATE_COMMAND</c>), which
+///   cannot show that the first attempt did not commit. Its Canton error id and metadata are not attached.</item>
 ///   <item><see cref="CommittedUndecodable"/> — the command committed, but the participant's
 ///   response could not be decoded into <typeparamref name="T"/>; do not resubmit, and read the
 ///   transaction by <see cref="CommittedUndecodable.UpdateId"/> instead.</item>
@@ -59,6 +61,17 @@ public abstract record ExerciseOutcome<T>
 {
     /// <summary>Sealed; new variants live alongside the existing ones.</summary>
     private protected ExerciseOutcome() { }
+
+    /// <summary>
+    /// The command id the submission behind this outcome was sent with, including one the SDK or a
+    /// generated helper minted because the caller supplied none; <c>null</c> when the outcome was
+    /// not produced by a command submission, or by a writer that does not report it. Look it up on the
+    /// completion stream to learn what became of a command whose outcome is
+    /// <see cref="InfraError"/>. It takes part in equality: two outcomes of different submissions are
+    /// not equal even when their content is. Written to JSON only when set.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CommandId { get; init; }
 
     /// <summary>The operation succeeded and produced a <typeparamref name="T"/>.</summary>
     public sealed record One(T Result) : ExerciseOutcome<T>;
@@ -169,6 +182,7 @@ public abstract record ExerciseOutcome<T>
                 || Category != other.Category
                 || ErrorId != other.ErrorId
                 || Message != other.Message
+                || CommandId != other.CommandId
                 || Metadata.Count != other.Metadata.Count)
             {
                 return false;
@@ -186,7 +200,7 @@ public abstract record ExerciseOutcome<T>
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            var hash = HashCode.Combine(Category, ErrorId, Message, Metadata.Count);
+            var hash = HashCode.Combine(Category, ErrorId, Message, CommandId, Metadata.Count);
             foreach (var (key, value) in Metadata)
             {
                 hash ^= HashCode.Combine(key, value);
@@ -196,7 +210,11 @@ public abstract record ExerciseOutcome<T>
     }
 
     /// <summary>
-    /// Infrastructure-level failure (no structured Canton error attached).
+    /// Infrastructure-level failure: no structured Canton error attached, or a structured rejection of a
+    /// write the retry pipeline re-sent (other than <c>DUPLICATE_COMMAND</c>), which leaves open whether the
+    /// first attempt committed. In the re-sent case the rejection's Canton error id and metadata are
+    /// deliberately not attached; the throwing call reports the same event as an
+    /// <c>Unknown</c> commit state.
     /// Must not represent cancellation of the caller's own <c>CancellationToken</c> —
     /// a <c>Try*</c> method must let <see cref="OperationCanceledException"/> (or a
     /// subtype, e.g. <c>TaskCanceledException</c>) propagate for that case instead of
@@ -222,7 +240,7 @@ public abstract record ExerciseOutcome<T>
         [property: JsonIgnore] Exception? SourceException = null) : ExerciseOutcome<T>
     {
         /// <summary>
-        /// Compares two infrastructure failures by <see cref="Status"/>, <see cref="Message"/> and <see cref="Category"/>, ignoring <see cref="SourceException"/>.
+        /// Compares two infrastructure failures by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ExerciseOutcome{T}.CommandId"/>, ignoring <see cref="SourceException"/>.
         /// </summary>
         /// <remarks>
         /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
@@ -236,14 +254,15 @@ public abstract record ExerciseOutcome<T>
             other is not null
             && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
             && Message == other.Message
-            && Category == other.Category;
+            && Category == other.Category
+            && CommandId == other.CommandId;
 
         /// <summary>
         /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
         /// <see cref="Equals(InfraError)"/>.
         /// </summary>
-        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/> and <see cref="Category"/>.</returns>
-        public override int GetHashCode() => HashCode.Combine(Status, Message, Category);
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ExerciseOutcome{T}.CommandId"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, CommandId);
     }
 
     /// <summary>
@@ -268,7 +287,7 @@ public abstract record ExerciseOutcome<T>
         [property: JsonIgnore] Exception? SourceException = null) : ExerciseOutcome<T>
     {
         /// <summary>
-        /// Compares two committed-but-undecodable outcomes by <see cref="UpdateId"/> and <see cref="Message"/>, ignoring <see cref="SourceException"/>.
+        /// Compares two committed-but-undecodable outcomes by <see cref="UpdateId"/>, <see cref="Message"/> and <see cref="ExerciseOutcome{T}.CommandId"/>, ignoring <see cref="SourceException"/>.
         /// </summary>
         /// <remarks>
         /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
@@ -281,14 +300,15 @@ public abstract record ExerciseOutcome<T>
         public bool Equals(CommittedUndecodable? other) =>
             other is not null
             && UpdateId == other.UpdateId
-            && Message == other.Message;
+            && Message == other.Message
+            && CommandId == other.CommandId;
 
         /// <summary>
         /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
         /// <see cref="Equals(CommittedUndecodable)"/>.
         /// </summary>
-        /// <returns>A hash code over <see cref="UpdateId"/> and <see cref="Message"/>.</returns>
-        public override int GetHashCode() => HashCode.Combine(UpdateId, Message);
+        /// <returns>A hash code over <see cref="UpdateId"/>, <see cref="Message"/> and <see cref="ExerciseOutcome{T}.CommandId"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(UpdateId, Message, CommandId);
     }
 }
 

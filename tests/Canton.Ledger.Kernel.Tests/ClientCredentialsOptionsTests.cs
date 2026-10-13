@@ -536,6 +536,77 @@ public class ClientCredentialsOptionsTests
             && r.MemberNames.Contains(nameof(ClientCredentialsOptions.AllowInsecureTokenEndpoint)));
     }
 
+    [Fact]
+    public void TokenFailureCooldown_defaults_to_enabled_with_500_milliseconds_doubling_to_30_seconds()
+    {
+        var cooldown = ValidOptions().TokenFailureCooldown;
+
+        cooldown.Enabled.Should().BeTrue();
+        cooldown.InitialDelay.Should().Be(TimeSpan.FromMilliseconds(500));
+        cooldown.MaxDelay.Should().Be(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public void Validate_accepts_a_disabled_TokenFailureCooldown()
+    {
+        var options = ValidOptions();
+        options.TokenFailureCooldown = new TokenFailureCooldownOptions { Enabled = false };
+
+        Validate(options).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Validate_fails_when_TokenFailureCooldown_InitialDelay_is_not_positive(int milliseconds)
+    {
+        var options = ValidOptions();
+        options.TokenFailureCooldown = new TokenFailureCooldownOptions { InitialDelay = TimeSpan.FromMilliseconds(milliseconds) };
+
+        var results = Validate(options);
+
+        results.Should().ContainSingle(r =>
+            r.MemberNames.Contains(nameof(TokenFailureCooldownOptions.InitialDelay))
+            && r.ErrorMessage == "TokenFailureCooldownOptions.InitialDelay must be positive.");
+    }
+
+    [Fact]
+    public void Validate_fails_when_TokenFailureCooldown_MaxDelay_is_below_InitialDelay()
+    {
+        var options = ValidOptions();
+        options.TokenFailureCooldown = new TokenFailureCooldownOptions
+        {
+            InitialDelay = TimeSpan.FromSeconds(2),
+            MaxDelay = TimeSpan.FromSeconds(1)
+        };
+
+        var results = Validate(options);
+
+        results.Should().ContainSingle(r =>
+            r.MemberNames.Contains(nameof(TokenFailureCooldownOptions.MaxDelay))
+            && r.ErrorMessage == "TokenFailureCooldownOptions.MaxDelay must not be below InitialDelay.");
+    }
+
+    [Fact]
+    public void Validate_accepts_a_TokenFailureCooldown_whose_MaxDelay_equals_InitialDelay()
+    {
+        var options = ValidOptions();
+        options.TokenFailureCooldown = new TokenFailureCooldownOptions
+        {
+            InitialDelay = TimeSpan.FromSeconds(1),
+            MaxDelay = TimeSpan.FromSeconds(1)
+        };
+
+        Validate(options).Should().BeEmpty();
+    }
+
+    private static ClientCredentialsOptions ValidOptions() => new()
+    {
+        ClientId = "id",
+        ClientSecret = "secret",
+        Domain = "https://auth.example.com"
+    };
+
     private static List<ValidationResult> Validate(ClientCredentialsOptions options)
     {
         var context = new ValidationContext(options);

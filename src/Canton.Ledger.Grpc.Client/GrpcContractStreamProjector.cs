@@ -93,13 +93,6 @@ internal static class GrpcContractStreamProjector
         StreamEventClassifier.Synchronizer(wireSynchronizerId)
         ?? throw MalformedResponse.MissingRequiredField($"the event for contract '{contractId}' has no synchronizer_id");
 
-    public static bool IsTemplateMatch(ProtoIdentifier? proto, RuntimeIdentifier expected) =>
-        proto is not null && MatchesModuleEntity(proto.ModuleName, proto.EntityName, expected);
-
-    internal static bool MatchesModuleEntity(string moduleName, string entityName, RuntimeIdentifier expected) =>
-        string.Equals(moduleName, expected.ModuleName, StringComparison.Ordinal)
-        && string.Equals(entityName, expected.EntityName, StringComparison.Ordinal);
-
     public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response)
     {
         var (created, wireSynchronizerId) = GrpcProjectionCore.ActiveEntryOf(response);

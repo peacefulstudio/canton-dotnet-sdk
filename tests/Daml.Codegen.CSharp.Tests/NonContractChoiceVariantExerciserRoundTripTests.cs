@@ -146,7 +146,10 @@ public class NonContractChoiceVariantExerciserRoundTripTests
             ExerciseResult: exerciseResult,
             Consuming: false,
             ActingParties: [],
-            WitnessParties: []);
+            WitnessParties: [])
+        {
+            PackageName = "test-package",
+        };
         var transaction = new TransactionResult(
             UpdateId: "update-1",
             CompletionOffset: LedgerOffset.At(1),

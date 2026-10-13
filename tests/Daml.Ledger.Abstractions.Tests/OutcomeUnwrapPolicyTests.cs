@@ -149,14 +149,14 @@ public class OutcomeUnwrapPolicyTests
                 "TryExerciseAsync",
                 DescribeNone,
                 DescribeMany,
-                Cancelled);
+                cancellationToken: Cancelled);
 
             act.Should().Throw<OperationCanceledException>();
         },
 
         ["RequireOne_keeps_a_cancelled_token_from_beating_DamlError"] = () =>
             ThrownBy(() => OutcomeUnwrapPolicy.Value(
-                    Contended, ValueIntent.RequireOne, "TryExerciseAsync", DescribeNone, DescribeMany, Cancelled))
+                    Contended, ValueIntent.RequireOne, "TryExerciseAsync", DescribeNone, DescribeMany, cancellationToken: Cancelled))
                 .CommitState.Should().Be(CommitState.NotCommitted),
 
         ["RequireOne_throws_committed_with_the_update_id_for_CommittedUndecodable"] = () =>
@@ -312,7 +312,7 @@ public class OutcomeUnwrapPolicyTests
         ["RejectNone_lets_a_cancelled_token_beat_InfraError"] = () =>
         {
             var act = () => OutcomeUnwrapPolicy.Discard(
-                Unreachable(new TimeoutException("boom")), DiscardIntent.RejectNone, "TrySubmitSingleAsync", Cancelled);
+                Unreachable(new TimeoutException("boom")), DiscardIntent.RejectNone, "TrySubmitSingleAsync", cancellationToken: Cancelled);
 
             act.Should().Throw<OperationCanceledException>();
         },
@@ -353,7 +353,7 @@ public class OutcomeUnwrapPolicyTests
         ["AcceptNone_keeps_a_cancelled_token_from_beating_InfraError"] = () =>
         {
             var thrown = ThrownBy(() => OutcomeUnwrapPolicy.Discard(
-                Unreachable(new TimeoutException("boom")), DiscardIntent.AcceptNone, "Settle", Cancelled));
+                Unreachable(new TimeoutException("boom")), DiscardIntent.AcceptNone, "Settle", cancellationToken: Cancelled));
 
             thrown.CommitState.Should().Be(CommitState.Unknown);
         },

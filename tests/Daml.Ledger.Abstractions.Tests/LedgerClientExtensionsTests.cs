@@ -47,7 +47,10 @@ public class LedgerClientExtensionsTests
             Payload: DamlRecord.Create(),
             WitnessParties: [new Party("alice")],
             Signatories: [new Party("alice")],
-            Observers: []);
+            Observers: [])
+        {
+            PackageName = "pkg-name",
+        };
 
     [Fact]
     public async Task ExerciseAsync_returns_value_when_TryExerciseAsync_returns_One()
@@ -483,10 +486,10 @@ public class LedgerClientExtensionsTests
             new ExerciseOutcome<TransactionResult>.One(TransactionCreating("cid-1", "cid-2")));
 
         var outcome = await client.TryCreateManyByExerciseAsync<SampleTemplate>(
-            SampleCommand, new Party("alice"), cancellationToken: TestContext.Current.CancellationToken);
+            SampleCommand, new Party("alice"), commandId: new CommandId("cmd-1"), cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Should().Be(
-            new ExerciseOutcome<EquatableArray<ContractId<SampleTemplate>>>.One([new("cid-1"), new("cid-2")]),
+            new ExerciseOutcome<EquatableArray<ContractId<SampleTemplate>>>.One([new("cid-1"), new("cid-2")]) { CommandId = "cmd-1" },
             "the One arm carries the value-comparing array All<T>() projected, so two outcomes over the "
             + "same created contracts are equal; boxing that array back into an IReadOnlyList changes the "
             + "outcome's closed type and moves == on the payload off the surface the projection handed over");

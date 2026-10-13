@@ -10,6 +10,13 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Canton.Ledger.Testing.FakeLedgerClient.PrepareSubmissionAsync(Daml.Runtime.Commands.CommandsSubmission,System.Nullable{System.TimeSpan},System.Threading.CancellationToken)</Target>
+    <Left>lib/net10.0/Canton.Ledger.Testing.dll</Left>
+    <Right>lib/net10.0/Canton.Ledger.Testing.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:Canton.Ledger.Testing.FakeLedgerClientBuilder.WithPackagePreference(Canton.Ledger.Abstractions.PackagePreference)</Target>
     <Left>lib/net10.0/Canton.Ledger.Testing.dll</Left>
     <Right>lib/net10.0/Canton.Ledger.Testing.dll</Right>

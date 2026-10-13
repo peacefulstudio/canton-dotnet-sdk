@@ -58,7 +58,7 @@ internal sealed partial class RestLedgerClient
         CancellationToken cancellationToken)
     {
         var commands = RestCommandBuilder.BuildCommands(submission, _userId);
-        await FireAsync(AsyncSubmitPath, commands, timeout, cancellationToken).ConfigureAwait(false);
+        await FireAsync(AsyncSubmitPath, commands, commands.CommandId, timeout, cancellationToken).ConfigureAwait(false);
         return (RuntimeCommands.CommandId)commands.CommandId;
     }
 
@@ -88,6 +88,7 @@ internal sealed partial class RestLedgerClient
         await FireAsync(
             AsyncSubmitReassignmentPath,
             new Raw.SubmitReassignmentRequest { ReassignmentCommands = commands },
+            commands.CommandId,
             timeout,
             cancellationToken).ConfigureAwait(false);
         return (RuntimeCommands.CommandId)commands.CommandId;
@@ -124,7 +125,8 @@ internal sealed partial class RestLedgerClient
         return _calls.TrySendAsync<Raw.SubmitAndWaitForReassignmentResponse, ContractStreamEvent<T>>(
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitForReassignmentPath, request,
-                MissingReassignmentMessage, MalformedReassignmentBodyPrefix, LedgerCallKind.EffectAppliedWrite),
+                MissingReassignmentMessage, MalformedReassignmentBodyPrefix, LedgerCallKind.EffectAppliedWrite,
+                CommandId: request.ReassignmentCommands.CommandId),
             ProjectReassignmentOutcome<T>,
             body => NonEmptyOrNull(body.Reassignment?.UpdateId),
             timeout,
@@ -420,11 +422,11 @@ internal sealed partial class RestLedgerClient
         }
     }
 
-    private Task FireAsync(string path, object body, TimeSpan? timeout, CancellationToken cancellationToken) =>
+    private Task FireAsync(string path, object body, string commandId, TimeSpan? timeout, CancellationToken cancellationToken) =>
         _calls.SendAsync(
             new RestCall(
                 HttpMethod.Post, path, body, MissingBody("submission"), MalformedBody("submission"),
-                LedgerCallKind.AcceptedOnlyWrite),
+                LedgerCallKind.AcceptedOnlyWrite, CommandId: commandId),
             IgnoreBodyAsync,
             timeout,
             cancellationToken);

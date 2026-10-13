@@ -269,7 +269,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddFallbackAdminClient(static sp => new RestAdminClient(
             sp.GetRequiredService<IHttpClientFactory>(),
-            sp.GetService<ILogger<RestAdminClient>>()));
+            sp.GetService<ILogger<RestAdminClient>>(),
+            sp.GetRequiredService<IOptions<RestLedgerClientOptions>>()));
 
         return services;
     }
@@ -371,6 +372,7 @@ public static class ServiceCollectionExtensions
                     var handler = builder.PrimaryHandler as SocketsHttpHandler
                         ?? new SocketsHttpHandler { PooledConnectionLifetime = factoryOptions.HandlerLifetime };
                     handler.SslOptions = sslOptions;
+                    handler.AllowAutoRedirect = false;
                     builder.PrimaryHandler = handler;
                 });
             });

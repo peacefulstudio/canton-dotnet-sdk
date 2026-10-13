@@ -91,6 +91,16 @@ public class ExercisedResultDecoderTests
             [ChoiceReturning<VersionTwoTemplate, Picked>(Pick, value => new Picked("v2:" + Picked.FromRecord(value.As<DamlRecord>()).Text))];
     }
 
+    public sealed class SplittableTemplate : IDamlType, IHasChoices<SplittableTemplate>
+    {
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(
+            new Identifier("pkg-v1", "Fleet", "Splittable"), DamlTypeKind.Template, "fleet");
+
+        public static IReadOnlyList<IChoice> Choices { get; } =
+            [ChoiceReturning<SplittableTemplate, IReadOnlyList<string>>(
+                Pick, value => value.As<DamlList>().Values.Select(item => "split:" + item.As<DamlText>().Value).ToArray())];
+    }
+
     public sealed class RefusingTemplate : IDamlType, IHasChoices<RefusingTemplate>
     {
         public static DamlTypeDescriptor DamlTypeId { get; } = new(
@@ -365,5 +375,47 @@ public class ExercisedResultDecoderTests
             + "its generated result type Daml.Runtime.Tests.ExercisedResultDecoderTests+Picked is not assignable to System.Int64. "
             + "Decoding its result as System.Int64 through FromDamlValue failed: "
             + "Cannot convert Daml.Runtime.Data.DamlText to System.Int64. Use a DamlValue-derived type as TResult for direct access.");
+    }
+
+    [Fact]
+    public void Decode_decodes_through_the_choice_descriptor_when_the_event_names_the_same_package_name_under_another_package_id()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForChoices<SplittableTemplate>();
+        var upgraded = ExercisedWith(
+            new Identifier("pkg-v2", "Fleet", "Splittable"), null, DamlList.Create(new DamlText("a"), new DamlText("b")))
+            with { PackageName = "fleet" };
+
+        var decoded = ExercisedResultDecoder.Decode<IReadOnlyList<string>>(upgraded, registry);
+
+        decoded.Should().Equal("split:a", "split:b");
+    }
+
+    [Fact]
+    public void Decode_does_not_resolve_the_choice_descriptor_when_the_event_names_another_package_name()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForChoices<SplittableTemplate>();
+        var foreign = ExercisedWith(
+            new Identifier("pkg-v2", "Fleet", "Splittable"), null, DamlList.Create(new DamlText("a"), new DamlText("b")))
+            with { PackageName = "other-fleet" };
+
+        var act = () => ExercisedResultDecoder.Decode<IReadOnlyList<string>>(foreign, registry);
+
+        act.Should().Throw<NotSupportedException>().WithMessage(
+            "Choice 'Pick' of 'pkg-v2:Fleet:Splittable' did not resolve to a generated result decoder: no generated binding for it is registered. *");
+    }
+
+    [Fact]
+    public void Decode_does_not_resolve_an_interface_choice_by_package_name_under_another_package_id()
+    {
+        var registry = new GeneratedTypeRegistry();
+        registry.ForChoices<ParkableInterface>();
+        var otherParkable = new Identifier("pkg-parkable-v2", "Fleet", "Parkable");
+        var exercised = ExercisedWith(VehicleId, otherParkable, new Picked("x").ToRecord()) with { PackageName = "fleet" };
+
+        var decoded = ExercisedResultDecoder.Decode<Picked>(exercised, registry);
+
+        decoded.Should().Be(new Picked("x"));
     }
 }

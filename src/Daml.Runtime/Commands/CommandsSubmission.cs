@@ -52,7 +52,11 @@ public sealed record CommandsSubmission(
     private readonly IReadOnlyList<DisclosedContract>? _disclosedContracts =
         CopiedOrNull(DisclosedContracts, nameof(DisclosedContracts));
 
+    private readonly IReadOnlyList<string>? _packageIdSelectionPreference;
+
     private readonly DeduplicationPeriod? _deduplicationPeriod;
+
+    private readonly IReadOnlyList<DamlTypeDescriptor> _interfaceViewRequests = [];
 
     /// <summary>
     /// The commands to submit. Copied at construction and on <c>init</c>, so a caller that
@@ -99,6 +103,24 @@ public sealed record CommandsSubmission(
     }
 
     /// <summary>
+    /// The package ids the participant prefers when it resolves a package-name reference in this
+    /// submission, projected onto <c>package_id_selection_preference</c> of the submit and prepare
+    /// requests on both transports — or <see langword="null"/> to send none, so the participant
+    /// resolves every package name to the highest version it has vetted. Copied on the same terms
+    /// as <see cref="Commands"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it on an interactive (external-party) submission to hold prepare and execute to the same
+    /// package versions while vetting changes between them.
+    /// </remarks>
+    /// <exception cref="ArgumentException">An entry is null, empty or whitespace.</exception>
+    public IReadOnlyList<string>? PackageIdSelectionPreference
+    {
+        get => _packageIdSelectionPreference;
+        init => _packageIdSelectionPreference = NonBlankOrNull(value, nameof(PackageIdSelectionPreference));
+    }
+
+    /// <summary>
     /// The period over which the participant deduplicates this submission against earlier ones
     /// carrying the same change id (<see cref="CommandId"/>, <see cref="ActAs"/> and user id),
     /// projected onto the <c>Commands.deduplication_period</c> oneof — or <see langword="null"/>
@@ -117,6 +139,24 @@ public sealed record CommandsSubmission(
     {
         get => _deduplicationPeriod;
         init => _deduplicationPeriod = NonNegative(value, nameof(DeduplicationPeriod));
+    }
+
+    internal IReadOnlyList<ICommand> AddressedCommands =>
+        [.. Commands.Select(command => command is IAddressedByPackageName named ? named.AddressedByPackageName() : command)];
+
+    internal IReadOnlyList<DamlTypeDescriptor> InterfaceViewRequests
+    {
+        get => _interfaceViewRequests;
+        init => _interfaceViewRequests = EventCollections.Copy(value, nameof(InterfaceViewRequests));
+    }
+
+    internal CommandsSubmission WithInterfaceViewRequest<T>()
+        where T : IDamlType
+    {
+        var marker = T.DamlTypeId;
+        return marker.Kind != DamlTypeKind.Interface || InterfaceViewRequests.Contains(marker)
+            ? this
+            : this with { InterfaceViewRequests = [.. InterfaceViewRequests, marker] };
     }
 
     /// <summary>
@@ -220,6 +260,16 @@ public sealed record CommandsSubmission(
         this with { DeduplicationPeriod = deduplicationPeriod };
 
     /// <summary>
+    /// Sets the package ids the participant prefers when it resolves a package-name reference in
+    /// this submission. Passing no package ids, <see langword="null"/>, or an empty array clears
+    /// the field back to <see langword="null"/>.
+    /// </summary>
+    /// <param name="packageIds">The preferred package ids, in the order to send them.</param>
+    /// <exception cref="ArgumentException">An entry is null, empty or whitespace.</exception>
+    public CommandsSubmission WithPackageIdSelectionPreference(params string[]? packageIds) =>
+        this with { PackageIdSelectionPreference = packageIds is { Length: > 0 } ? packageIds : null };
+
+    /// <summary>
     /// Applies a <see cref="SubmitterInfo"/> — sets both <see cref="ActAs"/> and
     /// <see cref="ReadAs"/> from the submitter's party sets in a single call. The
     /// preferred way for code-generated and library callers to project a typed
@@ -265,7 +315,9 @@ public sealed record CommandsSubmission(
         && Commands.SequenceEqual(other.Commands)
         && ContentsEqual(ActAs, other.ActAs)
         && ContentsEqual(ReadAs, other.ReadAs)
-        && ContentsEqual(DisclosedContracts, other.DisclosedContracts);
+        && ContentsEqual(DisclosedContracts, other.DisclosedContracts)
+        && ContentsEqual(PackageIdSelectionPreference, other.PackageIdSelectionPreference)
+        && ContentsEqual(InterfaceViewRequests, other.InterfaceViewRequests);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -280,6 +332,8 @@ public sealed record CommandsSubmission(
         hash.Add(ContentsHash(ActAs));
         hash.Add(ContentsHash(ReadAs));
         hash.Add(ContentsHash(DisclosedContracts));
+        hash.Add(ContentsHash(PackageIdSelectionPreference));
+        hash.Add(ContentsHash(InterfaceViewRequests));
         return hash.ToHashCode();
     }
 
@@ -290,6 +344,14 @@ public sealed record CommandsSubmission(
                 length,
                 "A deduplication duration must be non-negative.")
             : period;
+
+    private static IReadOnlyList<string>? NonBlankOrNull(IReadOnlyList<string>? packageIds, string parameterName)
+    {
+        var copy = CopiedOrNull(packageIds, parameterName);
+        return copy is not null && copy.Any(string.IsNullOrWhiteSpace)
+            ? throw new ArgumentException("A package id must not be null, empty or whitespace.", parameterName)
+            : copy;
+    }
 
     private static IReadOnlyList<T>? CopiedOrNull<T>(IReadOnlyList<T>? values, string parameterName) =>
         values is null ? null : EventCollections.Copy(values, parameterName);

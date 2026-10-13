@@ -69,20 +69,6 @@ internal static class RestWireConversions
     public static bool TryParseOffset(string? wireOffset, out long offset) =>
         long.TryParse(wireOffset, NumberStyles.None, CultureInfo.InvariantCulture, out offset);
 
-    public static bool IsModuleEntityMatch(WireIdentifier? candidate, RuntimeIdentifier expected)
-    {
-        if (candidate is null) return false;
-        return string.Equals(candidate.ModuleName, expected.ModuleName, StringComparison.Ordinal)
-            && string.Equals(candidate.EntityName, expected.EntityName, StringComparison.Ordinal);
-    }
-
-    public static bool IsModuleEntityMatch(RuntimeIdentifier? candidate, RuntimeIdentifier expected)
-    {
-        if (candidate is null) return false;
-        return string.Equals(candidate.ModuleName, expected.ModuleName, StringComparison.Ordinal)
-            && string.Equals(candidate.EntityName, expected.EntityName, StringComparison.Ordinal);
-    }
-
     private static long ParseNonNegativeInt64(string? wireValue, string fieldName) =>
         long.TryParse(wireValue, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
             ? value

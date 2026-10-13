@@ -33,9 +33,10 @@ public interface ILedgerWriter
     /// </param>
     /// <param name="workflowId">Optional workflow identifier.</param>
     /// <param name="commandId">
-    /// Optional command id for deduplication; a fresh id is minted only when omitted. Pass the
-    /// same id across a retry of a lost-but-accepted submission so the ledger deduplicates the
-    /// resubmission instead of re-executing the command.
+    /// Optional command id for deduplication; a fresh id is minted only when omitted. The id the
+    /// submission was sent with, minted or supplied, is reported on the outcome's
+    /// <c>CommandId</c>, including a failed one; look it up on the completion stream to learn
+    /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
     /// Optional per-call deadline, applied best-effort by the transport. gRPC transports
@@ -96,8 +97,8 @@ public interface ILedgerWriter
     /// transport-native <see cref="LedgerOperationException.Status"/> and, when the participant sent them, the
     /// <see cref="LedgerOperationException.Category"/>, <see cref="LedgerOperationException.ErrorId"/> and
     /// <see cref="LedgerOperationException.Metadata"/>. Read <see cref="LedgerOperationException.CommitState"/> before
-    /// retrying: <see cref="CommitState.Unknown"/> when no answer arrived or the participant could not tell (resubmit
-    /// with the same command id), <see cref="CommitState.NotCommitted"/> for a structured rejection, except that
+    /// retrying: <see cref="CommitState.Unknown"/> when no answer arrived or the participant could not tell (look
+    /// <see cref="LedgerOperationException.CommandId"/> up on the completion stream before resubmitting), <see cref="CommitState.NotCommitted"/> for a structured rejection, except that
     /// the error ids take precedence over the category: <c>DUPLICATE_COMMAND</c> is
     /// <see cref="CommitState.Committed"/> because the ledger already accepted a command with that command id
     /// (<see cref="CommitState.Unknown"/> when its <c>accepted</c> metadata is <c>"false"</c>), and
@@ -174,9 +175,10 @@ public interface ILedgerWriter
     /// </param>
     /// <param name="workflowId">Optional workflow identifier.</param>
     /// <param name="commandId">
-    /// Optional command id for deduplication; a fresh id is minted only when omitted. Pass the
-    /// same id across a retry of a lost-but-accepted submission so the ledger deduplicates the
-    /// resubmission instead of re-executing the command.
+    /// Optional command id for deduplication; a fresh id is minted only when omitted. The id the
+    /// submission was sent with, minted or supplied, is reported on the outcome's
+    /// <c>CommandId</c>, including a failed one; look it up on the completion stream to learn
+    /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
     /// Optional per-call deadline, applied best-effort by the transport — see

@@ -55,7 +55,7 @@ public static class EntryPointInvocations
         "GetActiveContractsPageAsync(7)" => ledger.GetActiveContractsPageAsync<TContract>(Submitter, LedgerOffset.At(5), includeDisclosure: true, cancellationToken: cancellationToken),
         "GetLatestPrunedOffsetsAsync(2)" => ledger.GetLatestPrunedOffsetsAsync(cancellationToken: cancellationToken),
         "GetUpdatesPageAsync(8)" => ledger.GetUpdatesPageAsync(Submitter, cancellationToken: cancellationToken),
-        "PrepareSubmissionAsync(3)" => ledger.PrepareSubmissionAsync(Submission(), cancellationToken: cancellationToken),
+        "PrepareSubmissionAsync(4)" => ledger.PrepareSubmissionAsync(Submission(), cancellationToken: cancellationToken),
         "ExecuteSubmissionAsync(3)" => ledger.ExecuteSubmissionAsync(Signed(preparedTransaction), cancellationToken: cancellationToken),
         "ExecuteSubmissionAndWaitAsync(3)" => ledger.ExecuteSubmissionAndWaitAsync(Signed(preparedTransaction), cancellationToken: cancellationToken),
         "ExecuteSubmissionAndWaitForTransactionAsync(4)" => ledger.ExecuteSubmissionAndWaitForTransactionAsync(Signed(preparedTransaction), Submitter, cancellationToken: cancellationToken),
@@ -66,7 +66,7 @@ public static class EntryPointInvocations
         "GenerateExternalPartyTopologyAsync(2)" => admin.GenerateExternalPartyTopologyAsync(
             new ExternalPartyTopologyRequest(Source, "alice", new SigningPublicKey(PublicKeyFormat.Der, new byte[] { 1 }, SigningKeySpec.EcP256)), cancellationToken),
         "AllocateExternalPartyAsync(2)" => admin.AllocateExternalPartyAsync(
-            new ExternalPartyAllocation(Source, [], []), cancellationToken),
+            new ExternalPartyAllocation(Source, [GoldenExternalPartyOnboarding.UnsignedTransaction()], []), cancellationToken),
         "GetPartiesAsync(2)" => admin.GetPartiesAsync([Alice], cancellationToken),
         "ListKnownPartiesAsync(1)" => admin.ListKnownPartiesAsync(cancellationToken),
         "CreateUserAsync(4)" => admin.CreateUserAsync("alice", Alice, cancellationToken: cancellationToken),

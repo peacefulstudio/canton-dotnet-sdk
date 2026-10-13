@@ -42,7 +42,10 @@ public class SingleCommandExtensionsTests
             Payload: DamlRecord.Create(),
             WitnessParties: [new Party("alice")],
             Signatories: [new Party("alice")],
-            Observers: []);
+            Observers: [])
+        {
+            PackageName = "pkg-name",
+        };
 
     [Fact]
     public async Task TrySubmitSingleAsync_uses_the_supplied_command_id()

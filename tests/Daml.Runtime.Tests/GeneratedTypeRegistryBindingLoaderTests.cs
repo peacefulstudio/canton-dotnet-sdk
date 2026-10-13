@@ -29,7 +29,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
     private sealed record AmbiguousRecordOne : IDamlType, IDamlRecord<AmbiguousRecordOne>
     {
         public static DamlTypeDescriptor DamlTypeId { get; } = new(
-            new Identifier("pkg-one", "Registry.Twin", "TwinRecord"), DamlTypeKind.Template, "TwinOne");
+            new Identifier("pkg-one", "Registry.Twin", "TwinRecord"), DamlTypeKind.Template, "Twin");
 
         public DamlRecord ToRecord() => DamlRecord.Create();
 
@@ -41,7 +41,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
     private sealed record AmbiguousRecordTwo : IDamlType, IDamlRecord<AmbiguousRecordTwo>
     {
         public static DamlTypeDescriptor DamlTypeId { get; } = new(
-            new Identifier("pkg-two", "Registry.Twin", "TwinRecord"), DamlTypeKind.Template, "TwinTwo");
+            new Identifier("pkg-two", "Registry.Twin", "TwinRecord"), DamlTypeKind.Template, "Twin");
 
         public DamlRecord ToRecord() => DamlRecord.Create();
 
@@ -221,7 +221,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
         var loader = new CountingLoader(registry => registry.ForRecord<VersionedRecordTwo>());
         loader.Registry.ForRecord<VersionedRecordOne>();
 
-        var lookup = loader.Registry.FindRecordReader(VersionedTwoId);
+        var lookup = loader.Registry.FindRecordReader(VersionedTwoId, "Versioned");
 
         ResolvedRecord(lookup).DeclaringType.Should().Be<VersionedRecordTwo>();
         loader.Runs.Should().Be(1);
@@ -234,7 +234,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
         loader.Registry.ForRecord<VersionedRecordZero>();
         loader.Registry.ForRecord<VersionedRecordOne>();
 
-        var lookup = loader.Registry.FindRecordReader(VersionedTwoId);
+        var lookup = loader.Registry.FindRecordReader(VersionedTwoId, "Versioned");
 
         ResolvedRecord(lookup).DeclaringType.Should().Be<VersionedRecordTwo>();
         loader.Runs.Should().Be(1);
@@ -246,8 +246,8 @@ public class GeneratedTypeRegistryBindingLoaderTests
         var loader = new CountingLoader(_ => { });
         loader.Registry.ForRecord<VersionedRecordOne>();
 
-        var first = loader.Registry.FindRecordReader(VersionedTwoId);
-        var second = loader.Registry.FindRecordReader(VersionedTwoId);
+        var first = loader.Registry.FindRecordReader(VersionedTwoId, "Versioned");
+        var second = loader.Registry.FindRecordReader(VersionedTwoId, "Versioned");
 
         ResolvedRecord(first).DeclaringType.Should().Be<VersionedRecordOne>();
         ResolvedRecord(second).DeclaringType.Should().Be<VersionedRecordOne>();
@@ -261,7 +261,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
         loader.Registry.ForRecord<VersionedRecordOne>();
         loader.Registry.ForRecord<VersionedRecordTwo>();
 
-        var lookup = loader.Registry.FindRecordReader(VersionedTwoId);
+        var lookup = loader.Registry.FindRecordReader(VersionedTwoId, "Versioned");
 
         ResolvedRecord(lookup).DeclaringType.Should().Be<VersionedRecordTwo>();
         loader.Runs.Should().Be(0);
@@ -274,7 +274,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
         loader.Registry.ForRecord<AmbiguousRecordOne>();
         loader.Registry.ForRecord<AmbiguousRecordTwo>();
 
-        var lookup = loader.Registry.FindRecordReader(new Identifier("pkg-three", "Registry.Twin", "TwinRecord"));
+        var lookup = loader.Registry.FindRecordReader(new Identifier("pkg-three", "Registry.Twin", "TwinRecord"), "Twin");
 
         lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Ambiguous>();
         loader.Runs.Should().Be(1);
@@ -286,7 +286,7 @@ public class GeneratedTypeRegistryBindingLoaderTests
         var loader = new CountingLoader(_ => { });
         loader.Registry.ForRecord<AmbiguousRecordOne>();
 
-        var lookup = loader.Registry.FindRecordReader(new Identifier("pkg-three", "Registry.Twin", "TwinRecord"));
+        var lookup = loader.Registry.FindRecordReader(new Identifier("pkg-three", "Registry.Twin", "TwinRecord"), "Twin");
 
         lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>();
         loader.Runs.Should().Be(1, "no exact pkg-three binding is registered, so the loader runs before the single-version module/entity fallback is accepted");

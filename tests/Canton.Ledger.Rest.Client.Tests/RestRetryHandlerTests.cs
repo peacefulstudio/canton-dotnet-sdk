@@ -7,6 +7,7 @@ using System.Text;
 using AwesomeAssertions;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Rest.Client.Raw;
 using Daml.Ledger.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -65,15 +66,40 @@ public class RestRetryHandlerTests
         }
     }
 
-    private static HttpClient ClientOver(CountingHandler transport, RetryOptions retry) =>
-        new(new RestRetryHandler(
+    private sealed class ReplayableMarker : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RestRetryHandler.MarkReplayable(request);
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    private static HttpClient ClientOver(CountingHandler transport, RetryOptions retry, bool replayable = true)
+    {
+        var retryHandler = new RestRetryHandler(
             Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575", Retry = retry }))
         {
             InnerHandler = transport
-        })
-        {
-            BaseAddress = new Uri("http://localhost:7575")
         };
+        HttpMessageHandler pipeline = replayable ? new ReplayableMarker { InnerHandler = retryHandler } : retryHandler;
+        return new HttpClient(pipeline) { BaseAddress = new Uri("http://localhost:7575") };
+    }
+
+    private static ServiceProvider RawApiProvider(CountingHandler transport, RetryOptions retry)
+    {
+        var services = new ServiceCollection();
+#pragma warning disable CANTONREST001
+        services.AddRestLedgerRawApis(options =>
+        {
+            options.HttpAddress = "http://localhost:7575";
+            options.Retry = retry;
+        });
+#pragma warning restore CANTONREST001
+        services.AddHttpClient(ServiceCollectionExtensions.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(() => transport);
+        return services.BuildServiceProvider();
+    }
 
     private static RetryOptions Fast(int maxRetryAttempts) =>
         new() { Enabled = true, MaxRetryAttempts = maxRetryAttempts, Delay = TimeSpan.Zero };
@@ -119,7 +145,7 @@ public class RestRetryHandlerTests
     public async Task SendAsync_sends_a_request_marked_not_replayable_exactly_once_with_Retry_enabled()
     {
         var transport = new CountingHandler(new HttpRequestException("connection reset"));
-        using var client = ClientOver(transport, Fast(3));
+        using var client = ClientOver(transport, Fast(3), replayable: false);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/v2/parties");
         RestRetryHandler.MarkNotReplayable(request);
 
@@ -127,6 +153,77 @@ public class RestRetryHandlerTests
 
         await act.Should().ThrowAsync<HttpRequestException>();
         transport.Attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SendAsync_sends_a_request_with_no_replay_decision_exactly_once_with_Retry_enabled()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection reset"));
+        using var client = ClientOver(transport, Fast(3), replayable: false);
+
+        var act = async () => await client.GetAsync("/v2/version", TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        transport.Attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RawApi_call_is_sent_once_when_Retry_is_enabled_and_the_first_attempt_fails()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection reset"));
+        using var provider = RawApiProvider(transport, Fast(3));
+
+#pragma warning disable CANTONREST001
+        var act = async () => await provider.GetRequiredService<IVersionServiceApi>()
+            .GetLedgerApiVersion(TestContext.Current.CancellationToken);
+#pragma warning restore CANTONREST001
+
+        var thrown = await act.Should().ThrowAsync<Refit.ApiRequestException>();
+        thrown.Which.InnerException.Should().BeOfType<HttpRequestException>();
+        transport.Attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SendAsync_retries_a_request_with_no_replay_decision_inside_a_RawCallReplay_scope()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection reset"));
+        using var client = ClientOver(transport, Fast(3), replayable: false);
+
+        using var replay = RawCallReplay.Allow();
+        var response = await client.GetAsync("/v2/version", TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        transport.Attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SendAsync_still_sends_a_request_marked_not_replayable_once_inside_a_RawCallReplay_scope()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection reset"));
+        using var client = ClientOver(transport, Fast(3), replayable: false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v2/parties");
+        RestRetryHandler.MarkNotReplayable(request);
+
+        using var replay = RawCallReplay.Allow();
+        var act = async () => await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        transport.Attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RawApi_call_is_retried_inside_a_RawCallReplay_scope()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection reset"));
+        using var provider = RawApiProvider(transport, Fast(3));
+
+        using var replay = RawCallReplay.Allow();
+#pragma warning disable CANTONREST001
+        _ = await provider.GetRequiredService<IVersionServiceApi>()
+            .GetLedgerApiVersion(TestContext.Current.CancellationToken);
+#pragma warning restore CANTONREST001
+
+        transport.Attempts.Should().Be(2);
     }
 
     [Fact]

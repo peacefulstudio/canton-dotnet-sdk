@@ -49,6 +49,11 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// <c>DUPLICATE_COMMAND</c> error is surfaced unchanged.
     /// </para>
     /// <para>
+    /// A call made through the raw Refit interfaces from <c>AddRestLedgerRawApis</c> is never retried,
+    /// because the client cannot tell whether it is idempotent; make it inside a
+    /// <see cref="Canton.Ledger.Kernel.Resilience.RawCallReplay.Allow"/> scope to opt it in.
+    /// </para>
+    /// <para>
     /// Enabling retries also makes each request body buffered in memory before the first attempt,
     /// so it can be replayed on the next one. Command submissions are small enough for this to be
     /// irrelevant, but a caller pushing very large bodies through this client — a DAR upload, say —
@@ -118,13 +123,13 @@ public sealed class RestLedgerClientOptions : IValidatableObject
 
     /// <summary>
     /// How long the participant holds one window open once no further entry arrives, sent as the
-    /// <c>stream_idle_timeout_ms</c> query parameter on every window the pagination loop opens and
-    /// rounded down to whole milliseconds. Defaults to
+    /// <c>stream_idle_timeout_ms</c> query parameter on every window of an open-ended read and
+    /// rounded down to whole milliseconds. A read with an end offset sends none. Defaults to
     /// <see cref="DefaultStreamWindowIdleTimeout"/>.
     /// </summary>
     /// <remarks>
     /// Canton's documentation states that a window carrying neither an end offset nor this timeout
-    /// never closes, so the client always sends it. This bounds how long a single request blocks on
+    /// never closes, so the client sends it on every window of an open-ended read. This bounds how long a single request blocks on
     /// a quiet ledger, so a consumer following a stream trades window latency against request volume
     /// here: the 250 ms default favours latency, and a quiet followed stream costs about four
     /// requests a second. Raise it — two seconds is the <c>http-list-wait-time</c> Canton's worked
@@ -143,7 +148,7 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// reopens a window as soon as the previous one answers, so a participant honouring this
     /// timeout sets the request rate on its own and the client adds no backoff of its own: one
     /// would tax every window that legitimately answers fast to defend against a participant
-    /// ignoring a parameter sent on every request. A participant that does ignore it is reported
+    /// ignoring a parameter sent on every window of an open-ended read. A participant that does ignore it is reported
     /// rather than absorbed — the loop logs a warning once a hundred consecutive windows come back
     /// neither advancing the offset nor held, and again at each doubling of that run.
     /// </para>
@@ -154,6 +159,27 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// </para>
     /// </remarks>
     public TimeSpan StreamWindowIdleTimeout { get; set; } = DefaultStreamWindowIdleTimeout;
+
+    /// <summary>
+    /// The most bytes the client reads from one response body, for every typed call and every
+    /// window or page of a looped read. Defaults to 104857600 (100 MiB), the gRPC client's
+    /// <c>MaxMessageSize</c>. The bytes actually read are counted as they arrive, so a body that
+    /// declares no <c>Content-Length</c>, or a smaller one than it sends, is stopped at the cap too.
+    /// Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// A body over the cap is reported as <c>TransportStatus.UndecodableBody</c> and the
+    /// commit state of the call's kind: <c>CommitState.NotCommitted</c> for a read,
+    /// <c>CommitState.Committed</c> for a write whose success implies its effect, and
+    /// <c>CommitState.Unknown</c> for a submission the participant only accepted. A looped
+    /// read ends with a terminal in-band stream error. An error response over the cap still
+    /// surfaces its HTTP status, with the body dropped. Raise it for a deployment that
+    /// legitimately returns larger bodies, such as a very large DAR download or a window of very
+    /// large contracts; lower <see cref="StreamWindowLimit"/> first, which shrinks each window.
+    /// </remarks>
+    public long MaxResponseBodyBytes { get; set; } = DefaultMaxResponseBodyBytes;
+
+    internal const long DefaultMaxResponseBodyBytes = 100L * 1024 * 1024;
 
     /// <summary>
     /// Recurses into <see cref="Retry"/> and <see cref="Tls"/> so their validation runs under the
@@ -192,6 +218,13 @@ public sealed class RestLedgerClientOptions : IValidatableObject
             results.Add(new ValidationResult(
                 $"{nameof(StreamWindowIdleTimeout)} must be positive, but was {StreamWindowIdleTimeout}.",
                 [nameof(StreamWindowIdleTimeout)]));
+        }
+
+        if (MaxResponseBodyBytes <= 0)
+        {
+            results.Add(new ValidationResult(
+                $"{nameof(MaxResponseBodyBytes)} must be positive, but was {MaxResponseBodyBytes}.",
+                [nameof(MaxResponseBodyBytes)]));
         }
 
         return results;

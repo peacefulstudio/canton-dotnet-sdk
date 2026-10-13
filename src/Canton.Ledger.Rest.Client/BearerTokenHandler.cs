@@ -27,6 +27,8 @@ internal sealed partial class BearerTokenHandler : DelegatingHandler
 {
     private const string BearerScheme = "Bearer";
 
+    private static readonly HttpRequestOptionsKey<CancellationToken> CallerCancellation = new("Canton.Ledger.Rest.CallerCancellation");
+
     private readonly ITokenProvider _tokenProvider;
     private readonly ILogger<BearerTokenHandler> _logger;
     private int _plaintextTransportWarned;
@@ -48,7 +50,8 @@ internal sealed partial class BearerTokenHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var token = await _tokenProvider.ResolveBearerTokenAsync(cancellationToken).ConfigureAwait(false);
+        var callerCancellation = request.Options.TryGetValue(CallerCancellation, out var recorded) ? recorded : cancellationToken;
+        var token = await _tokenProvider.ResolveBearerTokenAsync(cancellationToken, callerCancellation).ConfigureAwait(false);
         if (token is not null)
         {
             WarnOnceIfPlaintextTransport(request.RequestUri);
@@ -57,6 +60,9 @@ internal sealed partial class BearerTokenHandler : DelegatingHandler
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
+
+    internal static void RecordCallerCancellation(HttpRequestMessage request, CancellationToken callerCancellation) =>
+        request.Options.Set(CallerCancellation, callerCancellation);
 
     private void WarnOnceIfPlaintextTransport(Uri? requestUri)
     {

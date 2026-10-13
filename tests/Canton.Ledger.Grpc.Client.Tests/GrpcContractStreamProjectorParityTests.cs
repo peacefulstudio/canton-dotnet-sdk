@@ -172,6 +172,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                     {
                         ContractId = ActiveContractScenario.ContractId,
                         TemplateId = templateId,
+                        PackageName = ActiveContractScenario.PackageName,
                         Offset = eventOffset,
                     },
                     scenario.ImplementsSubscribedInterface),
@@ -183,6 +184,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                     {
                         ContractId = ActiveContractScenario.ContractId,
                         TemplateId = templateId,
+                        PackageName = ActiveContractScenario.PackageName,
                         Choice = TransactionEventScenario.ChoiceName,
                         ChoiceArgument = new ProtoValue { Text = TransactionEventScenario.ChoiceArgumentValue },
                         ExerciseResult = new ProtoValue { Text = TransactionEventScenario.ExerciseResultValue },
@@ -273,6 +275,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         {
             ContractId = ActiveContractScenario.ContractId,
             TemplateId = scenario.OmitTemplateId ? null : TemplateIdFor(scenario.EntityName),
+            PackageName = ActiveContractScenario.PackageName,
             Source = scenario.Source ?? string.Empty,
             Target = scenario.Target ?? string.Empty,
             Offset = offset,
@@ -294,6 +297,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         {
             ContractId = ActiveContractScenario.ContractId,
             TemplateId = omitTemplateId ? null : TemplateIdFor(entityName),
+            PackageName = ActiveContractScenario.PackageName,
             CreateArguments = omitCreateArguments ? null : PayloadRecord(ActiveContractScenario.CreateArgumentValue),
             ContractKey = new ProtoValue { Party = ActiveContractScenario.ContractKeyParty },
             ContractKeyHash = Google.Protobuf.ByteString.FromBase64(ActiveContractScenario.ContractKeyHashBase64),
@@ -364,6 +368,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         var created = new ProtoCreatedEvent
         {
             ContractId = ActiveContractScenario.ContractId,
+            PackageName = ActiveContractScenario.PackageName,
             TemplateId = new ProtoIdentifier
             {
                 PackageId = "tmpl-pkg",

@@ -6,12 +6,17 @@ using Daml.Runtime.Data;
 
 namespace Daml.Runtime.Commands;
 
+internal interface IAddressedByPackageName
+{
+    ICommand AddressedByPackageName();
+}
+
 /// <summary>
 /// Base interface for all ledger commands.
 /// </summary>
 /// <remarks>
-/// Commands are written, never read back. A command rebuilt for a retry must be resubmitted with the
-/// original <see cref="CommandsSubmission.CommandId"/>, so the participant deduplicates it.
+/// Commands are written, never read back. Before a command is rebuilt for a retry after an unknown outcome,
+/// look its <see cref="CommandsSubmission.CommandId"/> up on the completion stream.
 /// </remarks>
 public interface ICommand
 {
@@ -28,16 +33,27 @@ public interface ICommand
 /// <param name="CreateArguments">The template arguments.</param>
 public sealed record CreateCommand(
     Identifier TemplateId,
-    DamlRecord CreateArguments) : ICommand
+    DamlRecord CreateArguments) : ICommand, IAddressedByPackageName
 {
     /// <inheritdoc />
     public string CommandType => "Create";
 
     /// <summary>
+    /// The name of the package that defines <see cref="TemplateId"/>. A submission puts the
+    /// template on the wire as <c>#&lt;package-name&gt;:Module:Entity</c> when this is set, so the
+    /// participant resolves the version it has vetted. Set by <see cref="For{T}"/>; <see langword="null"/> on a command
+    /// built by hand, which goes on the wire as <see cref="TemplateId"/> is.
+    /// </summary>
+    public string? PackageName { get; init; }
+
+    ICommand IAddressedByPackageName.AddressedByPackageName() =>
+        PackageName is null ? this : this with { TemplateId = TemplateId.AddressedByPackageName(PackageName) };
+
+    /// <summary>
     /// Creates a CreateCommand for the specified template.
     /// </summary>
     public static CreateCommand For<T>(T template) where T : ITemplate =>
-        new(T.TemplateId, template.ToRecord());
+        new(T.TemplateId, template.ToRecord()) { PackageName = T.PackageName };
 }
 
 /// <summary>
@@ -57,10 +73,23 @@ public sealed record ExerciseCommand(
     Identifier TemplateId,
     ContractId ContractId,
     ChoiceName Choice,
-    DamlValue ChoiceArgument) : ICommand
+    DamlValue ChoiceArgument) : ICommand, IAddressedByPackageName
 {
     /// <inheritdoc />
     public string CommandType => "Exercise";
+
+    /// <summary>
+    /// The name of the package that defines the template <see cref="TemplateId"/> names, which a
+    /// result projection compares in place of the package id so an exercise that ran on an upgraded
+    /// version of the package still resolves, and which a submission puts on the wire as
+    /// <c>#&lt;package-name&gt;:Module:Entity</c>. Set by <see cref="For{TOwner}"/> for a template; <see langword="null"/>
+    /// for an interface, which is not upgradeable and so is always addressed by its exact package id,
+    /// and on a command built by hand, which a projection then matches on the exact package id.
+    /// </summary>
+    public string? PackageName { get; init; }
+
+    ICommand IAddressedByPackageName.AddressedByPackageName() =>
+        PackageName is null ? this : this with { TemplateId = TemplateId.AddressedByPackageName(PackageName) };
 
     /// <summary>
     /// Creates an ExerciseCommand for a specific contract and choice. Works uniformly for
@@ -77,7 +106,11 @@ public sealed record ExerciseCommand(
         DamlValue argument) where TOwner : IDamlType
     {
         ArgumentNullException.ThrowIfNull(contractId);
-        return new(TOwner.DamlTypeId.Identifier, contractId, choice, argument);
+        var owner = TOwner.DamlTypeId;
+        return new(owner.Identifier, contractId, choice, argument)
+        {
+            PackageName = owner.Kind == DamlTypeKind.Template ? owner.PackageName : null,
+        };
     }
 
     /// <summary>
@@ -108,10 +141,21 @@ public sealed record ExerciseByKeyCommand(
     Identifier TemplateId,
     DamlValue ContractKey,
     ChoiceName Choice,
-    DamlValue ChoiceArgument) : ICommand
+    DamlValue ChoiceArgument) : ICommand, IAddressedByPackageName
 {
     /// <inheritdoc />
     public string CommandType => "ExerciseByKey";
+
+    /// <summary>
+    /// The name of the package that defines <see cref="TemplateId"/>. A submission puts the
+    /// template on the wire as <c>#&lt;package-name&gt;:Module:Entity</c> when this is set. Set by the
+    /// generated <c>&lt;Choice&gt;ByKeyCommand</c> builders; <see langword="null"/> on a command built
+    /// by hand, which goes on the wire as <see cref="TemplateId"/> is.
+    /// </summary>
+    public string? PackageName { get; init; }
+
+    ICommand IAddressedByPackageName.AddressedByPackageName() =>
+        PackageName is null ? this : this with { TemplateId = TemplateId.AddressedByPackageName(PackageName) };
 }
 
 /// <summary>
@@ -125,10 +169,21 @@ public sealed record CreateAndExerciseCommand(
     Identifier TemplateId,
     DamlRecord CreateArguments,
     ChoiceName Choice,
-    DamlValue ChoiceArgument) : ICommand
+    DamlValue ChoiceArgument) : ICommand, IAddressedByPackageName
 {
     /// <inheritdoc />
     public string CommandType => "CreateAndExercise";
+
+    /// <summary>
+    /// The name of the package that defines <see cref="TemplateId"/>. A submission puts the
+    /// template on the wire as <c>#&lt;package-name&gt;:Module:Entity</c> when this is set. Set by
+    /// <see cref="For{T}"/>; <see langword="null"/> on a command built by hand, which goes on the
+    /// wire as <see cref="TemplateId"/> is.
+    /// </summary>
+    public string? PackageName { get; init; }
+
+    ICommand IAddressedByPackageName.AddressedByPackageName() =>
+        PackageName is null ? this : this with { TemplateId = TemplateId.AddressedByPackageName(PackageName) };
 
     /// <summary>
     /// Creates a CreateAndExerciseCommand for the specified template.
@@ -137,5 +192,5 @@ public sealed record CreateAndExerciseCommand(
         T template,
         ChoiceName choice,
         DamlValue argument) where T : ITemplate =>
-        new(T.TemplateId, template.ToRecord(), choice, argument);
+        new(T.TemplateId, template.ToRecord(), choice, argument) { PackageName = T.PackageName };
 }

@@ -56,6 +56,11 @@ public sealed record TransactionResult(
     /// nonconsuming exercises — see that method's documentation.
     /// </summary>
     public EquatableArray<ExercisedEvent> ExercisedEvents { get; init; }
+
+    internal EquatableArray<Identifier> RequestedInterfaces { get; init; }
+
+    internal TransactionResult WithRequestedInterfaces(IEnumerable<DamlTypeDescriptor> requested) =>
+        this with { RequestedInterfaces = [.. requested.Select(descriptor => descriptor.Identifier)] };
 }
 
 /// <summary>
@@ -119,6 +124,13 @@ public sealed record CreatedContract(
     /// known only as an interface and must be dispatched at runtime.
     /// </summary>
     public EquatableArray<Identifier> InterfaceIds { get; init; }
+
+    /// <summary>
+    /// The name of the package that defines <see cref="TemplateId"/> (Canton <c>CreatedEvent.package_name</c>),
+    /// which template matching compares in place of the package id so a template upgrade still resolves. <see langword="null"/>
+    /// when the transport reported none; a contract without a package name matches no template marker.
+    /// </summary>
+    public string? PackageName { get; init; }
 
     /// <summary>
     /// The create arguments as the Daml-LF JSON the participant sent, when the transport could not decode them

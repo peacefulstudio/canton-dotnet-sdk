@@ -19,12 +19,13 @@ internal sealed partial class LedgerClient
     /// <inheritdoc />
     public Task<PreparedSubmission> PrepareSubmissionAsync(
         RuntimeCommands.CommandsSubmission submission,
+        HashingSchemeVersion? hashingSchemeVersion = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
 
-        var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: false);
+        var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: false, hashingSchemeVersion);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.PrepareSubmissionResponse, PreparedSubmission>(
             LedgerCallKind.Read,
@@ -33,7 +34,8 @@ internal sealed partial class LedgerClient
             "PrepareSubmission",
             (headers, deadline, token) => _interactiveSubmissionService.PrepareSubmissionAsync(
                 request, headers, deadline, token),
-            ProjectPreparedSubmission,
+            response => PreparedSubmissionIntegrity.RequireWellFormed(
+                ProjectPreparedSubmission(response), hashingSchemeVersion),
             cancellationToken,
             timeout: timeout);
     }

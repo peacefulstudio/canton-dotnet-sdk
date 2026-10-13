@@ -27,13 +27,13 @@ public sealed partial record Marker(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Marker>, global::Daml.Runtime.Data.IDamlRecord<Marker>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68", "RichTypes", "Marker");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "Marker");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    public static string PackageId => "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hbefba41fabc8";
+    public static string PackageName => "richtypes-ha8d30776aa45";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -80,11 +80,212 @@ public sealed partial record Marker(
         ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
     };
 
+    /// <summary>
+    /// Exercise the Mint choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<Marker, Mint, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>> ChoiceMint { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Mint"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => Mint.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>(val.As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.Mint.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(json, context),
+    };
+
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive];
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceMint];
 
 }
 
+
+/// <summary>
+/// Static <c>Try&lt;Choice&gt;Async</c> extension methods for <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.Marker"/>.
+/// One method per create-bearing choice; each delegates to
+/// <see cref="global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TrySubmitSingleAsync"/>
+/// and projects success from the choice's own exercise result.
+/// </summary>
+public static class MarkerExtensions
+{
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Mint choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand MintCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.Mint argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("Mint"),
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.PackageName };
+    }
+
+    /// <summary>
+    /// Exercises the Mint choice and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.Asset&gt;</c>.
+    /// One <c>Party</c> parameter is emitted per Daml controller (declaration order).
+    /// The wrapper builds a <see cref="SubmitterInfo"/> from those parties before
+    /// dispatching to <c>ILedgerWriter</c>.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="owner">Controller party from the Daml <c>controller</c> clause, routed into the submission's <c>actAs</c> set.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>>> TryMintAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.Mint argument,
+        global::Daml.Runtime.Data.Party owner,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        global::Daml.Runtime.Commands.SubmitterInfo submitter = owner;
+
+        return contractId.TryMintAsync(
+            client,
+            argument,
+            submitter,
+            workflowId,
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exercises the Mint choice with an explicit <see cref="SubmitterInfo"/> and lifts the choice's exercise result to <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Contracts.ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.Asset&gt;</c>.
+    /// Companion to the named-<c>Party</c> overload for the case where the submitter must
+    /// read contracts it does not act as — the choice's created contracts are visible to an
+    /// observer but not to the submitter, so the caller supplies the <c>readAs</c> parties.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>>> TryMintAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.Mint argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.MintCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectMintResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Exercises the Mint choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.Marker"/> contract,
+    /// reading every controller and observer party off the contract payload so the
+    /// caller passes no parties. Delegates to the
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.Marker&gt;</c> overload.
+    /// </summary>
+    /// <param name="contract">The fetched contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>>> TryMintAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker>, global::Daml.Codegen.Testing.Conformance.RichTypes.Marker> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.Mint argument,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+
+        return contract.Id.TryMintAsync(
+            client,
+            argument,
+            contract.Data.Owner,
+            workflowId,
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exercises the Mint choice on a fetched <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.Marker"/> contract with an
+    /// explicit <see cref="SubmitterInfo"/>. Companion to the payload-derived overload for
+    /// multi-party submissions and for callers who must supply <c>readAs</c> parties the
+    /// payload cannot name. Delegates to the
+    /// <c>ContractId&lt;global::Daml.Codegen.Testing.Conformance.RichTypes.Marker&gt;</c> overload.
+    /// </summary>
+    /// <param name="contract">The fetched contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>>> TryMintAsync(
+        this global::Daml.Runtime.Contracts.IContract<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker>, global::Daml.Codegen.Testing.Conformance.RichTypes.Marker> contract,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.Mint argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contract);
+        global::System.ArgumentNullException.ThrowIfNull(client);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+
+        return contract.Id.TryMintAsync(
+            client,
+            argument,
+            submitter,
+            workflowId,
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
+    }
+
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Asset>> ProjectMintResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.ChoiceMint, contractId);
+}
 
 /// <summary>
 /// Typed-submitter extensions for <see cref="Marker"/>. The
@@ -143,7 +344,7 @@ public static class MarkerNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("Archive"),
-            global::Daml.Runtime.Data.DamlRecord.Create());
+            global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.Marker.PackageName };
     }
 
     /// <summary>
@@ -155,7 +356,7 @@ public static class MarkerNonContractExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

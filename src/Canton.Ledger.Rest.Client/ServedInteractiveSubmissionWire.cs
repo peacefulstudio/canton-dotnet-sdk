@@ -19,7 +19,8 @@ internal sealed record ServedPrepareSubmissionRequest(
     [property: JsonPropertyName("readAs")] ICollection<string> ReadAs,
     [property: JsonPropertyName("disclosedContracts")] ICollection<WireDisclosedContract>? DisclosedContracts,
     [property: JsonPropertyName("synchronizerId")] string SynchronizerId,
-    [property: JsonPropertyName("packageIdSelectionPreference")] ICollection<string> PackageIdSelectionPreference);
+    [property: JsonPropertyName("packageIdSelectionPreference")] ICollection<string> PackageIdSelectionPreference,
+    [property: JsonPropertyName("hashingSchemeVersion")] string? HashingSchemeVersion);
 
 internal sealed record ServedPrepareSubmissionResponse(
     [property: JsonPropertyName("preparedTransaction")] string? PreparedTransaction,

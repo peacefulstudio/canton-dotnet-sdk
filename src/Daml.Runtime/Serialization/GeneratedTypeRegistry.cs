@@ -30,13 +30,13 @@ internal sealed class GeneratedTypeRegistry
     public void ForRecord<T>() where T : IDamlType, IDamlRecord<T>
     {
         var values = new Dictionary<NoDiscriminator, DamlLfElementReader> { [default] = T.__ReadDamlLfJson };
-        _records.Register(T.DamlTypeId.Identifier, typeof(T), values);
+        _records.Register(T.DamlTypeId.Identifier, T.DamlTypeId.PackageName, typeof(T), values);
     }
 
     public void ForKey<TTemplate, TKey>() where TTemplate : ITemplate, IHasKey<TTemplate, TKey>
     {
         var values = new Dictionary<NoDiscriminator, IKeyDescriptor> { [default] = TTemplate.Key };
-        _keys.Register(TTemplate.TemplateId, typeof(TTemplate), values);
+        _keys.Register(TTemplate.TemplateId, TTemplate.PackageName, typeof(TTemplate), values);
     }
 
     public void ForChoices<T>() where T : IDamlType, IHasChoices<T>
@@ -47,30 +47,30 @@ internal sealed class GeneratedTypeRegistry
             values.TryAdd(choice.Name, choice);
         }
 
-        _choices.Register(T.DamlTypeId.Identifier, typeof(T), values);
+        _choices.Register(T.DamlTypeId.Identifier, T.DamlTypeId.PackageName, typeof(T), values);
     }
 
-    public RegistryLookup<DamlLfElementReader> FindRecordReader(Identifier identifier) =>
-        FindOrLoadBindings(_records, identifier, default);
+    public RegistryLookup<DamlLfElementReader> FindRecordReader(Identifier identifier, string? packageName = null) =>
+        FindOrLoadBindings(_records, identifier, packageName, default);
 
-    public RegistryLookup<IKeyDescriptor> FindKeyDescriptor(Identifier identifier) =>
-        FindOrLoadBindings(_keys, identifier, default);
+    public RegistryLookup<IKeyDescriptor> FindKeyDescriptor(Identifier identifier, string? packageName = null) =>
+        FindOrLoadBindings(_keys, identifier, packageName, default);
 
-    public RegistryLookup<IChoice> FindChoice(Identifier identifier, ChoiceName choice) =>
-        FindOrLoadBindings(_choices, identifier, choice);
+    public RegistryLookup<IChoice> FindChoice(Identifier identifier, ChoiceName choice, string? packageName = null) =>
+        FindOrLoadBindings(_choices, identifier, packageName, choice);
 
     private RegistryLookup<TValue> FindOrLoadBindings<TDiscriminator, TValue>(
-        RegistryTable<TDiscriminator, TValue> table, Identifier identifier, TDiscriminator discriminator)
+        RegistryTable<TDiscriminator, TValue> table, Identifier identifier, string? packageName, TDiscriminator discriminator)
         where TDiscriminator : notnull
         where TValue : notnull
     {
         if (table.HasExact(identifier))
         {
-            return table.Find(identifier, discriminator);
+            return table.Find(identifier, packageName, discriminator);
         }
 
         LoadBindingsOnce();
-        return table.Find(identifier, discriminator);
+        return table.Find(identifier, packageName, discriminator);
     }
 
     private void LoadBindingsOnce()
@@ -108,17 +108,17 @@ internal sealed class GeneratedTypeRegistry
 
         private sealed record Snapshot(
             ImmutableDictionary<Identifier, ImmutableList<Owner>> ByIdentifier,
-            ImmutableDictionary<(string ModuleName, string EntityName), ImmutableList<Owner>> ByModuleEntity)
+            ImmutableDictionary<(string PackageName, string ModuleName, string EntityName), ImmutableList<Owner>> ByModuleEntity)
         {
             public static Snapshot Empty { get; } = new(
                 ImmutableDictionary<Identifier, ImmutableList<Owner>>.Empty,
-                ImmutableDictionary<(string ModuleName, string EntityName), ImmutableList<Owner>>.Empty);
+                ImmutableDictionary<(string PackageName, string ModuleName, string EntityName), ImmutableList<Owner>>.Empty);
         }
 
         private readonly object _writeLock = new();
         private Snapshot _snapshot = Snapshot.Empty;
 
-        public void Register(Identifier identifier, Type declaringType, IReadOnlyDictionary<TDiscriminator, TValue> values)
+        public void Register(Identifier identifier, string packageName, Type declaringType, IReadOnlyDictionary<TDiscriminator, TValue> values)
         {
             lock (_writeLock)
             {
@@ -130,7 +130,7 @@ internal sealed class GeneratedTypeRegistry
                 }
 
                 var owner = new Owner(declaringType, values);
-                var moduleEntityKey = (identifier.ModuleName, identifier.EntityName);
+                var moduleEntityKey = (packageName, identifier.ModuleName, identifier.EntityName);
                 var moduleEntityOwners = current.ByModuleEntity.GetValueOrDefault(moduleEntityKey, []);
                 var next = new Snapshot(
                     current.ByIdentifier.SetItem(identifier, owners.Add(owner)),
@@ -142,21 +142,26 @@ internal sealed class GeneratedTypeRegistry
         public bool HasExact(Identifier identifier) =>
             Volatile.Read(ref _snapshot).ByIdentifier.ContainsKey(identifier);
 
-        public RegistryLookup<TValue> Find(Identifier identifier, TDiscriminator discriminator)
+        public RegistryLookup<TValue> Find(Identifier identifier, string? packageName, TDiscriminator discriminator)
         {
             var snapshot = Volatile.Read(ref _snapshot);
             if (snapshot.ByIdentifier.TryGetValue(identifier, out var exactOwners))
             {
-                return Resolve(exactOwners, discriminator);
+                return Resolve(exactOwners, discriminator, viaPackageName: false);
             }
 
-            var moduleEntityKey = (identifier.ModuleName, identifier.EntityName);
+            if (string.IsNullOrEmpty(packageName))
+            {
+                return new RegistryLookup<TValue>.Missing();
+            }
+
+            var moduleEntityKey = (packageName, identifier.ModuleName, identifier.EntityName);
             return snapshot.ByModuleEntity.TryGetValue(moduleEntityKey, out var moduleEntityOwners)
-                ? Resolve(moduleEntityOwners, discriminator)
+                ? Resolve(moduleEntityOwners, discriminator, viaPackageName: true)
                 : new RegistryLookup<TValue>.Missing();
         }
 
-        private static RegistryLookup<TValue> Resolve(ImmutableList<Owner> owners, TDiscriminator discriminator)
+        private static RegistryLookup<TValue> Resolve(ImmutableList<Owner> owners, TDiscriminator discriminator, bool viaPackageName)
         {
             if (owners.Count > 1)
             {
@@ -169,7 +174,7 @@ internal sealed class GeneratedTypeRegistry
 
             var only = owners[0];
             return only.Values.TryGetValue(discriminator, out var value)
-                ? new RegistryLookup<TValue>.Resolved(value, only.DeclaringType)
+                ? new RegistryLookup<TValue>.Resolved(value, only.DeclaringType, viaPackageName)
                 : new RegistryLookup<TValue>.Missing();
         }
     }

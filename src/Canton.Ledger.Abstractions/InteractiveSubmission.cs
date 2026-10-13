@@ -34,13 +34,19 @@ public enum HashingSchemeVersion
 /// </summary>
 /// <remarks>
 /// Equality compares the byte fields by buffer identity, not by content.
+/// <para>
+/// The client that returned it has recomputed <see cref="Hash"/> from <see cref="PreparedTransaction"/>
+/// and found them equal, so a signature over <see cref="Hash"/> authorizes exactly the transaction the
+/// participant returned. A submission built by hand carries no such guarantee.
+/// </para>
 /// </remarks>
 /// <param name="PreparedTransaction">
-/// The serialized prepared transaction, opaque to the SDK. Hand it back unchanged in a
-/// <see cref="SignedSubmission"/>; a caller that does not trust the preparing participant must
-/// decode and show it to the signer before signing.
+/// The serialized prepared transaction. Hand it back unchanged in a <see cref="SignedSubmission"/>.
 /// </param>
-/// <param name="Hash">The hash to sign.</param>
+/// <param name="Hash">
+/// The hash to sign, as the participant reported it: 32 bytes, and the hash of
+/// <paramref name="PreparedTransaction"/>.
+/// </param>
 /// <param name="HashingSchemeVersion">The scheme <paramref name="Hash"/> was computed with.</param>
 /// <param name="HashingDetails">
 /// A human-readable account of how the hash was computed, or <see langword="null"/> when the

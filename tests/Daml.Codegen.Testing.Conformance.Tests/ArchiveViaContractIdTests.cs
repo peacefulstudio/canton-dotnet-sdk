@@ -46,7 +46,10 @@ public class ArchiveViaContractIdTests
                     ExerciseResult: DamlUnit.Instance,
                     Consuming: true,
                     ActingParties: [],
-                    WitnessParties: []),
+                    WitnessParties: [])
+                {
+                    PackageName = "richtypes-ha8d30776aa45",
+                },
             ],
         };
 
@@ -111,5 +114,21 @@ public class ArchiveViaContractIdTests
             .Should().BeOfType<ExerciseCommand>().Subject;
         command.TemplateId.Should().Be(IHolding.InterfaceId);
         command.ChoiceArgument.Should().BeOfType<DamlRecord>().Subject.Fields.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ArchiveCommand_on_a_template_contract_id_names_the_package_of_the_template()
+    {
+        var command = MarkerCid.ArchiveCommand();
+
+        command.PackageName.Should().Be("richtypes-ha8d30776aa45");
+    }
+
+    [Fact]
+    public void ArchiveCommand_on_an_interface_contract_id_names_no_package()
+    {
+        var command = HoldingCid.ArchiveCommand();
+
+        command.PackageName.Should().BeNull();
     }
 }

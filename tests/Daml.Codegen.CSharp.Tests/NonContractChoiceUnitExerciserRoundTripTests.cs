@@ -137,7 +137,10 @@ public class NonContractChoiceUnitExerciserRoundTripTests
             ExerciseResult: DamlUnit.Instance,
             Consuming: false,
             ActingParties: [],
-            WitnessParties: []);
+            WitnessParties: [])
+        {
+            PackageName = "test-package",
+        };
 
     private static TransactionResult TransactionWith(params ExercisedEvent[] events) =>
         new(

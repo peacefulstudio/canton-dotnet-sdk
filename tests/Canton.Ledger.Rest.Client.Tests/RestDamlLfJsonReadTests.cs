@@ -319,6 +319,7 @@ public class RestDamlLfJsonReadTests
             $$$"""
             {"transaction":{"updateId":"upd-1","offset":"1","events":[{"ExercisedEvent":{
               "offset":"1","contractId":"00holding",
+              "packageName": "token-impl",
               "templateId":{"packageId":"tmpl-pkg","moduleName":"Sample.Token","entityName":"ResultsHolding"},
               "choice":"{{{choice}}}","choiceArgument":{},"actingParties":["alice::ns1"],"consuming":false,
               "witnessParties":["alice::ns1"],"exerciseResult":{{{exerciseResultJson}}}}}]}}
@@ -333,6 +334,7 @@ public class RestDamlLfJsonReadTests
     private static string CreatedEventJson(
         string createArgumentJson, string? contractKeyJson = null, string? viewValueJson = null, string entityName = "Holding") =>
         "{\"offset\":\"7\",\"nodeId\":0,\"contractId\":\"00holding\","
+        + "\"packageName\":\"token-impl\","
         + "\"templateId\":{\"packageId\":\"tmpl-pkg\",\"moduleName\":\"Sample.Token\",\"entityName\":\"" + entityName + "\"},"
         + "\"createArgument\":" + createArgumentJson + ","
         + (contractKeyJson is null ? "" : "\"contractKey\":" + contractKeyJson + ",\"contractKeyHash\":\"AQID\",")

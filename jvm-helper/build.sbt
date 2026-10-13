@@ -6,7 +6,7 @@ ThisBuild / version      := sys.env.get("DAML_DAR_TO_PROTO_VERSION").map(_.trim)
 
 resolvers += "Daml" at "https://repo1.maven.org/maven2/"
 
-lazy val damlLfArchiveVersion = "3.5.12"
+lazy val damlLfArchiveVersion = "3.6.1"
 
 lazy val jvmHelper = (project in file("."))
   .settings(

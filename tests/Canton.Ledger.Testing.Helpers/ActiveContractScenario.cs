@@ -53,6 +53,9 @@ public sealed record ActiveContractScenario
     /// <summary>The module name of <see cref="TemplateMarker"/>.</summary>
     public static string ModuleName { get; } = TemplateMarker.TemplateId.ModuleName;
 
+    /// <summary>The package name of <see cref="TemplateMarker"/>, which every template event carries.</summary>
+    public static string PackageName { get; } = TemplateMarker.PackageName;
+
     /// <summary>The entity name that classifies as <see cref="TemplateMarker"/>.</summary>
     public static string MatchingEntityName { get; } = TemplateMarker.TemplateId.EntityName;
 

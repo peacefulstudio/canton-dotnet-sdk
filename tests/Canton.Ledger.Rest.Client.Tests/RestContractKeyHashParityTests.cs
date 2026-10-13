@@ -62,6 +62,7 @@ public sealed class RestContractKeyHashParityTests : ContractKeyHashParityTests
         NodeId = 0,
         Offset = "42",
         ContractId = "00keyed",
+        PackageName = TemplateMarker.PackageName,
         TemplateId = TemplateId,
         CreateArgument = OwnerRecord(),
         ContractKey = FromDamlLfJson<WireValue>("\"alice::ns1\""),

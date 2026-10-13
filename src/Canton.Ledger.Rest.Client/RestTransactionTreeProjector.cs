@@ -75,7 +75,10 @@ internal static class RestTransactionTreeProjector
             exercised.Consuming ?? false,
             RestWireConversions.ToPartyList(exercised.ActingParties),
             RestWireConversions.ToPartyList(exercised.WitnessParties),
-            children);
+            children)
+        {
+            PackageName = exercised.PackageName,
+        };
     }
 
     private static TreeEvent ToCreatedNode(WireEvent evt, int nodeId)
@@ -106,6 +109,7 @@ internal static class RestTransactionTreeProjector
         {
             InterfaceIds = ToInterfaceIds(created),
             UndecodedCreateArguments = payload.Undecoded,
+            PackageName = created.PackageName,
         };
     }
 

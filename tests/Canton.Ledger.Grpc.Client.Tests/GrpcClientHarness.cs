@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Authentication;
 using Canton.Ledger.Testing.Helpers;
 using Com.Daml.Ledger.Api.V2;
@@ -19,18 +20,22 @@ internal sealed record GrpcClients(LedgerClient Ledger, AdminClient Admin);
 internal static class GrpcClientHarness
 {
     private static readonly GrpcChannel Channel = GrpcChannel.ForAddress("https://localhost:5001");
-    private static readonly LedgerClientOptions Options = new() { GrpcAddress = "https://localhost:5001", UserId = "test-user" };
+    private static readonly LedgerClientOptions Options = new()
+    {
+        GrpcAddress = "https://localhost:5001",
+        UserId = "test-user",
+    };
 
-    private static readonly byte[] SerializedPreparedTransaction =
+    internal static readonly byte[] SerializedPreparedTransaction =
         new Interactive.PreparedTransaction { Metadata = new Interactive.Metadata { TransactionUuid = "uuid-1" } }.ToByteArray();
 
     internal static Task Invoke(GrpcClients clients, string entryPoint) =>
         EntryPointInvocations.Invoke<FooBar>(
             clients.Ledger, clients.Admin, entryPoint, SerializedPreparedTransaction, TestContext.Current.CancellationToken);
 
-    internal static GrpcClients CreateClients(CallInvoker invoker)
+    internal static GrpcClients CreateClients(CallInvoker invoker, ITokenProvider? tokenProvider = null)
     {
-        var tokenProvider = new StaticTokenProvider("test-token");
+        tokenProvider ??= new StaticTokenProvider("test-token");
         var ledger = new LedgerClient(
             Options,
             Channel,

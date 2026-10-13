@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Daml.Runtime\Daml.Runtime.csproj" />
     <ProjectReference Include="..\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Grpc\Canton.Ledger.Grpc.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +40,12 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Topology/Proto/**/*.proto" ProtoRoot="Topology/Proto" GrpcServices="None" Access="Internal" />
   </ItemGroup>
 
 </Project>

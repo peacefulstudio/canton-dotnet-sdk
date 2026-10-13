@@ -75,7 +75,7 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
     private const string OffsetPlaceholder = "OFFSET";
 
     private const string TransactionEntry =
-        """{"update": {"Transaction": {"value": {"offset": "OFFSET", "synchronizerId": "sync-1", "events": [{"CreatedEvent": {"offset": "OFFSET", "contractId": "00holding-OFFSET", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "WindowLoopTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}}]}}}}""";
+        """{"update": {"Transaction": {"value": {"offset": "OFFSET", "synchronizerId": "sync-1", "events": [{"CreatedEvent": {"offset": "OFFSET", "contractId": "00holding-OFFSET", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "WindowLoopTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}}]}}}}""";
 
     private const string CheckpointEntry =
         """{"update": {"OffsetCheckpoint": {"value": {"offset": "OFFSET"}}}}""";
@@ -231,7 +231,8 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
     {
         var transport = new RecordingHttpHandler().WithResponseSequence(
             (HttpStatusCode.OK, TransactionWindow("6", "7")),
-            (HttpStatusCode.OK, TransactionWindow("8")));
+            (HttpStatusCode.OK, TransactionWindow("8")),
+            (HttpStatusCode.OK, "[]"));
         var client = ClientWith(transport, windowLimit: 2);
 
         var observed = new List<ContractStreamEvent<TestTemplate>>();
@@ -242,7 +243,7 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
         }
 
         observed.Should().HaveCount(3);
-        transport.Requests.Should().HaveCount(2);
+        transport.Requests.Should().HaveCount(3);
         transport.Requests[1].Body.Should().Contain("\"beginExclusive\":\"7\"");
         transport.Requests.Should().OnlyContain(request => request.Body!.Contains("\"endInclusive\":\"100\""));
     }
@@ -263,6 +264,62 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
 
         observed.Should().HaveCount(2);
         transport.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_reopens_a_bounded_range_after_a_short_window_that_stops_before_the_end_offset()
+    {
+        var transport = new RecordingHttpHandler().WithResponseSequence(
+            (HttpStatusCode.OK, TransactionWindow("10")),
+            (HttpStatusCode.OK, TransactionWindow("20")),
+            (HttpStatusCode.OK, "[]"));
+        var client = ClientWith(transport);
+
+        var observed = new List<ContractStreamEvent<TestTemplate>>();
+        await foreach (var streamEvent in client.SubscribeAsync<TestTemplate>(
+            Alice, LedgerOffset.At(5), LedgerOffset.At(100), TestContext.Current.CancellationToken))
+        {
+            observed.Add(streamEvent);
+        }
+
+        observed.Should().HaveCount(2);
+        transport.Requests.Should().HaveCount(3);
+        transport.Requests[1].Body.Should().Contain("\"beginExclusive\":\"10\"");
+        transport.Requests[2].Body.Should().Contain("\"beginExclusive\":\"20\"");
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_ends_a_bounded_range_on_an_empty_window_below_the_end_offset()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "[]");
+        var client = ClientWith(transport);
+
+        var observed = new List<ContractStreamEvent<TestTemplate>>();
+        await foreach (var streamEvent in client.SubscribeAsync<TestTemplate>(
+            Alice, LedgerOffset.At(5), LedgerOffset.At(100), TestContext.Current.CancellationToken))
+        {
+            observed.Add(streamEvent);
+        }
+
+        observed.Should().BeEmpty();
+        transport.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_sends_no_idle_timeout_on_the_windows_of_a_bounded_range()
+    {
+        var transport = new RecordingHttpHandler().WithResponseSequence(
+            (HttpStatusCode.OK, TransactionWindow("10")),
+            (HttpStatusCode.OK, "[]"));
+        var client = ClientWith(transport);
+
+        await foreach (var _ in client.SubscribeAsync<TestTemplate>(
+            Alice, LedgerOffset.At(5), LedgerOffset.At(100), TestContext.Current.CancellationToken))
+        {
+        }
+
+        transport.Requests.Should().HaveCount(2);
+        transport.Requests.Should().OnlyContain(request => request.PathAndQuery == "/v2/updates?limit=200");
     }
 
     [Fact]
@@ -309,7 +366,7 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
     }
 
     private const string ActiveContractEntry =
-        """{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "3", "contractId": "OFFSET", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "WindowLoopTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}""";
+        """{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "3", "contractId": "OFFSET", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "WindowLoopTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}""";
 
     private static string ActiveContractsPage(string? nextPageToken, params string[] contractIds)
     {
@@ -354,6 +411,41 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
         transport.Requests[0].Body.Should().NotContain("pageToken");
         transport.Requests[1].Body.Should().Contain("\"pageToken\":\"page-2\"");
         transport.Requests[2].Body.Should().Contain("\"pageToken\":\"page-3\"");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_ends_with_a_StreamError_when_the_participant_repeats_a_page_token()
+    {
+        var transport = new RecordingHttpHandler().WithResponseSequence(
+            (HttpStatusCode.OK, ActiveContractsPage("stuck", "00a")),
+            (HttpStatusCode.OK, ActiveContractsPage("stuck", "00b")));
+
+        var entries = await SnapshotAsync(transport);
+
+        CreatedContractIds(entries).Should().Equal("00a", "00b");
+        entries[^1].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.StreamError>()
+            .Which.Message.Should().Be(
+                "The active-contracts snapshot is not progressing: the participant returned the page token " +
+                "'stuck' that was already used earlier in this snapshot.");
+        entries.OfType<AcsSnapshotEntry<TestTemplate>.Checkpoint>().Should().BeEmpty();
+        transport.Requests.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_ends_with_a_StreamError_after_10000_pages_that_keep_naming_a_new_token()
+    {
+        var pages = Enumerable.Range(1, 10_001)
+            .Select(page => (HttpStatusCode.OK, ActiveContractsPage($"page-{page}")))
+            .ToArray();
+        var transport = new RecordingHttpHandler().WithResponseSequence(pages);
+
+        var entries = await SnapshotAsync(transport);
+
+        entries.Should().ContainSingle().Which.Should().BeOfType<AcsSnapshotEntry<TestTemplate>.StreamError>()
+            .Which.Message.Should().Be(
+                "The active-contracts snapshot did not complete after 10000 pages; ending it instead of " +
+                "following an unbounded page-token stream.");
+        transport.Requests.Should().HaveCount(10_000);
     }
 
     [Fact]

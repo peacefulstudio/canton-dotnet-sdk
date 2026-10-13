@@ -67,6 +67,7 @@ public sealed class SynchronizerIdWireFormatTests : IDisposable
         {
           "offset": "{{offset}}",
           "contractId": "00holding",
+          "packageName": "token-impl",
           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "WireFormatHolding"},
           "createArgument": {},
           "witnessParties": ["alice::ns1"]
@@ -158,6 +159,7 @@ public sealed class SynchronizerIdWireFormatTests : IDisposable
                             "source": "{{wireSource}}",
                             "target": "{{wireTarget}}",
                             "contractId": "00holding",
+                            "packageName": "token-impl",
                             "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "WireFormatHolding"},
                             "reassignmentId": "reassign-2",
                             "reassignmentCounter": "4",

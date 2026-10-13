@@ -112,13 +112,13 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
             Created = new Created { CreatedEvent = CreatedEventMalformedIn(field), SynchronizerId = "sync::a" },
         },
 
-        ("PrepareSubmissionAsync(3)", MalformedField.ResultMissing) => new Interactive.PrepareSubmissionResponse(),
-        ("PrepareSubmissionAsync(3)", MalformedField.EnumValueUnknown) => new Interactive.PrepareSubmissionResponse
+        ("PrepareSubmissionAsync(4)", MalformedField.ResultMissing) => new Interactive.PrepareSubmissionResponse(),
+        ("PrepareSubmissionAsync(4)", MalformedField.EnumValueUnknown) => new Interactive.PrepareSubmissionResponse
         {
             PreparedTransaction = new Interactive.PreparedTransaction(),
             HashingSchemeVersion = (Interactive.HashingSchemeVersion)99,
         },
-        ("PrepareSubmissionAsync(3)" or "EstimateTrafficCostAsync(3)", MalformedField.TimestampOutOfRange) =>
+        ("PrepareSubmissionAsync(4)" or "EstimateTrafficCostAsync(3)", MalformedField.TimestampOutOfRange) =>
             PreparedWith(new Interactive.CostEstimation { EstimationTimestamp = new Timestamp { Seconds = long.MaxValue } }),
         ("EstimateTrafficCostAsync(3)", MalformedField.CostOutOfRange) =>
             PreparedWith(new Interactive.CostEstimation { TotalTrafficCostEstimation = ulong.MaxValue }),
@@ -144,6 +144,7 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
             {
                 NodeId = 0,
                 ContractId = "00aa",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Choice = "Accept",
                 ChoiceArgument = new ProtoValue { Unit = new Empty() },
@@ -165,6 +166,7 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
             MalformedField.ContractIdWhitespace => "  ",
             _ => "00abc",
         },
+        PackageName = "test-package",
         TemplateId = field == MalformedField.TemplateIdMissing ? null : FooBarTemplate,
         CreateArguments = field switch
         {
@@ -182,6 +184,7 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
             ArchivedEvent = new Com.Daml.Ledger.Api.V2.ArchivedEvent
             {
                 ContractId = contractId,
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Offset = offset,
             },

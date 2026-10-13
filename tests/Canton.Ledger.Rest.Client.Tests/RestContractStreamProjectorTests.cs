@@ -125,6 +125,7 @@ public class RestContractStreamProjectorTests
                     "offset": "42",
                     "nodeId": 0,
                     "contractId": "00holding",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "CirceStreamHolding"},
                     "createArgument": {"owner": "alice::ns1", "amount": "10.5"},
                     "witnessParties": ["alice::ns1"]
@@ -196,6 +197,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "42",
                     "contractId": "00holding",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "{{createdEntityName}}"},
                     "createArgument": {}
                   },
@@ -316,6 +318,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "42",
                     "contractId": "00holding",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
                     "createArgument": {},
                     "createdEventBlob": "CgsM"
@@ -346,6 +349,7 @@ public class RestContractStreamProjectorTests
                     "createdEvent": {
                       "offset": "43",
                       "contractId": "00assigned",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
                       "createArgument": {},
                       "createdEventBlob": "ISI="
@@ -373,6 +377,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "44",
                     "contractId": "00unassigned",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
                     "createArgument": {},
                     "createdEventBlob": "MTIz"
@@ -400,6 +405,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "42",
                     "contractId": "00holding",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
                     "createArgument": {}
                   },
@@ -423,6 +429,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "42",
                     "contractId": "00holding",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
                     "createArgument": {},
                     "createdEventBlob": "not base64!"
@@ -452,6 +459,7 @@ public class RestContractStreamProjectorTests
                     "createdEvent": {
                       "offset": "43",
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "StreamHolding"},
                       "createArgument": {}
                     }
@@ -496,6 +504,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "not-a-number",
                     "contractId": "00other",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                     "createArgument": {}
                   },
@@ -528,6 +537,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "not-a-number",
                     "contractId": "00other",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                     "createArgument": {}
                   },
@@ -596,6 +606,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "42",
                     "contractId": "00holding",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "{{entityName}}"},
                     "createArgument": {{createArgumentJson}}
                   },
@@ -614,6 +625,7 @@ public class RestContractStreamProjectorTests
                   "createdEvent": {
                     "offset": "42",
                     "contractId": "00keyless",
+                    "packageName": "token-impl",
                     "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Keyless"},
                     "createArgument": {},
                     "contractKey": {{contractKeyJson}}

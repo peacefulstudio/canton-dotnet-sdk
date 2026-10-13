@@ -257,9 +257,18 @@ internal sealed partial class LedgerClient
 
         LogCompletionStreamStarted(_logger, request.BeginExclusive);
 
+        var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
+        if (opening.Fault is { } openingFault)
+        {
+            LogCompletionStreamError(_logger, openingFault.Status, openingFault.Message);
+            yield return new CompletionStreamEvent.StreamError(
+                openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
+            yield break;
+        }
+
         using var call = _commandCompletionService.GetCompletions(
             request,
-            headers: await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false),
+            headers: opening.Headers,
             deadline: null,
             cancellationToken: cancellationToken);
 

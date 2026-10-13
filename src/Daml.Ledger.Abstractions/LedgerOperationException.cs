@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Runtime.Commands;
 using Daml.Runtime.Outcomes;
 
 namespace Daml.Ledger.Abstractions;
@@ -43,6 +44,9 @@ public sealed class LedgerOperationException : InvalidOperationException
     /// <c>StreamError</c> entry this exception was raised from; otherwise <c>null</c>. A stream
     /// fault supplies it without any <see cref="Metadata"/>, so a non-null identifier no longer
     /// implies a non-null <see cref="Metadata"/> the way it did before the stream path filled it.
+    /// An exception built from an <see cref="ExerciseOutcome{T}.InfraError"/> (a generated
+    /// exercise or create helper unwrapping a <c>Try*</c> outcome) carries none, even where the
+    /// participant sent a structured error for a write the retry pipeline re-sent.
     /// </summary>
     public string? ErrorId { get; }
 
@@ -94,11 +98,22 @@ public sealed class LedgerOperationException : InvalidOperationException
     /// <see cref="ExerciseOutcome{T}.Many"/>, and <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>,
     /// and <see cref="CommitState.Unknown"/> for an <see cref="ExerciseOutcome{T}.InfraError"/>.
     /// A catch site must read this, not a null <see cref="UpdateId"/>, to decide whether resubmitting
-    /// the command is safe — and must resubmit with the same command id when this is
-    /// <see cref="CommitState.Unknown"/>, so command-id deduplication resolves the duplicate if the
-    /// original request did commit.
+    /// the command is safe. When this is <see cref="CommitState.Unknown"/>, do not resubmit blindly:
+    /// look <see cref="CommandId"/> up on the completion stream
+    /// (<c>ICantonLedgerClient.CompletionStreamAsync</c>) to learn whether the original request
+    /// committed. A resubmitted consuming exercise that already committed is rejected with
+    /// <c>CONTRACT_NOT_FOUND</c>, which looks like a plain rejection of a command that never ran.
     /// </summary>
     public CommitState CommitState { get; }
+
+    /// <summary>
+    /// The command id of the failed write, including one the <c>ExerciseAsync</c> and
+    /// <c>CreateOneByExerciseAsync</c>/<c>CreateManyByExerciseAsync</c> helpers or the client
+    /// generated because the caller supplied none; look it up on the completion stream to find out
+    /// what became of the command. <c>null</c> when the failed call carried no command id: a read, an
+    /// administration call, an interactive-submission execute, or an exception raised without a call.
+    /// </summary>
+    public CommandId? CommandId { get; internal set; }
 
     /// <summary>
     /// Creates an exception for a non-committed or unexpected outcome with no structured

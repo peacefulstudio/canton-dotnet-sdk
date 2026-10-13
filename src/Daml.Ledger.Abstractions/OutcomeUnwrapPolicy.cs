@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
 
@@ -31,6 +32,7 @@ internal static class OutcomeUnwrapPolicy
         string label,
         Func<string>? describeNone = null,
         Func<int, string>? describeMany = null,
+        CommandId? commandId = null,
         CancellationToken cancellationToken = default)
     {
         var rules = RulesFor(intent);
@@ -45,18 +47,19 @@ internal static class OutcomeUnwrapPolicy
             return one.Result;
         }
 
-        throw FailureOf(outcome, rules, label, describeNone, describeMany, cancellationToken)!;
+        throw Identified(FailureOf(outcome, rules, label, describeNone, describeMany, cancellationToken)!, CommandId.FromWire(outcome.CommandId) ?? commandId);
     }
 
     internal static void Discard<T>(
         ExerciseOutcome<T> outcome,
         DiscardIntent intent,
         string label,
+        CommandId? commandId = null,
         CancellationToken cancellationToken = default)
     {
         if (FailureOf(outcome, RulesFor(intent), label, describeNone: null, describeMany: null, cancellationToken) is { } failure)
         {
-            throw failure;
+            throw Identified(failure, CommandId.FromWire(outcome.CommandId) ?? commandId);
         }
     }
 
@@ -73,6 +76,16 @@ internal static class OutcomeUnwrapPolicy
         DiscardIntent.AcceptNone => AcceptNoneRules.Instance,
         _ => throw new ArgumentOutOfRangeException(nameof(intent), intent, null),
     };
+
+    private static Exception Identified(Exception failure, CommandId? commandId)
+    {
+        if (failure is LedgerOperationException operationFailure)
+        {
+            operationFailure.CommandId = commandId;
+        }
+
+        return failure;
+    }
 
     private static Exception? FailureOf<T>(
         ExerciseOutcome<T> outcome,

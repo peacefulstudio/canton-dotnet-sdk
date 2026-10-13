@@ -110,7 +110,7 @@ Every call reports failure through one contract, the same on the gRPC and JSON L
 - A stream ends with a terminal `StreamError` event instead of throwing.
 - Only your own `CancellationToken` surfaces as `OperationCanceledException`. A null argument or a value that cannot be encoded still throws synchronously with its own type.
 
-`CommitState` follows the kind of call: a failed read is always `NotCommitted`, a write the participant may have received without answering is `Unknown`, and a write it rejected reports from its error (`DUPLICATE_COMMAND` is `Committed` unless its `accepted` metadata is `"false"`, and `SUBMISSION_ALREADY_IN_FLIGHT` is `Unknown`). Branch on `Category` and `CommitState` rather than on the transport status:
+`CommitState` follows the kind of call: a failed read is always `NotCommitted`, a write the participant may have received without answering is `Unknown`, and a write it rejected reports from its error (`DUPLICATE_COMMAND` is `Committed` unless its `accepted` metadata is `"false"`, and `SUBMISSION_ALREADY_IN_FLIGHT` is `Unknown`). A write that `Retry` re-sent after a transient failure is `Unknown` for any rejection other than `DUPLICATE_COMMAND`, because the first attempt may have committed before its response was lost; the `Try*` members return that rejection as an `InfraError` rather than a `DamlError`. Branch on `Category` and `CommitState` rather than on the transport status:
 
 ```csharp
 try
@@ -191,7 +191,7 @@ await foreach (var streamEvent in ledgerClient.CompletionStreamAsync(actAs, begi
 }
 ```
 
-> `SubmitAsync` and `SubmitAndWaitAsync` report the effective `CommandId` back to you — the one you supplied, or the one minted here when you omit it. To retry safely after a transport failure, resubmit with that same `CommandId`; re-invoking with a fresh, command_id-less submission mints a *new* id and double-submits, because the participant may have accepted the first attempt before the failure surfaced.
+> `SubmitAsync` and `SubmitAndWaitAsync` report the effective `CommandId` back to you — the one you supplied, or the one minted here when you omit it. After a transport failure the first attempt may have been accepted, so do not resubmit blindly: `LedgerOperationException.CommandId` names the failed write (including an id minted here), so look that id up on the completion stream (`CompletionStreamAsync`). Re-invoking with a fresh, command_id-less submission mints a *new* id and double-submits. A resubmitted consuming exercise that already committed is rejected with `CONTRACT_NOT_FOUND`.
 
 To submit and wait for the transaction in one call instead, use `SubmitAndWaitAsync`.
 
@@ -222,7 +222,7 @@ var users = await adminClient.ListUsersAsync();
 
 For Ledger API services or overloads the typed surface does not cover, opt into
 `IGrpcCallInvokerFactory` (namespace `Canton.Ledger.Grpc.Client.Raw`). Its `CreateCallInvoker()`
-returns a `Grpc.Core.CallInvoker` that reuses the SDK's authentication, deadline, and retry
+returns a `Grpc.Core.CallInvoker` that reuses the SDK's authentication and deadline
 plumbing — no hand-built `GrpcChannel`, Bearer-header `CallOptions`, or deadlines needed:
 
 ```csharp
@@ -236,9 +236,21 @@ var ledgerEnd = await stateService.GetLedgerEndAsync(new GetLedgerEndRequest());
 
 Bearer tokens come from the registered `ITokenProvider` on every call (`ITokenProvider.None`
 sends no `authorization` header); unary calls get the configured `Timeout` as a per-attempt
-deadline and run through the opt-in `Retry` pipeline, while streaming calls attach auth headers
-but no default deadline and are never retried. A caller-supplied `authorization` header or
-deadline in `CallOptions` wins over the SDK's.
+deadline, while streaming calls attach auth headers but no default deadline and are never
+retried. A caller-supplied `authorization` header or deadline in `CallOptions` wins over the
+SDK's.
+
+A raw unary call is sent exactly once even with `Retry` enabled, because the SDK cannot know
+whether it is safe to repeat. When you know a call is idempotent, start it inside a
+`RawCallReplay.Allow()` scope (namespace `Canton.Ledger.Kernel.Resilience`) and the `Retry`
+pipeline re-sends it after a transient failure:
+
+```csharp
+using (RawCallReplay.Allow())
+{
+    var ledgerEnd = await stateService.GetLedgerEndAsync(new GetLedgerEndRequest());
+}
+```
 
 The factory runs on the one channel the container shares across every client it registers, built
 from the same `LedgerClientOptions` the clients use, so it needs neither client registered and

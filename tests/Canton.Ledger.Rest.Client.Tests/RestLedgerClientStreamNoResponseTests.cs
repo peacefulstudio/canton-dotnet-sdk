@@ -119,13 +119,13 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
     private const string OffsetPlaceholder = "OFFSET";
 
     private const string TransactionEntry =
-        """{"update": {"Transaction": {"value": {"offset": "OFFSET", "synchronizerId": "sync-1", "events": [{"CreatedEvent": {"offset": "OFFSET", "contractId": "00holding-OFFSET", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "NoResponseTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}}]}}}}""";
+        """{"update": {"Transaction": {"value": {"offset": "OFFSET", "synchronizerId": "sync-1", "events": [{"CreatedEvent": {"offset": "OFFSET", "contractId": "00holding-OFFSET", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "NoResponseTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}}]}}}}""";
 
     private const string CompletionCheckpointEntry =
         """{"completionResponse": {"OffsetCheckpoint": {"value": {"offset": "OFFSET"}}}}""";
 
     private const string ActiveContractEntry =
-        """{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "3", "contractId": "OFFSET", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "NoResponseTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}""";
+        """{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "3", "contractId": "OFFSET", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "NoResponseTemplate"}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}""";
 
     private const string InterfaceActivePage =
         """
@@ -135,6 +135,7 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
               "createdEvent": {
                 "offset": "9",
                 "contractId": "00impl",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "impl-pkg", "moduleName": "Token.Impl", "entityName": "Asset"},
                 "createArgument": {"amount": "999"},
                 "interfaceViews": [{

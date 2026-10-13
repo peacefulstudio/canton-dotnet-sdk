@@ -123,14 +123,46 @@ public class TransactionResultTests
     }
 
     [Fact]
-    public void Match_helpers_ignore_package_id_difference()
+    public void Match_helpers_accept_a_different_package_id_under_the_same_package_name()
     {
-        // Same module/entity but a different package id (e.g. upgrade) should still match —
-        // template upgrades change the package hash but keep the qualified name stable.
-        var differentPackage = new RuntimeIdentifier("pkg-v2", FooBar.TemplateId.ModuleName, FooBar.TemplateId.EntityName);
-        var result = MakeTransaction(("00upgraded", differentPackage));
+        var upgradedPackage = new RuntimeIdentifier("pkg-v2", FooBar.TemplateId.ModuleName, FooBar.TemplateId.EntityName);
+        var result = MakeTransaction(("00upgraded", upgradedPackage));
 
         result.Single<FooBar>().Value.Should().Be("00upgraded");
+    }
+
+    [Fact]
+    public void Match_helpers_refuse_a_template_with_the_same_module_and_entity_from_another_package_name()
+    {
+        var otherPackagesAsset = new CreatedContract(
+            "evt-1", "00foreign", FooBar.TemplateId, DamlRecord.Create(), [new Party("alice")], [new Party("alice")], [])
+        {
+            PackageName = "someone-elses-package",
+        };
+        var result = ResultOf(otherPackagesAsset);
+
+        result.All<FooBar>().Should().BeEmpty();
+        result.TrySingle<FooBar>().Should().BeNull();
+    }
+
+    [Fact]
+    public void Match_helpers_never_match_a_created_contract_that_carries_no_package_name()
+    {
+        var nameless = MakeCreated("00nameless") with { PackageName = null };
+        var emptyName = MakeCreated("00empty") with { PackageName = "" };
+
+        ResultOf(nameless, emptyName).All<FooBar>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Match_helpers_keep_the_contract_of_the_matching_package_when_two_packages_share_a_template_name()
+    {
+        var ours = MakeCreated("00ours");
+        var theirs = MakeCreated("00theirs") with { PackageName = "someone-elses-package" };
+
+        var ids = ResultOf(theirs, ours).All<FooBar>();
+
+        ids.Should().ContainSingle().Which.Value.Should().Be("00ours");
     }
 
     [Fact]
@@ -698,14 +730,15 @@ public class TransactionResultTests
     }
 
     [Fact]
-    public void Interface_match_ignores_package_id_and_template_id()
+    public void Interface_match_requires_the_exact_package_id_of_the_interface()
     {
-        var differentPackageInterfaceId = new RuntimeIdentifier(
-            "iface-pkg-v2", IThing.InterfaceId.ModuleName, IThing.InterfaceId.EntityName);
+        var sameNameInAnotherPackage = new RuntimeIdentifier(
+            "other-iface-pkg", IThing.InterfaceId.ModuleName, IThing.InterfaceId.EntityName);
         var result = MakeTransactionWithInterfaces(
-            ("00upgraded", FooBar.TemplateId, [differentPackageInterfaceId]));
+            ("00foreign", FooBar.TemplateId, [sameNameInAnotherPackage]),
+            ("00ours", FooBar.TemplateId, [IThing.InterfaceId]));
 
-        result.Single<IThing>().Value.Should().Be("00upgraded");
+        result.All<IThing>().Should().ContainSingle().Which.Value.Should().Be("00ours");
     }
 
     [Fact]
@@ -742,6 +775,80 @@ public class TransactionResultTests
     }
 
     [Fact]
+    public void Single_on_an_interface_throws_when_the_result_was_produced_without_interface_data()
+    {
+        var result = MakeTransactionWithInterfaces(
+            ("00thing", FooBar.TemplateId, [IThing.InterfaceId])) with { RequestedInterfaces = default };
+
+        Action act = () => result.Single<IThing>();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("This transaction result was produced without interface data for IThing,*");
+    }
+
+    [Fact]
+    public void TrySingle_on_an_interface_throws_when_the_result_was_produced_without_interface_data()
+    {
+        var result = MakeTransactionWithInterfaces() with { RequestedInterfaces = default };
+
+        Action act = () => result.TrySingle<IThing>();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("This transaction result was produced without interface data for IThing,*");
+    }
+
+    [Fact]
+    public void All_on_an_interface_throws_when_the_result_was_produced_without_interface_data()
+    {
+        var result = MakeTransactionWithInterfaces() with { RequestedInterfaces = default };
+
+        Action act = () => result.All<IThing>();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("This transaction result was produced without interface data for IThing,*");
+    }
+
+    [Fact]
+    public void All_on_an_interface_throws_when_only_another_interface_was_requested()
+    {
+        var result = MakeTransactionWithInterfaces() with
+        {
+            RequestedInterfaces = [new RuntimeIdentifier("other-pkg", "Acme.Other", "IOther")],
+        };
+
+        Action act = () => result.All<IThing>();
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void All_on_an_interface_is_empty_when_the_interface_was_requested_and_no_contract_matches()
+    {
+        var result = MakeTransactionWithInterfaces(("00foo", FooBar.TemplateId, []));
+
+        result.All<IThing>().Should().BeEmpty();
+        result.TrySingle<IThing>().Should().BeNull();
+    }
+
+    [Fact]
+    public void Single_on_a_template_does_not_need_interface_data()
+    {
+        var result = MakeTransactionWithInterfaces(("00foo", FooBar.TemplateId, [])) with { RequestedInterfaces = default };
+
+        result.Single<FooBar>().Value.Should().Be("00foo");
+    }
+
+    [Fact]
+    public void Requested_interfaces_take_part_in_result_equality()
+    {
+        var plain = MakeTransactionWithInterfaces() with { RequestedInterfaces = default };
+        var requested = plain with { RequestedInterfaces = [IThing.InterfaceId] };
+
+        requested.Should().NotBe(plain);
+        requested.Should().Be(plain with { RequestedInterfaces = [IThing.InterfaceId] });
+    }
+
+    [Fact]
     public void CreatedContract_stays_findable_in_a_set_after_the_producer_mutates_its_list()
     {
         var witnesses = new List<Party> { new("alice") };
@@ -764,7 +871,18 @@ public class TransactionResultTests
             Payload: payload ?? DamlRecord.Create(),
             WitnessParties: [new Party("alice")],
             Signatories: [new Party("alice")],
-            Observers: []);
+            Observers: [])
+        {
+            PackageName = FooBar.PackageName,
+        };
+
+    private static TransactionResult ResultOf(params CreatedContract[] created) =>
+        new(
+            UpdateId: "u1",
+            CompletionOffset: LedgerOffset.At(1),
+            CreatedContracts: [.. created],
+            ArchivedContractIds: [],
+            CommandId: null);
 
     private static TransactionResult MakeResult(
         EquatableArray<string> archived = default,
@@ -819,7 +937,10 @@ public class TransactionResultTests
             CompletionOffset: LedgerOffset.At(1),
             CreatedContracts: [.. contracts],
             ArchivedContractIds: [],
-            CommandId: null);
+            CommandId: null)
+        {
+            RequestedInterfaces = [IThing.InterfaceId],
+        };
     }
 
     private sealed record FooBar(string Owner) : ITemplate

@@ -125,7 +125,7 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
             """
             {
               "preparedTransaction": "CgMyLjESBTAuMS4w",
-              "preparedTransactionHash": "3q2+7w==",
+              "preparedTransactionHash": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
               "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V2",
               "costEstimation": {
                 "estimationTimestamp": "2026-08-15T09:30:00Z",

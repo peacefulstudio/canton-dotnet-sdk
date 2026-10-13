@@ -73,6 +73,7 @@ internal sealed class RecordingSubmissionHandler : HttpMessageHandler
                   "offset": "1",
                   "nodeId": 0,
                   "contractId": "00probe",
+                  "packageName": "conformance-package",
                   "templateId": {{{ProbeTemplateIdJson}}},
                   "createArgument": {"owner": "party::alice"},
                   "witnessParties": ["party::alice"]
@@ -83,6 +84,7 @@ internal sealed class RecordingSubmissionHandler : HttpMessageHandler
                   "offset": "1",
                   "nodeId": 0,
                   "contractId": "00probe",
+                  "packageName": "conformance-package",
                   "templateId": {{{ProbeTemplateIdJson}}},
                   "choice": "Archive",
                   "choiceArgument": {},
@@ -197,6 +199,8 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
     private const long ConsumedOffset = 3L;
     private const long LedgerEndOffset = 5L;
     private const string Synchronizer = "sync-1";
+
+    private const string ProbePackageName = "conformance-package";
 
     private static readonly object ProbeTemplateId =
         new { packageId = "conformance-pkg", moduleName = "Conformance.Probe", entityName = "Probe" };
@@ -329,6 +333,7 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
     {
         offset = offset.ToString(CultureInfo.InvariantCulture),
         contractId,
+        packageName = ProbePackageName,
         templateId,
         createArgument = new { owner = "party::alice" },
         interfaceViews,
@@ -344,6 +349,7 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
         {
             offset = ConsumedOffset.ToString(CultureInfo.InvariantCulture),
             contractId = "00probe",
+            packageName = ProbePackageName,
             templateId = ProbeTemplateId,
             implementedInterfaces = new[] { ProbeInterfaceId() },
             witnessParties = Witnesses,
@@ -356,6 +362,7 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
         {
             offset = ConsumedOffset.ToString(CultureInfo.InvariantCulture),
             contractId = "00probe",
+            packageName = ProbePackageName,
             templateId = ProbeTemplateId,
             choice = "Archive",
             choiceArgument = new { },

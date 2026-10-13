@@ -156,11 +156,12 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        RecordSubmittedCommandId(commandId);
+        var effectiveCommandId = RecordSubmittedCommandId(commandId);
         return Task.FromResult(
             AdvancingLedgerEndOnCommit(
                 Staged<ExerciseOutcome<TResult>>(
-                    _exerciseResults, typeof(TResult), "exercise outcome", $"WithExerciseResult<{typeof(TResult).Name}>")));
+                    _exerciseResults, typeof(TResult), "exercise outcome", $"WithExerciseResult<{typeof(TResult).Name}>")
+                    .WithCommandId(effectiveCommandId.Value)));
     }
 
     /// <inheritdoc />
@@ -174,11 +175,12 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         where TTemplate : ITemplate
     {
         ArgumentNullException.ThrowIfNull(payload);
-        RecordSubmittedCommandId(commandId);
+        var effectiveCommandId = RecordSubmittedCommandId(commandId);
         return Task.FromResult(
             AdvancingLedgerEndOnCommit(
                 Staged<ExerciseOutcome<ContractId<TTemplate>>>(
-                    _createResults, typeof(TTemplate), "create outcome", $"WithCreateResult<{typeof(TTemplate).Name}>")));
+                    _createResults, typeof(TTemplate), "create outcome", $"WithCreateResult<{typeof(TTemplate).Name}>")
+                    .WithCommandId(effectiveCommandId.Value)));
     }
 
     /// <inheritdoc />
@@ -209,9 +211,10 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Task.FromResult(
-            AdvancingLedgerEndOnCommit(_submissionOutcome ?? throw StagingMissing(
-                "submission outcome", nameof(TrySubmitAndWaitForTransactionAsync), "WithSubmissionOutcome")));
+        var staged = _submissionOutcome ?? throw StagingMissing(
+            "submission outcome", nameof(TrySubmitAndWaitForTransactionAsync), "WithSubmissionOutcome");
+        return Task.FromResult(AdvancingLedgerEndOnCommit(
+            RecordingRequestedInterfaces(staged, submission).WithCommandId(SentCommandId(submission.CommandId))));
     }
 
     /// <inheritdoc />
@@ -255,8 +258,23 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     private Task<T> Answering<T>(Func<T> answer) =>
         ThrowingCallFailure is { } failure ? Task.FromException<T>(failure) : Task.FromResult(answer());
 
-    private void RecordSubmittedCommandId(CommandId? commandId) =>
-        _submittedCommandIds.Enqueue(commandId ?? new CommandId(Guid.NewGuid().ToString()));
+    private CommandId RecordSubmittedCommandId(CommandId? commandId)
+    {
+        var effective = commandId ?? MintedCommandId();
+        _submittedCommandIds.Enqueue(effective);
+        return effective;
+    }
+
+    private static string SentCommandId(CommandId? commandId) => (commandId ?? MintedCommandId()).Value;
+
+    private static CommandId MintedCommandId() => new(Guid.NewGuid().ToString());
+
+    private static ExerciseOutcome<TransactionResult> RecordingRequestedInterfaces(
+        ExerciseOutcome<TransactionResult> staged, CommandsSubmission submission) =>
+        staged is ExerciseOutcome<TransactionResult>.One one && submission.InterfaceViewRequests.Count > 0
+            ? new ExerciseOutcome<TransactionResult>.One(
+                one.Result.WithRequestedInterfaces(submission.InterfaceViewRequests))
+            : staged;
 
     private ExerciseOutcome<T> AdvancingLedgerEndOnCommit<T>(ExerciseOutcome<T> outcome)
     {

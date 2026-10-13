@@ -60,7 +60,7 @@ internal sealed partial class RestLedgerClient
 
         return _calls.SendAsync<ServedPrepareSubmissionResponse, TrafficCostEstimate?>(
             new RestCall(
-                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission),
+                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission, hashingSchemeVersion: null),
                 MissingPreparedSubmissionMessage, MalformedTrafficCostBodyPrefix, LedgerCallKind.Read),
             body => ProjectTrafficCostEstimate(body.CostEstimation),
             timeout,

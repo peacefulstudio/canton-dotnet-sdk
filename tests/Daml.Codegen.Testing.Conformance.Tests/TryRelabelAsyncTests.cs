@@ -36,7 +36,10 @@ public class TryRelabelAsyncTests
                     ExerciseResult: new DamlContractId(newRichRecordId),
                     Consuming: false,
                     ActingParties: [new Party("alice")],
-                    WitnessParties: [new Party("alice")]),
+                    WitnessParties: [new Party("alice")])
+                {
+                    PackageName = "richtypes-ha8d30776aa45",
+                },
             ],
         };
 

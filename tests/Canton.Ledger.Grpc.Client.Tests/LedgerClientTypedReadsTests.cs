@@ -183,6 +183,7 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
                     ArchivedEvent = new Com.Daml.Ledger.Api.V2.ArchivedEvent
                     {
                         ContractId = "00abc",
+                        PackageName = "test-package",
                         TemplateId = FooBarTemplate,
                         Offset = 8L,
                         WitnessParties = { "alice::ns1" },
@@ -688,6 +689,7 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
         var created = new ProtoCreatedEvent
         {
             ContractId = contractId,
+            PackageName = "test-package",
             TemplateId = FooBarTemplate,
             CreateArguments = LedgerClientTestFixtures.OwnerArgumentsFor("alice::ns1"),
             Offset = offset,

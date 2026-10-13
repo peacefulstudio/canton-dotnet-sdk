@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
+using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Microsoft.Extensions.Options;
@@ -10,8 +11,10 @@ using Polly;
 namespace Canton.Ledger.Rest.Client;
 
 /// <summary>
-/// Applies the kernel's opt-in retry pipeline to every JSON Ledger API request, mirroring the gRPC
-/// client's <c>LedgerCallInvoker</c>. Registered outermost in the handler chain, so each attempt
+/// Applies the kernel's opt-in retry pipeline to the JSON Ledger API requests that state they can be
+/// replayed, mirroring the gRPC client's <c>LedgerCallInvoker</c>. A request that states nothing is a
+/// raw-tier call: it is sent once unless it starts inside a <see cref="RawCallReplay.Allow"/> scope.
+/// Registered outermost in the handler chain, so each attempt
 /// resolves a fresh bearer token and emits its own client span. Register the source as
 /// <c>tracing.AddSource(LedgerActivitySourceNames.RestLedgerClient)</c> to see the retry spans.
 /// </summary>
@@ -19,7 +22,7 @@ internal sealed class RestRetryHandler : DelegatingHandler
 {
     private const string RetryAttemptActivityName = "RestLedgerClient.RetryAttempt";
 
-    private static readonly HttpRequestOptionsKey<bool> NotReplayable = new("Canton.Ledger.Rest.NotReplayable");
+    private static readonly HttpRequestOptionsKey<bool> Replayable = new("Canton.Ledger.Rest.Replayable");
 
     private static readonly HttpRequestOptionsKey<int> AttemptsSent = new("Canton.Ledger.Rest.AttemptsSent");
 
@@ -42,20 +45,40 @@ internal sealed class RestRetryHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        if (!_enabled || IsNotReplayable(request))
+        if (!_enabled || !IsReplayable(request))
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
         await BufferBodySoEveryAttemptCanReplayItAsync(request, cancellationToken).ConfigureAwait(false);
 
-        return await _retryPipeline
-            .ExecuteAsync(
-                async token =>
-                {
-                    RecordAttemptSent(request);
-                    return await base.SendAsync(request, token).ConfigureAwait(false);
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
+        Exception? sentAttemptFailure = null;
+        try
+        {
+            return await _retryPipeline
+                .ExecuteAsync(
+                    async token =>
+                    {
+                        RecordAttemptSent(request);
+                        try
+                        {
+                            return await base.SendAsync(request, token).ConfigureAwait(false);
+                        }
+                        catch (TokenAcquisitionException) when (sentAttemptFailure is not null)
+                        {
+                            throw new RetryAbandonedException(sentAttemptFailure);
+                        }
+                        catch (Exception failure) when (IsTransientHttpFailure(failure))
+                        {
+                            sentAttemptFailure = failure;
+                            throw;
+                        }
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (RetryAbandonedException abandoned)
+        {
+            throw abandoned.SentAttemptFailure;
+        }
     }
 
     internal static bool WasRetried(HttpRequestMessage request) =>
@@ -64,11 +87,14 @@ internal sealed class RestRetryHandler : DelegatingHandler
     private static void RecordAttemptSent(HttpRequestMessage request) =>
         request.Options.Set(AttemptsSent, request.Options.TryGetValue(AttemptsSent, out var attemptsSent) ? attemptsSent + 1 : 1);
 
-    internal static void MarkNotReplayable(HttpRequestMessage request) =>
-        request.Options.Set(NotReplayable, true);
+    internal static void MarkReplayable(HttpRequestMessage request) =>
+        request.Options.Set(Replayable, true);
 
-    private static bool IsNotReplayable(HttpRequestMessage request) =>
-        request.Options.TryGetValue(NotReplayable, out var notReplayable) && notReplayable;
+    internal static void MarkNotReplayable(HttpRequestMessage request) =>
+        request.Options.Set(Replayable, false);
+
+    private static bool IsReplayable(HttpRequestMessage request) =>
+        request.Options.TryGetValue(Replayable, out var replayable) ? replayable : RawCallReplay.IsAllowed;
 
     private static async Task BufferBodySoEveryAttemptCanReplayItAsync(
         HttpRequestMessage request,
@@ -99,4 +125,9 @@ internal sealed class RestRetryHandler : DelegatingHandler
             activity.SetTag(SemanticConventions.ErrorType, exception.GetType().FullName);
         }
     }
+}
+
+internal sealed class RetryAbandonedException(Exception sentAttemptFailure) : Exception
+{
+    internal Exception SentAttemptFailure { get; } = sentAttemptFailure;
 }

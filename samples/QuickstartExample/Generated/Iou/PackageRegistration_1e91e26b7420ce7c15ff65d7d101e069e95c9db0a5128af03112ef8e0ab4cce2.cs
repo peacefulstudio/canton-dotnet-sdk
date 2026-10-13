@@ -7,7 +7,7 @@
 
 namespace Iou;
 
-internal static class PackageRegistration_de23f94dcf17ffbbdc361d499d9830d1c6e9121de0885e6a050ebc8ec2df1adb
+internal static class PackageRegistration_1e91e26b7420ce7c15ff65d7d101e069e95c9db0a5128af03112ef8e0ab4cce2
 {
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()

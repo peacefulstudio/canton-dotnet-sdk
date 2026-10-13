@@ -335,7 +335,7 @@ internal sealed partial class ChoiceEmitter(
             NullGuardedParameters: GuardedParameters("contractId", argument.HasArgument),
             ReturnStatement: ReturnNew(
                 exerciseCommand,
-                $"{templateClassName}.TemplateId",
+                templateClassName,
                 "contractId",
                 choice,
                 ArgumentExpression(choice, argument))));
@@ -349,16 +349,16 @@ internal sealed partial class ChoiceEmitter(
 
     private static IReadOnlyList<string> ReturnNew(
         string commandType,
-        string templateId,
+        string templateClassName,
         string receiverExpression,
         DamlChoice choice,
         string argumentExpression) =>
     [
         $"return new {commandType}(",
-        $"{templateId},",
+        $"{templateClassName}.TemplateId,",
         $"{receiverExpression},",
         $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),",
-        $"{argumentExpression});",
+        $"{argumentExpression}) {{ PackageName = {templateClassName}.PackageName }};",
     ];
 
     /// <summary>
@@ -425,7 +425,7 @@ internal sealed partial class ChoiceEmitter(
             NullGuardedParameters: GuardedParameters(mapper.MapsToReferenceType(keyType) ? "key" : null, argument.HasArgument),
             ReturnStatement: ReturnNew(
                 exerciseByKeyCommand,
-                $"{templateClassName}.TemplateId",
+                templateClassName,
                 mapper.ToValue(keyType, "key"),
                 choice,
                 ArgumentExpression(choice, argument))));

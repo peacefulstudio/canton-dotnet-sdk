@@ -47,6 +47,16 @@ public abstract class ChoiceResultProjectionParityTests
 
     private static readonly RuntimeIdentifier HoldingTemplateId = new("tmpl-pkg", "Sample.Token", "Holding");
 
+    private static string PackageNameOf(RuntimeIdentifier templateId) => templateId switch
+    {
+        { ModuleName: "Sample.Token" or "Sample.Impl" } => HoldingOwner.DamlTypeId.PackageName,
+        var id when id == GenericResults.TemplateId => GenericResults.DamlTypeId.PackageName,
+        var id when id == OptionalTails.TemplateId => OptionalTails.DamlTypeId.PackageName,
+        var id when id == Asset.TemplateId => Asset.DamlTypeId.PackageName,
+        { PackageId: var packageId } when packageId.StartsWith("parity-pkg-", StringComparison.Ordinal) => "parity",
+        _ => throw new InvalidOperationException($"No package name is known for {templateId}."),
+    };
+
     private static readonly RuntimeIdentifier HoldingInterfaceId = new("iface-pkg", "Sample.Token", "Holdable");
 
     private static readonly ChoiceName RecordReturningChoice = new("Split");
@@ -420,6 +430,9 @@ public abstract class ChoiceResultProjectionParityTests
 
         /// <summary>The contract the exercise ran on.</summary>
         public string ContractId => WireContractId;
+
+        /// <summary>The name of the package that defines <see cref="TemplateId"/>.</summary>
+        public string PackageName => PackageNameOf(TemplateId);
     }
 
     /// <summary>An exercise of <paramref name="choice"/> on the shared <c>GenericResults</c> template.</summary>
@@ -924,7 +937,10 @@ public abstract class ChoiceResultProjectionParityTests
         generatedPath.Should().Throw<InvalidOperationException>().Which.Message.Should().StartWith(NoExercisedEventMessage);
 
     private static ExerciseCommand Command(ChoiceName choice, RuntimeIdentifier? exercisedOn = null) =>
-        new(exercisedOn ?? HoldingTemplateId, new ContractId<HoldingOwner>(TargetContractId), choice, DamlUnit.Instance);
+        new(exercisedOn ?? HoldingTemplateId, new ContractId<HoldingOwner>(TargetContractId), choice, DamlUnit.Instance)
+        {
+            PackageName = exercisedOn == HoldingInterfaceId ? null : PackageNameOf(exercisedOn ?? HoldingTemplateId),
+        };
 
     private static ExerciseOutcome<TResult> Generated<TResult>(
         ExerciseOutcome<TransactionResult>.One transaction, ChoiceName choice, Func<DamlValue, TResult> resultDecoder) =>
@@ -962,7 +978,10 @@ public abstract class ChoiceResultProjectionParityTests
             exerciseResult,
             false,
             [(Party)ReturnedParty],
-            [(Party)ReturnedParty]);
+            [(Party)ReturnedParty])
+        {
+            PackageName = PackageNameOf(template ?? HoldingTemplateId),
+        };
 
     private static ExerciseOutcome<TransactionResult>.One Exercised(ChoiceName choice, DamlValue exerciseResult) =>
         Exercised(Event(choice, exerciseResult));

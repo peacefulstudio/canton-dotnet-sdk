@@ -126,6 +126,7 @@ public sealed class RestChoiceResultProjectionParityTests : ChoiceResultProjecti
                   "offset": "1",
                   "nodeId": 0,
                   "contractId": "{{exercise.ContractId}}",
+                  "packageName": "{{exercise.PackageName}}",
                   "templateId": {{IdentifierJson(exercise.TemplateId)}},
                   {{InterfaceIdMember(exercise.InterfaceId)}}
                   "choice": "{{exercise.Choice}}",

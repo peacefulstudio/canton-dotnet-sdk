@@ -223,7 +223,10 @@ public class ContractIdChoiceProjectorTests
             ExerciseResult: result,
             Consuming: false,
             ActingParties: [],
-            WitnessParties: []);
+            WitnessParties: [])
+        {
+            PackageName = "desk-package",
+        };
 
     private static CreatedContract Created(string contractId, string template) =>
         new(
@@ -233,7 +236,10 @@ public class ContractIdChoiceProjectorTests
             Payload: DamlRecord.Create(),
             WitnessParties: [],
             Signatories: [],
-            Observers: []);
+            Observers: [])
+        {
+            PackageName = "desk-package",
+        };
 
     private static TransactionResult Transaction(IReadOnlyList<CreatedContract> created, params ExercisedEvent[] exercised) =>
         new(

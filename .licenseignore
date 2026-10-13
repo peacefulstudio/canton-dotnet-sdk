@@ -5,4 +5,5 @@
 # to this repository's holder. One path prefix per line, relative to the root.
 
 src/Daml.Codegen.DarParser/Proto/
+src/Canton.Ledger.Kernel/Topology/Proto/
 src/Canton.Ledger.Rest/spec/openapi.yaml

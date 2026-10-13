@@ -128,7 +128,7 @@ public sealed partial record Iou(
 ) : ITemplate, IHasChoices<Iou>, IDamlRecord<Iou>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("de23f94dcf17ffbbdc361d499d9830d1c6e9121de0885e6a050ebc8ec2df1adb", "Iou", "Iou");
+    public static Identifier TemplateId { get; } = new("1e91e26b7420ce7c15ff65d7d101e069e95c9db0a5128af03112ef8e0ab4cce2", "Iou", "Iou");
 
     // … package id/name/version properties, Daml-LF JSON decoder and Archive choice metadata elided …
 

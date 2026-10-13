@@ -33,7 +33,11 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
 
     public LedgerClientInteractiveSubmissionTests()
     {
-        _options = new LedgerClientOptions { GrpcAddress = "https://localhost:5001", UserId = "test-user" };
+        _options = new LedgerClientOptions
+        {
+            GrpcAddress = "https://localhost:5001",
+            UserId = "test-user",
+        };
         _channel = GrpcChannel.ForAddress(_options.GrpcAddress);
         _service = Substitute.ForPartsOf<Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient>(
             Substitute.For<CallInvoker>());
@@ -91,6 +95,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         new()
         {
             PreparedTransaction = new Interactive.PreparedTransaction(),
+            PreparedTransactionHash = ByteString.CopyFrom(Convert.FromHexString(EmptyTransactionV2Hash)),
             HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
         };
 
@@ -194,6 +199,60 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
                 Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(_ => Ok(PreparedResponse()));
 
+    private const string EmptyTransactionV2Hash = "d5acdc7f600596f7f03c12ff6dda5c48c7f479bf1fa73de82ecfa62e9dbc61e3";
+    private const string Uuid7TransactionV3Hash = "d6369ee1b1d5eb324a7e781c94e1f4407a284db0c969d578f924b4ffaf2f1763";
+    private const string EmptyTransactionV3Hash = "ff796e29747acf79ead358a3156a18b95730e8b7492669a124cb78752edf53ef";
+
+    private void StubPrepareOfEmptyTransaction(string hashHex, int wireScheme) =>
+        StubPrepare(new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            PreparedTransactionHash = ByteString.CopyFrom(Convert.FromHexString(hashHex)),
+            HashingSchemeVersion = (Interactive.HashingSchemeVersion)wireScheme,
+        });
+
+    [Theory]
+    [InlineData(EmptyTransactionV2Hash, 2)]
+    [InlineData(EmptyTransactionV3Hash, 3)]
+    public async Task PrepareSubmissionAsync_returns_a_prepared_submission_whose_hash_matches_its_transaction(
+        string hashHex, int wireScheme)
+    {
+        StubPrepareOfEmptyTransaction(hashHex, wireScheme);
+
+        var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        Convert.ToHexStringLower(result.Hash.Span).Should().Be(hashHex);
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_refuses_a_hash_that_does_not_match_its_transaction_as_undecodable()
+    {
+        StubPrepareOfEmptyTransaction(EmptyTransactionV3Hash, 2);
+
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        var mismatch = thrown.InnerException.Should().BeOfType<PreparedHashMismatchException>().Subject;
+        Convert.ToHexStringLower(mismatch.ReportedHash.Span).Should().Be(EmptyTransactionV3Hash);
+        Convert.ToHexStringLower(mismatch.RecomputedHash.Span).Should().Be(EmptyTransactionV2Hash);
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_refuses_a_scheme_it_cannot_recompute_as_undecodable()
+    {
+        StubPrepareOfEmptyTransaction(EmptyTransactionV3Hash, 4);
+
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>()
+            .Which.Detail.Should().Contain("scheme V4, which this SDK cannot recompute");
+    }
+
     [Fact]
     public async Task PrepareSubmissionAsync_projects_every_field_of_the_response()
     {
@@ -201,7 +260,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         StubPrepare(new Interactive.PrepareSubmissionResponse
         {
             PreparedTransaction = prepared,
-            PreparedTransactionHash = ByteString.CopyFrom(7, 8, 9),
+            PreparedTransactionHash = ByteString.CopyFrom(Convert.FromHexString(Uuid7TransactionV3Hash)),
             HashingSchemeVersion = Interactive.HashingSchemeVersion.V3,
             HashingDetails = "details",
             CostEstimation = new Interactive.CostEstimation { TotalTrafficCostEstimation = 4096UL },
@@ -209,7 +268,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
 
         var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
 
-        result.Hash.ToArray().Should().Equal(7, 8, 9);
+        Convert.ToHexStringLower(result.Hash.Span).Should().Be(Uuid7TransactionV3Hash);
         result.HashingSchemeVersion.Should().Be((HashingSchemeVersion)3);
         result.HashingDetails.Should().Be("details");
         result.CostEstimate!.TotalCost.Should().Be(4096L);
@@ -220,11 +279,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     [Fact]
     public async Task PrepareSubmissionAsync_leaves_details_and_estimate_null_when_the_participant_sends_none()
     {
-        StubPrepare(new Interactive.PrepareSubmissionResponse
-        {
-            PreparedTransaction = new Interactive.PreparedTransaction(),
-            HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
-        });
+        StubPrepare(PreparedResponse());
 
         var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
 
@@ -234,17 +289,12 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Theory]
-    [InlineData(2, HashingSchemeVersion.V2)]
-    [InlineData(3, HashingSchemeVersion.V3)]
-    [InlineData(4, HashingSchemeVersion.V4)]
+    [InlineData(2, HashingSchemeVersion.V2, EmptyTransactionV2Hash)]
+    [InlineData(3, HashingSchemeVersion.V3, EmptyTransactionV3Hash)]
     public async Task PrepareSubmissionAsync_maps_the_wire_hashing_scheme_version_to_the_public_member(
-        int wireValue, HashingSchemeVersion expected)
+        int wireValue, HashingSchemeVersion expected, string hashHex)
     {
-        StubPrepare(new Interactive.PrepareSubmissionResponse
-        {
-            PreparedTransaction = new Interactive.PreparedTransaction(),
-            HashingSchemeVersion = (Interactive.HashingSchemeVersion)wireValue,
-        });
+        StubPrepareOfEmptyTransaction(hashHex, wireValue);
 
         var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
 
@@ -262,6 +312,7 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         StubPrepare(new Interactive.PrepareSubmissionResponse
         {
             PreparedTransaction = new Interactive.PreparedTransaction(),
+            PreparedTransactionHash = ByteString.CopyFrom(new byte[32]),
             HashingSchemeVersion = (Interactive.HashingSchemeVersion)wireValue,
         });
 
@@ -271,6 +322,138 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
         thrown.CommitState.Should().Be(CommitState.NotCommitted);
         thrown.Message.Should().Contain($"HashingSchemeVersion value {wireValue}");
+    }
+
+    [Theory]
+    [InlineData(HashingSchemeVersion.V2, 2, EmptyTransactionV2Hash)]
+    [InlineData(HashingSchemeVersion.V3, 3, EmptyTransactionV3Hash)]
+    public async Task PrepareSubmissionAsync_sends_the_requested_hashing_scheme_as_its_wire_value(
+        HashingSchemeVersion requested, int expectedWireValue, string hashHex)
+    {
+        Interactive.PrepareSubmissionRequest? captured = null;
+        _service.PrepareSubmissionAsync(
+                Arg.Do<Interactive.PrepareSubmissionRequest>(r => captured = r),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Ok(new Interactive.PrepareSubmissionResponse
+            {
+                PreparedTransaction = new Interactive.PreparedTransaction(),
+                PreparedTransactionHash = ByteString.CopyFrom(Convert.FromHexString(hashHex)),
+                HashingSchemeVersion = (Interactive.HashingSchemeVersion)expectedWireValue,
+            }));
+
+        var result = await CreateClient().PrepareSubmissionAsync(Submission(), requested, cancellationToken: Ct);
+
+        ((int)captured!.HashingSchemeVersion).Should().Be(expectedWireValue);
+        result.HashingSchemeVersion.Should().Be(requested);
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_sends_a_requested_V4_as_wire_value_4_and_refuses_the_answer_it_cannot_recompute()
+    {
+        Interactive.PrepareSubmissionRequest? captured = null;
+        _service.PrepareSubmissionAsync(
+                Arg.Do<Interactive.PrepareSubmissionRequest>(r => captured = r),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Ok(new Interactive.PrepareSubmissionResponse
+            {
+                PreparedTransaction = new Interactive.PreparedTransaction(),
+                PreparedTransactionHash = ByteString.CopyFrom(Convert.FromHexString(EmptyTransactionV3Hash)),
+                HashingSchemeVersion = Interactive.HashingSchemeVersion.V4,
+            }));
+
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), HashingSchemeVersion.V4, cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        ((int)captured!.HashingSchemeVersion).Should().Be(4);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>()
+            .Which.Detail.Should().Contain("scheme V4, which this SDK cannot recompute");
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_rejects_a_requested_hashing_scheme_it_cannot_name_before_any_call()
+    {
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), (HashingSchemeVersion)99, cancellationToken: Ct);
+
+        await act.Should().ThrowAsync<ArgumentException>().WithParameterName("hashingSchemeVersion");
+        _service.ReceivedCalls().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_leaves_the_wire_hashing_scheme_unspecified_when_none_is_requested()
+    {
+        Interactive.PrepareSubmissionRequest? captured = null;
+        StubPrepare(r => captured = r);
+
+        await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        ((int)captured!.HashingSchemeVersion).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EstimateTrafficCostAsync_leaves_the_wire_hashing_scheme_unspecified()
+    {
+        Interactive.PrepareSubmissionRequest? captured = null;
+        StubPrepare(r => captured = r);
+
+        await CreateClient().EstimateTrafficCostAsync(Submission(), cancellationToken: Ct);
+
+        ((int)captured!.HashingSchemeVersion).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    [InlineData(31)]
+    [InlineData(33)]
+    [InlineData(64)]
+    public async Task PrepareSubmissionAsync_rejects_a_hash_that_is_not_32_bytes_as_undecodable(int hashLength)
+    {
+        StubPrepare(new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            PreparedTransactionHash = ByteString.CopyFrom(new byte[hashLength]),
+            HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
+        });
+
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Contain($"{hashLength} bytes").And.Contain("32");
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_rejects_a_response_scheme_that_differs_from_the_requested_one_as_undecodable()
+    {
+        StubPrepare(new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            PreparedTransactionHash = ByteString.CopyFrom(new byte[32]),
+            HashingSchemeVersion = Interactive.HashingSchemeVersion.V2,
+        });
+
+        var act = () => CreateClient().PrepareSubmissionAsync(Submission(), HashingSchemeVersion.V3, cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.Message.Should().Contain("V3").And.Contain("V2");
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_accepts_any_scheme_the_participant_chooses_when_none_is_requested()
+    {
+        StubPrepare(new Interactive.PrepareSubmissionResponse
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction(),
+            PreparedTransactionHash = ByteString.CopyFrom(Convert.FromHexString(EmptyTransactionV3Hash)),
+            HashingSchemeVersion = Interactive.HashingSchemeVersion.V3,
+        });
+
+        var result = await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        result.HashingSchemeVersion.Should().Be(HashingSchemeVersion.V3);
     }
 
     [Fact]
@@ -682,4 +865,33 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         _service.ExecuteSubmissionAsync(
                 Arg.Do(capture), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(_ => Ok(new Interactive.ExecuteSubmissionResponse()));
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_maps_the_package_id_selection_preference()
+    {
+        Interactive.PrepareSubmissionRequest? captured = null;
+        _service.PrepareSubmissionAsync(
+                Arg.Do<Interactive.PrepareSubmissionRequest>(r => captured = r),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Ok(PreparedResponse()));
+
+        await CreateClient().PrepareSubmissionAsync(
+            Submission().WithPackageIdSelectionPreference("pkg-b", "pkg-a"), cancellationToken: Ct);
+
+        captured!.PackageIdSelectionPreference.Should().Equal("pkg-b", "pkg-a");
+    }
+
+    [Fact]
+    public async Task PrepareSubmissionAsync_leaves_the_package_id_selection_preference_empty_when_the_submission_sets_none()
+    {
+        Interactive.PrepareSubmissionRequest? captured = null;
+        _service.PrepareSubmissionAsync(
+                Arg.Do<Interactive.PrepareSubmissionRequest>(r => captured = r),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Ok(PreparedResponse()));
+
+        await CreateClient().PrepareSubmissionAsync(Submission(), cancellationToken: Ct);
+
+        captured!.PackageIdSelectionPreference.Should().BeEmpty();
+    }
 }

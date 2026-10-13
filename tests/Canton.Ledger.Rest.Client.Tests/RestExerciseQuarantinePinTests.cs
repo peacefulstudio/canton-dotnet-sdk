@@ -94,6 +94,7 @@ public sealed class RestExerciseQuarantinePinTests : IDisposable
                 "ExercisedEvent": {
                   "offset": "7",
                   "contractId": "00marker",
+                  "packageName": "pkg-name",
                   "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "QuarantinePinTemplate"},
                   "choice": "Archive",
                   "choiceArgument": {},
@@ -165,7 +166,7 @@ public sealed class RestExerciseQuarantinePinTests : IDisposable
         command.EnumerateObject().Select(arm => arm.Name).Should().Equal("ExerciseCommand");
 
         var exercise = command.GetProperty("ExerciseCommand");
-        exercise.GetProperty("templateId").GetString().Should().Be("pkg:Module:QuarantinePinTemplate");
+        exercise.GetProperty("templateId").GetString().Should().Be("#pkg-name:Module:QuarantinePinTemplate");
         exercise.GetProperty("contractId").GetString().Should().Be("00marker");
         exercise.GetProperty("choice").GetString().Should().Be("Archive");
         exercise.GetProperty("choiceArgument").GetRawText().Should().Be("{}",

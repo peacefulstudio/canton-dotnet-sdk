@@ -48,7 +48,8 @@ public class ExerciseResultProjectionTests
         string choiceName,
         DamlValue result,
         Identifier? templateId = null,
-        Identifier? interfaceId = null) =>
+        Identifier? interfaceId = null,
+        string? packageName = "oracle") =>
         new(
             ContractId: contractId,
             TemplateId: templateId ?? new Identifier("pkg-v1", "Test.Oracle", "Oracle"),
@@ -58,7 +59,10 @@ public class ExerciseResultProjectionTests
             ExerciseResult: result,
             Consuming: false,
             ActingParties: [],
-            WitnessParties: []);
+            WitnessParties: [])
+        {
+            PackageName = packageName,
+        };
 
     private static TransactionResult TransactionWith(params ExercisedEvent[] events) =>
         TransactionWithUpdateId("update-7", events);
@@ -135,7 +139,7 @@ public class ExerciseResultProjectionTests
     }
 
     [Fact]
-    public void ProjectChoiceResult_matches_a_template_owner_through_package_id_drift()
+    public void ProjectChoiceResult_matches_a_template_owner_under_the_same_package_name_through_package_id_drift()
     {
         var upgraded = new Identifier("pkg-v2", "Test.Oracle", "Oracle");
         var tx = TransactionWith(Exercised("contract-1", "GetCount", new DamlInt64(42), templateId: upgraded));
@@ -143,6 +147,28 @@ public class ExerciseResultProjectionTests
         var outcome = tx.ProjectChoiceResult(GetCount, "contract-1");
 
         outcome.Should().BeOfType<ExerciseOutcome<long>.One>().Which.Result.Should().Be(42L);
+    }
+
+    [Fact]
+    public void ProjectChoiceResult_ignores_an_exercise_on_the_same_template_name_of_another_package()
+    {
+        var tx = TransactionWith(Exercised("contract-1", "GetCount", new DamlInt64(99), packageName: "gauge"));
+
+        var act = () => tx.ProjectChoiceResult(GetCount, "contract-1");
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void ProjectChoiceResult_ignores_an_exercise_that_carries_no_package_name(string? packageName)
+    {
+        var tx = TransactionWith(Exercised("contract-1", "GetCount", new DamlInt64(99), packageName: packageName));
+
+        var act = () => tx.ProjectChoiceResult(GetCount, "contract-1");
+
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -171,7 +197,7 @@ public class ExerciseResultProjectionTests
     public void ProjectChoiceResult_matches_an_interface_owner_on_the_exercised_interface_id()
     {
         var choice = ChoiceNamed<QuotableInterface, long>("Quote", value => value.As<DamlInt64>().Value);
-        var viaInterface = new Identifier("pkg-v2", "Test.Oracle", "Quotable");
+        var viaInterface = new Identifier("pkg-v1", "Test.Oracle", "Quotable");
         var tx = TransactionWith(
             Exercised("contract-1", "Quote", new DamlInt64(1)),
             Exercised("contract-1", "Quote", new DamlInt64(42), interfaceId: viaInterface));
@@ -179,6 +205,18 @@ public class ExerciseResultProjectionTests
         var outcome = tx.ProjectChoiceResult(choice, "contract-1");
 
         outcome.Should().BeOfType<ExerciseOutcome<long>.One>().Which.Result.Should().Be(42L);
+    }
+
+    [Fact]
+    public void ProjectChoiceResult_ignores_the_same_interface_name_from_another_package_id()
+    {
+        var choice = ChoiceNamed<QuotableInterface, long>("Quote", value => value.As<DamlInt64>().Value);
+        var sameNameElsewhere = new Identifier("pkg-v2", "Test.Oracle", "Quotable");
+        var tx = TransactionWith(Exercised("contract-1", "Quote", new DamlInt64(99), interfaceId: sameNameElsewhere));
+
+        var act = () => tx.ProjectChoiceResult(choice, "contract-1");
+
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]

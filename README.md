@@ -42,28 +42,85 @@ All 16 packages share one version and publish together from one `v*` tag, alongs
 
 ## Quick Start
 
-The walkthrough uses the `Iou` model in
-[`samples/QuickstartExample/daml/Iou.daml`](samples/QuickstartExample/daml/Iou.daml): a template
-signed by an `issuer`, observed by an `owner`, with a `Transfer` choice the owner controls.
+The walkthrough takes the `Iou` model in
+[`samples/QuickstartExample/daml/Iou.daml`](samples/QuickstartExample/daml/Iou.daml) (a template
+signed by an `issuer`, observed by an `owner`, with a `Transfer` choice the owner controls) from
+Daml source to a contract created and transferred on a local Canton ledger. Steps 1 and 2 need no
+ledger; step 3 starts one.
 
-### 1. Generate C# from a DAR
+### Prerequisites
 
-`dpm codegen-cs` is a dpm component. List it under `components:` in your `daml.yaml`, next to the
-SDK components your project uses (`components:` replaces the `sdk-version:` key):
+| Tool | Version | Needed for |
+|---|---|---|
+| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.100 or later (`dotnet --version`) | building and running the app |
+| JDK | 17 or later on `PATH` (`java -version`) | `dpm codegen-cs`, which decodes the DAR with a bundled JVM helper |
+| dpm and Daml SDK 3.6.0 | dpm 1.0.20 or later | `dpm build` and `dpm codegen-cs` |
+| Docker and Compose | Docker 27 or later, Compose 2.27 or later, about 16 GB of RAM | the local ledger of step 3 |
+
+The dpm installer takes the Daml SDK version as its argument and installs that SDK with it:
+
+```bash
+curl -sSL https://get.digitalasset.com/install/install.sh | sh -s -- 3.6.0
+export PATH="$HOME/.dpm/bin:$PATH"
+```
+
+With dpm already installed, `dpm install 3.6.0` fetches the same SDK. JDK 24 and later print a few
+`sun.misc.Unsafe` deprecation warnings during `dpm codegen-cs`; they are harmless.
+
+### 1. Lay out two dpm projects
+
+dpm refuses a `daml.yaml` that sets both `sdk-version:` and `components:`, so the Daml build and
+the code generator live in two small projects side by side:
+
+```text
+quickstart/
+├── daml/
+│   ├── daml.yaml    sdk-version: builds the DAR
+│   └── Iou.daml
+├── codegen/
+│   └── daml.yaml    components: runs dpm codegen-cs
+├── Quickstart.csproj
+└── Program.cs
+```
+
+`daml/daml.yaml` selects the Daml SDK; copy [`Iou.daml`](samples/QuickstartExample/daml/Iou.daml)
+next to it:
 
 ```yaml
+sdk-version: 3.6.0
+name: quickstart
+source: .
+version: 0.0.1
+dependencies:
+  - daml-prim
+  - daml-stdlib
+```
+
+`codegen/daml.yaml` lists the `dpm codegen-cs` component and nothing else. The component and the
+NuGet packages of step 4 share one version, so pin them together:
+
+```yaml
+name: quickstart-codegen
+version: 0.0.1
 components:
   - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.0-preview.1
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
-use the tag without its leading `v`, and pin the NuGet packages to the same version. The component
-decodes the DAR with a bundled JVM helper, so a JDK must be on `PATH`. Set `DPM_AUTO_INSTALL=true`
-so dpm fetches the component on first use, then build the DAR and generate:
+use the tag without its leading `v`. On first use dpm rewrites the component line to add the
+digest it resolved.
+
+### 2. Generate C# from the DAR
+
+From the folder that holds `quickstart/`, build the DAR in `daml/`, then generate from `codegen/`.
+`DPM_AUTO_INSTALL=true` lets dpm fetch the component on first use:
 
 ```bash
-dpm build -o iou.dar
-dpm codegen-cs --dar ./iou.dar --out ./Generated
+cd quickstart/daml
+dpm build -o ../iou.dar
+
+cd ../codegen
+DPM_AUTO_INSTALL=true dpm codegen-cs --dar ../iou.dar --out ../Generated
 ```
 
 Each Daml module becomes a C# namespace: here `Iou`, holding the `Iou.Iou` template record, its
@@ -71,21 +128,48 @@ Each Daml module becomes a C# namespace: here `Iou`, holding the `Iou.Iou` templ
 helpers. The checked-in output is in
 [`samples/QuickstartExample/Generated/Iou/`](samples/QuickstartExample/Generated/Iou/).
 
-### 2. Connect, submit and read
+### 3. Start a local ledger
+
+[`canton-localnet`](https://github.com/peacefulstudio/canton-localnet) runs a complete Canton
+LocalNet in Docker. In a separate folder, clone and start it. Its `a-validator-1` slot exposes the gRPC Ledger API on `localhost:11901` over
+plain HTTP, the JSON Ledger API on `localhost:11975`, and OAuth2 through Keycloak on port 8082:
 
 ```bash
+git clone https://github.com/peacefulstudio/canton-localnet.git
+cd canton-localnet
+make up
+make wait-ready
+```
+
+LocalNet requires a token. Download the `canton-localnet` binary for your platform from the
+[releases page](https://github.com/peacefulstudio/canton-localnet/releases), put it on `PATH`, and
+mint a participant-admin token for the slot from inside the clone:
+
+```bash
+export CANTON_TOKEN=$(canton-localnet auth token --slot a)
+```
+
+The token is short-lived; run the command again for a fresh one if the program reports an invalid or expired token.
+
+### 4. Connect, submit and read
+
+In the `quickstart/` folder, create `Quickstart.csproj` next to `Generated/` and add the packages:
+
+```bash
+dotnet new console --name Quickstart --output . --force
 dotnet add package Daml.Runtime --version 0.7.0-preview.1
 dotnet add package Daml.Ledger.Abstractions --version 0.7.0-preview.1
 dotnet add package Canton.Ledger.Grpc.Client --version 0.7.0-preview.1
 dotnet add package Microsoft.Extensions.DependencyInjection
 ```
 
-Register the clients, allocate two parties, create an `Iou`, transfer it, and read what the new
-owner holds:
+Replace `Program.cs` with this program. It uploads the DAR, allocates two parties, lets the token's
+user act as both, creates an `Iou`, transfers it, and reads what the new owner holds:
 
 ```csharp
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Grpc.Client;
+using Canton.Ledger.Kernel.Authentication;
 using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
@@ -93,16 +177,26 @@ using Iou;
 using Microsoft.Extensions.DependencyInjection;
 using IouContract = Iou.Iou;
 
+var token = Environment.GetEnvironmentVariable("CANTON_TOKEN")
+    ?? throw new InvalidOperationException("Set CANTON_TOKEN to a participant admin token.");
+
 var services = new ServiceCollection();
-services.AddLedgerClient(options => options.GrpcAddress = "https://localhost:5001");
-services.AddAdminClient(options => options.GrpcAddress = "https://localhost:5001");
+services.AddCantonStaticAuth(token);
+services.AddLedgerClient(options => options.GrpcAddress = "http://localhost:11901");
+services.AddAdminClient(options => options.GrpcAddress = "http://localhost:11901");
 
 await using var provider = services.BuildServiceProvider();
 var ledger = provider.GetRequiredService<ICantonLedgerClient>();
 var admin = provider.GetRequiredService<IAdminClient>();
 
-var alice = (await admin.AllocatePartyAsync("alice")).Party;
-var bob = (await admin.AllocatePartyAsync("bob")).Party;
+await admin.UploadDarAsync(await File.ReadAllBytesAsync("iou.dar"));
+
+var run = Guid.NewGuid().ToString("N")[..8];
+var alice = (await admin.AllocatePartyAsync($"alice-{run}")).Party;
+var bob = (await admin.AllocatePartyAsync($"bob-{run}")).Party;
+
+var user = await admin.GetUserAsync("") ?? throw new InvalidOperationException("No authenticated user.");
+await admin.GrantUserRightsAsync(user.UserId, [new UserRight.ActAs(alice), new UserRight.ActAs(bob)]);
 
 var created = await ledger.TryCreateAsync(
     new IouContract(Issuer: alice, Owner: bob, Currency: "USD", Amount: 100m));
@@ -118,7 +212,20 @@ if (transferred is not ExerciseOutcome<ContractId<IouContract>>.One)
     throw new InvalidOperationException(transferred.ToString());
 
 foreach (var iou in await ledger.SnapshotAsync<IouContract>(alice))
-    Console.WriteLine($"{iou.Id}: {iou.Data.Amount} {iou.Data.Currency} from {iou.Data.Issuer}");
+    Console.WriteLine($"{iou.Id}: {iou.Data.Currency} {iou.Data.Amount} from {iou.Data.Issuer}");
+```
+
+Run it from the `quickstart/` folder, where `iou.dar` sits, in the shell that holds `CANTON_TOKEN`:
+
+```bash
+dotnet run
+```
+
+It prints one line, the `Iou` that alice now owns. The contract id and the party suffixes differ on
+every run; the amount, currency and issuer name do not:
+
+```text
+00594322a9e8…: USD 100.0000000000 from alice-69971cdf::1220d11c3f6f…
 ```
 
 Every generated `Try…Async` returns an `ExerciseOutcome<T>` instead of throwing: `One` on success,
@@ -136,7 +243,7 @@ place of `Canton.Ledger.Grpc.Client`, and replace the two registrations with one
 unchanged:
 
 ```csharp
-services.AddRestLedgerClient(options => options.HttpAddress = "http://localhost:7575");
+services.AddRestLedgerClient(options => options.HttpAddress = "http://localhost:11975");
 ```
 
 ## Go deeper

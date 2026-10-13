@@ -20,6 +20,7 @@ public class LedgerCallOutcomeTests
         {
             ["unanswered"] = new LedgerCallEnding.Unanswered("connection refused", TransportCause),
             ["unreadable"] = new LedgerCallEnding.Unreadable("could not be decoded", TransportCause, UpdateId: null),
+            ["never sent"] = new LedgerCallEnding.NeverSent("no token could be acquired", TransportCause),
             ["rejected, unstructured"] = Rejected(new ParsedLedgerError.Unstructured(
                 "the participant is unreachable",
                 new TransportStatus.Grpc(GrpcStatusCode.Unavailable),
@@ -64,6 +65,9 @@ public class LedgerCallOutcomeTests
         { "unanswered", "Read", CommitState.NotCommitted },
         { "unanswered", "AcceptedOnlyWrite", CommitState.Unknown },
         { "unanswered", "EffectAppliedWrite", CommitState.Unknown },
+        { "never sent", "Read", CommitState.NotCommitted },
+        { "never sent", "AcceptedOnlyWrite", CommitState.NotCommitted },
+        { "never sent", "EffectAppliedWrite", CommitState.NotCommitted },
         { "unreadable", "Read", CommitState.NotCommitted },
         { "unreadable", "AcceptedOnlyWrite", CommitState.Unknown },
         { "unreadable", "EffectAppliedWrite", CommitState.Committed },
@@ -98,6 +102,31 @@ public class LedgerCallOutcomeTests
         Endings[ending].ToException(Enum.Parse<LedgerCallKind>(kind)).CommitState.Should().Be(expected);
     }
 
+    public static TheoryData<string, string, CommitState> RetriedCommitStateTable() => new()
+    {
+        { "rejected, definite category", "Read", CommitState.NotCommitted },
+        { "rejected, definite category", "AcceptedOnlyWrite", CommitState.Unknown },
+        { "rejected, definite category", "EffectAppliedWrite", CommitState.Unknown },
+        { "rejected, contention", "EffectAppliedWrite", CommitState.Unknown },
+        { "rejected, unrecognised category", "EffectAppliedWrite", CommitState.Unknown },
+        { "rejected, DUPLICATE_CONTRACT_KEY", "EffectAppliedWrite", CommitState.Unknown },
+        { "rejected, SUBMISSION_ALREADY_IN_FLIGHT", "EffectAppliedWrite", CommitState.Unknown },
+        { "rejected, DUPLICATE_COMMAND", "AcceptedOnlyWrite", CommitState.Committed },
+        { "rejected, DUPLICATE_COMMAND", "EffectAppliedWrite", CommitState.Committed },
+        { "rejected, DUPLICATE_COMMAND not accepted", "EffectAppliedWrite", CommitState.Unknown },
+    };
+
+    [Theory]
+    [MemberData(nameof(RetriedCommitStateTable))]
+    public void ToException_reports_a_write_rejected_after_a_retry_as_unknown_unless_the_rejection_is_a_duplicate(
+        string ending, string kind, CommitState expected)
+    {
+        AfterRetry(Endings[ending]).ToException(Enum.Parse<LedgerCallKind>(kind)).CommitState.Should().Be(expected);
+    }
+
+    private static LedgerCallEnding.Rejected AfterRetry(LedgerCallEnding ending) =>
+        ((LedgerCallEnding.Rejected)ending) with { AfterRetry = true };
+
     [Theory]
     [InlineData("Read")]
     [InlineData("AcceptedOnlyWrite")]
@@ -107,6 +136,22 @@ public class LedgerCallOutcomeTests
         var exception = Endings["unanswered"].ToException(Enum.Parse<LedgerCallKind>(kind));
 
         exception.Message.Should().Be("connection refused");
+        exception.Status.Should().Be(new TransportStatus.NoResponse());
+        exception.InnerException.Should().BeSameAs(TransportCause);
+        exception.Category.Should().BeNull();
+        exception.ErrorId.Should().BeNull();
+        exception.Metadata.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("Read")]
+    [InlineData("AcceptedOnlyWrite")]
+    [InlineData("EffectAppliedWrite")]
+    public void ToException_reports_a_call_that_was_never_sent_with_a_no_response_status_and_its_cause(string kind)
+    {
+        var exception = Endings["never sent"].ToException(Enum.Parse<LedgerCallKind>(kind));
+
+        exception.Message.Should().Be("no token could be acquired");
         exception.Status.Should().Be(new TransportStatus.NoResponse());
         exception.InnerException.Should().BeSameAs(TransportCause);
         exception.Category.Should().BeNull();
@@ -179,6 +224,7 @@ public class LedgerCallOutcomeTests
     public static TheoryData<string, string> OutcomeArmTable() => new()
     {
         { "unanswered", "InfraError" },
+        { "never sent", "InfraError" },
         { "unreadable", "CommittedUndecodable" },
         { "rejected, unstructured", "InfraError" },
         { "rejected, definite category", "DamlError" },
@@ -207,6 +253,43 @@ public class LedgerCallOutcomeTests
             new Dictionary<string, string> { ["accepted"] = "true", ["completion_offset"] = "9663" }));
     }
 
+    [Theory]
+    [InlineData("rejected, definite category")]
+    [InlineData("rejected, contention")]
+    [InlineData("rejected, unrecognised category")]
+    [InlineData("rejected, DUPLICATE_CONTRACT_KEY")]
+    [InlineData("rejected, SUBMISSION_ALREADY_IN_FLIGHT")]
+    public void ToOutcome_reports_a_structured_rejection_after_a_retry_as_an_InfraError_for_it_may_follow_a_commit(
+        string ending)
+    {
+        var structured = (ParsedLedgerError.Structured)((LedgerCallEnding.Rejected)Endings[ending]).Error;
+
+        var infraError = AfterRetry(Endings[ending]).ToOutcome<string>()
+            .Should().BeOfType<ExerciseOutcome<string>.InfraError>().Subject;
+
+        infraError.Status.Should().Be(new TransportStatus.Http(HttpStatusCode.Conflict));
+        infraError.Message.Should().Be("the participant said no");
+        infraError.Category.Should().Be(structured.Category);
+        infraError.SourceException.Should().BeSameAs(TransportCause);
+    }
+
+    [Theory]
+    [InlineData("rejected, DUPLICATE_COMMAND")]
+    [InlineData("rejected, DUPLICATE_COMMAND without accepted")]
+    [InlineData("rejected, DUPLICATE_COMMAND not accepted")]
+    public void ToOutcome_keeps_a_DUPLICATE_COMMAND_after_a_retry_as_a_DamlError(string ending)
+    {
+        AfterRetry(Endings[ending]).ToOutcome<string>().Should().BeOfType<ExerciseOutcome<string>.DamlError>()
+            .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
+    }
+
+    [Fact]
+    public void ToOutcome_reports_an_unstructured_rejection_after_a_retry_as_the_same_InfraError()
+    {
+        AfterRetry(Endings["rejected, unstructured"]).ToOutcome<string>()
+            .Should().Be(Endings["rejected, unstructured"].ToOutcome<string>());
+    }
+
     [Fact]
     public void ToOutcome_reports_an_unstructured_rejection_as_an_InfraError_carrying_its_status_category_and_cause()
     {
@@ -227,6 +310,18 @@ public class LedgerCallOutcomeTests
 
         infraError.Status.Should().Be(new TransportStatus.NoResponse());
         infraError.Message.Should().Be("connection refused");
+        infraError.Category.Should().BeNull();
+        infraError.SourceException.Should().BeSameAs(TransportCause);
+    }
+
+    [Fact]
+    public void ToOutcome_reports_a_call_that_was_never_sent_as_a_no_response_InfraError_carrying_its_cause()
+    {
+        var infraError = Endings["never sent"].ToOutcome<string>()
+            .Should().BeOfType<ExerciseOutcome<string>.InfraError>().Subject;
+
+        infraError.Status.Should().Be(new TransportStatus.NoResponse());
+        infraError.Message.Should().Be("no token could be acquired");
         infraError.Category.Should().BeNull();
         infraError.SourceException.Should().BeSameAs(TransportCause);
     }
@@ -294,6 +389,18 @@ public class LedgerCallOutcomeTests
 
         fault.Status.Should().Be(new TransportStatus.NoResponse());
         fault.Message.Should().Be("connection refused");
+        fault.Category.Should().BeNull();
+        fault.ErrorId.Should().BeNull();
+        fault.SourceException.Should().BeSameAs(TransportCause);
+    }
+
+    [Fact]
+    public void ToStreamFault_reports_a_window_that_was_never_sent_with_a_no_response_status_and_its_cause()
+    {
+        var fault = Endings["never sent"].ToStreamFault();
+
+        fault.Status.Should().Be(new TransportStatus.NoResponse());
+        fault.Message.Should().Be("no token could be acquired");
         fault.Category.Should().BeNull();
         fault.ErrorId.Should().BeNull();
         fault.SourceException.Should().BeSameAs(TransportCause);
@@ -371,6 +478,7 @@ public class LedgerCallOutcomeTests
     [InlineData("rejected, DUPLICATE_CONTRACT_KEY")]
     [InlineData("rejected, unstructured")]
     [InlineData("unanswered")]
+    [InlineData("never sent")]
     [InlineData("unreadable")]
     public void ToRetriedDuplicateVerdict_ignores_any_other_ending_after_a_retry(string ending)
     {

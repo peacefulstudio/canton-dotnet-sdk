@@ -36,6 +36,8 @@ public static class ExerciseOutcomeProjection
     ///   <item><see cref="ExerciseOutcome{T}.DamlError"/> / <see cref="ExerciseOutcome{T}.InfraError"/> —
     ///   re-wrapped over <typeparamref name="TProjected"/> with every field preserved.</item>
     /// </list>
+    /// Whatever arm results carries the <see cref="ExerciseOutcome{T}.CommandId"/> of
+    /// <paramref name="outcome"/>.
     /// </summary>
     /// <typeparam name="TProjected">The projected success payload type.</typeparam>
     /// <param name="outcome">The transaction-level outcome to project.</param>
@@ -49,7 +51,7 @@ public static class ExerciseOutcomeProjection
         ArgumentNullException.ThrowIfNull(outcome);
         ArgumentNullException.ThrowIfNull(projectCommitted);
 
-        return outcome switch
+        var projected = outcome switch
         {
             ExerciseOutcome<TransactionResult>.One one => projectCommitted(one.Result),
             ExerciseOutcome<TransactionResult>.None => new ExerciseOutcome<TProjected>.None(),
@@ -59,6 +61,8 @@ public static class ExerciseOutcomeProjection
             ExerciseOutcome<TransactionResult>.CommittedUndecodable e => new ExerciseOutcome<TProjected>.CommittedUndecodable(e.UpdateId, e.Message, e.SourceException),
             _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name} from TrySubmitAndWaitForTransactionAsync."),
         };
+
+        return projected.WithCommandId(outcome.CommandId);
     }
 
     /// <summary>
@@ -70,10 +74,12 @@ public static class ExerciseOutcomeProjection
     /// </summary>
     /// <remarks>
     /// An exercised event matches when it carries <paramref name="contractId"/>, the choice name, and
-    /// the module and entity names of <typeparamref name="TOwner"/> — compared with the event's
-    /// template id when the owner is a template and with its interface id when the owner is an
-    /// interface. The package id is ignored, so package-id drift from an upgrade still matches, and an
-    /// exercise of the same choice on another contract in the same transaction is not a match.
+    /// the identity of <typeparamref name="TOwner"/>. A template owner is compared by package name,
+    /// module and entity with the event's template id, so package-id drift from an upgrade still
+    /// matches while a template of the same module and entity in another package, or an event that
+    /// names no package, does not. An interface owner is compared by exact package id, module and
+    /// entity with the event's interface id, because interfaces are not upgradeable. An exercise of the
+    /// same choice on another contract in the same transaction is not a match.
     /// A result that fails to decode is returned as <see cref="ExerciseOutcome{T}.CommittedUndecodable"/>
     /// because the command already committed; an <see cref="OperationCanceledException"/> from the
     /// decoder propagates.

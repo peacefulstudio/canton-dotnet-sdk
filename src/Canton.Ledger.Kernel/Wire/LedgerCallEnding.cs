@@ -15,5 +15,13 @@ internal abstract record LedgerCallEnding
 
     internal sealed record Unanswered(string Message, Exception Cause) : LedgerCallEnding;
 
+    internal sealed record NeverSent(string Message, Exception Cause) : LedgerCallEnding
+    {
+        internal NeverSent(TokenAcquisitionException tokenFailure)
+            : this(tokenFailure.Message, tokenFailure)
+        {
+        }
+    }
+
     internal sealed record Unreadable(string Message, Exception? Cause, string? UpdateId) : LedgerCallEnding;
 }

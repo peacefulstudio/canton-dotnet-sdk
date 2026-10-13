@@ -11,6 +11,7 @@ using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -50,12 +51,18 @@ internal sealed partial class RestAdminClient : IAdminClient
     private readonly RestCallEnvelope _calls;
     private readonly ILogger<RestAdminClient> _logger;
 
-    internal RestAdminClient(IHttpClientFactory httpClientFactory, ILogger<RestAdminClient>? logger = null)
+    internal RestAdminClient(
+        IHttpClientFactory httpClientFactory,
+        ILogger<RestAdminClient>? logger = null,
+        IOptions<RestLedgerClientOptions>? options = null)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
         _logger = logger ?? NullLogger<RestAdminClient>.Instance;
-        _calls = new RestCallEnvelope(httpClientFactory, _logger);
+        _calls = new RestCallEnvelope(
+            httpClientFactory,
+            _logger,
+            options?.Value.MaxResponseBodyBytes ?? RestLedgerClientOptions.DefaultMaxResponseBodyBytes);
     }
 
     public Task<string> GetParticipantIdAsync(CancellationToken cancellationToken = default) =>
@@ -419,14 +426,14 @@ internal sealed partial class RestAdminClient : IAdminClient
             (LedgerActivityTagNames.DamlPackageId, packageId));
     }
 
-    private static async Task<PackageArchive> ReadPackageArchiveAsync(
+    private async Task<PackageArchive> ReadPackageArchiveAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
         if (!response.Headers.TryGetValues(PackageHashHeader, out var hashes) || hashes.FirstOrDefault() is not { } hash)
             throw MalformedResponse.WithDetail($"The response carries no {PackageHashHeader} header.");
 
-        var payload = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        var payload = await _calls.ReadBodyBytesAsync(response, cancellationToken).ConfigureAwait(false);
         return new PackageArchive(payload, hash, HashFunction.Sha256);
     }
 

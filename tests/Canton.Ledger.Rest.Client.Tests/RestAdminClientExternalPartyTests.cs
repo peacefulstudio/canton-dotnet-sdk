@@ -66,13 +66,15 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
     private static LedgerSignature Signature(byte value) =>
         new(SignatureFormat.Concat, new byte[] { value }, "fingerprint-1", SigningAlgorithm.Ed25519);
 
+    private const string AllocatedAlice = "alice::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa";
+
     private const string ServedTopologyBody =
         """
         {
-          "partyId": "alice::1220abcd",
-          "publicKeyFingerprint": "1220abcd",
-          "topologyTransactions": ["CgE=", "CgI="],
-          "multiHash": "3q2+7w=="
+          "partyId": "alice::1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472",
+          "publicKeyFingerprint": "1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472",
+          "topologyTransactions": ["CoQBCAEQARp+SnwKS2FsaWNlOjoxMjIwYTBjMjhlZDliYWVjZmIyNWIyNGExZTkwMTY5OTc1ZGZhYTIwY2VjNDBiZjkxOTMyM2E1ZDY0NGI1ZTBjOTQ3MhABGhgKFFBBUjo6bG9jYWw6OjEyMjBmZmZmEAIyEQoNEAQaAjBZKgMBBQQwAhABEB4="],
+          "multiHash": "EiCReclkGQcYJ97CUmyKTT5JBqteFAwfW8AMRuHmA4gpog=="
         }
         """;
 
@@ -111,7 +113,7 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
             PublicKey = new SigningPublicKey(PublicKeyFormat.Raw, new byte[] { 0x30, 0x59 }, SigningKeySpec.MlDsa65),
         };
 
-        await client.GenerateExternalPartyTopologyAsync(request, TestContext.Current.CancellationToken);
+        await Record.ExceptionAsync(() => client.GenerateExternalPartyTopologyAsync(request, TestContext.Current.CancellationToken));
 
         using var body = JsonDocument.Parse(transport.LastRequestBody!);
         body.RootElement.GetProperty("publicKey").GetProperty("keySpec").GetString()
@@ -124,7 +126,7 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
         var transport = TransportServing(ServedTopologyBody);
         var client = ClientWith(transport);
 
-        await client.GenerateExternalPartyTopologyAsync(
+        await Record.ExceptionAsync(() => client.GenerateExternalPartyTopologyAsync(
             TopologyRequest() with
             {
                 LocalParticipantObservationOnly = true,
@@ -132,7 +134,7 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
                 ConfirmationThreshold = 2,
                 ObservingParticipantUids = ["participant3::ns3"],
             },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         BodyShouldBe(
             transport,
@@ -161,18 +163,54 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
         var topology = await client.GenerateExternalPartyTopologyAsync(
             TopologyRequest(), TestContext.Current.CancellationToken);
 
-        topology.Party.Should().Be(new Party("alice::1220abcd"));
-        topology.PublicKeyFingerprint.Should().Be("1220abcd");
-        topology.TopologyTransactions.Select(transaction => transaction.ToArray())
-            .Should().BeEquivalentTo(new[] { new byte[] { 0x0A, 0x01 }, new byte[] { 0x0A, 0x02 } }, options => options.WithStrictOrdering());
-        topology.MultiHash.ToArray().Should().Equal(0xDE, 0xAD, 0xBE, 0xEF);
+        topology.Party.Should().Be(new Party("alice::1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472"));
+        topology.PublicKeyFingerprint.Should().Be("1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472");
+        topology.TopologyTransactions.Select(transaction => Convert.ToBase64String(transaction.Span))
+            .Should().Equal("CoQBCAEQARp+SnwKS2FsaWNlOjoxMjIwYTBjMjhlZDliYWVjZmIyNWIyNGExZTkwMTY5OTc1ZGZhYTIwY2VjNDBiZjkxOTMyM2E1ZDY0NGI1ZTBjOTQ3MhABGhgKFFBBUjo6bG9jYWw6OjEyMjBmZmZmEAIyEQoNEAQaAjBZKgMBBQQwAhABEB4=");
+        Convert.ToBase64String(topology.MultiHash.Span).Should().Be("EiCReclkGQcYJ97CUmyKTT5JBqteFAwfW8AMRuHmA4gpog==");
+    }
+
+    [Theory]
+    [InlineData("1220abcd", "alice::1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472")]
+    [InlineData("1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472", "alice::1220abcd")]
+    [InlineData("1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472", "alice")]
+    public async Task GenerateExternalPartyTopologyAsync_fails_closed_when_the_fingerprint_or_party_namespace_is_not_the_key_sent(
+        string fingerprint, string partyId)
+    {
+        var client = ClientWith(TransportServing(
+            $$"""
+            {"partyId": "{{partyId}}", "publicKeyFingerprint": "{{fingerprint}}", "topologyTransactions": ["CgE="], "multiHash": "3q2+7w=="}
+            """));
+
+        var act = () => client.GenerateExternalPartyTopologyAsync(TopologyRequest(), TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>();
+    }
+
+    [Fact]
+    public async Task GenerateExternalPartyTopologyAsync_fails_closed_when_the_multi_hash_does_not_cover_the_transactions()
+    {
+        var client = ClientWith(TransportServing(ServedTopologyBody.Replace(
+            "EiCReclkGQcYJ97CUmyKTT5JBqteFAwfW8AMRuHmA4gpog==", "EiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==", StringComparison.Ordinal)));
+
+        var act = () => client.GenerateExternalPartyTopologyAsync(TopologyRequest(), TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>().Which.Detail.Should().Be(
+            "the multi-hash 12200000000000000000000000000000000000000000000000000000000000000000 is not "
+            + "12209179c96419071827dec2526c8a4d3e4906ab5e140c1f5bc00c46e1e6038829a2, the hash of the topology transactions returned.");
     }
 
     [Fact]
     public async Task GenerateExternalPartyTopologyAsync_fails_as_undecodable_when_the_multi_hash_is_missing()
     {
         var client = ClientWith(TransportServing(
-            """{"partyId": "alice::1220abcd", "publicKeyFingerprint": "1220abcd", "topologyTransactions": []}"""));
+            """{"partyId": "alice::1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472", "publicKeyFingerprint": "1220a0c28ed9baecfb25b24a1e90169975dfaa20cec40bf919323a5d644b5e0c9472", "topologyTransactions": []}"""));
 
         var act = () => client.GenerateExternalPartyTopologyAsync(TopologyRequest(), TestContext.Current.CancellationToken);
 
@@ -243,23 +281,20 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
     [Fact]
     public async Task AllocateExternalPartyAsync_posts_the_signed_onboarding_transactions_and_projects_the_party()
     {
-        var transport = TransportServing("""{"partyId": "alice::1220abcd"}""");
+        var transport = TransportServing("""{"partyId": "alice::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa"}""");
         var client = ClientWith(transport);
 
         var party = await client.AllocateExternalPartyAsync(
             new ExternalPartyAllocation(
                 Synchronizer,
-                [
-                    new SignedTopologyTransaction(new byte[] { 0x0A, 0x01 }, [Signature(0x07)]),
-                    new SignedTopologyTransaction(new byte[] { 0x0A, 0x02 }, []),
-                ],
+                [new SignedTopologyTransaction(GoldenExternalPartyOnboarding.Transaction(), [Signature(0x07)])],
                 [Signature(0x08)],
                 WaitForAllocation: true,
                 IdentityProviderId: "idp-1",
                 UserId: "alice-user"),
             TestContext.Current.CancellationToken);
 
-        party.Should().Be(new Party("alice::1220abcd"));
+        party.Should().Be(new Party(AllocatedAlice));
         transport.LastRequest!.Method.Should().Be(HttpMethod.Post);
         transport.LastRequest.RequestUri!.PathAndQuery.Should().Be("/v2/parties/external/allocate");
         BodyShouldBe(
@@ -269,7 +304,7 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
               "synchronizer": "sync::ns1",
               "onboardingTransactions": [
                 {
-                  "transaction": "CgE=",
+                  "transaction": "CrcBCAEQARqwAUqtAQpLYWxpY2U6OjEyMjAyMDUwNTdlMzMxY2M4OTI5ZGQyMTdlMmY4ZTYzZjUwM2I3MDgxNzczZGU2MGQwMWZiNDY4Mzk3MDBiYzVjYWFhEAEaHwobUEFSOjpwYXJ0aWNpcGFudDE6OjEyMjBhYWFhEAIyOwo3EAQaLDAqMAUGAytlcAMhANkcFIiB1VFXbpccw/DSrT5iGmgajHq9QPdKw46JJST2KgMBBQQwARABEB4=",
                   "signatures": [
                     {
                       "format": "SIGNATURE_FORMAT_CONCAT",
@@ -278,8 +313,7 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
                       "signingAlgorithmSpec": "SIGNING_ALGORITHM_SPEC_ED25519"
                     }
                   ]
-                },
-                {"transaction": "CgI="}
+                }
               ],
               "multiHashSignatures": [
                 {
@@ -299,16 +333,16 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
     [Fact]
     public async Task AllocateExternalPartyAsync_omits_the_multi_hash_signatures_and_unset_optionals()
     {
-        var transport = TransportServing("""{"partyId": "alice::1220abcd"}""");
+        var transport = TransportServing("""{"partyId": "alice::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa"}""");
         var client = ClientWith(transport);
 
         await client.AllocateExternalPartyAsync(
-            new ExternalPartyAllocation(Synchronizer, [new SignedTopologyTransaction(new byte[] { 0x0A, 0x01 }, [])], []),
+            new ExternalPartyAllocation(Synchronizer, [GoldenExternalPartyOnboarding.UnsignedTransaction()], []),
             TestContext.Current.CancellationToken);
 
         BodyShouldBe(
             transport,
-            """{"synchronizer": "sync::ns1", "onboardingTransactions": [{"transaction": "CgE="}]}""");
+            """{"synchronizer": "sync::ns1", "onboardingTransactions": [{"transaction": "CrcBCAEQARqwAUqtAQpLYWxpY2U6OjEyMjAyMDUwNTdlMzMxY2M4OTI5ZGQyMTdlMmY4ZTYzZjUwM2I3MDgxNzczZGU2MGQwMWZiNDY4Mzk3MDBiYzVjYWFhEAEaHwobUEFSOjpwYXJ0aWNpcGFudDE6OjEyMjBhYWFhEAIyOwo3EAQaLDAqMAUGAytlcAMhANkcFIiB1VFXbpccw/DSrT5iGmgajHq9QPdKw46JJST2KgMBBQQwARABEB4="}]}""");
     }
 
     [Fact]
@@ -317,10 +351,38 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
         var client = ClientWith(TransportServing("{}"));
 
         var act = () => client.AllocateExternalPartyAsync(
-            new ExternalPartyAllocation(Synchronizer, [], []), TestContext.Current.CancellationToken);
+            new ExternalPartyAllocation(Synchronizer, [GoldenExternalPartyOnboarding.UnsignedTransaction()], []), TestContext.Current.CancellationToken);
 
         (await act.Should().ThrowAsync<LedgerOperationException>())
             .Which.Message.Should().Contain("partyId");
+    }
+
+    [Fact]
+    public async Task AllocateExternalPartyAsync_fails_as_undecodable_and_committed_when_another_party_is_allocated()
+    {
+        var client = ClientWith(TransportServing("""{"partyId": "mallory::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa"}"""));
+
+        var act = () => client.AllocateExternalPartyAsync(
+            new ExternalPartyAllocation(Synchronizer, [GoldenExternalPartyOnboarding.UnsignedTransaction()], []), TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
+        thrown.CommitState.Should().Be(CommitState.Committed);
+        thrown.InnerException.Should().BeOfType<MalformedResponseException>().Which.Detail.Should().Be(
+            "the participant allocated party 'mallory::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa', but the onboarding topology was generated for 'alice::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa'.");
+    }
+
+    [Fact]
+    public async Task AllocateExternalPartyAsync_rejects_onboarding_transactions_that_are_not_a_party_topology_before_sending()
+    {
+        var transport = TransportServing("""{"partyId": "alice::1220205057e331cc8929dd217e2f8e63f503b7081773de60d01fb46839700bc5caaa"}""");
+        var client = ClientWith(transport);
+
+        var act = () => client.AllocateExternalPartyAsync(
+            new ExternalPartyAllocation(Synchronizer, [], []), TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ArgumentException>()).Which.ParamName.Should().Be("allocation");
+        transport.Requests.Should().BeEmpty();
     }
 
     [Fact]
@@ -330,7 +392,7 @@ public sealed class RestAdminClientExternalPartyTests : IDisposable
         var client = RetryingClientWith(transport);
 
         var act = () => client.AllocateExternalPartyAsync(
-            new ExternalPartyAllocation(Synchronizer, [], []), TestContext.Current.CancellationToken);
+            new ExternalPartyAllocation(Synchronizer, [GoldenExternalPartyOnboarding.UnsignedTransaction()], []), TestContext.Current.CancellationToken);
 
         var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
         thrown.Which.Status.Should().Be(new TransportStatus.NoResponse());

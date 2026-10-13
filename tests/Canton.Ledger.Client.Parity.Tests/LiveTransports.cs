@@ -82,13 +82,21 @@ internal static class LiveTransports
 
     internal static Task<CapabilityLane<ExternalSigningCapability>> OpenExternalSigningAsync(
         LiveTransport transport, CancellationToken cancellationToken) =>
+        OpenExternalSigningWithDarAsync(transport, RichTypesDar.Path, cancellationToken);
+
+    internal static Task<CapabilityLane<ExternalSigningCapability>> OpenKeyedExternalSigningAsync(
+        LiveTransport transport, CancellationToken cancellationToken) =>
+        OpenExternalSigningWithDarAsync(transport, ContractKeysDar.Path, cancellationToken);
+
+    private static Task<CapabilityLane<ExternalSigningCapability>> OpenExternalSigningWithDarAsync(
+        LiveTransport transport, string darPath, CancellationToken cancellationToken) =>
         LiveLane.OpenAsync(
             transport.SkipMessage,
             transport.BuildServices,
             async (context, ct) =>
             {
                 await transport.VerifyEndpoint(context.Services, ct).ConfigureAwait(false);
-                await context.Fixture.UploadDarAsync(RichTypesDar.Path, ct).ConfigureAwait(false);
+                await context.Fixture.UploadDarAsync(darPath, ct).ConfigureAwait(false);
                 return new ExternalSigningCapability(
                     context.Services.GetRequiredService<IAdminClient>(),
                     context.Services.GetRequiredService<ICantonLedgerClient>(),

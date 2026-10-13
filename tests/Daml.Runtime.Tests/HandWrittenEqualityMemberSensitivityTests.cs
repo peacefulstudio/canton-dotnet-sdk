@@ -100,7 +100,7 @@ public class HandWrittenEqualityMemberSensitivityTests
         }
 
         var equal = entry.Sample.Equals(copy);
-        var excluded = member.IsDefined(typeof(JsonIgnoreAttribute)) || entry.NamedExclusions.ContainsKey(member.Name);
+        var excluded = member.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition == JsonIgnoreCondition.Always || entry.NamedExclusions.ContainsKey(member.Name);
         if (!excluded && equal)
         {
             yield return $"{member.Name}: Equals ignores it";

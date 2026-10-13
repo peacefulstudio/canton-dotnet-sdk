@@ -106,14 +106,20 @@ namespace Canton.Ledger.Abstractions;
 /// <description>
 /// <b>Caller errors are outside the contract.</b> A null or malformed argument throws its usual
 /// <see cref="ArgumentException"/> type synchronously at the call, before anything is sent, and never
-/// becomes a <see cref="LedgerOperationException"/>. A failure of the configured token provider
-/// propagates unchanged on gRPC. On the JSON Ledger API the provider runs inside the HTTP pipeline, so an
-/// <see cref="System.Net.Http.HttpRequestException"/> (including a token endpoint that is unreachable or answers
-/// with a non-success status), a <see cref="TimeoutException"/>, or an <see cref="OperationCanceledException"/>
-/// the caller did not cause is reported as <see cref="TransportStatus.NoResponse"/>: a
-/// <see cref="LedgerOperationException"/> from a throwing call, an
-/// <see cref="ExerciseOutcome{T}.InfraError"/> from a <c>Try*</c> call, a terminal error entry on a stream. Any
-/// other provider exception propagates unchanged.
+/// becomes a <see cref="LedgerOperationException"/>.
+/// </description>
+/// </item>
+/// <item>
+/// <description>
+/// <b>A token that cannot be acquired means nothing was sent.</b> On both transports, a configured token
+/// provider that throws, returns a blank token, or (on the JSON Ledger API) outlasts the call's timeout
+/// before any attempt of the call went out is reported as <see cref="TransportStatus.NoResponse"/> with
+/// <see cref="CommitState.NotCommitted"/>, whatever the call's kind: a <see cref="LedgerOperationException"/>
+/// from a throwing call, an <see cref="ExerciseOutcome{T}.InfraError"/> from a <c>Try*</c> call, a terminal
+/// error entry on a stream. Each carries a <see cref="TokenAcquisitionException"/>, whose
+/// <see cref="Exception.InnerException"/> is what the provider raised. A token that cannot be fetched for a
+/// retry after an earlier attempt went out and failed is not reported this way: that attempt may have been
+/// applied, so the call reports its failure instead.
 /// </description>
 /// </item>
 /// </list>
@@ -132,9 +138,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// correlates completions by <c>command_id</c>/<c>submission_id</c> and owns
     /// its own offset. The returned <see cref="RuntimeCommands.CommandId"/> is the
     /// effective id the participant recorded — minted here when the submission
-    /// omits one — so a caller retrying after a transport failure (by hand or via
-    /// a resilience policy such as Polly) must resubmit with this same id for
-    /// ledger-side deduplication. Re-invoking with a fresh, command_id-less
+    /// omits one — and a failed call reports it on
+    /// <see cref="LedgerOperationException.CommandId"/>. After a transport failure,
+    /// look that id up on <see cref="CompletionStreamAsync"/> before retrying (by hand
+    /// or via a resilience policy such as Polly): a resubmitted consuming exercise
+    /// that already committed is rejected with <c>CONTRACT_NOT_FOUND</c> rather than
+    /// deduplicated. Re-invoking with a fresh, command_id-less
     /// submission instead mints a new id and double-submits, because the
     /// participant may have accepted the first attempt before the failure
     /// surfaced.
@@ -149,7 +158,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
     /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
-    /// surfaced, so resubmit with the same command id. A structured participant rejection is
+    /// surfaced, so look <see cref="LedgerOperationException.CommandId"/> up on <see cref="CompletionStreamAsync"/> before resubmitting. A structured participant rejection is
     /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
     /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
     /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
@@ -176,8 +185,9 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The two-step unassign→assign dance is the consumer's: capture the <c>reassignment_id</c> from
     /// the resulting <c>UnassignedEvent</c> and pass it to a follow-up <see cref="AssignCommand"/>.
     /// The returned <see cref="RuntimeCommands.CommandId"/> is the effective id the participant
-    /// recorded — minted here when omitted — so a retry after a transport failure must resubmit with
-    /// this same id for ledger-side deduplication.
+    /// recorded — minted here when omitted — and a failed call reports it on
+    /// <see cref="LedgerOperationException.CommandId"/>; after a transport failure, look that id up on
+    /// <see cref="CompletionStreamAsync"/> before retrying.
     /// </remarks>
     /// <param name="submission">The reassignment submission to hand to the participant.</param>
     /// <param name="timeout">
@@ -189,7 +199,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
     /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
-    /// surfaced, so resubmit with the same command id. A structured participant rejection is
+    /// surfaced, so look <see cref="LedgerOperationException.CommandId"/> up on <see cref="CompletionStreamAsync"/> before resubmitting. A structured participant rejection is
     /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
     /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
     /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
@@ -838,19 +848,41 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <remarks>
     /// The workflow id on <paramref name="submission"/> is not carried — the prepare step has no field
     /// for it. The caller's token needs only read rights for the acting parties.
+    /// <para>
+    /// The client recomputes <see cref="PreparedSubmission.Hash"/> from
+    /// <see cref="PreparedSubmission.PreparedTransaction"/> under the Canton external-signing hashing
+    /// algorithm of the scheme the participant reports, and refuses a hash that differs: a participant
+    /// that is buggy or compromised could otherwise return a hash of content other than the transaction
+    /// it returns, and the signature would authorize that other content. It recomputes schemes
+    /// <see cref="HashingSchemeVersion.V2"/> and <see cref="HashingSchemeVersion.V3"/>; any other
+    /// scheme fails closed. It also checks that the hash is 32 bytes long and that the scheme is the
+    /// one requested.
+    /// </para>
     /// </remarks>
     /// <param name="submission">The commands to prepare, exactly as they would be submitted.</param>
+    /// <param name="hashingSchemeVersion">
+    /// The scheme to hash the transaction with, or <see langword="null"/> to leave the choice to the
+    /// participant, which defaults to <see cref="HashingSchemeVersion.V2"/>. A transaction that touches
+    /// a contract key cannot be hashed under <see cref="HashingSchemeVersion.V2"/> and needs
+    /// <see cref="HashingSchemeVersion.V3"/> or later; <see cref="HashingSchemeVersion.V4"/> needs a
+    /// synchronizer running protocol version 36 or later. When set, the participant must answer with
+    /// the same scheme, or the call fails.
+    /// </param>
     /// <param name="timeout">Per-call deadline overriding the client's configured request timeout.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>, thrown synchronously at the call.</exception>
     /// <exception cref="LedgerOperationException">
     /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
-    /// call, or answered with a body the client could not decode. A read changes nothing, so
+    /// call, or answered with a body the client could not decode — including a hash that is not 32 bytes
+    /// long, a scheme other than <paramref name="hashingSchemeVersion"/>, a scheme the client cannot
+    /// recompute, or a hash that is not the hash of the returned transaction, which carries a
+    /// <see cref="PreparedHashMismatchException"/> as its <see cref="Exception.InnerException"/>. A read changes nothing, so
     /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     Task<PreparedSubmission> PrepareSubmissionAsync(
         RuntimeCommands.CommandsSubmission submission,
+        HashingSchemeVersion? hashingSchemeVersion = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default);
 
@@ -872,7 +904,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
     /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
-    /// surfaced, so resubmit with the same command id. A structured participant rejection is
+    /// surfaced, so look the command id the submission was prepared with up on <see cref="CompletionStreamAsync"/> before resubmitting. A structured participant rejection is
     /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
     /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
     /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
@@ -904,7 +936,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <exception cref="LedgerOperationException">
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
-    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so resubmit with the same command id.
+    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so look the command id the submission was prepared with up on
+    /// <see cref="CompletionStreamAsync"/> before resubmitting.
     /// A structured participant rejection is <see cref="CommitState.NotCommitted"/>, except a
     /// <see cref="LedgerOperationException.Category"/> of <c>DeadlineExceededRequestStateUnknown</c> or
     /// <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>, and two error ids that take precedence
@@ -939,7 +972,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <exception cref="LedgerOperationException">
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
-    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so resubmit with the same command id.
+    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so look the command id the submission was prepared with up on
+    /// <see cref="CompletionStreamAsync"/> before resubmitting.
     /// A structured participant rejection is <see cref="CommitState.NotCommitted"/>, except a
     /// <see cref="LedgerOperationException.Category"/> of <c>DeadlineExceededRequestStateUnknown</c> or
     /// <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>, and two error ids that take precedence

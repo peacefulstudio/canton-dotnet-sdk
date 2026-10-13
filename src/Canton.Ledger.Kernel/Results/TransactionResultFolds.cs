@@ -17,7 +17,7 @@ internal static class TransactionResultFolds
     {
         ArgumentNullException.ThrowIfNull(outcome);
 
-        return outcome switch
+        var projected = outcome switch
         {
             ExerciseOutcome<TransactionResult>.One success => projectSuccess(success.Result),
             ExerciseOutcome<TransactionResult>.DamlError damlError => new ExerciseOutcome<TProjection>.DamlError(
@@ -29,6 +29,8 @@ internal static class TransactionResultFolds
                     undecodable.UpdateId, undecodable.Message, undecodable.SourceException),
             _ => throw new InvalidOperationException($"Unhandled outcome: {outcome.GetType().Name}"),
         };
+
+        return projected.WithCommandId(outcome.CommandId);
     }
 
     internal static ExerciseOutcome<ContractId<TMarker>> ToCreatedContractId<TMarker>(
@@ -57,6 +59,7 @@ internal static class TransactionResultFolds
         ExerciseResultProjector.ProjectCommandedExercise<TResult>(
             result,
             command.TemplateId,
+            command.PackageName,
             command.Choice,
             static exercised => ExercisedResultDecoder.Decode<TResult>(exercised),
             command.ContractId.Value);

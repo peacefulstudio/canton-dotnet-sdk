@@ -53,9 +53,18 @@ internal sealed partial class LedgerClient
         var request = BuildCompletionStreamRequest(submitter, beginExclusiveOffset);
         LogCompletionStreamStarted(_logger, beginExclusiveOffset);
 
+        var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
+        if (opening.Fault is { } openingFault)
+        {
+            LogCompletionStreamError(_logger, openingFault.Status, openingFault.Message);
+            yield return new CompletionStreamEvent.StreamError(
+                openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
+            yield break;
+        }
+
         using var call = _commandCompletionService.CompletionStream(
             request,
-            headers: await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false),
+            headers: opening.Headers,
             deadline: null,
             cancellationToken: cancellationToken);
 
@@ -237,9 +246,18 @@ internal sealed partial class LedgerClient
 
         LogSubscribeStarted(_logger, typeof(T).Name, fromOffset ?? 0L);
 
+        var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
+        if (opening.Fault is { } openingFault)
+        {
+            LogSubscribeStreamError(_logger, typeof(T).Name, openingFault.Status, openingFault.Message);
+            yield return new ContractStreamEvent<T>.StreamError(
+                openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
+            yield break;
+        }
+
         using var call = _updateService.GetUpdates(
             request,
-            headers: await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false),
+            headers: opening.Headers,
             deadline: null,
             cancellationToken: cancellationToken);
 
@@ -308,7 +326,14 @@ internal sealed partial class LedgerClient
         activity.SetSubmitterTags(submitter, _options);
 
         var effectiveOffset = activeAtOffset ?? (await GetLedgerEndForSnapshotAsync(cancellationToken).ConfigureAwait(false)).Offset;
-        var sharedHeaders = await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false);
+        var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
+        if (opening.Fault is { } openingFault)
+        {
+            LogSubscribeStreamError(_logger, typeof(T).Name, openingFault.Status, openingFault.Message);
+            yield return new AcsSnapshotEntry<T>.StreamError(
+                openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
+            yield break;
+        }
 
         var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
             submitter,
@@ -321,7 +346,7 @@ internal sealed partial class LedgerClient
 
         using var call = _stateService.GetActiveContracts(
             request,
-            headers: sharedHeaders,
+            headers: opening.Headers,
             deadline: null,
             cancellationToken: cancellationToken);
 

@@ -226,4 +226,12 @@ public class ChoiceEmitterNonContractExerciserTests
         output.Should().Contain("/// <param name=\"configure\">");
         output.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");
     }
+
+    [Fact]
+    public void ChoiceEmitterNonContractExerciser_command_builder_names_the_package_of_the_template()
+    {
+        var output = Emit(Template(Choice("Quote", new DamlPrimitiveType(DamlPrimitive.Numeric))));
+
+        output.Should().Contain("{ PackageName = global::Test.Package.Main.Vault.PackageName };");
+    }
 }

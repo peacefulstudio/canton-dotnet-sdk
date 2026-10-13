@@ -52,14 +52,18 @@ namespace Canton.Ledger.Abstractions;
 /// </para>
 /// <para>
 /// A caller error — a null or blank argument — throws its usual <see cref="ArgumentException"/> type
-/// synchronously, outside this contract. A failure of the configured token provider propagates unchanged
-/// on gRPC. On the JSON Ledger API the provider runs inside the HTTP pipeline, so an
-/// <see cref="System.Net.Http.HttpRequestException"/> (including a token endpoint that is unreachable or answers
-/// with a non-success status), a <see cref="TimeoutException"/>, or an <see cref="OperationCanceledException"/>
-/// the caller did not cause is reported as <c>NoResponse</c> on a
-/// <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/>; any other provider exception propagates
-/// unchanged. A member the JSON Ledger API serves no route for throws
+/// synchronously, outside this contract. A member the JSON Ledger API serves no route for throws
 /// <see cref="NotSupportedException"/> from the returned task on that transport.
+/// </para>
+/// <para>
+/// A token that cannot be acquired means nothing was sent. On both transports, a configured token provider
+/// that throws, returns a blank token, or (on the JSON Ledger API) outlasts the call's timeout before any
+/// attempt of the call went out raises a <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/> with
+/// <c>NoResponse</c> and <see cref="Daml.Ledger.Abstractions.CommitState.NotCommitted"/>, whatever kind
+/// of call it is, carrying a <see cref="TokenAcquisitionException"/> whose
+/// <see cref="Exception.InnerException"/> is what the provider raised. A token that cannot be fetched for a
+/// retry after an earlier attempt went out and failed is not reported this way: that attempt may have been
+/// applied, so the call reports its failure instead.
 /// </para>
 /// </remarks>
 public interface IAdminClient
@@ -95,6 +99,24 @@ public interface IAdminClient
     /// <see cref="ExternalPartyTopology.MultiHash"/> and pass the result to
     /// <see cref="AllocateExternalPartyAsync"/>.
     /// </summary>
+    /// <remarks>
+    /// The SDK decodes the topology before returning it and fails closed unless it is exactly the
+    /// onboarding Canton 3.6 generates for <paramref name="request"/>: one <c>PartyToParticipant</c>
+    /// transaction (add-replace, serial 1) for the party named by the hint in the key's namespace, whose
+    /// fingerprint is the one Canton computes for <see cref="ExternalPartyTopologyRequest.PublicKey"/>;
+    /// that key alone as the party's signing key, with threshold 1; each requested participant hosting
+    /// the party with the requested permission, plus exactly one other participant, the generating one,
+    /// with confirmation permission (observation when
+    /// <see cref="ExternalPartyTopologyRequest.LocalParticipantObservationOnly"/> is set); the requested
+    /// confirmation threshold, or every confirming participant when it is zero; no field this SDK does
+    /// not decode; and a <see cref="ExternalPartyTopology.MultiHash"/> that is the hash of exactly those
+    /// transactions. Any difference raises a <c>LedgerOperationException</c> whose status is
+    /// <c>UndecodableBody</c>, whose commit state is <c>NotCommitted</c>, and whose
+    /// <see cref="Exception.InnerException"/> is a <see cref="MalformedResponseException"/>
+    /// naming the difference. The request does not name the generating participant, so the SDK cannot
+    /// check which participant that is: generate the topology on the participant you mean to host the
+    /// party.
+    /// </remarks>
     /// <param name="request">What to generate the topology for.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<ExternalPartyTopology> GenerateExternalPartyTopologyAsync(
@@ -106,9 +128,21 @@ public interface IAdminClient
     /// retried by the opt-in retry pipeline, because replaying a committed allocation is not
     /// idempotent.
     /// </summary>
+    /// <remarks>
+    /// The SDK derives the expected party from the single PartyToParticipant transaction in
+    /// <see cref="ExternalPartyAllocation.OnboardingTransactions"/>: its hint in the namespace of its
+    /// signing key. It compares the party the participant allocated with that party. On a mismatch it fails with a
+    /// <c>LedgerOperationException</c> whose status is <c>UndecodableBody</c> and whose commit state is
+    /// <c>Committed</c>, because the participant has allocated a party, just not the expected one; the
+    /// <c>MalformedResponseException</c> it carries names both parties.
+    /// </remarks>
     /// <param name="allocation">The signed onboarding topology.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The allocated party.</returns>
+    /// <returns>The allocated party, which is the party the onboarding transaction is for.</returns>
+    /// <exception cref="ArgumentException">
+    /// The onboarding transactions are not the single PartyToParticipant transaction of an external
+    /// party in the namespace of its one signing key; nothing is sent.
+    /// </exception>
     Task<Party> AllocateExternalPartyAsync(
         ExternalPartyAllocation allocation,
         CancellationToken cancellationToken = default);

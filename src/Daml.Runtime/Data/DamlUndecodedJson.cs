@@ -10,4 +10,12 @@ namespace Daml.Runtime.Data;
 /// own reader, for example with <see cref="DamlValueExtensions.FromDamlValue{TResult}"/> once the binding is loaded.
 /// </summary>
 /// <param name="LfJson">The Daml-LF JSON text of the value, exactly as the participant sent it.</param>
-public sealed record DamlUndecodedJson(string LfJson) : DamlValue;
+public sealed record DamlUndecodedJson(string LfJson) : DamlValue
+{
+    /// <summary>
+    /// Gets the id of the package whose type the participant sent this value for, set when a client could not
+    /// decode the value through a generated type that another version of the same package supplied; <see langword="null"/>
+    /// when no package is known.
+    /// </summary>
+    public string? PackageId { get; init; }
+}

@@ -44,6 +44,7 @@ public class GrpcTransactionResultProjectorTests
                 Created = new ProtoCreatedEvent
                 {
                     ContractId = "00noCreateArguments",
+                    PackageName = "token-impl",
                     TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
                 },
             },
@@ -64,6 +65,7 @@ public class GrpcTransactionResultProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00noViewInterfaceId",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
         };
@@ -109,6 +111,7 @@ public class GrpcTransactionResultProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
         };
@@ -131,6 +134,7 @@ public class GrpcTransactionResultProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00plain",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
         };
@@ -142,25 +146,25 @@ public class GrpcTransactionResultProjectorTests
     }
 
     [Fact]
-    public void ProjectToContractId_matches_interface_marker_by_interface_view_ignoring_package_id()
+    public void ProjectToContractId_returns_None_for_interface_marker_when_the_view_is_of_another_package_id_because_interfaces_are_not_upgradeable()
     {
         var created = new ProtoCreatedEvent
         {
             ContractId = "00holding",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg-2", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
         };
         created.InterfaceViews.Add(new InterfaceView
         {
-            InterfaceId = new ProtoIdentifier { PackageId = "any-pkg", ModuleName = "Token.Api", EntityName = "IHolding" },
+            InterfaceId = new ProtoIdentifier { PackageId = "other-iface-pkg", ModuleName = "Token.Api", EntityName = "IHolding" },
         });
         var transactionResult = GrpcTransactionResultProjector.Project(ResponseWith(created));
 
         var outcome = GrpcTransactionResultProjector.ProjectToContractId<IHolding>(
             new ExerciseOutcome<TransactionResult>.One(transactionResult));
 
-        outcome.Should().BeOfType<ExerciseOutcome<ContractId<IHolding>>.One>()
-            .Which.Result.Value.Should().Be("00holding");
+        outcome.Should().BeOfType<ExerciseOutcome<ContractId<IHolding>>.None>();
     }
 
     [Fact]
@@ -169,6 +173,7 @@ public class GrpcTransactionResultProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00plain",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
         };
@@ -186,6 +191,7 @@ public class GrpcTransactionResultProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00bare",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
         };
@@ -212,6 +218,7 @@ public class GrpcTransactionResultProjectorTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00keyedWithoutHash",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
             CreateArguments = new ProtoRecord(),
             ContractKey = new ProtoValue { Text = "the-key" },
@@ -295,6 +302,7 @@ public class GrpcTransactionResultProjectorTests
     private static ProtoExercisedEvent ExercisedWithUnitPayloads() => new()
     {
         ContractId = "00holding",
+        PackageName = "token-impl",
         TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
         Choice = "Archive",
         ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },

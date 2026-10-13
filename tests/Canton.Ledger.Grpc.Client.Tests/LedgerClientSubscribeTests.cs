@@ -120,6 +120,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Archived = new ProtoArchivedEvent
             {
                 ContractId = "00abc",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Offset = 7L,
             },
@@ -143,6 +144,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Exercised = new ProtoExercisedEvent
             {
                 ContractId = "00abc",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Choice = "Accept",
                 ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -185,6 +187,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Archived = new ProtoArchivedEvent
             {
                 ContractId = "00abc",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Offset = 7L,
             },
@@ -207,6 +210,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Exercised = new ProtoExercisedEvent
             {
                 ContractId = "00abc",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Choice = "Accept",
                 ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -352,6 +356,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var created = new ProtoCreatedEvent
         {
             ContractId = "00impl",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier
             {
                 PackageId = "impl-pkg",
@@ -365,7 +370,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         {
             InterfaceId = new ProtoIdentifier
             {
-                PackageId = "any-pkg",
+                PackageId = "iface-pkg",
                 ModuleName = "Sample.Foo",
                 EntityName = "IFoo",
             },
@@ -389,19 +394,21 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var matching = new ProtoCreatedEvent
         {
             ContractId = "00impl",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 1L,
         };
         matching.InterfaceViews.Add(new InterfaceView
         {
-            InterfaceId = new ProtoIdentifier { PackageId = "any-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" },
+            InterfaceId = new ProtoIdentifier { PackageId = "iface-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" },
             ViewStatus = new RpcStatus { Code = 0 },
             ViewValue = new ProtoRecord(),
         });
         var unrelated = new ProtoCreatedEvent
         {
             ContractId = "00other",
+            PackageName = "other-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Other", EntityName = "Other" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 2L,
@@ -424,12 +431,13 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var archived = new ProtoArchivedEvent
         {
             ContractId = "00impl",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             Offset = 7L,
         };
         archived.ImplementedInterfaces.Add(new ProtoIdentifier
         {
-            PackageId = "any-pkg",
+            PackageId = "iface-pkg",
             ModuleName = "Sample.Foo",
             EntityName = "IFoo",
         });
@@ -450,12 +458,13 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var unrelated = new ProtoArchivedEvent
         {
             ContractId = "00other",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             Offset = 8L,
         };
         unrelated.ImplementedInterfaces.Add(new ProtoIdentifier
         {
-            PackageId = "any-pkg",
+            PackageId = "iface-pkg",
             ModuleName = "Sample.Other",
             EntityName = "IOther",
         });
@@ -473,6 +482,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var exercised = new ProtoExercisedEvent
         {
             ContractId = "00impl",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             Choice = "Accept",
             ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -482,7 +492,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         };
         exercised.ImplementedInterfaces.Add(new ProtoIdentifier
         {
-            PackageId = "any-pkg",
+            PackageId = "iface-pkg",
             ModuleName = "Sample.Foo",
             EntityName = "IFoo",
         });
@@ -504,6 +514,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var unrelated = new ProtoExercisedEvent
         {
             ContractId = "00other",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             Choice = "Accept",
             ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -513,7 +524,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         };
         unrelated.ImplementedInterfaces.Add(new ProtoIdentifier
         {
-            PackageId = "any-pkg",
+            PackageId = "iface-pkg",
             ModuleName = "Sample.Other",
             EntityName = "IOther",
         });
@@ -534,6 +545,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 Archived = new ProtoArchivedEvent
                 {
                     ContractId = "00arch",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Offset = 10L,
                 },
@@ -543,6 +555,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 Exercised = new ProtoExercisedEvent
                 {
                     ContractId = "00exer",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Choice = "Accept",
                     ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -990,7 +1003,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var matching = MakeActiveContractWithInterfaceView(
             "00impl",
             new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
-            new ProtoIdentifier { PackageId = "any-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" });
+            new ProtoIdentifier { PackageId = "iface-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" });
         var unrelated = MakeActiveContract("00other", new ProtoIdentifier
         {
             PackageId = "impl-pkg",
@@ -1197,6 +1210,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                     CreatedEvent = new ProtoCreatedEvent
                     {
                         ContractId = "00mid2",
+                        PackageName = "test-package",
                         TemplateId = FooBarTemplate,
                         CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                         CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x21, 0x22),
@@ -1228,6 +1242,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00mid3",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x41, 0x42),
@@ -1235,6 +1250,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 UnassignedEvent = new UnassignedEvent
                 {
                     ContractId = "00mid3",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Source = "sync-a",
                     Target = "sync-b",
@@ -1275,7 +1291,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var response = MakeActiveContractWithInterfaceView(
             "00impl",
             new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
-            new ProtoIdentifier { PackageId = "any-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" });
+            new ProtoIdentifier { PackageId = "iface-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" });
         response.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x31, 0x32, 0x33, 0x34);
         StubGetActiveContracts(response);
 
@@ -1334,6 +1350,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00abc",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = 200L,
@@ -1363,6 +1380,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             {
                 ReassignmentId = "rid-2",
                 ContractId = "00abc",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Source = "sync-a",
                 Target = "sync-b",
@@ -1396,6 +1414,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Unassigned = new UnassignedEvent
             {
                 ContractId = "00unrelated",
+                PackageName = PackageNameFor(unrelatedTemplate),
                 TemplateId = unrelatedTemplate,
                 Source = "sync-a",
                 Target = "sync-b",
@@ -1407,6 +1426,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Unassigned = new UnassignedEvent
             {
                 ContractId = "00foo",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Source = "sync-a",
                 Target = "sync-b",
@@ -1441,6 +1461,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Unassigned = new UnassignedEvent
             {
                 ContractId = "00iface",
+                PackageName = PackageNameFor(interfaceShapedTemplate),
                 TemplateId = interfaceShapedTemplate,
                 Source = "sync-a",
                 Target = "sync-b",
@@ -1470,12 +1491,14 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00mid",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                 },
                 UnassignedEvent = new UnassignedEvent
                 {
                     ContractId = "00mid",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Source = "sync-a",
                     Target = "sync-b",
@@ -1511,6 +1534,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                     CreatedEvent = new ProtoCreatedEvent
                     {
                         ContractId = "00mid2",
+                        PackageName = "test-package",
                         TemplateId = FooBarTemplate,
                         CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     },
@@ -1540,6 +1564,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00nosync",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = 15L,
@@ -1571,6 +1596,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00midnosync",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = 16L,
@@ -1578,6 +1604,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 UnassignedEvent = new UnassignedEvent
                 {
                     ContractId = "00midnosync",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Source = string.Empty,
                     Target = "sync-b",
@@ -1612,6 +1639,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                     CreatedEvent = new ProtoCreatedEvent
                     {
                         ContractId = "00mid2nosync",
+                        PackageName = "test-package",
                         TemplateId = FooBarTemplate,
                         CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                         Offset = 17L,
@@ -1644,6 +1672,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00mismatch",
+                    PackageName = "other-package",
                     TemplateId = new ProtoIdentifier
                     {
                         PackageId = "test-pkg",
@@ -1681,6 +1710,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 UnassignedEvent = new UnassignedEvent
                 {
                     ContractId = "00noevent",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Source = "sync-a",
                     Target = "sync-b",
@@ -1841,6 +1871,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var archived = new ProtoArchivedEvent
         {
             ContractId = "00impl",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             Offset = 71L,
         };
@@ -1863,6 +1894,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var exercised = new ProtoExercisedEvent
         {
             ContractId = "00impl",
+            PackageName = "test-package",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" },
             Choice = "Accept",
             ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -1915,6 +1947,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00nosync",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = 260L,
@@ -1941,6 +1974,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Unassigned = new UnassignedEvent
             {
                 ContractId = "00nosync2",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 Source = string.Empty,
                 Target = "sync-b",
@@ -1966,6 +2000,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Created = new ProtoCreatedEvent
             {
                 ContractId = "00poison",
+                PackageName = "test-package",
                 TemplateId = FooBarTemplate,
                 CreateArguments = LedgerClientTestFixtures.OwnerArgumentsWith(
                     "amount", LedgerClientTestFixtures.OutOfDecimalRangeNumeric()),
@@ -2000,6 +2035,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = "00poison",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = LedgerClientTestFixtures.OwnerArgumentsWith(
                         "amount", LedgerClientTestFixtures.OutOfDecimalRangeNumeric()),
@@ -2045,6 +2081,9 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         EntityName = "FooBar",
     };
 
+    private static string PackageNameFor(ProtoIdentifier templateId) =>
+        templateId.ModuleName == "Sample.Foo" && templateId.EntityName == "FooBar" ? "test-package" : "other-package";
+
     private static Event MakeCreatedEvent(string contractId, ProtoIdentifier templateId, long offset)
     {
         return new Event
@@ -2052,6 +2091,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             Created = new ProtoCreatedEvent
             {
                 ContractId = contractId,
+                PackageName = PackageNameFor(templateId),
                 TemplateId = templateId,
                 CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                 Offset = offset,
@@ -2089,7 +2129,8 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = contractId,
-                    TemplateId = templateId,
+                    PackageName = PackageNameFor(templateId),
+                TemplateId = templateId,
                     CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
                     Offset = offset,
                 },

@@ -31,6 +31,49 @@ public class ExerciseOutcomeProjectionTests
         result.Should().BeSameAs(projected);
     }
 
+    public static TheoryData<string, ExerciseOutcome<TransactionResult>> OutcomesCarryingACommandId() => new()
+    {
+        { "One", new ExerciseOutcome<TransactionResult>.One(SampleTransaction) { CommandId = "cmd-9" } },
+        { "None", new ExerciseOutcome<TransactionResult>.None { CommandId = "cmd-9" } },
+        { "Many", new ExerciseOutcome<TransactionResult>.Many(EquatableArray.Create(["00a", "00b"])) { CommandId = "cmd-9" } },
+        {
+            "DamlError",
+            new ExerciseOutcome<TransactionResult>.DamlError(
+                DamlErrorCategory.ContentionOnSharedResources, "CONTRACT_NOT_FOUND", "gone", new Dictionary<string, string>())
+            {
+                CommandId = "cmd-9",
+            }
+        },
+        {
+            "InfraError",
+            new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.NoResponse(), "reset") { CommandId = "cmd-9" }
+        },
+        {
+            "CommittedUndecodable",
+            new ExerciseOutcome<TransactionResult>.CommittedUndecodable("u1", "bad") { CommandId = "cmd-9" }
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(OutcomesCarryingACommandId))]
+    public void ProjectCommitted_keeps_the_command_id_of_the_outcome_it_projects(
+        string arm, ExerciseOutcome<TransactionResult> outcome)
+    {
+        var result = outcome.ProjectCommitted<int>(_ => new ExerciseOutcome<int>.One(7));
+
+        result.CommandId.Should().Be("cmd-9", because: arm);
+    }
+
+    [Fact]
+    public void ProjectCommitted_stamps_the_command_id_on_a_projector_result_that_has_none()
+    {
+        var outcome = new ExerciseOutcome<TransactionResult>.One(SampleTransaction) { CommandId = "cmd-9" };
+
+        var result = outcome.ProjectCommitted<int>(_ => new ExerciseOutcome<int>.CommittedUndecodable("u1", "bad"));
+
+        result.Should().Be(new ExerciseOutcome<int>.CommittedUndecodable("u1", "bad") { CommandId = "cmd-9" });
+    }
+
     [Fact]
     public void ProjectCommitted_passes_through_a_projector_None_result()
     {

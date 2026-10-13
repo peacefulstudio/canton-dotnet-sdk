@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
 using AwesomeAssertions;
+using Daml.Ledger.Abstractions;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Data;
 using Xunit;
 
@@ -498,6 +501,17 @@ public class FakeAdminClientTests
         var result = await client.AllocateExternalPartyAsync(Allocation(), TestContext.Current.CancellationToken);
 
         result.Should().Be(new Party("ext::1220ab"));
+    }
+
+    [Fact]
+    public async Task AllocateExternalPartyAsync_returns_the_staged_party_whatever_party_the_transactions_are_for()
+    {
+        var client = FakeAdminClient.Create().WithAllocatedExternalParty(new Party("mallory::1220ab")).Build();
+        var allocation = Allocation() with { OnboardingTransactions = [GoldenExternalPartyOnboarding.UnsignedTransaction()] };
+
+        var result = await client.AllocateExternalPartyAsync(allocation, TestContext.Current.CancellationToken);
+
+        result.Should().Be(new Party("mallory::1220ab"));
     }
 
     [Fact]

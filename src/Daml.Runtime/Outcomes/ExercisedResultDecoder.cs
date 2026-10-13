@@ -20,9 +20,9 @@ internal static class ExercisedResultDecoder
         }
 
         var unresolved = new List<string>();
-        foreach (var owner in OwnersOf(exercised))
+        foreach (var (owner, packageName) in OwnersOf(exercised))
         {
-            switch ((registry ?? GeneratedTypeReaders.Shared).FindChoice(owner, exercised.ChoiceName))
+            switch ((registry ?? GeneratedTypeReaders.Shared).FindChoice(owner, exercised.ChoiceName, packageName))
             {
                 case RegistryLookup<IChoice>.Resolved resolved when typeof(TResult).IsAssignableFrom(resolved.Value.ResultType):
                     return (TResult)DecodeResult(resolved.Value, exercised)!;
@@ -63,13 +63,13 @@ internal static class ExercisedResultDecoder
         }
     }
 
-    private static IEnumerable<Identifier> OwnersOf(ExercisedEvent exercised)
+    private static IEnumerable<(Identifier Owner, string? PackageName)> OwnersOf(ExercisedEvent exercised)
     {
         if (exercised.InterfaceId is { } interfaceId)
         {
-            yield return interfaceId;
+            yield return (interfaceId, null);
         }
 
-        yield return exercised.TemplateId;
+        yield return (exercised.TemplateId, exercised.PackageName);
     }
 }

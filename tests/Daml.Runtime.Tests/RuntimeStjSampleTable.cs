@@ -15,7 +15,7 @@ internal static partial class RuntimeStjSampleTable
     private static readonly SynchronizerId PrivateSynchronizer = new("private::1220ee");
     private static readonly Identifier SampleIdentifier = new("sample-pkg", "Sample.Module", "Sample");
     private static readonly Identifier OtherIdentifier = new("other-pkg", "Other.Module", "Other");
-    private static readonly DamlUndecodedJson SampleUndecodedJson = new("{\"amount\":\"42\"}");
+    private static readonly DamlUndecodedJson SampleUndecodedJson = new("{\"amount\":\"42\"}") { PackageId = "sample-package-id" };
     private static readonly DateTimeOffset SampleInstant = new(2026, 10, 5, 12, 30, 15, 123, TimeSpan.Zero);
 
     public static IReadOnlyDictionary<Type, object[]> Samples { get; } = Build();

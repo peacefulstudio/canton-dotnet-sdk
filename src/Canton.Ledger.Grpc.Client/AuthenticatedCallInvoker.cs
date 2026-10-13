@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Kernel.Resilience;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,9 +12,11 @@ namespace Canton.Ledger.Grpc.Client;
 /// The escape-hatch <see cref="CallInvoker"/> behind <c>CreateCallInvoker()</c>: wraps the
 /// channel's own invoker and reuses the SDK's <see cref="LedgerCallInvoker"/> plumbing, so raw
 /// generated stubs get the same bearer-token resolution (including the
-/// <c>ITokenProvider.None</c> unauthenticated skip), the same default per-attempt deadline on
-/// unary calls, and the same opt-in transient-failure retry pipeline as the typed surface —
-/// with a caller-supplied <c>authorization</c> header or deadline always winning. Streaming
+/// <c>ITokenProvider.None</c> unauthenticated skip) and the same default per-attempt deadline on
+/// unary calls, with a caller-supplied <c>authorization</c> header or deadline always winning.
+/// A unary call is sent exactly once unless it is started inside a
+/// <see cref="RawCallReplay.Allow"/> scope, which lets the opt-in transient-failure retry
+/// pipeline re-send it: the SDK cannot know whether a raw call is idempotent. Streaming
 /// calls attach auth headers but, mirroring the typed streaming paths, carry no default
 /// deadline and are never retried.
 /// </summary>
@@ -43,6 +46,7 @@ internal sealed partial class AuthenticatedCallInvoker : CallInvoker
         Method<TRequest, TResponse> method, string? host, CallOptions options, TRequest request)
     {
         AsyncUnaryCall<TResponse>? lastAttempt = null;
+        var replayable = RawCallReplay.IsAllowed;
         var responseTask = _context.InvokeAsync(
             (headers, deadline, token) =>
             {
@@ -51,7 +55,8 @@ internal sealed partial class AuthenticatedCallInvoker : CallInvoker
                 lastAttempt = attempt;
                 return attempt;
             },
-            options.CancellationToken).AsTask();
+            options.CancellationToken,
+            replayable: replayable).AsTask();
 
         return new AsyncUnaryCall<TResponse>(
             responseTask,

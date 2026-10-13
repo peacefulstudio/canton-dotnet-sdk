@@ -27,7 +27,9 @@ internal static class RestMarkerMatcher<TMarker>
 
     public static bool IsInterface { get; } = TMarker.DamlTypeId.Kind == DamlTypeKind.Interface;
 
-    private static readonly RuntimeIdentifier MarkerIdentity = TMarker.DamlTypeId.Identifier;
+    private static readonly DamlTypeDescriptor Marker = TMarker.DamlTypeId;
+
+    private static readonly RuntimeIdentifier MarkerIdentity = Marker.Identifier;
 
     /// <summary>
     /// The wire <see cref="WireIdentifier"/> used to scope a <c>TemplateFilter</c> or
@@ -43,8 +45,8 @@ internal static class RestMarkerMatcher<TMarker>
 
     public static bool MatchesCreated(WireCreatedEvent created) =>
         IsInterface
-            ? MatchesAnyIdentifier(created.InterfaceViews?.Select(view => view?.InterfaceId))
-            : RestWireConversions.IsModuleEntityMatch(created.TemplateId, MarkerIdentity);
+            ? MatchesAnyInterface(created.InterfaceViews?.Select(view => view?.InterfaceId))
+            : MatchesTemplate(created.PackageName, created.TemplateId);
 
     /// <summary>
     /// Reads the participant-computed view this interface marker's <c>InterfaceFilter</c> asked for
@@ -63,7 +65,7 @@ internal static class RestMarkerMatcher<TMarker>
 
         foreach (var view in created.InterfaceViews ?? [])
         {
-            if (view is null || !RestWireConversions.IsModuleEntityMatch(view.InterfaceId, MarkerIdentity)) continue;
+            if (view is null || !MatchesInterface(view.InterfaceId)) continue;
 
             if (view.ViewStatus?.Code != GoogleRpcCodeOk || view.ViewValue is null)
             {
@@ -81,17 +83,17 @@ internal static class RestMarkerMatcher<TMarker>
 
     public static bool MatchesArchived(WireArchivedEvent archived) =>
         IsInterface
-            ? MatchesAnyIdentifier(archived.ImplementedInterfaces?.Select(id => (WireIdentifier?)id))
-            : RestWireConversions.IsModuleEntityMatch(archived.TemplateId, MarkerIdentity);
+            ? MatchesAnyInterface(archived.ImplementedInterfaces?.Select(id => (WireIdentifier?)id))
+            : MatchesTemplate(archived.PackageName, archived.TemplateId);
 
     public static bool MatchesExercised(WireExercisedEvent exercised) =>
         IsInterface
-            ? MatchesAnyIdentifier(exercised.ImplementedInterfaces?.Select(id => (WireIdentifier?)id))
-            : RestWireConversions.IsModuleEntityMatch(exercised.TemplateId, MarkerIdentity);
+            ? MatchesAnyInterface(exercised.ImplementedInterfaces?.Select(id => (WireIdentifier?)id))
+            : MatchesTemplate(exercised.PackageName, exercised.TemplateId);
 
     public static bool MatchesUnassigned(WireUnassignedEvent unassigned) =>
         (IsInterface && InterfaceFilterAlreadyScopesUnassignedEventsServerSide)
-            || RestWireConversions.IsModuleEntityMatch(unassigned.TemplateId, MarkerIdentity);
+            || MatchesTemplate(unassigned.PackageName, unassigned.TemplateId);
 
     /// <summary>
     /// Matches a transport-neutral <see cref="CreatedContract"/> (as projected from a command
@@ -100,16 +102,17 @@ internal static class RestMarkerMatcher<TMarker>
     /// </summary>
     public static bool MatchesContract(CreatedContract created) =>
         IsInterface
-            ? created.InterfaceIds.Any(id => RestWireConversions.IsModuleEntityMatch(id, MarkerIdentity))
-            : RestWireConversions.IsModuleEntityMatch(created.TemplateId, MarkerIdentity);
+            ? created.InterfaceIds.Any(id => MarkerMatch.Interface(Marker, id))
+            : MarkerMatch.Template(Marker, created.PackageName, created.TemplateId);
 
-    private static bool MatchesAnyIdentifier(IEnumerable<WireIdentifier?>? identifiers)
-    {
-        if (identifiers is null) return false;
-        foreach (var identifier in identifiers)
-        {
-            if (RestWireConversions.IsModuleEntityMatch(identifier, MarkerIdentity)) return true;
-        }
-        return false;
-    }
+    private static bool MatchesTemplate(string? packageName, WireIdentifier? templateId) =>
+        templateId is not null
+        && MarkerMatch.Template(Marker, packageName, templateId.ModuleName, templateId.EntityName);
+
+    private static bool MatchesInterface(WireIdentifier? interfaceId) =>
+        interfaceId is not null
+        && MarkerMatch.Interface(Marker, interfaceId.PackageId, interfaceId.ModuleName, interfaceId.EntityName);
+
+    private static bool MatchesAnyInterface(IEnumerable<WireIdentifier?>? identifiers) =>
+        identifiers is not null && identifiers.Any(MatchesInterface);
 }

@@ -11,7 +11,7 @@ falls behind emitter output instead of silently rotting.
 
 `intermediate.binpb` is the canonical codegen input for the drift gate;
 `quickstart-0.0.1.dar` is the archive it was derived from, built from
-`samples/QuickstartExample/daml` (SDK 3.5.12, LF target 2.1), kept alongside
+`samples/QuickstartExample/daml` (SDK 3.6.0, LF target 2.1), kept alongside
 for provenance.
 
 ## Refreshing the sample

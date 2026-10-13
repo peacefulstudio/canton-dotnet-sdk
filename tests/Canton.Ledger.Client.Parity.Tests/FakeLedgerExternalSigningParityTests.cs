@@ -32,7 +32,11 @@ public sealed class FakeLedgerExternalSigningParityTests : LedgerExternalSigning
             .WithLedgerEnd(LedgerOffset.At(5))
             .WithConnectedSynchronizers(new ConnectedSynchronizer("global", "fake-sync", SynchronizerPermissionLevel.Submission))
             .WithPreparedSubmission(new PreparedSubmission(
-                new byte[] { 5, 6 }, new byte[] { 7, 8 }, HashingSchemeVersion.V2, null, null))
+                Convert.FromHexString("120b2a0966616b652d75756964"),
+                Convert.FromHexString("b417b2c3ddfe7365d87143bb68dee13aa14c912f77db8d8e30627cac3744fb8c"),
+                HashingSchemeVersion.V2,
+                null,
+                null))
             .WithExecutedSubmission(new ExecutedSubmission(updateId, LedgerOffset.At(6)))
             .WithExecutedTransaction(transaction)
             .WithUpdateById(updateId, transaction)

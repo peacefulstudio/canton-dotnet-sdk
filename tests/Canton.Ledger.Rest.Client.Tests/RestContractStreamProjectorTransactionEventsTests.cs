@@ -114,6 +114,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "CreatedEvent": {
                           "offset": "7",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "createArgument": {"owner": "alice::ns1"},
                           "witnessParties": ["alice::ns1"]
@@ -151,6 +152,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "CreatedEvent": {
                           "offset": "7",
                           "contractId": "00keyed",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "createArgument": {"owner": "alice::ns1"},
                           "contractKey": "alice::ns1",
@@ -191,6 +193,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "CreatedEvent": {
                           "offset": "7",
                           "contractId": "00keyed",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ScalarKeyedHolding"},
                           "createArgument": {"owner": "alice::ns1"},
                           "contractKey": "alice::ns1",
@@ -230,6 +233,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "CreatedEvent": {
                           "offset": "7",
                           "contractId": "00unkeyed",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "createArgument": {"owner": "alice::ns1"},
                           "witnessParties": ["alice::ns1"]
@@ -264,6 +268,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ArchivedEvent": {
                           "offset": "8",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "witnessParties": ["alice::ns1"]
                         }
@@ -299,6 +304,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ExercisedEvent": {
                           "offset": "9",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "choice": "Archive",
                           "choiceArgument": {},
@@ -340,6 +346,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ExercisedEvent": {
                           "offset": "9",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "choice": "Mystery",
                           "choiceArgument": {"reason": "expired"},
@@ -379,6 +386,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ExercisedEvent": {
                           "offset": "9",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "choice": "Archive",
                           "choiceArgument": 1e400,
@@ -421,6 +429,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ArchivedEvent": {
                           "offset": "not-a-number",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "witnessParties": ["alice::ns1"]
                         }
@@ -459,6 +468,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ExercisedEvent": {
                           "offset": "not-a-number",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "choice": "Archive",
                           "choiceArgument": {},
@@ -547,6 +557,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                           "createdEvent": {
                             "offset": "{{createdOffset}}",
                             "contractId": "00holding",
+                            "packageName": "token-impl",
                             "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                             "createArgument": {},
                             "witnessParties": ["alice::ns1"]
@@ -592,6 +603,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                             "source": "sync-1",
                             "target": "sync-2",
                             "contractId": "00holding",
+                            "packageName": "token-impl",
                             "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                             "reassignmentId": "reassign-2",
                             "reassignmentCounter": "{{reassignmentCounter}}",
@@ -651,6 +663,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ArchivedEvent": {
                           "offset": "8",
                           "contractId": "00other",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                           "witnessParties": ["alice::ns1"]
                         }
@@ -697,6 +710,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                       {
                         "ArchivedEvent": {
                           "offset": "9",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "witnessParties": ["alice::ns1"]
                         }
@@ -705,6 +719,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ArchivedEvent": {
                           "offset": "10",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "witnessParties": ["alice::ns1"]
                         }
@@ -746,6 +761,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                             "source": "sync-1",
                             "target": "sync-2",
                             "contractId": "00other",
+                            "packageName": "token-impl",
                             "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                             "reassignmentId": "reassign-2",
                             "reassignmentCounter": "4",
@@ -801,6 +817,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "CreatedEvent": {
                           "offset": "7",
                           "contractId": "00other",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                           "createArgument": {},
                           "witnessParties": ["alice::ns1"]
@@ -850,6 +867,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ExercisedEvent": {
                           "offset": "9",
                           "contractId": "00other",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                           "choice": "Archive",
                           "choiceArgument": {},
@@ -911,6 +929,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                           "createdEvent": {
                             "offset": "20",
                             "contractId": "00other",
+                            "packageName": "token-impl",
                             "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "Other"},
                             "createArgument": {},
                             "witnessParties": ["alice::ns1"]
@@ -970,6 +989,7 @@ public class RestContractStreamProjectorTransactionEventsTests
                         "ExercisedEvent": {
                           "offset": "9",
                           "contractId": "00holding",
+                          "packageName": "token-impl",
                           "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "EventsHolding"},
                           "choice": "Archive",
                           "actingParties": ["alice::ns1"],

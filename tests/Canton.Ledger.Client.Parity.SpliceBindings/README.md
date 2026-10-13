@@ -13,7 +13,7 @@ live LocalNet by the same pull request that makes it.
 
 ## Provenance
 
-The proto is decoded from `splice-wallet-0.1.25.dar` (sha256 `71cbe6c718c70d893bd8a5f2d757f98e3617b09f619efd73c47d9a3bf6b9d386`), taken from the `dars/` directory of the Splice 0.9.0 `splice-node` bundle (`0.9.0_splice-node.tar.gz`, sha256 `f5cd8722c9030f9417dece4ba7cb158bcb42a8f5190ddb641f06f4049aa4412e`), the Splice release the LocalNet runs. A DAR bundles its dependencies, so it carries `splice-amulet`, `splice-wallet-payments` and the token-standard interface packages, with the package ids the LocalNet participant has uploaded. The DAR itself is not part of this package.
+The proto is decoded from `splice-wallet-0.1.25.dar` (sha256 `71cbe6c718c70d893bd8a5f2d757f98e3617b09f619efd73c47d9a3bf6b9d386`), taken from the `dars/` directory of the Splice 0.9.1 `splice-node` bundle (`0.9.1_splice-node.tar.gz`, sha256 `30092e00ae94fc491af933f4a744e5916f4eb0038fb25e6446944896a8ed5f5a`), the Splice release the LocalNet runs. A DAR bundles its dependencies, so it carries `splice-amulet`, `splice-wallet-payments` and the token-standard interface packages, with the package ids the LocalNet participant has uploaded. The DAR itself is not part of this package.
 
 ## How the bindings are built
 

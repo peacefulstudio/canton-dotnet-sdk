@@ -50,6 +50,13 @@ template Marker
   where
     signatory owner
 
+    nonconsuming choice Mint : ContractId Asset
+      with
+        amount : Decimal
+      controller owner
+      do
+        create Asset with issuer = owner, amount
+
 data HoldingView = HoldingView
   with
     amount : Decimal

@@ -23,6 +23,31 @@ public class ExerciseOutcomeJsonTests
     }
 
     [Fact]
+    public void One_carrying_a_command_id_writes_it_after_the_case_members_and_reads_back()
+    {
+        ExerciseOutcome<long> value = new ExerciseOutcome<long>.One(42) { CommandId = "cmd-7" };
+
+        var written = JsonSerializer.Serialize(value);
+
+        written.Should().Be("""{"$case":"One","Result":42,"CommandId":"cmd-7"}""");
+        JsonSerializer.Deserialize<ExerciseOutcome<long>>(written).Should().Be(value);
+    }
+
+    [Fact]
+    public void InfraError_carrying_a_command_id_writes_it_and_reads_back_unequal_to_the_same_error_without_one()
+    {
+        ExerciseOutcome<long> value = new ExerciseOutcome<long>.InfraError(
+            new TransportStatus.NoResponse(), "connection reset") { CommandId = "cmd-8" };
+
+        var written = JsonSerializer.Serialize(value);
+
+        written.Should().Contain("\"CommandId\":\"cmd-8\"");
+        var restored = JsonSerializer.Deserialize<ExerciseOutcome<long>>(written);
+        restored.Should().Be(value);
+        restored.Should().NotBe(new ExerciseOutcome<long>.InfraError(new TransportStatus.NoResponse(), "connection reset"));
+    }
+
+    [Fact]
     public void None_declared_as_its_base_type_writes_the_case_discriminator_and_reads_back()
     {
         ExerciseOutcome<long> value = new ExerciseOutcome<long>.None();

@@ -28,11 +28,11 @@ internal static class RestValueDecoder
     public static DamlValue ToDamlValue(WireValue value, DamlLfElementReader reader, string rootPath) =>
         MalformedResponse.Decoding(value, wireValue => Decode(wireValue.AdditionalProperties, reader.Invoke, rootPath));
 
-    public static DamlUndecodedJson ToUndecodedJson(WireRecord record) =>
-        MalformedResponse.Decoding(record, wireRecord => new DamlUndecodedJson(DamlLfJsonTextOf(wireRecord.AdditionalProperties)));
+    public static DamlUndecodedJson ToUndecodedJson(WireRecord record, string? packageId = null) =>
+        MalformedResponse.Decoding(record, wireRecord => new DamlUndecodedJson(DamlLfJsonTextOf(wireRecord.AdditionalProperties)) { PackageId = packageId });
 
-    public static DamlUndecodedJson ToUndecodedJson(WireValue value) =>
-        MalformedResponse.Decoding(value, wireValue => new DamlUndecodedJson(DamlLfJsonTextOf(wireValue.AdditionalProperties)));
+    public static DamlUndecodedJson ToUndecodedJson(WireValue value, string? packageId = null) =>
+        MalformedResponse.Decoding(value, wireValue => new DamlUndecodedJson(DamlLfJsonTextOf(wireValue.AdditionalProperties)) { PackageId = packageId });
 
     private static TDecoded Decode<TDecoded>(
         IDictionary<string, object> readFields,

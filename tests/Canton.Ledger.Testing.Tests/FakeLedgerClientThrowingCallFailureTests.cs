@@ -162,9 +162,10 @@ public class FakeLedgerClientThrowingCallFailureTests
             .Build();
         var command = ExerciseCommand.For(AssetId, (ChoiceName)"Archive", DamlRecord.Create());
 
-        var outcome = await client.TryExerciseAsync<DamlUnit>(command, Submitter, cancellationToken: TestContext.Current.CancellationToken);
+        var outcome = await client.TryExerciseAsync<DamlUnit>(
+            command, Submitter, commandId: (CommandId)"cmd-3", cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeSameAs(staged);
+        outcome.Should().Be(staged with { CommandId = "cmd-3" });
     }
 
     [Fact]

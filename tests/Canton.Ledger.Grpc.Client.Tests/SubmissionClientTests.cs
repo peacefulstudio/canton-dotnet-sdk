@@ -56,9 +56,7 @@ public class SubmissionClientTests
     }
 
     private SubmissionClient CreateClient(
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>>? pointReadByOffset = null,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>>? acsDeltaPointReadByOffset = null,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionTree>>? treePointReadByOffset = null,
+        Func<long, RuntimeCommands.SubmitterInfo, IReadOnlyList<DamlTypeDescriptor>, CancellationToken, Task<Transaction>>? readTransactionAtOffset = null,
         ILogger? logger = null) =>
         new(
             new LedgerCallInvoker(_options, _tokenProvider),
@@ -67,9 +65,7 @@ public class SubmissionClientTests
             new GrpcCommandBuilder(_options),
             _options,
             logger ?? NullLogger<LedgerClient>.Instance,
-            pointReadByOffset ?? ((_, _, _) => throw new InvalidOperationException("point read not expected")),
-            acsDeltaPointReadByOffset ?? ((_, _, _) => throw new InvalidOperationException("ACS-delta point read not expected")),
-            treePointReadByOffset ?? ((_, _, _) => throw new InvalidOperationException("tree point read not expected")));
+            readTransactionAtOffset ?? ((_, _, _, _) => throw new InvalidOperationException("point read not expected")));
 
     private static RuntimeCommands.CommandsSubmission Create() =>
         RuntimeCommands.CommandsSubmission
@@ -87,13 +83,9 @@ public class SubmissionClientTests
             Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
             Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
 
-        var resolved = GrpcTransactionResultProjector.Project(
-            new SubmitAndWaitForTransactionResponse
-            {
-                Transaction = new Transaction { UpdateId = "u-original", Offset = 42L },
-            });
+        var resolved = new Transaction { UpdateId = "u-original", CommandId = "test-cmd", Offset = 42L };
         long? readOffset = null;
-        var client = CreateClient(acsDeltaPointReadByOffset: (offset, _, _) =>
+        var client = CreateClient(readTransactionAtOffset: (offset, _, _, _) =>
         {
             readOffset = offset;
             return Task.FromResult(resolved);
@@ -114,10 +106,10 @@ public class SubmissionClientTests
         _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
         StubSubmitAndWaitForTransaction(Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
         var pointReadInvoked = false;
-        var client = CreateClient(acsDeltaPointReadByOffset: (_, _, _) =>
+        var client = CreateClient(readTransactionAtOffset: (_, _, _, _) =>
         {
             pointReadInvoked = true;
-            return Task.FromException<TransactionResult>(new InvalidOperationException("unexpected"));
+            return Task.FromException<Transaction>(new InvalidOperationException("unexpected"));
         });
 
         var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
@@ -140,10 +132,10 @@ public class SubmissionClientTests
                 StatusCode.AlreadyExists,
                 new Dictionary<string, string> { ["accepted"] = "false", ["completion_offset"] = "42" })));
         var pointReadInvoked = false;
-        var client = CreateClient(acsDeltaPointReadByOffset: (_, _, _) =>
+        var client = CreateClient(readTransactionAtOffset: (_, _, _, _) =>
         {
             pointReadInvoked = true;
-            return Task.FromException<TransactionResult>(new InvalidOperationException("unexpected"));
+            return Task.FromException<Transaction>(new InvalidOperationException("unexpected"));
         });
 
         var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
@@ -162,10 +154,9 @@ public class SubmissionClientTests
             Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
             Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
 
-        var resolved = GrpcTransactionTreeProjector.Project(
-            new Transaction { UpdateId = "u-original", Offset = 42L });
+        var resolved = new Transaction { UpdateId = "u-original", CommandId = "test-cmd", Offset = 42L };
         long? readOffset = null;
-        var client = CreateClient(treePointReadByOffset: (offset, _, _) =>
+        var client = CreateClient(readTransactionAtOffset: (offset, _, _, _) =>
         {
             readOffset = offset;
             return Task.FromResult(resolved);
@@ -178,7 +169,24 @@ public class SubmissionClientTests
             "a duplicate on a retried attempt proves the first attempt committed").Subject;
         success.Result.UpdateId.Should().Be("u-original");
         readOffset.Should().Be(42L,
-            "the tree path resolves the completion_offset through the tree point read, not the flat one");
+            "the tree path resolves the completion_offset through the same point read");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionTreeAsync_keeps_a_retried_duplicate_as_a_DamlError_when_the_transaction_at_the_offset_is_another_commands()
+    {
+        _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
+        var client = CreateClient(readTransactionAtOffset: (_, _, _, _) =>
+            Task.FromResult(new Transaction { UpdateId = "u-other", CommandId = "another-cmd", Offset = 42L }));
+
+        var outcome = await client.TrySubmitAndWaitForTransactionTreeAsync(
+            Create(), Submitter(), cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionTree>.DamlError>()
+            .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
     }
 
     [Fact]
@@ -259,8 +267,8 @@ public class SubmissionClientTests
         StubSubmitAndWaitForTransaction(
             Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
             Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
-        var pointRead = GrpcTransactionResultProjector.ProjectAcsDelta(LedgerEffectsTransactionCreatingAndConsuming("00transient"));
-        var client = CreateClient(acsDeltaPointReadByOffset: (_, _, _) => Task.FromResult(pointRead));
+        var pointRead = LedgerEffectsTransactionCreatingAndConsuming("00transient");
+        var client = CreateClient(readTransactionAtOffset: (_, _, _, _) => Task.FromResult(pointRead));
 
         var outcome = await client.TrySubmitAndWaitForTransactionAsync(
             Create(), cancellationToken: TestContext.Current.CancellationToken);
@@ -283,6 +291,76 @@ public class SubmissionClientTests
         result.ArchivedContractIds.Should().Equal("00earlier");
     }
 
+    private static readonly DamlTypeDescriptor GadgetInterface = new(
+        new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"), DamlTypeKind.Interface, "gadget-package");
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_asks_for_the_requested_interface_views_beside_the_wildcard()
+    {
+        StubSubmitAndWaitForTransaction(Completed(LedgerEffectsTransaction()));
+        var client = CreateClient();
+
+        await client.TrySubmitAndWaitForTransactionAsync(
+            Create() with { InterfaceViewRequests = [GadgetInterface] },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var cumulative = SentRequest().TransactionFormat.EventFormat.FiltersByParty["party::alice"].Cumulative;
+        cumulative.Should().HaveCount(2);
+        cumulative[0].WildcardFilter.Should().NotBeNull();
+        cumulative[1].InterfaceFilter.InterfaceId.PackageId.Should().Be("#gadget-package");
+        cumulative[1].InterfaceFilter.IncludeInterfaceView.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_records_the_requested_interface_on_the_result()
+    {
+        StubSubmitAndWaitForTransaction(Completed(LedgerEffectsTransaction()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create() with { InterfaceViewRequests = [GadgetInterface] },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.RequestedInterfaces.Should().Equal(new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"));
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_records_no_requested_interface_without_a_request()
+    {
+        StubSubmitAndWaitForTransaction(Completed(LedgerEffectsTransaction()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result
+            .RequestedInterfaces.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reads_a_retried_duplicate_with_the_requested_interface_views()
+    {
+        _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
+        IReadOnlyList<DamlTypeDescriptor>? readInterfaces = null;
+        var client = CreateClient(readTransactionAtOffset: (_, _, interfaces, _) =>
+        {
+            readInterfaces = interfaces;
+            return Task.FromResult(LedgerEffectsTransactionCreatingAndConsuming("00transient"));
+        });
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            Create() with { InterfaceViewRequests = [GadgetInterface] },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        readInterfaces.Should().Equal(GadgetInterface);
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result
+            .RequestedInterfaces.Should().Equal(new RuntimeIdentifier("gadget-pkg-id", "Acme.Gadget", "IGadget"));
+    }
+
     private SubmitAndWaitForTransactionRequest SentRequest() =>
         _commandService.ReceivedCalls()
             .Where(call => call.GetMethodInfo().Name == nameof(CommandService.CommandServiceClient.SubmitAndWaitForTransactionAsync))
@@ -291,7 +369,7 @@ public class SubmissionClientTests
 
     private static Transaction LedgerEffectsTransactionCreatingAndConsuming(string contractId)
     {
-        var transaction = new Transaction { UpdateId = "u-effects", Offset = 42L };
+        var transaction = new Transaction { UpdateId = "u-effects", CommandId = "test-cmd", Offset = 42L };
         transaction.Events.Add(Created(nodeId: 0, contractId));
         transaction.Events.Add(ExercisedOn(nodeId: 1, contractId, "Consume", consuming: true));
         return transaction;
