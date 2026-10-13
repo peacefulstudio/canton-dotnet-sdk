@@ -7,13 +7,21 @@ on:
         description: 'Splice version (decentralized-canton-sync release tag, e.g. 0.6.11). No default — always pass the version explicitly.'
         required: true
         type: string
+      download_sha256:
+        description: 'SHA-256 of the upstream bundle tarball, pinned in versions.yaml. The publish fails when the download does not match.'
+        required: true
+        type: string
       codegen_cs_version:
         description: 'Version of ghcr.io/peacefulstudio/dpm-codegen-cs to pull. Empty = Directory.Build.props <Version>.'
         required: false
         type: string
         default: ''
+      codegen_cs_digest:
+        description: 'Digest (sha256:<hex>) of the dpm-codegen-cs index to pull.'
+        required: true
+        type: string
       daml_sdk_version:
-        description: 'Daml SDK version; the damlc and daml-script component tags it ships are read from its SDK manifest.'
+        description: 'Daml SDK version; the damlc and daml-script component versions it ships are read from the SDK manifest pinned in versions.yaml.'
         required: true
         type: string
       runtime_version:
@@ -43,11 +51,13 @@ jobs:
     with:
       source_label: Splice
       download_url: https://github.com/digital-asset/decentralized-canton-sync/releases/download/v${{ inputs.splice_version }}/${{ inputs.splice_version }}_splice-node.tar.gz
+      download_sha256: ${{ inputs.download_sha256 }}
       dar_find_path: '*/dars/*.dar'
       dar_patterns: |
         splice-*
       counter_variable: SPLICE_RELEASE_COUNTERS
       codegen_cs_version: ${{ inputs.codegen_cs_version }}
+      codegen_cs_digest: ${{ inputs.codegen_cs_digest }}
       daml_sdk_version: ${{ inputs.daml_sdk_version }}
       runtime_version: ${{ inputs.runtime_version }}
       package_license: ${{ inputs.package_license }}

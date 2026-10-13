@@ -11,6 +11,10 @@ on:
         description: 'Full URL to the source bundle tarball (the caller interpolates its own version).'
         required: true
         type: string
+      download_sha256:
+        description: 'Expected SHA-256 of the source bundle tarball; select-dars.sh refuses to extract a download that does not match.'
+        required: true
+        type: string
       dar_find_path:
         description: "find -path glob locating DARs inside the extracted tree, relative to ./extracted (e.g. '*/dars/*.dar' or '*.dar')."
         required: true
@@ -28,8 +32,12 @@ on:
         required: false
         type: string
         default: ''
+      codegen_cs_digest:
+        description: 'Digest (sha256:<hex>) of the dpm-codegen-cs index to pull; the daml.yaml components pin it.'
+        required: true
+        type: string
       daml_sdk_version:
-        description: 'Daml SDK version; the damlc and daml-script component tags it ships are read from its SDK manifest.'
+        description: 'Daml SDK version; the damlc and daml-script component versions it ships are read from the SDK manifest pinned in versions.yaml.'
         required: true
         type: string
       runtime_version:
@@ -71,10 +79,12 @@ jobs:
     env:
       SOURCE_LABEL: ${{ inputs.source_label }}
       DOWNLOAD_URL: ${{ inputs.download_url }}
+      DOWNLOAD_SHA256: ${{ inputs.download_sha256 }}
       DAR_FIND_PATH: ${{ inputs.dar_find_path }}
       DAR_PATTERNS: ${{ inputs.dar_patterns }}
       COUNTER_VARIABLE_NAME: ${{ inputs.counter_variable }}
       CODEGEN_CS_VERSION_INPUT: ${{ inputs.codegen_cs_version }}
+      CODEGEN_CS_DIGEST: ${{ inputs.codegen_cs_digest }}
       DAML_SDK_VERSION_INPUT: ${{ inputs.daml_sdk_version }}
       RUNTIME_VERSION_INPUT: ${{ inputs.runtime_version }}
       PACKAGE_LICENSE_INPUT: ${{ inputs.package_license }}
@@ -97,10 +107,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install dpm 1.0.19 from GitHub release (oci:// component URIs need >= 1.0.12)
+      - name: Install dpm 1.0.22 from GitHub release (oci:// components pinned by digest need >= 1.0.22)
         env:
-          DPM_VERSION: '1.0.19'
-          DPM_SHA256: '36edd37025d6c1e8a72b5502234b6fea859be78950909733bc8a82bbb1c57798'
+          DPM_VERSION: '1.0.22'
+          DPM_SHA256: 'ebfdb2072e62e4b094f4cc1f9b221a5a6fd536644d88799da8e13bf936e088ff'
         run: |
           set -euo pipefail
           TARBALL="dpm-${DPM_VERSION}-linux-amd64.tar.gz"
@@ -124,18 +134,19 @@ jobs:
         with:
           version: ${{ env.ORAS_VERSION }}
 
-      - name: Resolve the damlc and daml-script components the Daml SDK ships
+      - name: Resolve the damlc and daml-script components the pinned Daml SDK manifest ships
         run: .github/scripts/resolve-sdk-components.sh "${DAML_SDK_VERSION}"
 
-      - name: Write daml.yaml with opt-in components
+      - name: Write daml.yaml with every component pinned by digest
         run: |
           set -euo pipefail
+          [[ "${CODEGEN_CS_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::codegen_cs_digest='${CODEGEN_CS_DIGEST}' is not a sha256 digest"; exit 1; }
           mkdir -p dpm-workspace
           cat > dpm-workspace/daml.yaml <<EOF
           components:
-            - damlc:${DAMLC_VERSION}
-            - daml-script:${DAML_SCRIPT_VERSION}
-            - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:${CODEGEN_CS_VERSION}
+            - oci://europe-docker.pkg.dev/da-images/public/components/damlc:${DAMLC_VERSION}@${DAMLC_DIGEST}
+            - oci://europe-docker.pkg.dev/da-images/public/components/daml-script:${DAML_SCRIPT_VERSION}@${DAML_SCRIPT_DIGEST}
+            - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:${CODEGEN_CS_VERSION}@${CODEGEN_CS_DIGEST}
           EOF
           echo "Written daml.yaml:"
           cat dpm-workspace/daml.yaml

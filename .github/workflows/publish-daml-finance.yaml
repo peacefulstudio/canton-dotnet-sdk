@@ -7,13 +7,21 @@ on:
         description: 'Daml.Finance SDK release version (digital-asset/daml-finance sdk/<ver> tag).'
         required: true
         type: string
+      download_sha256:
+        description: 'SHA-256 of the upstream bundle tarball, pinned in versions.yaml. The publish fails when the download does not match.'
+        required: true
+        type: string
       codegen_cs_version:
         description: 'Version of ghcr.io/peacefulstudio/dpm-codegen-cs to pull. Empty = Directory.Build.props <Version>.'
         required: false
         type: string
         default: ''
+      codegen_cs_digest:
+        description: 'Digest (sha256:<hex>) of the dpm-codegen-cs index to pull.'
+        required: true
+        type: string
       daml_sdk_version:
-        description: 'Daml SDK version; the damlc and daml-script component tags it ships are read from its SDK manifest.'
+        description: 'Daml SDK version; the damlc and daml-script component versions it ships are read from the SDK manifest pinned in versions.yaml.'
         required: true
         type: string
       runtime_version:
@@ -43,6 +51,7 @@ jobs:
     with:
       source_label: DamlFinance
       download_url: https://github.com/digital-asset/daml-finance/releases/download/sdk/${{ inputs.daml_finance_version }}/daml-finance-bundle-sdk-${{ inputs.daml_finance_version }}.tar.gz
+      download_sha256: ${{ inputs.download_sha256 }}
       dar_find_path: '*.dar'
       dar_patterns: |
         daml-finance-interface-types-common-v3-*
@@ -55,6 +64,7 @@ jobs:
         daml-finance-instrument-token-v4-*
       counter_variable: DAML_FINANCE_RELEASE_COUNTERS
       codegen_cs_version: ${{ inputs.codegen_cs_version }}
+      codegen_cs_digest: ${{ inputs.codegen_cs_digest }}
       daml_sdk_version: ${{ inputs.daml_sdk_version }}
       runtime_version: ${{ inputs.runtime_version }}
       package_license: ${{ inputs.package_license }}
