@@ -34,7 +34,7 @@ internal sealed partial class RestLedgerClient
         try
         {
             var projected = await GetUpdateAsync(
-                UpdateByOffsetPath, request, $"offset {completionOffset}", project,
+                UpdateByOffsetPath, request, $"offset {completionOffset}", OnlyOfCommand(commandId, completionOffset, project),
                 timeout: null, cancellationToken).ConfigureAwait(false);
             LogRetriedDuplicateResolved(_logger, commandId, completionOffset);
             return new ExerciseOutcome<TProjection>.One(projected);
@@ -45,6 +45,15 @@ internal sealed partial class RestLedgerClient
             return duplicate;
         }
     }
+
+    private static Func<Raw.Transaction, TProjection> OnlyOfCommand<TProjection>(
+        string commandId,
+        long completionOffset,
+        Func<Raw.Transaction, TProjection> project) =>
+        transaction => transaction.CommandId == commandId
+            ? project(transaction)
+            : throw new ProjectionRefusalException(
+                $"The transaction at offset {completionOffset} was not recorded for command '{commandId}'.");
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND because the first attempt already committed; resolved the committed transaction at completion offset {CompletionOffset} and surfaced it as success")]
     private static partial void LogRetriedDuplicateResolved(ILogger logger, string commandId, long completionOffset);

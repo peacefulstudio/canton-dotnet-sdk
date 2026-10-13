@@ -131,6 +131,54 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddCantonAuth_binds_nested_token_failure_cooldown_options_from_configuration()
+    {
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ClientId"] = "my-client",
+                ["ClientSecret"] = "my-secret",
+                ["Domain"] = "https://auth.example.com",
+                ["TokenFailureCooldown:Enabled"] = "false",
+                ["TokenFailureCooldown:InitialDelay"] = "00:00:02",
+                ["TokenFailureCooldown:MaxDelay"] = "00:01:00"
+            })
+            .Build();
+
+        services.AddCantonAuth(config);
+
+        using var provider = services.BuildServiceProvider();
+        var cooldown = provider.GetRequiredService<IOptions<ClientCredentialsOptions>>().Value.TokenFailureCooldown;
+
+        cooldown.Enabled.Should().BeFalse();
+        cooldown.InitialDelay.Should().Be(TimeSpan.FromSeconds(2));
+        cooldown.MaxDelay.Should().Be(TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public void AddCantonAuth_rejects_a_token_failure_cooldown_whose_MaxDelay_is_below_InitialDelay_at_startup()
+    {
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ClientId"] = "my-client",
+                ["ClientSecret"] = "my-secret",
+                ["Domain"] = "https://auth.example.com",
+                ["TokenFailureCooldown:InitialDelay"] = "00:00:05",
+                ["TokenFailureCooldown:MaxDelay"] = "00:00:01"
+            })
+            .Build();
+        services.AddCantonAuth(config);
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<ClientCredentialsOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*MaxDelay must not be below InitialDelay*");
+    }
+
+    [Fact]
     public void AddCantonAuth_registers_http_client()
     {
         var services = new ServiceCollection();

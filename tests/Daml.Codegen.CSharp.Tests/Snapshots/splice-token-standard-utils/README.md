@@ -45,7 +45,7 @@ scripts/regenerate.sh write --only snapshots --snapshot splice-token-standard-ut
 
 `intermediate.binpb` is the canonical codegen input for the drift test;
 `splice-token-standard-utils.dar` is the upstream Splice archive it was
-derived from (`splice-token-standard-utils-2.0.0.dar` from the Splice `0.8.4`
+derived from (`splice-token-standard-utils-2.0.0.dar` from the Splice `0.9.1`
 `splice-node` release tarball), kept alongside as the frozen upstream artifact
 and used as the regeneration input. Do not hand-edit `intermediate.binpb`: the
 refresh script regenerates it from this DAR on every run, and CI regenerates

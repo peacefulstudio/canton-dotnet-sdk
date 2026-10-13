@@ -46,7 +46,7 @@ internal sealed record MismatchedKindMarker(string Owner) : ITemplate, IDamlReco
 public class GrpcContractStreamProjectorInterfaceKindMarkerTests
 {
     private static readonly ProtoIdentifier MatchingInterfaceId =
-        new() { PackageId = "mismatched-view-pkg", ModuleName = "Mismatched.Token", EntityName = "IMismatched" };
+        new() { PackageId = "mismatched-pkg", ModuleName = "Mismatched.Token", EntityName = "IMismatched" };
 
     private static InterfaceView UndecodableMatchingView() => new()
     {
@@ -70,6 +70,7 @@ public class GrpcContractStreamProjectorInterfaceKindMarkerTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00mismatched",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Impl.Module", EntityName = "Impl" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 15L,
@@ -100,6 +101,7 @@ public class GrpcContractStreamProjectorInterfaceKindMarkerTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00mismatched",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Impl.Module", EntityName = "Impl" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 20L,
@@ -122,6 +124,7 @@ public class GrpcContractStreamProjectorInterfaceKindMarkerTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00mismatched",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Impl.Module", EntityName = "Impl" },
             Offset = 25L,
         };
@@ -149,6 +152,7 @@ public class GrpcContractStreamProjectorInterfaceKindMarkerTests
         var created = new ProtoCreatedEvent
         {
             ContractId = "00mismatched",
+            PackageName = "token-impl",
             TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Impl.Module", EntityName = "Impl" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 30L,

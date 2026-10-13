@@ -210,4 +210,15 @@ public class ChoiceEmitterByKeyCommandTests
         emitted.RecordBody.Should().NotContain("ByKeyCommand");
         emitted.SiblingTypes.Should().NotContain("ByKeyCommand");
     }
+
+    [Fact]
+    public void ChoiceEmitterByKeyCommand_names_the_package_of_the_template()
+    {
+        var template = Template(new DamlTypeRef(LocalPackageId, "Main", "VaultKey"), Choice("Spawn", ContractIdOf("Token")));
+
+        var emitted = Emit(template);
+
+        emitted.RecordBody.Should().Contain("key.ToRecord(),");
+        emitted.RecordBody.Should().Contain("{ PackageName = global::Test.Package.Main.Vault.PackageName };");
+    }
 }

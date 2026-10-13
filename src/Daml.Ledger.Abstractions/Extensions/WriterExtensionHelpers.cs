@@ -17,4 +17,10 @@ internal static class WriterExtensionHelpers
                 nameof(commandId));
         }
     }
+
+    internal static CommandId CommandIdOrMint(CommandId? commandId)
+    {
+        ThrowIfDefault(commandId);
+        return commandId ?? new CommandId(Guid.NewGuid().ToString());
+    }
 }

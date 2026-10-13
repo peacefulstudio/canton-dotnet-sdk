@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Com.Daml.Ledger.Api.V2;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using AwesomeAssertions;
 using Xunit;
@@ -294,5 +295,54 @@ public class GrpcSubscribeRequestBuilderTests
         var filtersByParty = transactionFormat.EventFormat.FiltersByParty;
         filtersByParty.Keys.Should().BeEquivalentTo(["alice", "observer"]);
         filtersByParty.Values.Should().OnlyContain(filters => filters.Cumulative.Count == 0);
+    }
+
+    private static readonly DamlTypeDescriptor GadgetInterface = new(
+        new Daml.Runtime.Data.Identifier("gadget-pkg-id", "Acme.Gadget", "IGadget"), DamlTypeKind.Interface, "gadget-package");
+
+    [Fact]
+    public void BuildTransactionFormat_keeps_the_wildcard_and_asks_for_each_requested_interface_view()
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Party> { (Party)"alice" },
+            new HashSet<Party> { (Party)"observer" });
+
+        var transactionFormat = GrpcSubscribeRequestBuilder.BuildTransactionFormat(submitter, [GadgetInterface]);
+
+        transactionFormat.TransactionShape.Should().Be(TransactionShape.LedgerEffects);
+        var filtersByParty = transactionFormat.EventFormat.FiltersByParty;
+        filtersByParty.Keys.Should().BeEquivalentTo(["alice", "observer"]);
+        foreach (var filters in filtersByParty.Values)
+        {
+            filters.Cumulative.Should().HaveCount(2);
+            filters.Cumulative[0].WildcardFilter.Should().NotBeNull();
+            filters.Cumulative[0].WildcardFilter.IncludeCreatedEventBlob.Should().BeFalse();
+            var interfaceFilter = filters.Cumulative[1].InterfaceFilter;
+            interfaceFilter.InterfaceId.PackageId.Should().Be("#gadget-package");
+            interfaceFilter.InterfaceId.ModuleName.Should().Be("Acme.Gadget");
+            interfaceFilter.InterfaceId.EntityName.Should().Be("IGadget");
+            interfaceFilter.IncludeInterfaceView.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public void BuildTransactionFormat_without_interface_requests_stays_the_plain_wildcard()
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(new HashSet<Party> { (Party)"alice" }, new HashSet<Party>());
+
+        var filtersByParty = GrpcSubscribeRequestBuilder.BuildTransactionFormat(submitter, []).EventFormat.FiltersByParty;
+
+        filtersByParty["alice"].Cumulative.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BuildTransactionUpdateFormat_carries_the_requested_interface_views()
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(new HashSet<Party> { (Party)"alice" }, new HashSet<Party>());
+
+        var updateFormat = GrpcSubscribeRequestBuilder.BuildTransactionUpdateFormat(submitter, [GadgetInterface]);
+
+        updateFormat.IncludeTransactions.EventFormat.FiltersByParty["alice"].Cumulative
+            .Should().ContainSingle(filter => filter.InterfaceFilter != null);
     }
 }

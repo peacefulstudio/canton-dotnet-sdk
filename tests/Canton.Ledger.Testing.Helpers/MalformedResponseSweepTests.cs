@@ -45,7 +45,7 @@ public abstract partial class MalformedResponseSweepTests
         .. Rows("GetActiveContractsPageAsync(7)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.BodyUnreadable),
         .. Rows("GetLatestPrunedOffsetsAsync(2)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.OffsetNonNumeric, MalformedField.BodyUnreadable),
         .. Rows("GetUpdatesPageAsync(8)", CommitState.NotCommitted, MalformedField.BodyUnreadable),
-        .. Rows("PrepareSubmissionAsync(3)", CommitState.NotCommitted, MalformedField.ResultMissing, MalformedField.TimestampOutOfRange, MalformedField.EnumValueUnknown, MalformedField.BodyUnreadable),
+        .. Rows("PrepareSubmissionAsync(4)", CommitState.NotCommitted, MalformedField.ResultMissing, MalformedField.TimestampOutOfRange, MalformedField.EnumValueUnknown, MalformedField.BodyUnreadable),
         .. Rows("ExecuteSubmissionAsync(3)", CommitState.Unknown, MalformedField.BodyUnreadable),
         .. Rows("ExecuteSubmissionAndWaitAsync(3)", CommitState.Committed, MalformedField.OffsetNegative, MalformedField.BodyUnreadable),
         .. Rows("ExecuteSubmissionAndWaitForTransactionAsync(4)", CommitState.Committed, MalformedField.ResultMissing, MalformedField.OffsetNegative, MalformedField.ActingPartyEmpty, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),

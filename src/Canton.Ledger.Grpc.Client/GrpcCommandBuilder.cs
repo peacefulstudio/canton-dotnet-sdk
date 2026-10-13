@@ -53,6 +53,11 @@ internal sealed class GrpcCommandBuilder
             commands.DisclosedContracts.AddRange(disclosedContracts.Select(ToProtoDisclosedContract));
         }
 
+        if (submission.PackageIdSelectionPreference is { } packageIdSelectionPreference)
+        {
+            commands.PackageIdSelectionPreference.AddRange(packageIdSelectionPreference);
+        }
+
         if (submission.MinLedgerTime is { } minLedgerTime)
         {
             var (absolute, relative) = ToProtoMinLedgerTime(minLedgerTime);
@@ -70,7 +75,7 @@ internal sealed class GrpcCommandBuilder
                 break;
         }
 
-        foreach (var cmd in submission.Commands)
+        foreach (var cmd in submission.AddressedCommands)
         {
             var protoCommand = cmd switch
             {

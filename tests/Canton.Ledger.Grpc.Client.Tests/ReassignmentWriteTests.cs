@@ -99,6 +99,7 @@ public sealed class LedgerClientReassignmentWriteTests : IDisposable
             Reassigned(new ProtoV2.UnassignedEvent
             {
                 ContractId = "00holding",
+                PackageName = "token-impl",
                 TemplateId = new ProtoV2.Identifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
                 Source = "sync::source",
                 Target = "sync::target",

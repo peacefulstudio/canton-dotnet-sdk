@@ -13,4 +13,5 @@ internal sealed record RestCall(
     string MalformedBodyMessagePrefix,
     LedgerCallKind Kind,
     bool Replayable = true,
-    string? Accept = null);
+    string? Accept = null,
+    string? CommandId = null);

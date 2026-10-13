@@ -35,19 +35,19 @@ public interface IAnnotated : global::Daml.Runtime.Contracts.IDamlInterface, glo
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68", "RichTypes", "Annotated");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "Annotated");
 
     /// <summary>Gets the package ID.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
 
     /// <summary>Gets the package name.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "richtypes-hbefba41fabc8";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "richtypes-ha8d30776aa45";
 
     /// <summary>Gets the package version.</summary>
     static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68", "RichTypes", "Annotated"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "richtypes-hbefba41fabc8");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "Annotated"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "richtypes-ha8d30776aa45");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static global::Daml.Runtime.Contracts.ViewDescriptor<IAnnotated, global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView> View { get; } = new();
@@ -120,7 +120,7 @@ public static class IAnnotatedExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

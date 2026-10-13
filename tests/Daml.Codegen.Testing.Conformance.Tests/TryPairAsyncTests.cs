@@ -28,7 +28,10 @@ public class TryPairAsyncTests
             ExerciseResult: result,
             Consuming: false,
             ActingParties: [Patron],
-            WitnessParties: [Patron]);
+            WitnessParties: [Patron])
+        {
+            PackageName = "richtypes-ha8d30776aa45",
+        };
 
     private static FakeLedgerClient ClientCommitting(ExercisedEvent exercised) =>
         new(_ => new ExerciseOutcome<TransactionResult>.One(

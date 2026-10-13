@@ -21,7 +21,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 /// </summary>
 public sealed class RestInterfaceChoiceDecodeTests : IDisposable
 {
-    private const string RichTypesPackageId = "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    private const string RichTypesPackageId = "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
     private static readonly Party Alice = new("party::alice");
 
     private readonly List<StubHttpClientFactory> _factories = [];
@@ -47,6 +47,7 @@ public sealed class RestInterfaceChoiceDecodeTests : IDisposable
                   "offset": "1",
                   "nodeId": 0,
                   "contractId": "00asset",
+                  "packageName": "richtypes-ha8d30776aa45",
                   "templateId": {"packageId": "{{RichTypesPackageId}}", "moduleName": "RichTypes", "entityName": "Asset"},
                   "interfaceId": {"packageId": "{{interfacePackageId}}", "moduleName": "RichTypes", "entityName": "Holding"},
                   "choice": "{{choice}}",
@@ -120,14 +121,12 @@ public sealed class RestInterfaceChoiceDecodeTests : IDisposable
     }
 
     [Fact]
-    public void Project_resolves_the_interface_under_another_package_id_by_its_module_and_entity()
+    public void Project_does_not_resolve_the_interface_under_another_package_id_because_interfaces_are_not_upgradeable()
     {
         var exercised = ProjectedExercise("upgraded-pkg", "Reissue", """{"newAmount": "7.5"}""", "\"00reissued\"");
 
-        exercised.ChoiceArgument.Should().BeOfType<DamlRecord>()
-            .Which.Fields.Should().ContainSingle()
-            .Which.Should().Be(new DamlField("newAmount", new DamlNumeric(7.5m)));
-        exercised.ExerciseResult.Should().Be(new DamlContractId("00reissued"));
+        exercised.ChoiceArgument.Should().Be(new DamlUndecodedJson("""{"newAmount": "7.5"}"""));
+        exercised.ExerciseResult.Should().Be(new DamlUndecodedJson("\"00reissued\""));
     }
 
     [Fact]

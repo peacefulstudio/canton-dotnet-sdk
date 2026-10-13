@@ -12,8 +12,8 @@ namespace Canton.Ledger.Rest.Client;
 /// (<c>POST /v2/updates</c>, <c>POST /v2/commands/completions</c>): one JSON array of entries,
 /// <c>[]</c> when the window closed with nothing to report — and for one page of the ACS snapshot
 /// (<c>POST /v2/state/active-contracts-page</c>): one JSON object carrying the page's entries and
-/// the token to the next page. Each window is a blocking call whose whole body is buffered by
-/// the transport before this parses it, unlike the gRPC transport's true server streaming; the
+/// the token to the next page. Each window is a blocking call whose whole body is read, up to
+/// <see cref="RestLedgerClientOptions.MaxResponseBodyBytes"/>, before this parses it, unlike the gRPC transport's true server streaming; the
 /// pagination loop stitches the windows back into one continuous stream.
 /// </summary>
 internal static class RestStreamBodyReader

@@ -35,19 +35,19 @@ public interface IStewardship : global::Daml.Runtime.Contracts.IDamlInterface, g
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5", "ContractKeys", "Stewardship");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2", "ContractKeys", "Stewardship");
 
     /// <summary>Gets the package ID.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2";
 
     /// <summary>Gets the package name.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "contractkeys-hb3f04acc1cbd";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "contractkeys-hcc6e8a4f16d9";
 
     /// <summary>Gets the package version.</summary>
     static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5", "ContractKeys", "Stewardship"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "contractkeys-hb3f04acc1cbd");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2", "ContractKeys", "Stewardship"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "contractkeys-hcc6e8a4f16d9");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static global::Daml.Runtime.Contracts.ViewDescriptor<IStewardship, global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView> View { get; } = new();
@@ -131,7 +131,7 @@ public static class IStewardshipExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -181,7 +181,7 @@ public static class IStewardshipExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

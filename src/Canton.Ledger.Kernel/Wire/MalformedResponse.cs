@@ -18,7 +18,7 @@ internal static class MalformedResponse
         new(detail, innerException);
 
     internal static bool IsWireDecodeFailure(Exception exception) =>
-        exception is FormatException or MalformedTransactionTreeException or MalformedResponseException;
+        exception is FormatException or MalformedTransactionTreeException or MalformedResponseException or PreparedHashMismatchException;
 
     internal static TDecoded Decoding<TWire, TDecoded>(TWire wire, Func<TWire, TDecoded> decode)
     {

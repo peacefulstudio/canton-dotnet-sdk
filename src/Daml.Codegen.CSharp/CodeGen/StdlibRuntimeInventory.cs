@@ -59,7 +59,7 @@ internal static class StdlibRuntimeInventory
 
     /// <summary>
     /// Serializable stdlib types that no <c>Daml.Runtime</c> binding covers, with the reason each
-    /// is unsupported by this SDK for now. Empty: every serializable type in the SDK 3.5.12 stable
+    /// is unsupported by this SDK for now. Empty: every serializable type in the SDK 3.6.0 stable
     /// packages is hand-mapped or generated.
     /// </summary>
     public static IReadOnlyDictionary<(string Module, string Name), string> Excluded { get; } =

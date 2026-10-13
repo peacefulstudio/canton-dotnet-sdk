@@ -295,6 +295,7 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
             "nodeId": {{{nodeId}}},
             "acsDelta": true,
             "contractId": "{{{contractId}}}",
+            "packageName": "pkg-name",
             "templateId": {{{TemplateIdJson}}},
             "createArgument": {"owner": "party::alice"}
           }
@@ -309,6 +310,7 @@ public sealed class RestLedgerClientTransactionTreeTests : IDisposable
             "nodeId": 0,
             "lastDescendantNodeId": 1,
             "contractId": "00target",
+            "packageName": "pkg-name",
             "templateId": {{TemplateIdJson}},
             "choice": "ExecuteSwap",
             "choiceArgument": {},

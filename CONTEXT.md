@@ -250,9 +250,10 @@ The set of Daml-LF versions a released codegen accepts. Supported means
 **proven by a fixture exercised in CI** — not merely claimed, and not merely emittable by
 some compiler. A fixture proves more than one thing and they are counted separately. The
 version its target names is proven on the **emit** path *and* on the **read** path, because
-the main package is decoded at that version — so 2.2 and 2.3 are read-proven by the main
-packages of `defaulttarget` and `contractkeys`, and would move with them if either were
-retargeted. The versions its dependency packages carry are proven on the **read** path only.
+the main package is decoded at that version — so 2.3 is read-proven by the main
+packages of `defaulttarget` and `contractkeys`, and 2.2 by the main package of
+`nonserializable`, which pins `--target=2.2` because the default is 2.3. Each would move with
+its fixture if retargeted. The versions its dependency packages carry are proven on the **read** path only.
 At the pinned SDK the per-module component packages behind `daml-prim` and `daml-stdlib` are
 Daml-LF 2.1 and travel unchanged inside every DAR that toolchain builds whatever its target,
 so 2.1 alone is read-proven by every fixture in the tree and no retarget can remove it. A
@@ -262,8 +263,8 @@ range and the Daml-LF range no longer coincide and must be stated separately), r
 fixture's target as the whole of what that fixture proves
 
 **Default Daml-LF version**:
-Daml-LF **2.2** — what the compiler emits when a project sets no target, on both the 3.4 and
-3.5 lines, silently and with no diagnostic. Project scaffolding does not write a target
+Daml-LF **2.3** — what the compiler emits when a project sets no target on the Daml SDK 3.6
+line (it was 2.2 on the 3.4 and 3.5 lines), silently and with no diagnostic. Project scaffolding does not write a target
 either, so this is the version an ordinary consumer produces without deciding to. The
 `defaulttarget` conformance fixture pins no target for exactly this reason, so the default is
 covered on both the read and the emit path.
@@ -343,8 +344,11 @@ _Avoid_: Auth handler, credential store
 **Command id**:
 The deduplication identifier of a submission (`CommandId`): the participant treats a second
 submission with the same command id from the same user and act-as parties within the
-deduplication period as a duplicate. A retry after an unknown outcome resubmits with the same
-command id. Distinct from a workflow id, which only correlates and is never deduplicated.
+deduplication period as a duplicate. After an unknown outcome, look the command id up on the
+completion stream (`CompletionStreamAsync`) rather than resubmitting: a resubmitted consuming
+exercise that already committed is rejected with `CONTRACT_NOT_FOUND`. A failed write's
+`LedgerOperationException.CommandId` names it, including an id the helpers generated. Distinct
+from a workflow id, which only correlates and is never deduplicated.
 _Avoid_: Request id, correlation id
 
 **Completion**:
@@ -375,8 +379,10 @@ The process-wide table (`GeneratedTypeReaders`) that maps a Daml identifier to t
 code that decodes it — a template's create-argument reader, its key descriptor, and the choice
 descriptors of a template or interface. Each generated package fills it from its own module
 initializer; nothing scans for types, so a hand-written type is never in it. A lookup tries the
-exact package id, then the one type declaring the same module and entity, and answers
-`Resolved`, `Missing` or `Ambiguous`. The JSON transport decodes payloads through it, and a
+exact package id, then, only when the caller supplies the event's package name, the one type
+declaring the same package name, module and entity; a lookup without a package name never falls
+back, and a package name never matches another package's module and entity. It answers
+`Resolved`, `Missing` or `Ambiguous`, and two versions of one package share a package name. The JSON transport decodes payloads through it, and a
 hand-built exercise finds its choice's result decoder there. When the JSON transport finds
 no single generated type for a node, it carries that node's payload as an **Undecoded value**
 instead of failing the transaction.
@@ -392,9 +398,10 @@ _Avoid_: Unknown value, raw value
 
 **Commit state**:
 Whether a failed call's command reached the ledger (`CommitState`): `NotCommitted` (retry
-freely), `Committed` (never resubmit) or `Unknown` (retry only with the same command id). It
-follows the kind of call: a failed read is always `NotCommitted`, and a write the participant
-may have received without answering is `Unknown`. A
+freely), `Committed` (never resubmit) or `Unknown` (look the command id up on the completion stream
+before resubmitting). It follows the kind of call: a failed read is always `NotCommitted`, and a
+write the participant may have received without answering is `Unknown`, as is a retried write the
+participant rejected with anything but `DUPLICATE_COMMAND`. A
 participant rejection of `DUPLICATE_COMMAND` is `Committed` (the ledger already accepted that
 command id; `Unknown` when its `accepted` metadata is `"false"`), and `SUBMISSION_ALREADY_IN_FLIGHT`
 is `Unknown`; the error id is checked before the category.
@@ -418,8 +425,9 @@ _Avoid_: Shared contract, attached contract
 **Interactive submission**:
 Submitting in three steps: the participant prepares the commands (interprets and hashes them
 without executing), the acting parties sign the hash outside the participant, and the
-participant executes the signed submission. The prepared transaction is opaque to the SDK; a
-signer that does not trust the preparing participant decodes it before signing.
+participant executes the signed submission. The SDK recomputes the hash from the prepared
+transaction under schemes V2 and V3 and refuses a hash that differs, so the signature authorizes
+the transaction the participant returned. A scheme the SDK cannot recompute, such as V4, is refused.
 _Avoid_: Two-phase submit, offline submission
 
 **External party**:

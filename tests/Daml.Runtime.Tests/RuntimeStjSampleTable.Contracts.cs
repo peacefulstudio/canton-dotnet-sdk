@@ -18,13 +18,17 @@ internal static partial class RuntimeStjSampleTable
         new("1:0", "00c0ffee", SampleIdentifier, SampleRecord, Witnesses, Eq(Alice), Eq(Bob, Carol), SampleContractKey, SampleInstant);
 
     private static ExercisedEvent SampleExercisedEvent =>
-        new("00c0ffee", SampleIdentifier, OtherIdentifier, new ChoiceName("Transfer"), new DamlParty(Bob.Value), new DamlInt64(5), true, Eq(Alice, Carol), Witnesses);
+        new("00c0ffee", SampleIdentifier, OtherIdentifier, new ChoiceName("Transfer"), new DamlParty(Bob.Value), new DamlInt64(5), true, Eq(Alice, Carol), Witnesses)
+        {
+            PackageName = "sample-package",
+        };
 
     private static CreatedContract SampleCreatedContract =>
         new("1:0", "00c0ffee", SampleIdentifier, SampleRecord, Witnesses, Eq(Alice), Eq(Bob, Carol), SampleContractKey, SampleInstant)
         {
             InterfaceIds = Eq(SampleIdentifier, OtherIdentifier),
             UndecodedPayload = SampleUndecodedJson,
+            PackageName = "sample-package",
         };
 
     private static TreeEvent.Created SampleTreeCreated =>
@@ -32,6 +36,7 @@ internal static partial class RuntimeStjSampleTable
         {
             InterfaceIds = Eq(SampleIdentifier, OtherIdentifier),
             UndecodedCreateArguments = SampleUndecodedJson,
+            PackageName = "sample-package",
         };
 
     private static TreeEvent.Exercised SampleTreeExercised =>
@@ -46,7 +51,10 @@ internal static partial class RuntimeStjSampleTable
             true,
             Eq(Alice, Carol),
             Witnesses,
-            Eq<TreeEvent>(SampleTreeCreated, SampleTreeCreated with { EventId = "1:2" }));
+            Eq<TreeEvent>(SampleTreeCreated, SampleTreeCreated with { EventId = "1:2" }))
+        {
+            PackageName = "sample-package",
+        };
 
     private static void AddContracts(Dictionary<Type, object[]> samples)
     {

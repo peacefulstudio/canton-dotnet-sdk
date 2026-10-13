@@ -73,7 +73,7 @@ public sealed class RestPayloadDecoderTests
     [Fact]
     public void CreatePayloadOf_resolves_the_one_template_declaring_the_module_and_entity_under_another_package_id()
     {
-        var created = CreatedEvent("upgraded-pkg:Fallback.Mod:Thing", """{"owner": "party::alice"}""");
+        var created = CreatedEvent("upgraded-pkg:Fallback.Mod:Thing", """{"owner": "party::alice"}""", packageName: "fallback");
 
         var payload = RestPayloadDecoder.CreatePayloadOf(created, new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing"));
 
@@ -83,7 +83,7 @@ public sealed class RestPayloadDecoderTests
     [Fact]
     public void CreatePayloadOf_carries_the_create_argument_when_templates_of_two_other_packages_declare_the_module_and_entity()
     {
-        var created = CreatedEvent("upgraded-pkg:Divergent.Mod:Thing", """{"owner":"alice::ns"}""");
+        var created = CreatedEvent("upgraded-pkg:Divergent.Mod:Thing", """{"owner":"alice::ns"}""", packageName: "divergent");
         var templateId = new RuntimeIdentifier("upgraded-pkg", "Divergent.Mod", "Thing");
 
         var payload = RestPayloadDecoder.CreatePayloadOf(created, templateId);
@@ -114,6 +114,97 @@ public sealed class RestPayloadDecoderTests
 
         payload.Arguments.Should().Be(new DamlRecord(templateId, []));
         payload.Undecoded.Should().Be(new DamlUndecodedJson("""{"amount":"12.5","owner":"alice::ns"}"""));
+    }
+
+    [Fact]
+    public void CreatePayloadOf_carries_the_create_argument_when_the_event_has_no_package_name_and_only_the_module_and_entity_match()
+    {
+        var created = CreatedEvent("upgraded-pkg:Fallback.Mod:Thing", """{"owner": "party::alice"}""");
+        var templateId = new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing");
+
+        var payload = RestPayloadDecoder.CreatePayloadOf(created, templateId);
+
+        payload.Arguments.Should().Be(new DamlRecord(templateId, []));
+        payload.Undecoded.Should().Be(new DamlUndecodedJson("""{"owner": "party::alice"}"""));
+    }
+
+    [Fact]
+    public void CreatePayloadOf_carries_the_create_argument_when_the_package_name_differs_though_the_module_and_entity_match()
+    {
+        var created = CreatedEvent("upgraded-pkg:Fallback.Mod:Thing", """{"owner": "party::alice"}""", packageName: "someone-else");
+        var templateId = new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing");
+
+        var payload = RestPayloadDecoder.CreatePayloadOf(created, templateId);
+
+        payload.Arguments.Should().Be(new DamlRecord(templateId, []));
+        payload.Undecoded.Should().Be(new DamlUndecodedJson("""{"owner": "party::alice"}"""));
+    }
+
+    [Fact]
+    public void CreatePayloadOf_carries_the_argument_with_its_package_id_when_a_package_name_fallback_payload_does_not_fit_the_generated_type()
+    {
+        var created = CreatedEvent("upgraded-pkg:Fallback.Mod:Thing", """{"renamedOwner": "party::alice"}""", packageName: "fallback");
+        var templateId = new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing");
+
+        var payload = RestPayloadDecoder.CreatePayloadOf(created, templateId);
+
+        payload.Arguments.Should().Be(new DamlRecord(templateId, []));
+        payload.Undecoded.Should().Be(new DamlUndecodedJson("""{"renamedOwner": "party::alice"}""") { PackageId = "upgraded-pkg" });
+        payload.Undecoded!.PackageId.Should().Be("upgraded-pkg");
+    }
+
+    [Fact]
+    public void CreatePayloadOf_still_refuses_an_exact_package_id_payload_that_does_not_fit_the_generated_type()
+    {
+        var created = CreatedEvent("fallback-pkg:Fallback.Mod:Thing", """{"renamedOwner": "party::alice"}""", packageName: "fallback");
+
+        FluentActions.Invoking(() => RestPayloadDecoder.CreatePayloadOf(
+                created, new RuntimeIdentifier("fallback-pkg", "Fallback.Mod", "Thing")))
+            .Should().Throw<MalformedResponseException>();
+    }
+
+    [Fact]
+    public void ContractKeyOf_carries_the_key_with_its_package_id_when_a_package_name_fallback_key_does_not_fit()
+    {
+        var created = CreatedEvent(
+            "upgraded-pkg:Fallback.Mod:Thing", """{"owner": "party::alice"}""", contractKeyJson: "7", packageName: "fallback");
+
+        var key = RestPayloadDecoder.ContractKeyOf(created, new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing"));
+
+        key!.Value.Should().Be(new DamlUndecodedJson("7") { PackageId = "upgraded-pkg" });
+    }
+
+    [Fact]
+    public void ContractKeyOf_carries_the_key_when_the_event_has_no_package_name_and_only_the_module_and_entity_match()
+    {
+        var created = CreatedEvent("upgraded-pkg:Fallback.Mod:Thing", "{}", contractKeyJson: "\"party::alice\"");
+
+        var key = RestPayloadDecoder.ContractKeyOf(created, new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing"));
+
+        key!.Value.Should().Be(new DamlUndecodedJson("\"party::alice\""));
+    }
+
+    [Fact]
+    public void ExercisePayloadsOf_carries_the_payloads_when_the_event_has_no_package_name_and_only_the_module_and_entity_match()
+    {
+        var exercised = ExercisedEvent("upgraded-pkg:Fallback.Mod:Thing", "Split");
+
+        var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing"));
+
+        payloads.Argument.Should().Be(new DamlUndecodedJson("{}"));
+        payloads.Result.Should().Be(new DamlUndecodedJson("\"7\""));
+    }
+
+    [Fact]
+    public void ExercisePayloadsOf_carries_the_payloads_with_their_package_id_when_a_package_name_fallback_result_does_not_fit()
+    {
+        var exercised = ExercisedEvent(
+            "upgraded-pkg:Fallback.Mod:Thing", "Split", exerciseResultJson: "\"not-a-number\"", packageName: "fallback");
+
+        var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing"));
+
+        payloads.Argument.Should().Be(new DamlUndecodedJson("{}") { PackageId = "upgraded-pkg" });
+        payloads.Result.Should().Be(new DamlUndecodedJson("\"not-a-number\"") { PackageId = "upgraded-pkg" });
     }
 
     [Fact]
@@ -183,7 +274,7 @@ public sealed class RestPayloadDecoderTests
     [Fact]
     public void ExercisePayloadsOf_resolves_the_one_template_declaring_the_module_and_entity_under_another_package_id()
     {
-        var exercised = ExercisedEvent("upgraded-pkg:Fallback.Mod:Thing", "Split");
+        var exercised = ExercisedEvent("upgraded-pkg:Fallback.Mod:Thing", "Split", packageName: "fallback");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier("upgraded-pkg", "Fallback.Mod", "Thing"));
 
@@ -215,7 +306,7 @@ public sealed class RestPayloadDecoderTests
     [Fact]
     public void ExercisePayloadsOf_carries_the_payloads_when_templates_of_two_other_packages_declare_the_module_and_entity()
     {
-        var exercised = ExercisedEvent("upgraded-pkg:Divergent.Mod:Thing", "Split");
+        var exercised = ExercisedEvent("upgraded-pkg:Divergent.Mod:Thing", "Split", packageName: "divergent");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier("upgraded-pkg", "Divergent.Mod", "Thing"));
 
@@ -257,13 +348,15 @@ public sealed class RestPayloadDecoderTests
     }
 
     [Fact]
-    public void ExercisePayloadsOf_resolves_the_one_interface_declaring_the_module_and_entity_under_another_package_id()
+    public void ExercisePayloadsOf_never_resolves_an_interface_declared_under_another_package_id()
     {
-        var exercised = ExercisedEvent("impl-pkg:Impl.Mod:Thing", "Split", interfaceId: "upgraded-pkg:Iface.Mod:IThing");
+        var exercised = ExercisedEvent(
+            "impl-pkg:Impl.Mod:Thing", "Split", interfaceId: "upgraded-pkg:Iface.Mod:IThing", packageName: "iface");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier("impl-pkg", "Impl.Mod", "Thing"));
 
-        payloads.Result.Should().Be(new DamlInt64(7));
+        payloads.Argument.Should().Be(new DamlUndecodedJson("{}"));
+        payloads.Result.Should().Be(new DamlUndecodedJson("\"7\""));
     }
 
     [Fact]
@@ -303,7 +396,7 @@ public sealed class RestPayloadDecoderTests
     public void The_generated_conformance_template_registers_its_key()
     {
         var created = CreatedEvent(
-            "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68:ContractKeys:Steward", "{}", contractKeyJson: "\"party::alice\"");
+            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:ContractKeys:Steward", "{}", contractKeyJson: "\"party::alice\"");
 
         var key = RestPayloadDecoder.ContractKeyOf(created, Steward.TemplateId);
 
@@ -314,7 +407,7 @@ public sealed class RestPayloadDecoderTests
     public void The_generated_conformance_template_registers_its_choices()
     {
         var exercised = ExercisedEvent(
-            "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68:ContractKeys:Account", "Archive", exerciseResultJson: "{}");
+            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:ContractKeys:Account", "Archive", exerciseResultJson: "{}");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, Account.TemplateId);
 
@@ -325,35 +418,39 @@ public sealed class RestPayloadDecoderTests
     public void The_generated_conformance_interface_registers_its_choices()
     {
         var exercised = ExercisedEvent(
-            "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68:RichTypes:Asset",
+            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:RichTypes:Asset",
             "Archive",
-            interfaceId: "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68:RichTypes:Holding",
+            interfaceId: "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:RichTypes:Holding",
             exerciseResultJson: "{}");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier(
-            "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68", "RichTypes", "Asset"));
+            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "Asset"));
 
         payloads.Result.Should().Be(DamlUnit.Instance);
     }
 
-    private static WireCreatedEvent CreatedEvent(string templateId, string createArgumentJson, string? contractKeyJson = null) =>
+    private static WireCreatedEvent CreatedEvent(
+        string templateId, string createArgumentJson, string? contractKeyJson = null, string? packageName = null) =>
         JsonSerializer.Deserialize<WireCreatedEvent>(
             $$"""
             {
               "contractId": "00created",
               "templateId": "{{templateId}}",
+              {{(packageName is null ? string.Empty : $"\"packageName\": \"{packageName}\",")}}
               "createArgument": {{createArgumentJson}}
               {{(contractKeyJson is null ? string.Empty : $", \"contractKey\": {contractKeyJson}")}}
             }
             """,
             RestRefitSettings.SerializerOptions)!;
 
-    private static WireExercisedEvent ExercisedEvent(string templateId, string choice, string? interfaceId = null, string exerciseResultJson = "\"7\"") =>
+    private static WireExercisedEvent ExercisedEvent(
+        string templateId, string choice, string? interfaceId = null, string exerciseResultJson = "\"7\"", string? packageName = null) =>
         JsonSerializer.Deserialize<WireExercisedEvent>(
             $$"""
             {
               "contractId": "00exercised",
               "templateId": "{{templateId}}",
+              {{(packageName is null ? string.Empty : $"\"packageName\": \"{packageName}\",")}}
               {{(interfaceId is null ? string.Empty : $"\"interfaceId\": \"{interfaceId}\",")}}
               "choice": "{{choice}}",
               "choiceArgument": {},

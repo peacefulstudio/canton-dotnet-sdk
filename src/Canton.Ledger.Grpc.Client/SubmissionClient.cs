@@ -26,9 +26,7 @@ internal sealed partial class SubmissionClient
     private readonly CommandSubmissionService.CommandSubmissionServiceClient _commandSubmissionService;
     private readonly LedgerClientOptions _options;
     private readonly ILogger _logger;
-    private readonly Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> _pointReadByOffset;
-    private readonly Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> _acsDeltaPointReadByOffset;
-    private readonly Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionTree>> _treePointReadByOffset;
+    private readonly Func<long, RuntimeCommands.SubmitterInfo, IReadOnlyList<DamlTypeDescriptor>, CancellationToken, Task<Transaction>> _readTransactionAtOffset;
     private readonly GrpcCommandBuilder _commandBuilder;
 
     internal SubmissionClient(
@@ -38,9 +36,7 @@ internal sealed partial class SubmissionClient
         GrpcCommandBuilder commandBuilder,
         LedgerClientOptions options,
         ILogger logger,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> pointReadByOffset,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionResult>> acsDeltaPointReadByOffset,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TransactionTree>> treePointReadByOffset)
+        Func<long, RuntimeCommands.SubmitterInfo, IReadOnlyList<DamlTypeDescriptor>, CancellationToken, Task<Transaction>> readTransactionAtOffset)
     {
         _invoker = invoker;
         _commandService = commandService;
@@ -48,9 +44,7 @@ internal sealed partial class SubmissionClient
         _commandBuilder = commandBuilder;
         _options = options;
         _logger = logger;
-        _pointReadByOffset = pointReadByOffset;
-        _acsDeltaPointReadByOffset = acsDeltaPointReadByOffset;
-        _treePointReadByOffset = treePointReadByOffset;
+        _readTransactionAtOffset = readTransactionAtOffset;
     }
 
     internal Task<ExerciseOutcome<TResult>> TryExerciseAsync<TResult>(
@@ -72,7 +66,7 @@ internal sealed partial class SubmissionClient
 
                 var commands = _commandBuilder.BuildCommands(submission);
                 var outcome = await TrySubmitCoreAsync(
-                    commands, transactionFormat, submitter, GrpcTransactionResultProjector.Project, _pointReadByOffset,
+                    commands, transactionFormat, submitter, [], GrpcTransactionResultProjector.Project,
                     timeout, token).ConfigureAwait(false);
 
                 LogChoiceExerciseOutcome(outcome, command);
@@ -94,6 +88,7 @@ internal sealed partial class SubmissionClient
             async (_, token) =>
             {
                 var commands = _commandBuilder.BuildCommands(submission);
+                ResponseReceipt.RecordCommandId(commands.CommandId);
                 var response = await SubmitAndWaitCoreAsync(commands, timeout, token).ConfigureAwait(false);
                 return new SubmitAndWaitResult(
                     (RuntimeCommands.CommandId)commands.CommandId,
@@ -114,6 +109,7 @@ internal sealed partial class SubmissionClient
             async (_, token) =>
             {
                 var commands = _commandBuilder.BuildCommands(submission);
+                ResponseReceipt.RecordCommandId(commands.CommandId);
                 LogFireSubmit(_logger, commands.CommandId, submission.Commands.Count);
 
                 var request = new SubmitRequest { Commands = commands };
@@ -139,6 +135,7 @@ internal sealed partial class SubmissionClient
             async (_, token) =>
             {
                 var commands = _commandBuilder.BuildReassignmentCommands(submission);
+                ResponseReceipt.RecordCommandId(commands.CommandId);
                 LogFireReassignment(_logger, commands.CommandId, submission.Command.GetType().Name);
 
                 var request = new SubmitReassignmentRequest { ReassignmentCommands = commands };
@@ -164,56 +161,71 @@ internal sealed partial class SubmissionClient
             async (_, token) =>
             {
                 var commands = _commandBuilder.BuildReassignmentCommands(submission);
-                LogAwaitReassignment(_logger, commands.CommandId, submission.Command.GetType().Name);
-
-                var submitter = new RuntimeCommands.SubmitterInfo(
-                    new HashSet<Daml.Runtime.Data.Party> { submission.Submitter }, new HashSet<Daml.Runtime.Data.Party>());
-                var eventFormat = GrpcSubscribeRequestBuilder.BuildReassignmentEventFormat(
-                    submitter, GrpcMarkerMatcher<T>.StreamFilterIdentifier(), GrpcMarkerMatcher<T>.IsInterface);
-
-                var request = new SubmitAndWaitForReassignmentRequest
-                {
-                    ReassignmentCommands = commands,
-                    EventFormat = eventFormat,
-                };
-
-                try
-                {
-                    var response = await _invoker.InvokeAsync(
-                        (headers, deadline, callToken) =>
-                            _commandService.SubmitAndWaitForReassignmentAsync(request, headers, deadline, callToken),
-                        token,
-                        timeout).ConfigureAwait(false);
-
-                    ContractStreamEvent<T> projected;
-                    try
-                    {
-                        projected = ProjectReassignmentResult<T>(response);
-                    }
-                    catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
-                    {
-                        LogReassignmentResponseUndecodable(_logger, decodeFailure);
-                        return RpcCallEnding.CommittedUndecodable(
-                                $"Could not decode the reassignment in the ledger response: {decodeFailure.Message}",
-                                decodeFailure,
-                                response.Reassignment?.UpdateId)
-                            .ToOutcome<ContractStreamEvent<T>>();
-                    }
-
-                    return new ExerciseOutcome<ContractStreamEvent<T>>.One(projected);
-                }
-                catch (RpcException ex) when (CallerCancellation.Signals(ex, token))
-                {
-                    throw CallerCancellation.AsOperationCanceled(ex, token);
-                }
-                catch (RpcException ex)
-                {
-                    LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
-                    return RpcCallEnding.SubmissionRejected(ex, afterRetry: false).ToOutcome<ContractStreamEvent<T>>();
-                }
+                var outcome = await AwaitReassignmentAsync<T>(submission, commands, timeout, token).ConfigureAwait(false);
+                return outcome.WithCommandId(commands.CommandId);
             },
             RecordOutcome,
             cancellationToken);
+
+    private async Task<ExerciseOutcome<ContractStreamEvent<T>>> AwaitReassignmentAsync<T>(
+        ReassignmentSubmission submission,
+        ReassignmentCommands commands,
+        TimeSpan? timeout,
+        CancellationToken token)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        LogAwaitReassignment(_logger, commands.CommandId, submission.Command.GetType().Name);
+
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Daml.Runtime.Data.Party> { submission.Submitter }, new HashSet<Daml.Runtime.Data.Party>());
+        var eventFormat = GrpcSubscribeRequestBuilder.BuildReassignmentEventFormat(
+            submitter, GrpcMarkerMatcher<T>.StreamFilterIdentifier(), GrpcMarkerMatcher<T>.IsInterface);
+
+        var request = new SubmitAndWaitForReassignmentRequest
+        {
+            ReassignmentCommands = commands,
+            EventFormat = eventFormat,
+        };
+
+        try
+        {
+            var response = await _invoker.InvokeAsync(
+                (headers, deadline, callToken) =>
+                    _commandService.SubmitAndWaitForReassignmentAsync(request, headers, deadline, callToken),
+                token,
+                timeout).ConfigureAwait(false);
+
+            ContractStreamEvent<T> projected;
+            try
+            {
+                projected = ProjectReassignmentResult<T>(response);
+            }
+            catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
+            {
+                LogReassignmentResponseUndecodable(_logger, decodeFailure);
+                return RpcCallEnding.CommittedUndecodable(
+                        $"Could not decode the reassignment in the ledger response: {decodeFailure.Message}",
+                        decodeFailure,
+                        response.Reassignment?.UpdateId)
+                    .ToOutcome<ContractStreamEvent<T>>();
+            }
+
+            return new ExerciseOutcome<ContractStreamEvent<T>>.One(projected);
+        }
+        catch (RpcException ex) when (CallerCancellation.Signals(ex, token))
+        {
+            throw CallerCancellation.AsOperationCanceled(ex, token);
+        }
+        catch (TokenAcquisitionException tokenFailure)
+        {
+            return new LedgerCallEnding.NeverSent(tokenFailure).ToOutcome<ContractStreamEvent<T>>();
+        }
+        catch (RpcException ex)
+        {
+            LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
+            return RpcCallEnding.SubmissionRejected(ex, afterRetry: ResponseReceipt.CurrentCallRetried).ToOutcome<ContractStreamEvent<T>>();
+        }
+    }
 
     private static ContractStreamEvent<T> ProjectReassignmentResult<T>(SubmitAndWaitForReassignmentResponse response)
         where T : ITemplate, IDamlRecord<T>
@@ -241,10 +253,13 @@ internal sealed partial class SubmissionClient
                 var submitter = SubmitterFrom(submission);
                 return TrySubmitCoreAsync(
                     commands,
-                    submitter is { } actingSubmitter ? GrpcSubscribeRequestBuilder.BuildTransactionFormat(actingSubmitter) : null,
+                    submitter is { } actingSubmitter
+                        ? GrpcSubscribeRequestBuilder.BuildTransactionFormat(actingSubmitter, submission.InterfaceViewRequests)
+                        : null,
                     submitter,
-                    GrpcTransactionResultProjector.ProjectAcsDelta,
-                    _acsDeltaPointReadByOffset,
+                    submission.InterfaceViewRequests,
+                    transaction => GrpcTransactionResultProjector.ProjectAcsDelta(transaction)
+                        .WithRequestedInterfaces(submission.InterfaceViewRequests),
                     timeout,
                     token);
             },
@@ -269,8 +284,8 @@ internal sealed partial class SubmissionClient
                     commands,
                     GrpcSubscribeRequestBuilder.BuildTransactionFormat(submitter),
                     submitter,
+                    [],
                     GrpcTransactionTreeProjector.Project,
-                    _treePointReadByOffset,
                     timeout,
                     token);
             },
@@ -314,8 +329,22 @@ internal sealed partial class SubmissionClient
         Commands commands,
         TransactionFormat? transactionFormat,
         RuntimeCommands.SubmitterInfo? submitter,
+        IReadOnlyList<DamlTypeDescriptor> interfaceViews,
         Func<Transaction, TProjection> project,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TProjection>> pointReadByOffset,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await SendSubmissionAsync(
+            commands, transactionFormat, submitter, interfaceViews, project, timeout, cancellationToken).ConfigureAwait(false);
+        return outcome.WithCommandId(commands.CommandId);
+    }
+
+    private async Task<ExerciseOutcome<TProjection>> SendSubmissionAsync<TProjection>(
+        Commands commands,
+        TransactionFormat? transactionFormat,
+        RuntimeCommands.SubmitterInfo? submitter,
+        IReadOnlyList<DamlTypeDescriptor> interfaceViews,
+        Func<Transaction, TProjection> project,
         TimeSpan? timeout,
         CancellationToken cancellationToken)
     {
@@ -325,15 +354,11 @@ internal sealed partial class SubmissionClient
             request.TransactionFormat = transactionFormat;
         }
 
-        var attemptCount = 0;
         try
         {
             var response = await _invoker.InvokeAsync(
                 (headers, deadline, token) =>
-                {
-                    attemptCount++;
-                    return _commandService.SubmitAndWaitForTransactionAsync(request, headers, deadline, token);
-                },
+                    _commandService.SubmitAndWaitForTransactionAsync(request, headers, deadline, token),
                 cancellationToken,
                 timeout).ConfigureAwait(false);
 
@@ -367,10 +392,14 @@ internal sealed partial class SubmissionClient
         {
             throw CallerCancellation.AsOperationCanceled(ex, cancellationToken);
         }
+        catch (TokenAcquisitionException tokenFailure)
+        {
+            return new LedgerCallEnding.NeverSent(tokenFailure).ToOutcome<TProjection>();
+        }
         catch (RpcException ex)
         {
             LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
-            var ending = RpcCallEnding.SubmissionRejected(ex, afterRetry: attemptCount > 1);
+            var ending = RpcCallEnding.SubmissionRejected(ex, afterRetry: ResponseReceipt.CurrentCallRetried);
             var outcome = ending.ToOutcome<TProjection>();
             var verdict = ending.ToRetriedDuplicateVerdict();
             return verdict is RetriedDuplicateVerdict.NotARetriedDuplicate
@@ -378,9 +407,10 @@ internal sealed partial class SubmissionClient
                 : await ResolveRetriedDuplicateAsync(
                     commands.CommandId,
                     submitter,
+                    interfaceViews,
                     verdict,
                     outcome,
-                    pointReadByOffset,
+                    project,
                     cancellationToken).ConfigureAwait(false);
         }
     }
@@ -445,9 +475,10 @@ internal sealed partial class SubmissionClient
     private async Task<ExerciseOutcome<TProjection>> ResolveRetriedDuplicateAsync<TProjection>(
         string commandId,
         RuntimeCommands.SubmitterInfo? submitter,
+        IReadOnlyList<DamlTypeDescriptor> interfaceViews,
         RetriedDuplicateVerdict verdict,
         ExerciseOutcome<TProjection> duplicateError,
-        Func<long, RuntimeCommands.SubmitterInfo, CancellationToken, Task<TProjection>> pointReadByOffset,
+        Func<Transaction, TProjection> project,
         CancellationToken cancellationToken)
     {
         if (submitter is not { } dedupReader
@@ -459,7 +490,14 @@ internal sealed partial class SubmissionClient
 
         try
         {
-            var projected = await pointReadByOffset(completionOffset, dedupReader, cancellationToken).ConfigureAwait(false);
+            var transaction = await _readTransactionAtOffset(completionOffset, dedupReader, interfaceViews, cancellationToken).ConfigureAwait(false);
+            if (transaction.CommandId != commandId)
+            {
+                LogRetriedDuplicateOfAnotherCommand(_logger, commandId, completionOffset);
+                return duplicateError;
+            }
+
+            var projected = project(transaction);
             LogRetriedDuplicateResolved(_logger, commandId, completionOffset);
             return new ExerciseOutcome<TProjection>.One(projected);
         }
@@ -561,6 +599,9 @@ internal sealed partial class SubmissionClient
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the rejection carried no usable completion_offset to resolve the committed transaction; surfacing the DUPLICATE_COMMAND error")]
     private static partial void LogRetriedDuplicateUnresolved(ILogger logger, string commandId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the transaction at completion offset {CompletionOffset} was not recorded for this command id; surfacing the DUPLICATE_COMMAND error")]
+    private static partial void LogRetriedDuplicateOfAnotherCommand(ILogger logger, string commandId, long completionOffset);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the point read at completion offset {CompletionOffset} failed with {StatusCode}; surfacing the DUPLICATE_COMMAND error")]
     private static partial void LogRetriedDuplicatePointReadFailed(ILogger logger, string commandId, long completionOffset, StatusCode statusCode);

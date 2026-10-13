@@ -68,4 +68,12 @@ public class ExerciseByKeyCommandTests
 
         exercise.Should().Throw<ArgumentNullException>().WithParameterName("key");
     }
+
+    [Fact]
+    public void ByKeyCommand_names_the_package_of_the_template()
+    {
+        var command = Account.CreditByKeyCommand(Key, new Account.Credit(7));
+
+        command.PackageName.Should().Be("contractkeys-hcc6e8a4f16d9");
+    }
 }

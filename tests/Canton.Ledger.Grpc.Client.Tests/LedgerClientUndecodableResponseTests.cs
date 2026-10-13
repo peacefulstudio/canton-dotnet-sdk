@@ -225,6 +225,7 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
                 ArchivedEvent = new Com.Daml.Ledger.Api.V2.ArchivedEvent
                 {
                     ContractId = "00abc",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     Offset = -1,
                 },
@@ -349,6 +350,7 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
                 CreatedEvent = new Com.Daml.Ledger.Api.V2.CreatedEvent
                 {
                     ContractId = "00abc",
+                    PackageName = "test-package",
                     TemplateId = FooBarTemplate,
                     CreateArguments = new Com.Daml.Ledger.Api.V2.Record
                     {
@@ -372,13 +374,14 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
         var created = new Com.Daml.Ledger.Api.V2.CreatedEvent
         {
             ContractId = "00abc",
+            PackageName = "token-impl",
             TemplateId = new Com.Daml.Ledger.Api.V2.Identifier { PackageId = "impl-pkg", ModuleName = "Impl.Module", EntityName = "Impl" },
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = 5,
         };
         created.InterfaceViews.Add(new InterfaceView
         {
-            InterfaceId = new Com.Daml.Ledger.Api.V2.Identifier { PackageId = "view-pkg", ModuleName = "Mismatched.Token", EntityName = "IMismatched" },
+            InterfaceId = new Com.Daml.Ledger.Api.V2.Identifier { PackageId = "mismatched-pkg", ModuleName = "Mismatched.Token", EntityName = "IMismatched" },
             ViewStatus = new Google.Rpc.Status { Code = 0 },
             ViewValue = new Com.Daml.Ledger.Api.V2.Record(),
         });
@@ -477,7 +480,7 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
             .Returns(Answered(new GetContractResponse { CreatedEvent = created }));
 
     private static Com.Daml.Ledger.Api.V2.CreatedEvent Created(string contractId, Com.Daml.Ledger.Api.V2.Record arguments) =>
-        new() { ContractId = contractId, TemplateId = FooBarTemplate, CreateArguments = arguments, Offset = 5 };
+        new() { ContractId = contractId, PackageName = "test-package", TemplateId = FooBarTemplate, CreateArguments = arguments, Offset = 5 };
 
     private void StubEventsByContractId(GetEventsByContractIdResponse response) =>
         _eventQueryService
@@ -488,6 +491,7 @@ public sealed class LedgerClientUndecodableResponseTests : IDisposable
         new()
         {
             ContractId = contractId,
+            PackageName = "test-package",
             TemplateId = FooBarTemplate,
             CreateArguments = LedgerClientTestFixtures.OwnerArgumentsFor("alice::ns1"),
             Offset = offset,

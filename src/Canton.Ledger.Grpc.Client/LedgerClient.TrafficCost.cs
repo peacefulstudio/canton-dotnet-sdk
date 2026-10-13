@@ -33,7 +33,7 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: true);
+        var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: true, hashingSchemeVersion: null);
 
         return _invoker.ExecuteTracedAsync<LedgerClient, TrafficCostEstimate?>(
             LedgerCallKind.Read,
@@ -76,7 +76,8 @@ internal sealed partial class LedgerClient
 
     private Interactive.PrepareSubmissionRequest BuildPrepareSubmissionRequest(
         RuntimeCommands.CommandsSubmission submission,
-        bool estimateTrafficCost)
+        bool estimateTrafficCost,
+        HashingSchemeVersion? hashingSchemeVersion)
     {
         var commands = _commandBuilder.BuildCommands(submission);
         var request = new Interactive.PrepareSubmissionRequest
@@ -91,6 +92,11 @@ internal sealed partial class LedgerClient
             request.MinLedgerTime = ToWireMinLedgerTime(minLedgerTime);
         }
 
+        if (hashingSchemeVersion is { } scheme)
+        {
+            request.HashingSchemeVersion = GrpcEnumMaps.HashingSchemeVersions.ToWire(scheme, nameof(hashingSchemeVersion));
+        }
+
         if (estimateTrafficCost)
         {
             request.EstimateTrafficCost = new Interactive.CostEstimationHints();
@@ -100,6 +106,7 @@ internal sealed partial class LedgerClient
         request.ReadAs.AddRange(commands.ReadAs);
         request.Commands.AddRange(commands.Commands_);
         request.DisclosedContracts.AddRange(commands.DisclosedContracts);
+        request.PackageIdSelectionPreference.AddRange(commands.PackageIdSelectionPreference);
 
         return request;
     }

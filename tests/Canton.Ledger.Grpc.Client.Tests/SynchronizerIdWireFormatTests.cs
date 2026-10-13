@@ -31,6 +31,7 @@ public class SynchronizerIdWireFormatTests
     private static CreatedEvent HoldingCreated(long offset) => new()
     {
         ContractId = "00holding",
+        PackageName = "token-impl",
         TemplateId = HoldingTemplateId,
         CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
         Offset = offset,
@@ -39,6 +40,7 @@ public class SynchronizerIdWireFormatTests
     private static UnassignedEvent HoldingUnassigned(string source, string target) => new()
     {
         ContractId = "00holding",
+        PackageName = "token-impl",
         TemplateId = HoldingTemplateId,
         Source = source,
         Target = target,

@@ -14,9 +14,9 @@ namespace Daml.Codegen.Testing.Conformance.Tests;
 
 public class GeneratedTypeRegistryCorpusTests
 {
-    private const string RichTypesPackageId = "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    private const string RichTypesPackageId = "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
 
-    private const string ContractKeysPackageId = "33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5";
+    private const string ContractKeysPackageId = "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2";
 
     private static RegistryLookup<TValue>.Resolved ResolvedOf<TValue>(RegistryLookup<TValue> lookup) =>
         lookup.Should().BeOfType<RegistryLookup<TValue>.Resolved>().Subject;
@@ -77,10 +77,24 @@ public class GeneratedTypeRegistryCorpusTests
     }
 
     [Fact]
-    public void FindChoice_resolves_by_module_and_entity_when_the_package_id_is_unknown()
+    public void FindChoice_resolves_by_package_name_when_the_package_id_is_unknown()
     {
         _ = Asset.TemplateId;
 
-        ChoiceOf(new Identifier("unknown-package-id", "RichTypes", "Asset"), "Archive").ResultType.Should().Be<DamlUnit>();
+        var lookup = GeneratedTypeReaders.FindChoice(
+            new Identifier("unknown-package-id", "RichTypes", "Asset"),
+            new ChoiceName("Archive"),
+            "richtypes-ha8d30776aa45");
+
+        ResolvedOf(lookup).Value.ResultType.Should().Be<DamlUnit>();
+    }
+
+    [Fact]
+    public void FindChoice_does_not_resolve_an_unknown_package_id_without_a_package_name()
+    {
+        _ = Asset.TemplateId;
+
+        GeneratedTypeReaders.FindChoice(new Identifier("unknown-package-id", "RichTypes", "Asset"), new ChoiceName("Archive"))
+            .Should().BeOfType<RegistryLookup<IChoice>.Missing>();
     }
 }

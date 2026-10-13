@@ -6,6 +6,7 @@ using System.Net;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Streams;
 using Daml.Ledger.Abstractions;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Outcomes;
 
 namespace Canton.Ledger.Kernel.Wire;
@@ -15,7 +16,15 @@ internal static class LedgerCallOutcome
     private const string DuplicateCommandErrorId = "DUPLICATE_COMMAND";
     private const string CompletionOffsetMetadataKey = "completion_offset";
 
-    internal static LedgerOperationException ToException(this LedgerCallEnding ending, LedgerCallKind kind) =>
+    internal static LedgerOperationException ToException(
+        this LedgerCallEnding ending, LedgerCallKind kind, CommandId? commandId = null)
+    {
+        var exception = ExceptionOf(ending, kind);
+        exception.CommandId = commandId;
+        return exception;
+    }
+
+    private static LedgerOperationException ExceptionOf(LedgerCallEnding ending, LedgerCallKind kind) =>
         ending switch
         {
             LedgerCallEnding.Rejected { Error: ParsedLedgerError.Structured structured } rejected =>
@@ -44,6 +53,14 @@ internal static class LedgerCallOutcome
                 metadata: null,
                 unanswered.Cause,
                 CommitStateOf(ending, kind)),
+            LedgerCallEnding.NeverSent neverSent => LedgerOperationException.FromFailedCall(
+                neverSent.Message,
+                new TransportStatus.NoResponse(),
+                category: null,
+                errorId: null,
+                metadata: null,
+                neverSent.Cause,
+                CommitStateOf(ending, kind)),
             LedgerCallEnding.Unreadable unreadable => LedgerOperationException.FromFailedCall(
                 unreadable.Message,
                 new TransportStatus.UndecodableBody(),
@@ -57,6 +74,13 @@ internal static class LedgerCallOutcome
 
     internal static ExerciseOutcome<T> ToOutcome<T>(this LedgerCallEnding ending) => ending switch
     {
+        LedgerCallEnding.Rejected
+        {
+            AfterRetry: true,
+            Error: ParsedLedgerError.Structured { ErrorId: not DuplicateCommandErrorId } structured,
+        } rejected =>
+            new ExerciseOutcome<T>.InfraError(
+                structured.Status, structured.Message, structured.Category, rejected.Cause),
         LedgerCallEnding.Rejected { Error: ParsedLedgerError.Structured structured } =>
             new ExerciseOutcome<T>.DamlError(
                 structured.Category, structured.ErrorId, structured.Message, structured.Metadata),
@@ -66,6 +90,9 @@ internal static class LedgerCallOutcome
         LedgerCallEnding.Unanswered unanswered =>
             new ExerciseOutcome<T>.InfraError(
                 new TransportStatus.NoResponse(), unanswered.Message, SourceException: unanswered.Cause),
+        LedgerCallEnding.NeverSent neverSent =>
+            new ExerciseOutcome<T>.InfraError(
+                new TransportStatus.NoResponse(), neverSent.Message, SourceException: neverSent.Cause),
         LedgerCallEnding.Unreadable unreadable =>
             new ExerciseOutcome<T>.CommittedUndecodable(
                 unreadable.UpdateId,
@@ -84,6 +111,8 @@ internal static class LedgerCallOutcome
             rejected.Cause),
         LedgerCallEnding.Unanswered unanswered => StreamFault.FromTransport(
             new TransportStatus.NoResponse(), unanswered.Message, category: null, errorId: null, unanswered.Cause),
+        LedgerCallEnding.NeverSent neverSent => StreamFault.FromTransport(
+            new TransportStatus.NoResponse(), neverSent.Message, category: null, errorId: null, neverSent.Cause),
         LedgerCallEnding.Unreadable unreadable => StreamFault.FromTransport(
             new TransportStatus.UndecodableBody(), unreadable.Message, category: null, errorId: null, unreadable.Cause),
         _ => throw Unhandled(ending),
@@ -121,7 +150,13 @@ internal static class LedgerCallOutcome
     private static CommitState CommitStateOf(LedgerCallEnding ending, LedgerCallKind kind) => (kind, ending) switch
     {
         (LedgerCallKind.Read, _) => CommitState.NotCommitted,
+        (_, LedgerCallEnding.NeverSent) => CommitState.NotCommitted,
         (_, LedgerCallEnding.Unanswered) => CommitState.Unknown,
+        (_, LedgerCallEnding.Rejected
+        {
+            AfterRetry: true,
+            Error: ParsedLedgerError.Structured { ErrorId: not DuplicateCommandErrorId },
+        }) => CommitState.Unknown,
         (_, LedgerCallEnding.Rejected { Error: ParsedLedgerError.Structured structured }) =>
             ParticipantRejectionCommitState.Of(structured.Category, structured.ErrorId, structured.Metadata),
         (_, LedgerCallEnding.Rejected) => CommitState.Unknown,

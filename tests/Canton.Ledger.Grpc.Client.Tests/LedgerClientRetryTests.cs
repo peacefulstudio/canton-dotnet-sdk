@@ -75,7 +75,19 @@ public sealed class LedgerClientRetryTests : IDisposable
 
     public void Dispose() => _channel.Dispose();
 
-    private LedgerClient CreateClient() => new(
+    private sealed class TokenProviderFailingAfterTheFirstToken(int tokensIssued = 1) : ITokenProvider
+    {
+        private int _calls;
+
+        public Task<string> GetTokenAsync(CancellationToken cancellationToken = default) =>
+            ++_calls <= tokensIssued
+                ? Task.FromResult("first-token")
+                : throw new HttpRequestException("the identity provider is unreachable");
+    }
+
+    private LedgerClient CreateClient() => CreateClient(_tokenProvider);
+
+    private LedgerClient CreateClient(ITokenProvider tokenProvider) => new(
         _options,
         _channel,
         _commandService,
@@ -83,7 +95,7 @@ public sealed class LedgerClientRetryTests : IDisposable
         _stateService,
         _submissionService,
         new CommandCompletionService.CommandCompletionServiceClient(_channel),
-        _tokenProvider);
+        tokenProvider);
 
     private void EnableRetry(int maxAttempts = 2, TimeSpan? delay = null) =>
         _options.Retry = new RetryOptions
@@ -131,6 +143,83 @@ public sealed class LedgerClientRetryTests : IDisposable
         outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>();
         _ = _commandService.Received(3).SubmitAndWaitForTransactionAsync(
             Arg.Any<SubmitAndWaitForTransactionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_token_failure_on_a_retry_after_a_sent_attempt_as_Unknown()
+    {
+        EnableRetry(maxAttempts: 2);
+        StubSubmitAndWaitForTransaction(Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()));
+
+        var client = CreateClient(new TokenProviderFailingAfterTheFirstToken());
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
+        infraError.SourceException.Should().BeOfType<RpcException>();
+        _ = _commandService.Received(1).SubmitAndWaitForTransactionAsync(
+            Arg.Any<SubmitAndWaitForTransactionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_token_failure_on_the_first_attempt_as_NotCommitted_when_retry_is_enabled()
+    {
+        EnableRetry(maxAttempts: 2);
+
+        var client = CreateClient(new TokenProviderFailingAfterTheFirstToken(tokensIssued: 0));
+        var act = () => client.SubmitAndWaitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<TokenAcquisitionException>();
+        _ = _commandService.DidNotReceive().SubmitAndWaitAsync(
+            Arg.Any<SubmitAndWaitRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_token_failure_on_a_retry_after_a_sent_attempt_as_Unknown()
+    {
+        EnableRetry(maxAttempts: 2);
+        _commandService
+            .SubmitAndWaitAsync(
+                Arg.Any<SubmitAndWaitRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Faulted<SubmitAndWaitResponse>(Unavailable()));
+
+        var client = CreateClient(new TokenProviderFailingAfterTheFirstToken());
+        var act = () => client.SubmitAndWaitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_structured_failure_followed_by_a_retry_token_failure_as_an_InfraError()
+    {
+        EnableRetry(maxAttempts: 2);
+        StubSubmitAndWaitForTransaction(Faulted<SubmitAndWaitForTransactionResponse>(ServiceNotRunning()));
+
+        var client = CreateClient(new TokenProviderFailingAfterTheFirstToken());
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
+        infraError.Category.Should().Be(DamlErrorCategory.TransientServerFailure);
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_structured_failure_followed_by_a_retry_token_failure_as_Unknown_with_the_participants_error_id()
+    {
+        EnableRetry(maxAttempts: 2);
+        StubSubmitAndWait(Faulted<SubmitAndWaitResponse>(ServiceNotRunning()));
+
+        var client = CreateClient(new TokenProviderFailingAfterTheFirstToken());
+        var act = () => client.SubmitAndWaitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("SERVICE_NOT_RUNNING");
+        thrown.CommitState.Should().Be(CommitState.Unknown);
     }
 
     [Fact]
@@ -196,7 +285,7 @@ public sealed class LedgerClientRetryTests : IDisposable
             Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
         GetUpdateByOffsetRequest? pointRead = null;
         StubGetUpdateByOffset(
-            new GetUpdateResponse { Transaction = new Transaction { UpdateId = "u-original", Offset = 42L } },
+            new GetUpdateResponse { Transaction = new Transaction { UpdateId = "u-original", CommandId = "test-cmd", Offset = 42L } },
             r => pointRead = r);
 
         var client = CreateClient();
@@ -207,6 +296,30 @@ public sealed class LedgerClientRetryTests : IDisposable
         success.Result.UpdateId.Should().Be("u-original");
         pointRead.Should().NotBeNull();
         pointRead!.Offset.Should().Be(42L, "the committed transaction sits at the completion_offset carried in the error metadata");
+    }
+
+    [Theory]
+    [InlineData("another-cmd")]
+    [InlineData("")]
+    public async Task TrySubmitAndWaitForTransactionAsync_keeps_a_retried_DUPLICATE_COMMAND_as_a_DamlError_when_the_transaction_at_the_offset_is_not_this_commands(
+        string recoveredCommandId)
+    {
+        EnableRetry(maxAttempts: 2);
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
+        StubGetUpdateByOffset(
+            new GetUpdateResponse
+            {
+                Transaction = new Transaction { UpdateId = "u-other", CommandId = recoveredCommandId, Offset = 42L },
+            },
+            _ => { });
+
+        var client = CreateClient();
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
+            .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
     }
 
     [Fact]
@@ -277,6 +390,7 @@ public sealed class LedgerClientRetryTests : IDisposable
             Exercised = new ProtoExercisedEvent
             {
                 ContractId = "00exer",
+                PackageName = "test-package",
                 TemplateId = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" },
                 Choice = "Accept",
                 ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -308,6 +422,115 @@ public sealed class LedgerClientRetryTests : IDisposable
         outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>();
         _ = _commandService.Received(1).SubmitAndWaitForTransactionAsync(
             Arg.Any<SubmitAndWaitForTransactionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_retried_CONTRACT_NOT_FOUND_as_an_InfraError_because_the_lost_attempt_may_have_committed()
+    {
+        EnableRetry(maxAttempts: 1);
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(ContractNotFound()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.NotFound));
+        infraError.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_keeps_the_DamlError_of_a_CONTRACT_NOT_FOUND_answering_the_first_attempt()
+    {
+        EnableRetry(maxAttempts: 1);
+        StubSubmitAndWaitForTransaction(Faulted<SubmitAndWaitForTransactionResponse>(ContractNotFound()));
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
+            .Which.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_retried_CONTRACT_NOT_FOUND_as_an_unknown_commit_state()
+    {
+        EnableRetry(maxAttempts: 1);
+        StubSubmitAndWait(Faulted<SubmitAndWaitResponse>(Unavailable()), Faulted<SubmitAndWaitResponse>(ContractNotFound()));
+        var client = CreateClient();
+
+        var act = () => client.SubmitAndWaitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.ErrorId.Should().Be("CONTRACT_NOT_FOUND");
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_reports_a_CONTRACT_NOT_FOUND_answering_the_first_attempt_as_not_committed()
+    {
+        EnableRetry(maxAttempts: 1);
+        StubSubmitAndWait(Faulted<SubmitAndWaitResponse>(ContractNotFound()));
+        var client = CreateClient();
+
+        var act = () => client.SubmitAndWaitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LedgerOperationException>()).Which.CommitState.Should().Be(CommitState.NotCommitted);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_reports_a_retried_CONTRACT_NOT_FOUND_as_an_unknown_commit_state()
+    {
+        EnableRetry(maxAttempts: 1);
+        StubSubmit(
+            onRequest: _ => { },
+            Faulted<SubmitResponse>(Unavailable()),
+            Faulted<SubmitResponse>(ContractNotFound()));
+        var client = CreateClient();
+
+        var act = () => client.SubmitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LedgerOperationException>()).Which.CommitState.Should().Be(CommitState.Unknown);
+    }
+
+    [Fact]
+    public async Task GetLedgerEndAsync_reports_a_retried_rejection_as_not_committed_because_a_read_commits_nothing()
+    {
+        EnableRetry(maxAttempts: 1);
+        StubGetLedgerEnd(
+            Faulted<GetLedgerEndResponse>(Unavailable()),
+            Faulted<GetLedgerEndResponse>(ContractNotFound()));
+        var client = CreateClient();
+
+        var act = () => client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LedgerOperationException>()).Which.CommitState.Should().Be(CommitState.NotCommitted);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_reports_a_retried_CONTRACT_NOT_FOUND_as_an_InfraError()
+    {
+        EnableRetry(maxAttempts: 1);
+        _commandService
+            .SubmitAndWaitForReassignmentAsync(
+                Arg.Any<SubmitAndWaitForReassignmentRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(
+                Faulted<SubmitAndWaitForReassignmentResponse>(Unavailable()),
+                Faulted<SubmitAndWaitForReassignmentResponse>(ContractNotFound()));
+        var reassignment = ReassignmentSubmission.Of(
+            new Canton.Ledger.Abstractions.UnassignCommand("00contract123", new SynchronizerId("sync::source"), new SynchronizerId("sync::target")),
+            ActAs);
+        var client = CreateClient();
+
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<LedgerClientTests.TestTemplate>(
+            reassignment, cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<Daml.Runtime.Streams.ContractStreamEvent<LedgerClientTests.TestTemplate>>.InfraError>()
+            .Which.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.NotFound));
     }
 
     [Fact]
@@ -490,6 +713,31 @@ public sealed class LedgerClientRetryTests : IDisposable
                 Arg.Any<CancellationToken>())
             .Returns(Ok(response));
     }
+
+    private void StubSubmitAndWait(params AsyncUnaryCall<SubmitAndWaitResponse>[] calls)
+    {
+        _commandService
+            .SubmitAndWaitAsync(
+                Arg.Any<SubmitAndWaitRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(calls[0], calls[1..]);
+    }
+
+    private static RpcException ContractNotFound() =>
+        LedgerClientTestFixtures.MakeDamlRpcException(
+            "CONTRACT_NOT_FOUND",
+            "Contract could not be found",
+            "InvalidGivenCurrentSystemStateResourceMissing",
+            StatusCode.NotFound);
+
+    private static RpcException ServiceNotRunning() =>
+        LedgerClientTestFixtures.MakeDamlRpcException(
+            "SERVICE_NOT_RUNNING",
+            "The participant is not running",
+            "TransientServerFailure",
+            StatusCode.Unavailable);
 
     private static RpcException Unavailable() => new(new Status(StatusCode.Unavailable, "transient down"));
 

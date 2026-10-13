@@ -24,6 +24,7 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
     private const string ContractCreatedEventTemplate =
         """
         {"offset": "42", "contractId": "00abc", "nodeId": 0,
+         "packageName": "pkg-name",
          "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"},
          "createArgument": {"owner": "party::alice"}, "witnessParties": ["party::alice"]}
         """;
@@ -101,6 +102,7 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
             {"transaction": {"updateId": "u-1", "commandId": "cmd-1", "offset": "42", "events": [
               {"CreatedEvent": {
                 "offset": "42", "contractId": "00aa", "nodeId": 0, "acsDelta": true,
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "ThrowingReaderTemplate"},
                 "createArgument": {"owner": "party::alice"},
                 "witnessParties": ["party::alice"], "signatories": ["party::alice"], "observers": []}}]}}
@@ -164,11 +166,11 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
         ("GetEventsByContractIdAsync(4)", _) =>
             $$$"""{"created": {"createdEvent": {{{CreatedEventMalformedIn(field)}}}, "synchronizerId": "sync::a"}}""",
 
-        ("PrepareSubmissionAsync(3)", MalformedField.ResultMissing) =>
-            """{"preparedTransactionHash": "3q2+7w==", "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V2"}""",
-        ("PrepareSubmissionAsync(3)", MalformedField.EnumValueUnknown) =>
-            """{"preparedTransaction": "CgM=", "preparedTransactionHash": "3q2+7w==", "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V99"}""",
-        ("PrepareSubmissionAsync(3)" or "EstimateTrafficCostAsync(3)", MalformedField.TimestampOutOfRange) =>
+        ("PrepareSubmissionAsync(4)", MalformedField.ResultMissing) =>
+            """{"preparedTransactionHash": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=", "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V2"}""",
+        ("PrepareSubmissionAsync(4)", MalformedField.EnumValueUnknown) =>
+            """{"preparedTransaction": "CgM=", "preparedTransactionHash": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=", "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V99"}""",
+        ("PrepareSubmissionAsync(4)" or "EstimateTrafficCostAsync(3)", MalformedField.TimestampOutOfRange) =>
             PreparedWithCostEstimation("""{"estimationTimestamp": "99999-01-01T00:00:00Z"}"""),
         ("EstimateTrafficCostAsync(3)", MalformedField.CostOutOfRange) =>
             PreparedWithCostEstimation("""{"totalTrafficCostEstimation": "9223372036854775808"}"""),
@@ -188,6 +190,7 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
             ? """
               [{"ExercisedEvent": {
                 "nodeId": 0, "contractId": "00aa",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"},
                 "choice": "Accept", "choiceArgument": {}, "exerciseResult": {},
                 "actingParties": [""], "lastDescendantNodeId": 0}}]
@@ -210,7 +213,7 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
         };
         var templateId = field == MalformedField.TemplateIdMissing
             ? string.Empty
-            : """ "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"}, """;
+            : """ "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"}, """;
         var createArgument = field switch
         {
             MalformedField.CreateArgumentFieldMissing => """{"other": "party::alice"}""",
@@ -234,13 +237,14 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
     private static string ArchivedEvent(string contractId, string offset) =>
         $$$"""
         {"archived": {"archivedEvent": {"offset": "{{{offset}}}", "contractId": "{{{contractId}}}",
+            "packageName": "pkg-name",
             "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"},
             "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"}}
         """;
 
     private static string PreparedWithCostEstimation(string costEstimation) =>
         $$"""
-        {"preparedTransaction": "CgM=", "preparedTransactionHash": "3q2+7w==",
+        {"preparedTransaction": "CgM=", "preparedTransactionHash": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
          "hashingSchemeVersion": "HASHING_SCHEME_VERSION_V2", "costEstimation": {{costEstimation}}}
         """;
 

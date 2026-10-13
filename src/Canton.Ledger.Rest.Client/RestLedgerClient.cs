@@ -77,12 +77,18 @@ internal sealed partial class RestLedgerClient
     private const string LimitQueryParameter = "limit";
     private const string StreamIdleTimeoutQueryParameter = "stream_idle_timeout_ms";
 
+    private const int MaxActiveContractsPages = 10_000;
+
     private const long UnpacedWindowWarningThreshold = 100L;
     private const double HonouredWindowHoldShareOfIdleTimeout = 0.5;
 
     private const string UnresumableWindowMessage =
         "The stream window carried entries but no offset the next window could resume from, so " +
         "following it would re-read what was just delivered.";
+
+    private const string PageCapExceededMessage =
+        "The active-contracts snapshot did not complete after 10000 pages; ending it instead of " +
+        "following an unbounded page-token stream.";
 
     private const string WindowTimedOutMessage = "The stream window request timed out before the participant answered.";
 
@@ -160,7 +166,10 @@ internal sealed partial class RestLedgerClient
         _shortestHonouredWindowHold = ShortestHonouredWindowHold(_streamWindowIdleTimeout);
         _timeProvider = timeProvider ?? TimeProvider.System;
         _logger = logger ?? NullLogger<RestLedgerClient>.Instance;
-        _calls = new RestCallEnvelope(httpClientFactory, _logger);
+        _calls = new RestCallEnvelope(
+            httpClientFactory,
+            _logger,
+            options?.Value.MaxResponseBodyBytes ?? RestLedgerClientOptions.DefaultMaxResponseBodyBytes);
     }
 
     /// <inheritdoc />
@@ -399,7 +408,7 @@ internal sealed partial class RestLedgerClient
         [EnumeratorCancellation] CancellationToken cancellationToken)
         where TEntry : class
     {
-        var windowUri = WindowPath(path);
+        var windowUri = WindowPath(path, bounded: endInclusive is not null);
         var resumeFrom = beginExclusive;
         var unpacedWindows = 0L;
         var warnAtConsecutiveWindows = UnpacedWindowWarningThreshold;
@@ -432,7 +441,7 @@ internal sealed partial class RestLedgerClient
                 yield return StreamWindowRead<TEntry>.Of(entry);
             }
 
-            if (endInclusive is { } end && (window.Entries.Count < _streamWindowLimit || resumeFrom >= end))
+            if (endInclusive is { } end && (window.Entries.Count == 0 || resumeFrom >= end))
             {
                 yield break;
             }
@@ -474,6 +483,8 @@ internal sealed partial class RestLedgerClient
 
         var request = RestSubscribeRequestBuilder.BuildGetActiveContractsPageRequest<T>(
             submitter, activeAtOffset.Value, _activeContractsPageSize, includeDisclosure);
+        var seenPageTokens = new HashSet<string>(StringComparer.Ordinal);
+        var fetchedPages = 0;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -497,9 +508,28 @@ internal sealed partial class RestLedgerClient
                 yield break;
             }
 
+            fetchedPages++;
+            if (!seenPageTokens.Add(nextPageToken))
+            {
+                yield return PageLoopFault(
+                    $"The active-contracts snapshot is not progressing: the participant returned the page token " +
+                    $"'{nextPageToken}' that was already used earlier in this snapshot.");
+                yield break;
+            }
+
+            if (fetchedPages >= MaxActiveContractsPages)
+            {
+                yield return PageLoopFault(PageCapExceededMessage);
+                yield break;
+            }
+
             request.PageToken = nextPageToken;
         }
     }
+
+    private static StreamWindowRead<WireGetActiveContractsResponse> PageLoopFault(string message) =>
+        StreamWindowRead<WireGetActiveContractsResponse>.Failed(
+            StreamFault.FromUndecodableBody(message, new InvalidOperationException(message)));
 
     private async Task<ActiveContractsPage> ReadActiveContractsPageAsync(
         WireGetActiveContractsPageRequest request, CancellationToken cancellationToken)
@@ -551,17 +581,29 @@ internal sealed partial class RestLedgerClient
             {
                 Content = JsonContent.Create(request, options: RestRefitSettings.SerializerOptions),
             };
-            using var response = await client.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+            RestRetryHandler.MarkReplayable(httpRequest);
+            BearerTokenHandler.RecordCallerCancellation(httpRequest, cancellationToken);
+            using var response = await client
+                .SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+            using var bodyTimeoutSource = RestCallEnvelope.CreateBodyTimeoutSource(client, timeout: null, cancellationToken);
+            var bodyToken = bodyTimeoutSource?.Token ?? cancellationToken;
 
             if (!response.IsSuccessStatusCode)
             {
-                return new WindowBody(null, await WindowFaultAsync(response, cancellationToken).ConfigureAwait(false));
+                return new WindowBody(null, await WindowFaultAsync(response, bodyToken).ConfigureAwait(false));
             }
 
-            return new WindowBody(
-                await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false), null);
+            return new WindowBody(await _calls.ReadBodyTextAsync(response, bodyToken).ConfigureAwait(false), null);
         }
-        catch (Exception failure) when (RestCallEnvelope.IsNoAnswerFailure(failure, cancellationToken))
+        catch (ResponseBodyTooLargeException tooLarge)
+        {
+            LogStreamWindowBodyUndecodable(_logger, requestUri, tooLarge);
+            return new WindowBody(null, StreamFault.FromUndecodableBody(
+                $"Could not read the stream window response body: {tooLarge.Message}", tooLarge));
+        }
+        catch (Exception failure) when (
+            RestCallEnvelope.IsNoAnswerFailure(failure, cancellationToken) || failure is IOException)
         {
             return new WindowBody(null, WindowNoResponseFault(failure));
         }
@@ -569,15 +611,22 @@ internal sealed partial class RestLedgerClient
 
     private StreamFault WindowNoResponseFault(Exception failure)
     {
-        var message = failure is HttpRequestException ? failure.Message : WindowTimedOutMessage;
+        LedgerCallEnding ending = failure switch
+        {
+            TokenAcquisitionException tokenFailure => new LedgerCallEnding.NeverSent(tokenFailure),
+            HttpRequestException or IOException => new LedgerCallEnding.Unanswered(failure.Message, failure),
+            _ => new LedgerCallEnding.Unanswered(WindowTimedOutMessage, failure),
+        };
+        var fault = ending.ToStreamFault();
 
-        LogStreamWindowFailed(_logger, new TransportStatus.NoResponse(), message);
-        return new LedgerCallEnding.Unanswered(message, failure).ToStreamFault();
+        LogStreamWindowFailed(_logger, new TransportStatus.NoResponse(), fault.Message);
+        return fault;
     }
 
     private async Task<StreamFault> WindowFaultAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        var rejection = await RestErrorParser.ReadRejectionAsync(response, cancellationToken).ConfigureAwait(false);
+        var rejection = await RestErrorParser.ReadRejectionAsync(
+            response, cancellationToken, maxBodyBytes: _calls.MaxResponseBodyBytes).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
         {
             rejection = rejection with { Error = rejection.Error.WithMessage(rejection.Error.Message + WindowLimitHint) };
@@ -589,13 +638,19 @@ internal sealed partial class RestLedgerClient
 
     /// <summary>
     /// The request URI for one window of a looped read: the endpoint plus the bounds that make the
-    /// participant close the window. The ACS snapshot does not go through here: its page size
-    /// travels in the request body as <c>maxPageSize</c>.
+    /// participant close the window. A bounded read sends no idle timeout, which Canton documents for
+    /// open-ended streams, so a window it closes short has reached the end of the range rather than
+    /// idled out. The ACS snapshot does not go through here: its page size travels in the request
+    /// body as <c>maxPageSize</c>.
     /// </summary>
-    private string WindowPath(string path) =>
-        $"{path}?{LimitQueryParameter}={_streamWindowLimit.ToString(CultureInfo.InvariantCulture)}" +
-        $"&{StreamIdleTimeoutQueryParameter}=" +
-        ((long)_streamWindowIdleTimeout.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
+    private string WindowPath(string path, bool bounded)
+    {
+        var limited = $"{path}?{LimitQueryParameter}={_streamWindowLimit.ToString(CultureInfo.InvariantCulture)}";
+        return bounded
+            ? limited
+            : $"{limited}&{StreamIdleTimeoutQueryParameter}=" +
+              ((long)_streamWindowIdleTimeout.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -711,7 +766,8 @@ internal sealed partial class RestLedgerClient
         return _calls.SendAsync<Raw.SubmitAndWaitResponse, SubmitAndWaitResult>(
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitPath, commands,
-                MissingSubmitAndWaitBodyMessage, MalformedSubmitAndWaitBodyPrefix, LedgerCallKind.EffectAppliedWrite),
+                MissingSubmitAndWaitBodyMessage, MalformedSubmitAndWaitBodyPrefix, LedgerCallKind.EffectAppliedWrite,
+                CommandId: commands.CommandId),
             body => ProjectSubmitAndWaitResult(commands, body),
             timeout,
             cancellationToken);
@@ -768,8 +824,9 @@ internal sealed partial class RestLedgerClient
 
         return TrySubmitAndWaitForTransactionCoreAsync(
             submission,
-            SubmitterFrom(submission) is { } submitter ? RestSubscribeRequestBuilder.BuildTransactionFormat(submitter) : null,
-            RestTransactionResultProjector.ProjectAcsDelta,
+            PointReadFormatOf(submission),
+            transaction => RestTransactionResultProjector.ProjectAcsDelta(transaction)
+                .WithRequestedInterfaces(submission.InterfaceViewRequests),
             timeout,
             cancellationToken);
     }
@@ -798,7 +855,8 @@ internal sealed partial class RestLedgerClient
         return _calls.TrySendAsync<Raw.SubmitAndWaitForTransactionResponse, TProjection>(
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitForTransactionPath, requestBody,
-                MissingTransactionMessage, MalformedTransactionPrefix, LedgerCallKind.EffectAppliedWrite),
+                MissingTransactionMessage, MalformedTransactionPrefix, LedgerCallKind.EffectAppliedWrite,
+                CommandId: requestBody.Commands.CommandId),
             body => body.Transaction is { } transaction
                 ? new ExerciseOutcome<TProjection>.One(project(transaction))
                 : new ExerciseOutcome<TProjection>.CommittedUndecodable(
@@ -816,7 +874,9 @@ internal sealed partial class RestLedgerClient
     }
 
     private static Raw.TransactionFormat? PointReadFormatOf(RuntimeCommands.CommandsSubmission submission) =>
-        SubmitterFrom(submission) is { } submitter ? RestSubscribeRequestBuilder.BuildTransactionFormat(submitter) : null;
+        SubmitterFrom(submission) is { } submitter
+            ? RestSubscribeRequestBuilder.BuildTransactionFormat(submitter, submission.InterfaceViewRequests)
+            : null;
 
     private static string? NonEmptyOrNull(string? value) =>
         string.IsNullOrEmpty(value) ? null : value;

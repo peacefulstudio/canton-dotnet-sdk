@@ -22,6 +22,7 @@ public class GrpcInterfaceStreamProjectorGapTests
     private static ProtoCreatedEvent DecodableMatchingCreatedEvent(string contractId, long offset) => new()
     {
         ContractId = contractId,
+        PackageName = "token-impl",
         TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
         CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
         Offset = offset,

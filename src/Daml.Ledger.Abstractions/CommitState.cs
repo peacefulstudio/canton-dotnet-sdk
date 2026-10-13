@@ -26,8 +26,9 @@ public enum CommitState
     /// Whether the command committed could not be determined — a transport failure occurred
     /// after the command was sent (a timeout or a dropped connection),
     /// or the ledger reported <see cref="DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>.
-    /// Retry only with the same command id: command-id deduplication resolves the duplicate if
-    /// the original request did commit.
+    /// Look the command id up on the completion stream before resubmitting: a resubmitted
+    /// consuming exercise that already committed is rejected with <c>CONTRACT_NOT_FOUND</c>
+    /// rather than deduplicated.
     /// </summary>
     Unknown,
 }

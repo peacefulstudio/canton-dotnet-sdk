@@ -28,13 +28,13 @@ public sealed partial record Registration(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasKey<Registration, global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Data.Party, global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>>, global::Daml.Runtime.Contracts.IHasChoices<Registration>, global::Daml.Runtime.Data.IDamlRecord<Registration>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5", "ContractKeys", "Registration");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2", "ContractKeys", "Registration");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5";
+    public static string PackageId => "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "contractkeys-hb3f04acc1cbd";
+    public static string PackageName => "contractkeys-hcc6e8a4f16d9";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -113,7 +113,7 @@ public sealed partial record Registration(
             global::Daml.Codegen.Testing.Conformance.ContractKeys.Registration.TemplateId,
             key.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToDamlValue()), __t1 => (global::Daml.Runtime.Data.DamlValue)(__t1.ToChainValue(__optional1 => __optional1.ToChainValue(__optional2 => new global::Daml.Runtime.Data.DamlText(__optional2))))),
             new global::Daml.Runtime.Commands.ChoiceName("Archive"),
-            global::Daml.Runtime.Data.DamlRecord.Create());
+            global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Daml.Codegen.Testing.Conformance.ContractKeys.Registration.PackageName };
     }
 
 }
@@ -176,7 +176,7 @@ public static class RegistrationNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.ContractKeys.Registration.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("Archive"),
-            global::Daml.Runtime.Data.DamlRecord.Create());
+            global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Daml.Codegen.Testing.Conformance.ContractKeys.Registration.PackageName };
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public static class RegistrationNonContractExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

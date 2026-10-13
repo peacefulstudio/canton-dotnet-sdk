@@ -79,21 +79,46 @@ internal static class RestErrorParser
     /// numbering schemes overlap in range and would be ambiguous to a caller if conflated.
     /// </remarks>
     public static async Task<ParsedLedgerError> ParseAsync(
-        HttpResponseMessage response, CancellationToken cancellationToken)
+        HttpResponseMessage response,
+        CancellationToken cancellationToken,
+        long maxBodyBytes = RestLedgerClientOptions.DefaultMaxResponseBodyBytes)
     {
         ArgumentNullException.ThrowIfNull(response);
 
         var httpStatusCode = response.StatusCode;
-        var body = response.Content is null
-            ? null
-            : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var body = await ReadBodyWithinCapAsync(response, maxBodyBytes, cancellationToken).ConfigureAwait(false);
 
         return RecoverAuthCategoryFromHttpStatus(Read(response, body, httpStatusCode), httpStatusCode);
     }
 
     internal static async Task<LedgerCallEnding.Rejected> ReadRejectionAsync(
-        HttpResponseMessage response, CancellationToken cancellationToken, bool afterRetry = false) =>
-        new(await ParseAsync(response, cancellationToken).ConfigureAwait(false), NonSuccessStatus(response), afterRetry);
+        HttpResponseMessage response,
+        CancellationToken cancellationToken,
+        bool afterRetry = false,
+        long maxBodyBytes = RestLedgerClientOptions.DefaultMaxResponseBodyBytes) =>
+        new(
+            await ParseAsync(response, cancellationToken, maxBodyBytes).ConfigureAwait(false),
+            NonSuccessStatus(response),
+            afterRetry);
+
+    private static async Task<string?> ReadBodyWithinCapAsync(
+        HttpResponseMessage response, long maxBodyBytes, CancellationToken cancellationToken)
+    {
+        if (response.Content is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await ResponseBodyCap.ReadTextAsync(response.Content, maxBodyBytes, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (ResponseBodyTooLargeException)
+        {
+            return null;
+        }
+    }
 
     private static HttpRequestException NonSuccessStatus(HttpResponseMessage response)
     {

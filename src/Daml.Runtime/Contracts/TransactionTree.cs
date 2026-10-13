@@ -119,6 +119,13 @@ public abstract record TreeEvent
         /// <see cref="CreatedContract.UndecodedPayload"/> by <see cref="TransactionTreeExtensions.ToTransactionResult"/>.
         /// </summary>
         public DamlUndecodedJson? UndecodedCreateArguments { get; init; }
+
+        /// <summary>
+        /// The name of the package that defines <see cref="TemplateId"/> (Canton <c>CreatedEvent.package_name</c>);
+        /// <see langword="null"/> when the transport reported none. Flattened through to
+        /// <see cref="CreatedContract.PackageName"/> by <see cref="TransactionTreeExtensions.ToTransactionResult"/>.
+        /// </summary>
+        public string? PackageName { get; init; }
     }
 
     /// <summary>
@@ -158,6 +165,13 @@ public abstract record TreeEvent
         EquatableArray<TreeEvent> ChildEvents) : TreeEvent
     {
         /// <summary>
+        /// The name of the package that defines <see cref="TemplateId"/> (Canton <c>ExercisedEvent.package_name</c>);
+        /// <see langword="null"/> when the transport reported none. Flattened through to
+        /// <see cref="ExercisedEvent.PackageName"/> by <see cref="TransactionTreeExtensions.ToTransactionResult"/>.
+        /// </summary>
+        public string? PackageName { get; init; }
+
+        /// <summary>
         /// Hashes the declared fields, folding in the number of <see cref="ChildEvents"/> rather
         /// than the children themselves. Equal nodes still hash alike, since equal trees have
         /// equal child counts, but hashing a node costs the node rather than its subtree, so a
@@ -192,6 +206,7 @@ public abstract record TreeEvent
             hash.Add(Consuming);
             hash.Add(ActingParties);
             hash.Add(WitnessParties);
+            hash.Add(PackageName);
             hash.Add(ChildEvents.Count);
             return hash.ToHashCode();
         }
@@ -214,6 +229,7 @@ public abstract record TreeEvent
                 .Append(", Consuming = ").Append(Consuming)
                 .Append(", ActingParties = ").Append(ActingParties)
                 .Append(", WitnessParties = ").Append(WitnessParties)
+                .Append(", PackageName = ").Append(PackageName)
                 .Append(", ChildEvents.Count = ").Append(ChildEvents.Count);
             return true;
         }

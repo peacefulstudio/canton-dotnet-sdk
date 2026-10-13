@@ -50,14 +50,15 @@ public class BearerTokenHandlerTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("\t")]
-    public async Task SendAsync_throws_when_token_provider_returns_a_blank_token(string blankToken)
+    public async Task SendAsync_reports_a_blank_token_as_a_TokenAcquisitionException(string blankToken)
     {
         var (client, _) = BuildClient(new BlankTokenProvider(blankToken));
 
         var act = () => client.GetAsync(new Uri("/v2/version", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        (await act.Should().ThrowAsync<InvalidOperationException>())
-            .WithMessage($"*{nameof(BlankTokenProvider)}*empty token*");
+        var failure = (await act.Should().ThrowAsync<TokenAcquisitionException>()).Which;
+        failure.InnerException.Should().BeOfType<InvalidOperationException>()
+            .Which.Message.Should().Match($"*{nameof(BlankTokenProvider)}*empty token*");
     }
 
     [Fact]

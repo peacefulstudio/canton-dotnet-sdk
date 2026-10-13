@@ -25,21 +25,49 @@ internal sealed record CreatePayload(DamlRecord Arguments, DamlUndecodedJson? Un
 /// event's template or interface. A payload whose type is not registered, or is registered by more than one
 /// generated type, is carried as the <see cref="DamlUndecodedJson"/> the participant sent: nothing is inferred
 /// from the JSON alone, and a later decode through the generated type's own reader recovers the value.
+/// A template that is not registered under the event's exact package id is found by the event's package name,
+/// module and entity; an event with no package name is never found that way. A payload that does not fit a type found
+/// that way is carried as the <see cref="DamlUndecodedJson"/> the participant sent, tagged with its package id, instead
+/// of failing the read. An interface is found by its exact package id only.
 /// A key that arrives for a registered template declaring none is still refused with
 /// <see cref="TemplateTypeRequiredException"/>.
 /// </summary>
 internal static class RestPayloadDecoder
 {
-    public static CreatePayload CreatePayloadOf(WireCreatedEvent created, RuntimeIdentifier templateId) =>
-        GeneratedTypeReaders.FindRecordReader(templateId) switch
+    public static CreatePayload CreatePayloadOf(WireCreatedEvent created, RuntimeIdentifier templateId)
+    {
+        var argument = RequireCreateArgument(created);
+        return GeneratedTypeReaders.FindRecordReader(templateId, created.PackageName) switch
         {
-            RegistryLookup<DamlLfElementReader>.Resolved template => new CreatePayload(
-                RestValueDecoder.ToDamlRecord(RequireCreateArgument(created), template.Value, template.DeclaringType.Name),
-                Undecoded: null),
-            _ => new CreatePayload(
-                new DamlRecord(templateId, []),
-                RestValueDecoder.ToUndecodedJson(RequireCreateArgument(created))),
+            RegistryLookup<DamlLfElementReader>.Resolved template => DecodeOrUndecode(
+                template.ViaPackageName,
+                () => new CreatePayload(
+                    RestValueDecoder.ToDamlRecord(argument, template.Value, template.DeclaringType.Name),
+                    Undecoded: null),
+                () => UndecodedCreatePayload(argument, templateId, templateId.PackageId)),
+            _ => UndecodedCreatePayload(argument, templateId, packageId: null),
         };
+    }
+
+    private static CreatePayload UndecodedCreatePayload(WireRecord argument, RuntimeIdentifier templateId, string? packageId) =>
+        new(new DamlRecord(templateId, []), RestValueDecoder.ToUndecodedJson(argument, packageId));
+
+    private static TDecoded DecodeOrUndecode<TDecoded>(bool viaPackageName, Func<TDecoded> decode, Func<TDecoded> undecoded)
+    {
+        if (!viaPackageName)
+        {
+            return decode();
+        }
+
+        try
+        {
+            return decode();
+        }
+        catch (MalformedResponseException)
+        {
+            return undecoded();
+        }
+    }
 
     public static WireRecord RequireCreateArgument(WireCreatedEvent created) =>
         created.CreateArgument
@@ -53,23 +81,26 @@ internal static class RestPayloadDecoder
             return null;
         }
 
-        return new ContractKey(KeyValueOf(created.ContractKey, templateId), templateId)
+        return new ContractKey(KeyValueOf(created.ContractKey, templateId, created.PackageName), templateId)
         {
             KeyHash = RestWireConversions.ToKeyHash(created.ContractKeyHash),
         };
     }
 
-    private static DamlValue KeyValueOf(WireValue contractKey, RuntimeIdentifier templateId)
+    private static DamlValue KeyValueOf(WireValue contractKey, RuntimeIdentifier templateId, string? packageName)
     {
-        if (GeneratedTypeReaders.FindRecordReader(templateId) is not RegistryLookup<DamlLfElementReader>.Resolved template)
+        if (GeneratedTypeReaders.FindRecordReader(templateId, packageName) is not RegistryLookup<DamlLfElementReader>.Resolved template)
         {
             return RestValueDecoder.ToUndecodedJson(contractKey);
         }
 
-        return GeneratedTypeReaders.FindKeyDescriptor(templateId) switch
+        return GeneratedTypeReaders.FindKeyDescriptor(templateId, packageName) switch
         {
-            RegistryLookup<IKeyDescriptor>.Resolved keyDescriptor => RestValueDecoder.ToDamlValue(
-                contractKey, keyDescriptor.Value.ReadKeyJson, $"{template.DeclaringType.Name}.key"),
+            RegistryLookup<IKeyDescriptor>.Resolved keyDescriptor => DecodeOrUndecode<DamlValue>(
+                keyDescriptor.ViaPackageName,
+                () => RestValueDecoder.ToDamlValue(
+                    contractKey, keyDescriptor.Value.ReadKeyJson, $"{template.DeclaringType.Name}.key"),
+                () => RestValueDecoder.ToUndecodedJson(contractKey, templateId.PackageId)),
             RegistryLookup<IKeyDescriptor>.Ambiguous => RestValueDecoder.ToUndecodedJson(contractKey),
             _ => throw TemplateTypeRequiredException.ForKeylessTemplate(
                 Display(templateId), template.DeclaringType.FullName ?? template.DeclaringType.Name),
@@ -96,11 +127,17 @@ internal static class RestPayloadDecoder
             throw new TemplateTypeRequiredException(Display(ownerId), choiceName);
         }
 
-        return GeneratedTypeReaders.FindChoice(ownerId, new ChoiceName(choiceName)) switch
+        var ownerPackageName = exercised.InterfaceId is null ? exercised.PackageName : null;
+        return GeneratedTypeReaders.FindChoice(ownerId, new ChoiceName(choiceName), ownerPackageName) switch
         {
-            RegistryLookup<IChoice>.Resolved choice => new ExercisePayloads(
-                RestValueDecoder.ToDamlValue(choiceArgument, choice.Value.ReadArgumentJson, $"{choiceName}.argument"),
-                RestValueDecoder.ToDamlValue(exerciseResult, choice.Value.ReadResultJson, $"{choiceName}.result")),
+            RegistryLookup<IChoice>.Resolved choice => DecodeOrUndecode(
+                choice.ViaPackageName,
+                () => new ExercisePayloads(
+                    RestValueDecoder.ToDamlValue(choiceArgument, choice.Value.ReadArgumentJson, $"{choiceName}.argument"),
+                    RestValueDecoder.ToDamlValue(exerciseResult, choice.Value.ReadResultJson, $"{choiceName}.result")),
+                () => new ExercisePayloads(
+                    RestValueDecoder.ToUndecodedJson(choiceArgument, ownerId.PackageId),
+                    RestValueDecoder.ToUndecodedJson(exerciseResult, ownerId.PackageId))),
             _ => new ExercisePayloads(
                 RestValueDecoder.ToUndecodedJson(choiceArgument),
                 RestValueDecoder.ToUndecodedJson(exerciseResult)),

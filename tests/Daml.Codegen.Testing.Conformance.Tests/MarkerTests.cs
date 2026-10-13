@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using AwesomeAssertions;
@@ -11,7 +12,7 @@ namespace Daml.Codegen.Testing.Conformance.Tests;
 
 public class MarkerTests
 {
-    private const string PackageHash = "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    private const string PackageHash = "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
 
     [Fact]
     public void ToRecord_then_from_record_round_trips_the_owner()
@@ -35,7 +36,7 @@ public class MarkerTests
     public void Marker_package_metadata_matches_the_corpus_dar()
     {
         Marker.PackageId.Should().Be(PackageHash);
-        Marker.PackageName.Should().Be("richtypes-hbefba41fabc8");
+        Marker.PackageName.Should().Be("richtypes-ha8d30776aa45");
         Marker.PackageVersion.Should().Be(new Version(0, 0, 1));
     }
 
@@ -64,5 +65,22 @@ public class MarkerTests
 
         contract.Id.Value.Should().Be("cid-1");
         contract.Data.Should().Be(payload);
+    }
+
+    [Fact]
+    public void Mint_choice_is_non_consuming_and_carries_the_amount_to_create_an_Asset_with()
+    {
+        Marker.ChoiceMint.Name.Value.Should().Be("Mint");
+        Marker.ChoiceMint.Consuming.Should().BeFalse();
+        new Marker.Mint(12.5m).ToRecord().GetRequiredField("amount").As<DamlNumeric>().Value.Should().Be(12.5m);
+    }
+
+    [Fact]
+    public void MintCommand_exercises_Mint_on_the_marker_by_package_name()
+    {
+        var command = new ContractId<Marker>("marker-cid").MintCommand(new Marker.Mint(12.5m));
+
+        command.Choice.Should().Be(new ChoiceName("Mint"));
+        command.PackageName.Should().Be("richtypes-ha8d30776aa45");
     }
 }

@@ -72,18 +72,28 @@ public sealed class ClientCredentialsOptions : IValidatableObject
     public bool AllowInsecureTokenEndpoint { get; set; }
 
     /// <summary>
-    /// How far before token expiry to trigger a refresh. Defaults to 30 seconds.
+    /// How far before token expiry to trigger a refresh. Defaults to 30 seconds. Capped at half
+    /// of the token's <c>expires_in</c>, so a margin at or above the token lifetime does not
+    /// make every call fetch a new token.
     /// </summary>
     public TimeSpan SafetyMargin { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Maximum time a single token-acquisition HTTP request may run before it is aborted.
     /// Bounds how long a hung identity provider can stall authenticated calls, since token
-    /// fetches are serialized behind a single refresh lock. Defaults to 30 seconds. Must be
+    /// fetches are shared by one in-flight refresh. Defaults to 30 seconds. Must be
     /// positive. This governs only token acquisition; <c>LedgerClientOptions.Timeout</c>
     /// applies to the gRPC call.
     /// </summary>
     public TimeSpan TokenAcquisitionTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How the provider cools down after a failed token fetch: calls fail fast with the failure that
+    /// opened the window, without reaching the identity provider, for 500 milliseconds after the
+    /// first failure, doubling per consecutive failure up to 30 seconds, and a successful fetch
+    /// resets it. It never re-sends a ledger call or a token request: it only makes calls fail fast for the window after a failed token fetch. On by default; see <see cref="TokenFailureCooldownOptions"/> to tune or disable it.
+    /// </summary>
+    public TokenFailureCooldownOptions TokenFailureCooldown { get; set; } = new();
 
     /// <summary>
     /// The TLS material the token client presents as its own identity and accepts as trust anchors.
@@ -210,6 +220,12 @@ public sealed class ClientCredentialsOptions : IValidatableObject
                 "TokenAcquisitionTimeout must be positive.",
                 [nameof(TokenAcquisitionTimeout)]);
         }
+
+        var cooldownResults = new List<ValidationResult>();
+        Validator.TryValidateObject(
+            TokenFailureCooldown, new ValidationContext(TokenFailureCooldown), cooldownResults, validateAllProperties: true);
+        foreach (var result in cooldownResults)
+            yield return result;
 
         var tlsResults = new List<ValidationResult>();
         Validator.TryValidateObject(

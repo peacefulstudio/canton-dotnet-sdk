@@ -13,6 +13,7 @@ public sealed partial class FakeLedgerClient
     /// <inheritdoc />
     public Task<PreparedSubmission> PrepareSubmissionAsync(
         RuntimeCommands.CommandsSubmission submission,
+        HashingSchemeVersion? hashingSchemeVersion = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {

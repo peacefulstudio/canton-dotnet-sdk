@@ -93,7 +93,7 @@ public class RestLedgerWriterConformanceTests
 
         var create = command.GetProperty("CreateCommand");
         create.GetProperty("templateId").GetString()
-            .Should().Be($"{Marker.PackageId}:RichTypes:Marker");
+            .Should().Be("#richtypes-ha8d30776aa45:RichTypes:Marker");
         create.GetProperty("createArguments").GetProperty("owner").GetString()
             .Should().Be(owner.Value);
     }

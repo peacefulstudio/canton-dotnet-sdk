@@ -90,10 +90,18 @@ ContractId<IouContract>? maybe = tx.TrySingle<IouContract>();
 ContractId<IouContract> single = tx.Single<IouContract>();
 ```
 
-Matching is by qualified name (module + entity), deliberately ignoring the
-package id, so a template upgrade that changes the package hash still
-resolves. When `T` is a generated Daml *interface* marker, a created
-contract matches on its `InterfaceIds` instead of its `TemplateId`.
+A template matches by package name, module and entity, deliberately ignoring
+the package id, so a template upgrade that changes the package hash still
+resolves and a same-named template of another package never does. A contract
+that carries no package name matches no template. When `T` is a generated Daml
+*interface* marker, a created contract matches on its `InterfaceIds` instead,
+by the interface's exact package id, module and entity: interface definitions
+are not upgradeable. A result carries interface views only when its submission
+asked for them, which `CreateOneByExerciseAsync<T>` and
+`CreateManyByExerciseAsync<T>` do for an interface marker. `All<T>()`,
+`TrySingle<T>()` and `Single<T>()` throw `InvalidOperationException` over a
+result produced without interface data for `T`, instead of reporting that
+nothing matched.
 
 ### Reading a Choice Result
 
@@ -297,8 +305,8 @@ round-trips on these options alone.
 Two families are written, never read back, by design. The commands (`CreateCommand`,
 `ExerciseCommand`, `ExerciseByKeyCommand`, `CreateAndExerciseCommand`) and the
 `CommandsSubmission` that wraps them are built and submitted in memory, so a caller that retries
-rebuilds the command rather than reading one back, and resubmits it with the original `CommandId`
-so the participant deduplicates it; `ICommand` is a bare interface
+rebuilds the command rather than reading one back, and checks the completion stream for the
+original `CommandId` before resubmitting; `ICommand` is a bare interface
 and a `CommandsSubmission` writes each of its commands as `{"CommandType":"Exercise"}`. The
 non-generic `ContractId` base is abstract and every template is one of its arms, so a bare
 contract-id string cannot name its `T`; declare `ContractId<T>`, which round-trips as the bare

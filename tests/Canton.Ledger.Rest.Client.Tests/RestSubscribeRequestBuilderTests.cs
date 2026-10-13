@@ -44,6 +44,44 @@ public class RestSubscribeRequestBuilderTests
     private static readonly Party Bob = new("party::bob");
 
     [Fact]
+    public void BuildTransactionFormat_keeps_the_empty_wildcard_filter_when_no_interface_is_requested()
+    {
+        var format = RestSubscribeRequestBuilder.BuildTransactionFormat((SubmitterInfo)Alice);
+
+        format.EventFormat.FiltersByParty["party::alice"].Cumulative.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BuildTransactionFormat_adds_a_wildcard_and_an_interface_view_filter_for_each_party_when_an_interface_is_requested()
+    {
+        var submitter = new SubmitterInfo(Alice, new HashSet<Party> { Bob });
+
+        var format = RestSubscribeRequestBuilder.BuildTransactionFormat(submitter, [InterfaceMarker.DamlTypeId]);
+
+        format.EventFormat.FiltersByParty.Keys.Should().BeEquivalentTo(["party::alice", "party::bob"]);
+        foreach (var filters in format.EventFormat.FiltersByParty.Values)
+        {
+            var cumulative = filters.Cumulative.ToList();
+            cumulative.Should().HaveCount(2);
+            cumulative[0].IdentifierFilter!.WildcardFilter.Should().NotBeNull();
+            var interfaceFilter = cumulative[1].IdentifierFilter!.InterfaceFilter!;
+            interfaceFilter.InterfaceId.PackageId.Should().Be("#token-iface");
+            interfaceFilter.InterfaceId.ModuleName.Should().Be("Sample.Token");
+            interfaceFilter.InterfaceId.EntityName.Should().Be("IHolding");
+            interfaceFilter.IncludeInterfaceView.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public void BuildTransactionUpdateFormat_carries_the_requested_interface_view()
+    {
+        var update = RestSubscribeRequestBuilder.BuildTransactionUpdateFormat(
+            (SubmitterInfo)Alice, [InterfaceMarker.DamlTypeId]);
+
+        update.IncludeTransactions!.EventFormat.FiltersByParty["party::alice"].Cumulative.Should().HaveCount(2);
+    }
+
+    [Fact]
     public void BuildGetActiveContractsPageRequest_sets_the_active_at_offset_the_page_size_and_a_template_filter_per_party()
     {
         var submitter = (SubmitterInfo)Alice;

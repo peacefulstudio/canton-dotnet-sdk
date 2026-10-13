@@ -18,7 +18,15 @@
     <InternalsVisibleTo Include="Daml.Codegen.Testing.Conformance.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Kernel" />
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client" />
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client" />
     <InternalsVisibleTo Include="Canton.Ledger.Abstractions" />
+    <InternalsVisibleTo Include="Daml.Ledger.Abstractions" />
+    <InternalsVisibleTo Include="Canton.Ledger.Testing" />
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Tests" />
+    <InternalsVisibleTo Include="Daml.Ledger.Abstractions.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Testing.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Client.Parity.Tests" />
   </ItemGroup>
 
 </Project>

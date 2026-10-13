@@ -152,7 +152,26 @@ public class AuthenticatedCallInvokerTests
     }
 
     [Fact]
-    public async Task AsyncUnaryCall_retries_transient_failures_with_fresh_auth_headers_per_attempt()
+    public async Task AsyncUnaryCall_sends_a_raw_call_once_when_Retry_is_enabled_and_the_first_attempt_is_unavailable()
+    {
+        var captured = StubUnary(
+            Faulted<GetLedgerEndResponse>(new RpcException(new Status(StatusCode.Unavailable, "down"))),
+            Ok(new GetLedgerEndResponse { Offset = 7L }));
+        var invoker = CreateInvoker(
+            new StaticTokenProvider("test-token"),
+            Options(retry: new RetryOptions { Enabled = true, MaxRetryAttempts = 3, Delay = TimeSpan.FromMilliseconds(1) }));
+
+        using var call = invoker.AsyncUnaryCall(
+            UnaryMethod, host: null, CallOptionsFor(), new GetLedgerEndRequest());
+        var act = async () => await call.ResponseAsync;
+
+        var thrown = await act.Should().ThrowAsync<RpcException>();
+        thrown.Which.StatusCode.Should().Be(StatusCode.Unavailable);
+        captured.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task AsyncUnaryCall_retries_transient_failures_with_fresh_auth_headers_per_attempt_inside_a_RawCallReplay_scope()
     {
         var captured = StubUnary(
             Faulted<GetLedgerEndResponse>(new RpcException(new Status(StatusCode.Unavailable, "down"))),
@@ -168,6 +187,7 @@ public class AuthenticatedCallInvokerTests
                 Delay = TimeSpan.FromMilliseconds(1),
             }));
 
+        using var replay = RawCallReplay.Allow();
         using var call = invoker.AsyncUnaryCall(
             UnaryMethod, host: null, CallOptionsFor(), new GetLedgerEndRequest());
         var response = await call.ResponseAsync;
@@ -175,6 +195,25 @@ public class AuthenticatedCallInvokerTests
         response.Offset.Should().Be(7L);
         captured.Select(options => AuthorizationHeaderOf(options.Headers))
             .Should().Equal("Bearer token-1", "Bearer token-2");
+    }
+
+    [Fact]
+    public async Task AsyncUnaryCall_sends_a_raw_call_once_again_after_the_RawCallReplay_scope_is_disposed()
+    {
+        var captured = StubUnary(
+            Faulted<GetLedgerEndResponse>(new RpcException(new Status(StatusCode.Unavailable, "down"))),
+            Ok(new GetLedgerEndResponse { Offset = 7L }));
+        var invoker = CreateInvoker(
+            new StaticTokenProvider("test-token"),
+            Options(retry: new RetryOptions { Enabled = true, MaxRetryAttempts = 3, Delay = TimeSpan.FromMilliseconds(1) }));
+        RawCallReplay.Allow().Dispose();
+
+        using var call = invoker.AsyncUnaryCall(
+            UnaryMethod, host: null, CallOptionsFor(), new GetLedgerEndRequest());
+        var act = async () => await call.ResponseAsync;
+
+        await act.Should().ThrowAsync<RpcException>();
+        captured.Should().HaveCount(1);
     }
 
     [Fact]

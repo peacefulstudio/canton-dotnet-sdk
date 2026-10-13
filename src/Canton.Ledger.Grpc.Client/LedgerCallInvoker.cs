@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Resilience;
+using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Ledger.Abstractions;
@@ -54,8 +55,28 @@ internal sealed class LedgerCallInvoker
     {
         async ValueTask<TResponse> Attempt(CancellationToken token)
         {
+            ResponseReceipt.RecordAttempt();
             var headers = await GetHeadersAsync(token).ConfigureAwait(false);
             return await call(headers, GetDeadline(timeout), token).ConfigureAwait(false);
+        }
+
+        RpcException? sentAttemptFailure = null;
+
+        async ValueTask<TResponse> AttemptUnlessTokenFailsAfterSend(CancellationToken token)
+        {
+            try
+            {
+                return await Attempt(token).ConfigureAwait(false);
+            }
+            catch (TokenAcquisitionException) when (sentAttemptFailure is not null)
+            {
+                throw new RetryAbandonedException(sentAttemptFailure);
+            }
+            catch (RpcException failure)
+            {
+                sentAttemptFailure = failure;
+                throw;
+            }
         }
 
         async ValueTask<TResponse> AttemptAndAcknowledge()
@@ -64,7 +85,14 @@ internal sealed class LedgerCallInvoker
             TResponse response;
             if (replayable)
             {
-                response = await _retryPipeline.ExecuteAsync(Attempt, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    response = await _retryPipeline.ExecuteAsync(AttemptUnlessTokenFailsAfterSend, cancellationToken).ConfigureAwait(false);
+                }
+                catch (RetryAbandonedException abandoned)
+                {
+                    throw abandoned.SentAttemptFailure;
+                }
             }
             else
             {
@@ -180,9 +208,12 @@ internal sealed class LedgerCallInvoker
     /// <see cref="RecordNothing{TOutcome}"/> and says so. Reclassifies a caller cancellation to
     /// <see cref="OperationCanceledException"/>, rethrows an <paramref name="isExpectedFailure"/> match
     /// unrecorded, and records any other <see cref="RpcException"/> on the span before raising it as a
-    /// <see cref="LedgerOperationException"/> whose commit state follows <paramref name="kind"/>. A wire
+    /// <see cref="LedgerOperationException"/> whose commit state follows <paramref name="kind"/>. A
+    /// <see cref="TokenAcquisitionException"/> before any attempt was sent is raised as a never-sent
+    /// <see cref="LedgerOperationException"/> whose commit state is <c>NotCommitted</c> whatever the
+    /// <paramref name="kind"/>; one on a retry after a sent attempt failed surfaces that attempt's failure instead. A wire
     /// decode failure is raised as a <see cref="LedgerOperationException"/> only once a response has
-    /// been received, so a failure while building the request or fetching the token escapes unchanged.
+    /// been received, so a failure while building the request escapes unchanged.
     /// An operation that composes other traced operations instead of making its own RPC passes a null
     /// <paramref name="serverCall"/> and its own <paramref name="activityKind"/>, so it carries no
     /// server-call tags.
@@ -252,11 +283,17 @@ internal sealed class LedgerCallInvoker
         catch (RpcException ex)
         {
             activity.RecordGrpcError(ex);
-            throw RpcCallEnding.Rejected(ex).ToException(kind);
+            throw RpcCallEnding.Rejected(ex, afterRetry: receipt.Retried).ToException(kind, receipt.CommandId);
+        }
+        catch (TokenAcquisitionException tokenFailure)
+        {
+            var neverSent = new LedgerCallEnding.NeverSent(tokenFailure).ToException(kind, receipt.CommandId);
+            activity.RecordInfraError(new TransportStatus.NoResponse(), neverSent.Message);
+            throw neverSent;
         }
         catch (Exception decodeFailure) when (receipt.ResponseReceived && MalformedResponse.IsWireDecodeFailure(decodeFailure))
         {
-            var undecodable = RpcCallEnding.Undecodable(decodeFailure).ToException(kind);
+            var undecodable = RpcCallEnding.Undecodable(decodeFailure).ToException(kind, receipt.CommandId);
             activity.RecordInfraError(new TransportStatus.UndecodableBody(), undecodable.Message);
             throw undecodable;
         }
@@ -264,6 +301,25 @@ internal sealed class LedgerCallInvoker
 
     internal Task<Metadata?> GetHeadersAsync(CancellationToken cancellationToken) =>
         CallContextHelper.GetHeadersAsync(_tokenProvider, cancellationToken);
+
+    /// <summary>
+    /// Resolves the headers a stream opens with. A <see cref="TokenAcquisitionException"/> comes back
+    /// as the <see cref="StreamOpening.Fault"/> the stream ends with, and is recorded on
+    /// <paramref name="activity"/>, instead of being thrown.
+    /// </summary>
+    internal async Task<StreamOpening> OpenStreamAsync(Activity? activity, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new StreamOpening(await GetHeadersAsync(cancellationToken).ConfigureAwait(false), Fault: null);
+        }
+        catch (TokenAcquisitionException tokenFailure)
+        {
+            var fault = new LedgerCallEnding.NeverSent(tokenFailure).ToStreamFault();
+            activity.RecordInfraError(fault.Status, fault.Message);
+            return new StreamOpening(Headers: null, fault);
+        }
+    }
 
     internal DateTime? GetDeadline(TimeSpan? perCallTimeout = null) =>
         CallContextHelper.GetDeadline(perCallTimeout ?? _options.Timeout);
@@ -289,3 +345,10 @@ internal sealed class LedgerCallInvoker
         }
     }
 }
+
+internal sealed class RetryAbandonedException(RpcException sentAttemptFailure) : Exception
+{
+    internal RpcException SentAttemptFailure { get; } = sentAttemptFailure;
+}
+
+internal readonly record struct StreamOpening(Metadata? Headers, StreamFault? Fault);

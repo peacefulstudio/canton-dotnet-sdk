@@ -42,7 +42,7 @@ internal static class RestCommandBuilder
             WorkflowId = submission.WorkflowId?.Value ?? string.Empty,
             ActAs = (submission.ActAs ?? []).Select(p => p.Value).ToList(),
             ReadAs = (submission.ReadAs ?? []).Select(p => p.Value).ToList(),
-            CommandList = submission.Commands.Select(ToWireCommand).ToList(),
+            CommandList = submission.AddressedCommands.Select(ToWireCommand).ToList(),
         };
 
         if (userId is not null)
@@ -58,6 +58,11 @@ internal static class RestCommandBuilder
         if (submission.DisclosedContracts is { Count: > 0 } disclosedContracts)
         {
             commands.DisclosedContracts = [.. disclosedContracts.Select(ToWireDisclosedContract)];
+        }
+
+        if (submission.PackageIdSelectionPreference is { } packageIdSelectionPreference)
+        {
+            commands.PackageIdSelectionPreference = [.. packageIdSelectionPreference];
         }
 
         if (submission.MinLedgerTime is { } minLedgerTime)

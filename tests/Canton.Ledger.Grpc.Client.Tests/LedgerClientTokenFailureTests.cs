@@ -7,7 +7,11 @@ using Canton.Ledger.Kernel.Authentication;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
+using Daml.Runtime.Streams;
+using Canton.Ledger.Testing.Helpers;
 using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -20,7 +24,7 @@ using SignatureFormat = Canton.Ledger.Abstractions.SignatureFormat;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
 
-public sealed class LedgerClientPreSendFailureTests : IDisposable
+public sealed class LedgerClientTokenFailureTests : IDisposable
 {
     private static readonly Party Alice = new("alice::ns1");
     private static readonly RuntimeCommands.SubmitterInfo Submitter = new(Alice);
@@ -32,7 +36,7 @@ public sealed class LedgerClientPreSendFailureTests : IDisposable
     private readonly Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient _interactiveService;
     private readonly FormatException _tokenFailure = new("the token is not valid base64");
 
-    public LedgerClientPreSendFailureTests()
+    public LedgerClientTokenFailureTests()
     {
         _channel = GrpcChannel.ForAddress(_options.GrpcAddress);
         var callInvoker = Substitute.For<CallInvoker>();
@@ -61,51 +65,118 @@ public sealed class LedgerClientPreSendFailureTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLedgerEndAsync_lets_a_failure_before_the_request_is_sent_escape_unchanged()
+    public async Task GetLedgerEndAsync_reports_a_token_failure_as_a_never_sent_read()
     {
         var act = () => CreateClient().GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await AssertEscapesUnchangedWithoutSending(act);
+        await AssertNeverSent(act);
     }
 
     [Fact]
-    public async Task GetUpdateByIdAsync_lets_a_failure_before_the_request_is_sent_escape_unchanged()
+    public async Task GetUpdateByIdAsync_reports_a_token_failure_as_a_never_sent_read()
     {
         var act = () => CreateClient().GetUpdateByIdAsync("u-1", Submitter, cancellationToken: TestContext.Current.CancellationToken);
 
-        await AssertEscapesUnchangedWithoutSending(act);
+        await AssertNeverSent(act);
     }
 
     [Fact]
-    public async Task SubmitAndWaitAsync_lets_a_failure_before_the_request_is_sent_escape_unchanged()
+    public async Task SubmitAndWaitAsync_reports_a_token_failure_as_a_never_sent_write()
     {
         var act = () => CreateClient().SubmitAndWaitAsync(Submission(), cancellationToken: TestContext.Current.CancellationToken);
 
-        await AssertEscapesUnchangedWithoutSending(act);
+        await AssertNeverSent(act);
     }
 
     [Fact]
-    public async Task ExecuteSubmissionAndWaitAsync_lets_a_failure_before_the_request_is_sent_escape_unchanged()
+    public async Task ExecuteSubmissionAndWaitAsync_reports_a_token_failure_as_a_never_sent_write()
     {
         var act = () => CreateClient().ExecuteSubmissionAndWaitAsync(Signed(), cancellationToken: TestContext.Current.CancellationToken);
 
-        await AssertEscapesUnchangedWithoutSending(act);
+        await AssertNeverSent(act);
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransactionAsync_lets_a_failure_before_the_request_is_sent_escape_unchanged()
+    public async Task TrySubmitAndWaitForTransactionAsync_reports_a_token_failure_as_an_InfraError_without_sending()
     {
-        var act = () => CreateClient().TrySubmitAndWaitForTransactionAsync(
+        var outcome = await CreateClient().TrySubmitAndWaitForTransactionAsync(
             Submission(), Submitter, cancellationToken: TestContext.Current.CancellationToken);
 
-        await AssertEscapesUnchangedWithoutSending(act);
+        var infraError = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infraError.Status.Should().Be(new TransportStatus.NoResponse());
+        AssertCarriesTheTokenFailure(infraError.SourceException);
+        AssertNothingSent();
     }
 
-    private async Task AssertEscapesUnchangedWithoutSending<T>(Func<Task<T>> act)
+    [Fact]
+    public async Task CompletionStreamAsync_ends_with_a_terminal_StreamError_when_the_token_cannot_be_acquired()
     {
-        (await act.Should().ThrowExactlyAsync<FormatException>()).Which.Should().BeSameAs(_tokenFailure);
+        var events = await CreateClient()
+            .CompletionStreamAsync(Submitter, cancellationToken: TestContext.Current.CancellationToken)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        var error = events.Should().ContainSingle().Which.Should().BeOfType<CompletionStreamEvent.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.NoResponse());
+        AssertCarriesTheTokenFailure(error.SourceException);
+    }
+
+    [Fact]
+    public async Task GetCompletionsAsync_ends_with_a_terminal_StreamError_when_the_token_cannot_be_acquired()
+    {
+        var events = await CreateClient()
+            .GetCompletionsAsync([Alice], cancellationToken: TestContext.Current.CancellationToken)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        var error = events.Should().ContainSingle().Which.Should().BeOfType<CompletionStreamEvent.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.NoResponse());
+        AssertCarriesTheTokenFailure(error.SourceException);
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_ends_with_a_terminal_StreamError_when_the_token_cannot_be_acquired()
+    {
+        var events = await CreateClient()
+            .SubscribeAsync<TemplateMarker>(Submitter, cancellationToken: TestContext.Current.CancellationToken)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        var error = events.Should().ContainSingle().Which.Should().BeOfType<ContractStreamEvent<TemplateMarker>.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.NoResponse());
+        AssertCarriesTheTokenFailure(error.SourceException);
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_ends_with_a_terminal_StreamError_when_the_token_cannot_be_acquired_after_the_ledger_end()
+    {
+        var events = await CreateClient()
+            .SubscribeActiveAsync<TemplateMarker>(Submitter, LedgerOffset.At(5), cancellationToken: TestContext.Current.CancellationToken)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        var error = events.Should().ContainSingle().Which.Should().BeOfType<AcsSnapshotEntry<TemplateMarker>.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.NoResponse());
+        AssertCarriesTheTokenFailure(error.SourceException);
+    }
+
+    private async Task AssertNeverSent<T>(Func<Task<T>> act)
+    {
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        AssertCarriesTheTokenFailure(thrown.InnerException);
+        AssertNothingSent();
+    }
+
+    private void AssertCarriesTheTokenFailure(Exception? reported)
+    {
+        reported.Should().BeOfType<TokenAcquisitionException>().Which.InnerException.Should().BeSameAs(_tokenFailure);
+    }
+
+    private void AssertNothingSent()
+    {
         _ = _commandService.DidNotReceiveWithAnyArgs()
             .SubmitAndWaitAsync(default!, default(Metadata), default(DateTime?), default);
+        _ = _commandService.DidNotReceiveWithAnyArgs()
+            .SubmitAndWaitForTransactionAsync(default!, default(Metadata), default(DateTime?), default);
         _ = _stateService.DidNotReceiveWithAnyArgs()
             .GetLedgerEndAsync(default!, default(Metadata), default(DateTime?), default);
         _ = _interactiveService.DidNotReceiveWithAnyArgs()

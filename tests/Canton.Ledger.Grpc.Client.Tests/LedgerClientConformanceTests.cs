@@ -113,6 +113,7 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
             Exercised = new ProtoExercisedEvent
             {
                 ContractId = "00probe",
+                PackageName = "conformance-package",
                 TemplateId = ProbeTemplate,
                 Choice = "Archive",
                 ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -200,6 +201,7 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         var created = new ProtoCreatedEvent
         {
             ContractId = "00probe",
+            PackageName = "conformance-package",
             TemplateId = ProbeTemplate,
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = CreatedOffset,
@@ -214,6 +216,7 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         var archived = new ProtoArchivedEvent
         {
             ContractId = "00probe",
+            PackageName = "conformance-package",
             TemplateId = ProbeTemplate,
             Offset = ConsumedOffset,
         };
@@ -227,6 +230,7 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         var exercised = new ProtoExercisedEvent
         {
             ContractId = "00probe",
+            PackageName = "conformance-package",
             TemplateId = ProbeTemplate,
             Choice = "Archive",
             ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -257,6 +261,7 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         var created = new ProtoCreatedEvent
         {
             ContractId = contractId,
+            PackageName = templateId.ModuleName == "Conformance.Probe" ? "conformance-package" : "other-package",
             TemplateId = templateId,
             CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
             Offset = offset,

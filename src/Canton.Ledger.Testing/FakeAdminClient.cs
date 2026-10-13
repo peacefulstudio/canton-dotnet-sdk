@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 
 namespace Canton.Ledger.Testing;
 
@@ -438,6 +440,11 @@ public sealed partial class FakeAdminClient : IAdminClient
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Returns the staged party without reading <see cref="ExternalPartyAllocation.OnboardingTransactions"/>,
+    /// as <see cref="GenerateExternalPartyTopologyAsync"/> returns its staged topology unverified, so a test
+    /// can stage any party; the clients compare the allocated party with the one the transactions are for.
+    /// </remarks>
     public Task<Party> AllocateExternalPartyAsync(
         ExternalPartyAllocation allocation,
         CancellationToken cancellationToken = default)

@@ -44,10 +44,10 @@ public static class SingleCommandExtensions
     /// correlates nothing.
     /// </param>
     /// <param name="commandId">
-    /// Optional command id for deduplication; a fresh id is minted only when omitted. Pass the
-    /// same id across a retry of a lost-but-accepted submission so the ledger deduplicates the
-    /// resubmission instead of re-executing the command. A minted id is not returned on a failed
-    /// submission, so only a caller-supplied id makes an application-level retry deduplicable.
+    /// Optional command id for deduplication; a fresh id is minted only when omitted. The id the
+    /// submission was sent with, minted or supplied, is reported on the outcome's
+    /// <c>CommandId</c>, including a failed one; look it up on the completion stream to learn
+    /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
     /// Optional per-call deadline, applied best-effort by the transport; transports without a
@@ -66,7 +66,8 @@ public static class SingleCommandExtensions
     /// dispatches it. <c>null</c> submits the submission unchanged.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The outcome of the submission, carrying the resulting transaction on success.</returns>
+    /// <returns>The outcome of the submission, carrying the resulting transaction on success and the command id
+    /// the submission was sent with, including one minted here, in <see cref="ExerciseOutcome{T}.CommandId"/>.</returns>
     public static Task<ExerciseOutcome<TransactionResult>> TrySubmitSingleAsync(
         this ILedgerWriter writer,
         ICommand command,
@@ -85,8 +86,20 @@ public static class SingleCommandExtensions
             .WithCommandId(commandId ?? new CommandId(Guid.NewGuid().ToString()))
             .WithOptionalWorkflowId(workflowId);
 
-        return writer.TrySubmitAndWaitForTransactionAsync(
-            ApplyConfigure(submission, command, configure), submitter, timeout, cancellationToken);
+        return SubmitAsync(writer, ApplyConfigure(submission, command, configure), submitter, timeout, cancellationToken);
+    }
+
+    private static async Task<ExerciseOutcome<TransactionResult>> SubmitAsync(
+        ILedgerWriter writer,
+        CommandsSubmission submission,
+        SubmitterInfo submitter,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await writer
+            .TrySubmitAndWaitForTransactionAsync(submission, submitter, timeout, cancellationToken)
+            .ConfigureAwait(false);
+        return outcome.WithCommandId(submission.CommandId?.Value);
     }
 
     /// <summary>
@@ -119,8 +132,10 @@ public static class SingleCommandExtensions
     /// and a hook is supplied, matching the workflow id the transports assign a create.
     /// </param>
     /// <param name="commandId">
-    /// Optional command id for deduplication; a fresh id is minted only when omitted. Pass the same id
-    /// across a retry of a lost-but-accepted submission so the ledger deduplicates the resubmission.
+    /// Optional command id for deduplication; a fresh id is minted only when omitted. The id the
+    /// submission was sent with, minted or supplied, is reported on the outcome's
+    /// <c>CommandId</c>, including a failed one; look it up on the completion stream to learn
+    /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
     /// Optional per-call deadline, applied best-effort by the transport. <c>null</c> applies no deadline.

@@ -31,6 +31,24 @@ public sealed class DamlUndecodedJsonTests
         new DamlUndecodedJson("{\"owner\":\"alice::ns\"}").Should().NotBe(new DamlUndecodedJson("{\"owner\":\"bob::ns\"}"));
     }
 
+    [Fact]
+    public void DamlUndecodedJson_names_no_package_unless_one_is_given()
+    {
+        new DamlUndecodedJson("{}").PackageId.Should().BeNull();
+    }
+
+    [Fact]
+    public void DamlUndecodedJson_carries_the_package_id_it_was_given()
+    {
+        new DamlUndecodedJson("{}") { PackageId = "pkg-v2" }.PackageId.Should().Be("pkg-v2");
+    }
+
+    [Fact]
+    public void DamlUndecodedJson_differs_when_the_package_id_differs()
+    {
+        new DamlUndecodedJson("{}") { PackageId = "pkg-v1" }.Should().NotBe(new DamlUndecodedJson("{}") { PackageId = "pkg-v2" });
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("[]")]

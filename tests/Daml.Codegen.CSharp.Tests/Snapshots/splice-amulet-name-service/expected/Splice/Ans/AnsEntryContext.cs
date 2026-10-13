@@ -225,7 +225,7 @@ public static class AnsEntryContextNonContractExtensions
             global::Splice.Ans.AnsEntryContext.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("AnsEntryContext_CollectEntryRenewalPayment"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Splice.Ans.AnsEntryContext.PackageName };
     }
 
     /// <summary>
@@ -238,7 +238,7 @@ public static class AnsEntryContextNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -277,7 +277,7 @@ public static class AnsEntryContextNonContractExtensions
             global::Splice.Ans.AnsEntryContext.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("AnsEntryContext_CollectInitialEntryPayment"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Splice.Ans.AnsEntryContext.PackageName };
     }
 
     /// <summary>
@@ -290,7 +290,7 @@ public static class AnsEntryContextNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -329,7 +329,7 @@ public static class AnsEntryContextNonContractExtensions
             global::Splice.Ans.AnsEntryContext.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("AnsEntryContext_RejectEntryInitialPayment"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Splice.Ans.AnsEntryContext.PackageName };
     }
 
     /// <summary>
@@ -342,7 +342,7 @@ public static class AnsEntryContextNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -381,7 +381,7 @@ public static class AnsEntryContextNonContractExtensions
             global::Splice.Ans.AnsEntryContext.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("AnsEntryContext_Terminate"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Splice.Ans.AnsEntryContext.PackageName };
     }
 
     /// <summary>
@@ -394,7 +394,7 @@ public static class AnsEntryContextNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -430,7 +430,7 @@ public static class AnsEntryContextNonContractExtensions
             global::Splice.Ans.AnsEntryContext.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("Archive"),
-            global::Daml.Runtime.Data.DamlRecord.Create());
+            global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Splice.Ans.AnsEntryContext.PackageName };
     }
 
     /// <summary>
@@ -442,7 +442,7 @@ public static class AnsEntryContextNonContractExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

@@ -122,4 +122,13 @@ public sealed record ExercisedEvent(
     DamlValue ExerciseResult,
     bool Consuming,
     EquatableArray<Party> ActingParties,
-    EquatableArray<Party> WitnessParties);
+    EquatableArray<Party> WitnessParties)
+{
+    /// <summary>
+    /// The name of the package that defines <see cref="TemplateId"/> (Canton <c>ExercisedEvent.package_name</c>),
+    /// compared in place of the package id when an exercise is matched to the template that owns its choice.
+    /// <see langword="null"/> when the transport reported none; an exercise without a package name matches no
+    /// template.
+    /// </summary>
+    public string? PackageName { get; init; }
+}

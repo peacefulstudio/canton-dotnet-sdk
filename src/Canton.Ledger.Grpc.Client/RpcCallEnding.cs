@@ -9,8 +9,8 @@ namespace Canton.Ledger.Grpc.Client;
 
 internal static class RpcCallEnding
 {
-    internal static LedgerCallEnding.Rejected Rejected(RpcException rejection) =>
-        new(DamlErrorParser.Parse(rejection), rejection);
+    internal static LedgerCallEnding.Rejected Rejected(RpcException rejection, bool afterRetry = false) =>
+        new(DamlErrorParser.Parse(rejection), rejection, afterRetry);
 
     internal static LedgerCallEnding.Rejected SubmissionRejected(RpcException rejection, bool afterRetry) =>
         new(DamlErrorParser.Parse(rejection) switch
@@ -30,9 +30,10 @@ internal static class RpcCallEnding
 
     internal static LedgerCallEnding.Unreadable Undecodable(Exception decodeFailure)
     {
-        var malformed = decodeFailure as MalformedResponseException
-            ?? MalformedResponse.WithDetail(decodeFailure.Message, decodeFailure);
-        return new LedgerCallEnding.Unreadable(malformed.Message, malformed, UpdateId: null);
+        var inner = decodeFailure is MalformedResponseException or PreparedHashMismatchException
+            ? decodeFailure
+            : MalformedResponse.WithDetail(decodeFailure.Message, decodeFailure);
+        return new LedgerCallEnding.Unreadable(inner.Message, inner, UpdateId: null);
     }
 
     internal static LedgerCallEnding.Unreadable CommittedUndecodable(

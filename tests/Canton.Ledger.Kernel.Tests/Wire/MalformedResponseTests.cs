@@ -66,6 +66,7 @@ public class MalformedResponseTests
         { new MalformedTransactionTreeException("Cannot reconstruct the transaction tree: ."), true },
         { MalformedResponse.MissingRequiredField("a field is absent"), true },
         { MalformedResponse.WithDetail("a value is undecodable"), true },
+        { new PreparedHashMismatchException(HashingSchemeVersion.V2, new byte[32], new byte[32]), true },
         { new ArgumentException("a caller passed something wrong"), false },
         { new NotSupportedException("an unsupported wire shape"), false },
         { new InvalidOperationException("a downstream bug of ours"), false },

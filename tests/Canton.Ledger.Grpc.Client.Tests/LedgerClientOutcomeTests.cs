@@ -57,6 +57,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
             {
                 AcsDelta = true,
                 ContractId = "00abc",
+                PackageName = "test-package",
                 TemplateId = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" },
                 CreateArguments = new ProtoRecord(),
             },
@@ -164,6 +165,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
             Exercised = new ProtoExercisedEvent
             {
                 ContractId = "00exer",
+                PackageName = "test-package",
                 TemplateId = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" },
                 Choice = "Accept",
                 ChoiceArgument = new Com.Daml.Ledger.Api.V2.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
@@ -191,6 +193,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
             {
                 AcsDelta = true,
                 ContractId = "00xyz",
+                PackageName = "test-package",
                 TemplateId = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" },
                 CreateArguments = new ProtoRecord(),
             },
@@ -240,8 +243,8 @@ public sealed class LedgerClientOutcomeTests : IDisposable
     {
         var transaction = new Transaction { UpdateId = "u-1", Offset = 1L };
         var tid = new ProtoIdentifier { PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar" };
-        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00a", TemplateId = tid, CreateArguments = new ProtoRecord() } });
-        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00b", TemplateId = tid, CreateArguments = new ProtoRecord() } });
+        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00a", PackageName = "test-package", TemplateId = tid, CreateArguments = new ProtoRecord() } });
+        transaction.Events.Add(new Event { Created = new ProtoCreatedEvent { AcsDelta = true, ContractId = "00b", PackageName = "test-package", TemplateId = tid, CreateArguments = new ProtoRecord() } });
         StubCommandService(new SubmitAndWaitForTransactionResponse { Transaction = transaction });
 
         var exercise = new RuntimeCommands.ExerciseCommand(
@@ -303,6 +306,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
             {
                 AcsDelta = true,
                 ContractId = "00a",
+                PackageName = "test-package",
                 TemplateId = new ProtoIdentifier
                 {
                     PackageId = "test-pkg", ModuleName = "Sample.Foo", EntityName = "FooBar",

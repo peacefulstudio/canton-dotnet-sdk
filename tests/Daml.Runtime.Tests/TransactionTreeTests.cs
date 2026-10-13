@@ -166,7 +166,7 @@ public class TransactionTreeTests
             + $"TemplateId = {FooTemplateId}, InterfaceId = , ChoiceName = DoThing, "
             + $"ChoiceArgument = {DamlUnit.Instance}, ExerciseResult = {DamlUnit.Instance}, "
             + "Consuming = False, ActingParties = [alice], WitnessParties = [alice], "
-            + "ChildEvents.Count = 2 }");
+            + "PackageName = , ChildEvents.Count = 2 }");
     }
 
     [Fact]
@@ -323,6 +323,19 @@ public class TransactionTreeTests
 
         result.CreatedContracts.Should().ContainSingle()
             .Which.InterfaceIds.Should().ContainSingle().Which.Should().Be(interfaceId);
+    }
+
+    [Fact]
+    public void ToTransactionResult_forwards_the_package_name_of_created_and_exercised_events()
+    {
+        var created = MakeCreated("00created") with { PackageName = "splice-amulet" };
+        var exercised = MakeExercised("00exercised", children: []) with { PackageName = "splice-wallet" };
+        var tree = new TransactionTree("u1", LedgerOffset.At(5), [created, exercised]);
+
+        var result = tree.ToTransactionResult();
+
+        result.CreatedContracts.Should().ContainSingle().Which.PackageName.Should().Be("splice-amulet");
+        result.ExercisedEvents.Should().ContainSingle().Which.PackageName.Should().Be("splice-wallet");
     }
 
     [Fact]

@@ -99,6 +99,25 @@ public abstract class LedgerDeduplicationParityTests
     }
 
     [Fact]
+    public async Task GetUpdateByOffsetAsync_reports_the_command_id_the_submitter_committed_the_transaction_under()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var lane = await OpenDeduplicationAsync(cancellationToken);
+        var (client, owner) = lane.Capability;
+        var submission = MarkerSubmission(owner, new DeduplicationPeriod.Duration(TimeSpan.FromMinutes(5)));
+        var submitter = new SubmitterInfo(new HashSet<Party> { owner }, new HashSet<Party>());
+
+        var committed = await client.TrySubmitAndWaitForTransactionAsync(
+            submission, owner, cancellationToken: cancellationToken);
+        var transaction = committed.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+
+        var readBack = await client.GetUpdateByOffsetAsync(
+            transaction.CompletionOffset, submitter, cancellationToken: cancellationToken);
+
+        readBack.CommandId.Should().Be(submission.CommandId);
+    }
+
+    [Fact]
     public async Task TrySubmitAndWaitForTransactionAsync_accepts_a_period_beyond_the_participant_maximum()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

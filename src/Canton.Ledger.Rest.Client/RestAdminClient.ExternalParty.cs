@@ -43,7 +43,7 @@ internal sealed partial class RestAdminClient
                 new RestCall(
                     HttpMethod.Post, GenerateExternalPartyTopologyPath, body,
                     MissingBody("external party topology"), MalformedBody("external party topology"), LedgerCallKind.Read),
-                ToExternalPartyTopology,
+                response => ExternalPartyTopologyVerifier.Verify(request, ToExternalPartyTopology(response)),
                 timeout: null,
                 cancellationToken));
     }
@@ -52,13 +52,14 @@ internal sealed partial class RestAdminClient
     /// <remarks>Sent as <c>POST /v2/parties/external/allocate</c>.</remarks>
     /// <exception cref="ArgumentNullException"><paramref name="allocation"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
-    /// A signature carries a format or algorithm this SDK version has no JSON Ledger API name for.
+    /// The onboarding transactions are not the single PartyToParticipant transaction of an external party, or a signature carries a format or algorithm this SDK version has no JSON Ledger API name for.
     /// </exception>
     public Task<Party> AllocateExternalPartyAsync(
         ExternalPartyAllocation allocation,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(allocation);
+        var expectedParty = ExternalPartyTopologyVerifier.ExpectedPartyOf(allocation);
 
         var body = new ServedAllocateExternalPartyRequest(
             allocation.SynchronizerId.Value,
@@ -78,7 +79,7 @@ internal sealed partial class RestAdminClient
                 Mutate(HttpMethod.Post, AllocateExternalPartyPath, body, "allocated external party"),
                 response => string.IsNullOrEmpty(response.PartyId)
                     ? throw MalformedResponse.MissingRequiredField("The response carries no partyId")
-                    : new Party(response.PartyId),
+                    : ExternalPartyIdentity.VerifyAllocated(expectedParty, new Party(response.PartyId)),
                 timeout: null,
                 cancellationToken));
     }

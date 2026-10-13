@@ -157,6 +157,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "createArgument": {"owner": "alice::ns1"},
                       "interfaceViews": [
@@ -194,6 +195,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00keyedWithAnEmptyHash",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "KeyedHolding"},
                       "createArgument": {"owner": "alice::ns1"},
                       "contractKey": "alice::ns1",
@@ -228,6 +230,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00keyedWithoutHash",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "KeyedHolding"},
                       "createArgument": {"owner": "alice::ns1"},
                       "contractKey": "alice::ns1"
@@ -260,6 +263,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00keyedWithANullKey",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "KeyedHolding"},
                       "createArgument": {"owner": "alice::ns1"},
                       "contractKey": null
@@ -332,6 +336,7 @@ public class RestTransactionResultProjectorTests
                     "CreatedEvent": {
                       "offset": "1",
                       "contractId": "00noNodeId",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "createArgument": {"owner": "alice::ns1"}
                     }
@@ -363,6 +368,7 @@ public class RestTransactionResultProjectorTests
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "Archive",
                       "choiceArgument": {},
@@ -402,6 +408,7 @@ public class RestTransactionResultProjectorTests
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "",
                       "choiceArgument": {},
@@ -438,7 +445,10 @@ public class RestTransactionResultProjectorTests
                     [],
                     [],
                     [],
-                    ContractKey: null),
+                    ContractKey: null)
+                {
+                    PackageName = "token-impl",
+                },
             ],
             [],
             new CommandId("cmd-1")));
@@ -550,6 +560,7 @@ public class RestTransactionResultProjectorTests
                 "ExercisedEvent": {
                   "offset": "1",
                   "contractId": "00holding",
+                  "packageName": "token-impl",
                   "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "CirceHolding"},
                   "choice": "Split",
                   "choiceArgument": {},
@@ -588,6 +599,7 @@ public class RestTransactionResultProjectorTests
                 "ExercisedEvent": {
                   "offset": "1",
                   "contractId": "00holding",
+                  "packageName": "token-impl",
                   "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "CirceHolding"},
                   "choice": "Settle",
                   "choiceArgument": {},
@@ -640,6 +652,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "CirceHolding"},
                       "createArgument": {"owner": "alice::ns1", "amount": "10.5"}
                     }
@@ -671,6 +684,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00keyed",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "KeyedHolding"},
                       "createArgument": {"owner": "alice::ns1"},
                       "contractKey": "alice::ns1"
@@ -705,6 +719,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "77",
                       "contractId": "00b",
                       "nodeId": 1,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "createArgument": {"owner": "bob::ns1"}
                     }
@@ -714,6 +729,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "77",
                       "contractId": "00c",
                       "nodeId": 2,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "KeyedHolding"},
                       "createArgument": {"owner": "carol::ns1"},
                       "contractKey": "carol::ns1",
@@ -725,6 +741,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "77",
                       "nodeId": 3,
                       "contractId": "00a",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "Transfer",
                       "choiceArgument": {"newOwner": "bob::ns1"},
@@ -786,6 +803,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00unknown",
                       "nodeId": 0,
+                      "packageName": "missing-pkg-name",
                       "templateId": {"packageId": "missing-pkg", "moduleName": "Missing.Module", "entityName": "Missing"},
                       "createArgument": {"owner": "alice::ns1"},
                       "contractKey": {"_1": "alice::ns1", "_2": "7"}
@@ -822,6 +840,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00known",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "createArgument": {"owner": "alice::ns1"}
                     }
@@ -850,6 +869,7 @@ public class RestTransactionResultProjectorTests
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "Burn",
                       "choiceArgument": {"amount": "2.5"},
@@ -886,6 +906,7 @@ public class RestTransactionResultProjectorTests
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "interfaceId": {"packageId": "iface-pkg", "moduleName": "Token.Api", "entityName": "IHolding"},
                       "choice": "Lock",
@@ -924,6 +945,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "5",
                       "nodeId": 0,
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "Transfer",
                       "choiceArgument": {"newOwner": "bob::ns1"},
@@ -939,6 +961,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "5",
                       "nodeId": 1,
                       "contractId": "00amulet",
+                      "packageName": "splice-amulet",
                       "templateId": {"packageId": "amulet-pkg", "moduleName": "Splice.Amulet", "entityName": "Amulet"},
                       "createArgument": {"owner": "bob::ns1", "amount": {"initialAmount": "12.5"}}
                     }
@@ -948,6 +971,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "5",
                       "nodeId": 2,
                       "contractId": "00old",
+                      "packageName": "splice-amulet",
                       "templateId": {"packageId": "amulet-pkg", "moduleName": "Splice.Amulet", "entityName": "Amulet"},
                       "choice": "Archive",
                       "choiceArgument": {},
@@ -994,6 +1018,7 @@ public class RestTransactionResultProjectorTests
                     "ExercisedEvent": {
                       "offset": "1",
                       "contractId": "00holding",
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
                       "choice": "Archive",
                       "actingParties": ["alice::ns1"],
@@ -1031,6 +1056,7 @@ public class RestTransactionResultProjectorTests
                       "offset": "1",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"}
                     }
                   }

@@ -272,7 +272,7 @@ public sealed class LedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransaction_throws_when_token_provider_returns_empty_token()
+    public async Task TrySubmitAndWaitForTransaction_reports_an_empty_token_as_a_never_sent_InfraError()
     {
         var emptyProvider = Substitute.For<ITokenProvider>();
         emptyProvider.GetTokenAsync(Arg.Any<CancellationToken>()).Returns("");
@@ -288,12 +288,14 @@ public sealed class LedgerClientTests : IDisposable
 
         var act = () => client.TrySubmitAndWaitForTransactionAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*returned an empty token*");
+        var infra = (await act()).Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infra.Status.Should().Be(new TransportStatus.NoResponse());
+        infra.SourceException.Should().BeOfType<TokenAcquisitionException>()
+            .Which.InnerException.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Contain("returned an empty token");
     }
 
     [Fact]
-    public async Task TrySubmitAndWaitForTransaction_throws_when_token_provider_returns_whitespace_token()
+    public async Task TrySubmitAndWaitForTransaction_reports_a_whitespace_token_as_a_never_sent_InfraError()
     {
         var whitespaceProvider = Substitute.For<ITokenProvider>();
         whitespaceProvider.GetTokenAsync(Arg.Any<CancellationToken>()).Returns("   ");
@@ -309,8 +311,10 @@ public sealed class LedgerClientTests : IDisposable
 
         var act = () => client.TrySubmitAndWaitForTransactionAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*returned an empty token*");
+        var infra = (await act()).Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>().Subject;
+        infra.Status.Should().Be(new TransportStatus.NoResponse());
+        infra.SourceException.Should().BeOfType<TokenAcquisitionException>()
+            .Which.InnerException.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Contain("returned an empty token");
     }
 
     [Fact]

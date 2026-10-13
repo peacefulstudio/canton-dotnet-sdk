@@ -4,6 +4,7 @@
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -87,5 +88,55 @@ public abstract class LedgerWriterParityTests
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
         effectiveCommandId.Should().Be(commandId);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_returns_the_Asset_behind_the_IHolding_view_it_requested()
+    {
+        await using var lane = await OpenWriterAsync(TestContext.Current.CancellationToken);
+        var (writer, _, owner) = lane.Capability;
+        var submission = CommandsSubmission
+            .Single(CreateCommand.For(new Asset(owner, 12.5m)))
+            .WithInterfaceViewRequest<IHolding>();
+
+        var outcome = await writer.TrySubmitAndWaitForTransactionAsync(
+            submission, owner, cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.Single<IHolding>().Value.Should().NotBeNullOrWhiteSpace();
+        result.Single<Asset>().Value.Should().Be(result.Single<IHolding>().Value);
+    }
+
+    [Fact]
+    public async Task Single_by_interface_throws_on_a_result_produced_without_the_interface_view()
+    {
+        await using var lane = await OpenWriterAsync(TestContext.Current.CancellationToken);
+        var (writer, _, owner) = lane.Capability;
+        var submission = CommandsSubmission.Single(CreateCommand.For(new Asset(owner, 12.5m)));
+
+        var outcome = await writer.TrySubmitAndWaitForTransactionAsync(
+            submission, owner, cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        var act = () => result.Single<IHolding>();
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("This transaction result was produced without interface data for Holding,*");
+    }
+
+    [Fact]
+    public async Task CreateOneByExerciseAsync_returns_the_Asset_a_Marker_choice_created_behind_its_IHolding_view()
+    {
+        await using var lane = await OpenWriterAsync(TestContext.Current.CancellationToken);
+        var (writer, _, owner) = lane.Capability;
+        var createOutcome = await writer.TryCreateAsync(
+            new Marker(owner), owner, cancellationToken: TestContext.Current.CancellationToken);
+        var markerCid = createOutcome.Should().BeOfType<ExerciseOutcome<ContractId<Marker>>.One>().Subject.Result;
+
+        var holdingCid = await writer.CreateOneByExerciseAsync<IHolding>(
+            markerCid.MintCommand(new Marker.Mint(12.5m)),
+            owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        holdingCid.Value.Should().NotBeNullOrWhiteSpace();
     }
 }

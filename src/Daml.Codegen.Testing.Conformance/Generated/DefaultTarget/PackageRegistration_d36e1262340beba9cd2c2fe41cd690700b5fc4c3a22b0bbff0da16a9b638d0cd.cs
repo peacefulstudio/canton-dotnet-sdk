@@ -7,7 +7,7 @@
 
 namespace Daml.Codegen.Testing.Conformance.DefaultTarget;
 
-internal static class PackageRegistration_f83e9558896c9112d83eb1631da8c97b4404ba1437ffc6f165692711f24c6ee8
+internal static class PackageRegistration_d36e1262340beba9cd2c2fe41cd690700b5fc4c3a22b0bbff0da16a9b638d0cd
 {
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()

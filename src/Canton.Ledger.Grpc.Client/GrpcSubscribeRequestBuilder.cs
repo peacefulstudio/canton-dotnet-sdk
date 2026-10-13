@@ -3,6 +3,8 @@
 
 using Canton.Ledger.Kernel.Streams;
 using Com.Daml.Ledger.Api.V2;
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Grpc;
 using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
 using RuntimeCommands = Daml.Runtime.Commands;
 
@@ -40,17 +42,21 @@ internal static class GrpcSubscribeRequestBuilder
         return request;
     }
 
-    public static UpdateFormat BuildTransactionUpdateFormat(RuntimeCommands.SubmitterInfo submitter) =>
+    public static UpdateFormat BuildTransactionUpdateFormat(
+        RuntimeCommands.SubmitterInfo submitter,
+        IReadOnlyList<DamlTypeDescriptor>? interfaceViews = null) =>
         new UpdateFormat
         {
-            IncludeTransactions = BuildTransactionFormat(submitter),
+            IncludeTransactions = BuildTransactionFormat(submitter, interfaceViews),
         };
 
-    public static TransactionFormat BuildTransactionFormat(RuntimeCommands.SubmitterInfo submitter)
+    public static TransactionFormat BuildTransactionFormat(
+        RuntimeCommands.SubmitterInfo submitter,
+        IReadOnlyList<DamlTypeDescriptor>? interfaceViews = null)
     {
         var eventFormat = new EventFormat { Verbose = true };
 
-        AddFilterForEachParty(eventFormat, submitter, static () => new Filters());
+        AddFilterForEachParty(eventFormat, submitter, () => BuildWildcardWithInterfaceViews(interfaceViews ?? []));
 
         return new TransactionFormat
         {
@@ -99,6 +105,31 @@ internal static class GrpcSubscribeRequestBuilder
         var eventFormat = new EventFormat { Verbose = true };
         AddFilterForEachParty(eventFormat, submitter, BuildWildcardBlobFilters);
         return eventFormat;
+    }
+
+    private static Filters BuildWildcardWithInterfaceViews(IReadOnlyList<DamlTypeDescriptor> interfaceViews)
+    {
+        var filters = new Filters();
+        if (interfaceViews.Count == 0)
+        {
+            return filters;
+        }
+
+        filters.Cumulative.Add(new CumulativeFilter { WildcardFilter = new WildcardFilter() });
+        foreach (var interfaceView in interfaceViews)
+        {
+            filters.Cumulative.Add(new CumulativeFilter
+            {
+                InterfaceFilter = new InterfaceFilter
+                {
+                    InterfaceId = DamlValueConverter.ToProtoTemplateNameIdentifier(
+                        interfaceView.PackageName, interfaceView.Identifier),
+                    IncludeInterfaceView = true,
+                },
+            });
+        }
+
+        return filters;
     }
 
     private static Filters BuildWildcardBlobFilters()

@@ -181,13 +181,13 @@ public class ChoiceEmitterArchiveChoiceTests
         {
             "Archive",
             new DamlTypeRef(StdlibPackageId, "DA.Internal.Template", "Archive"),
-            "DamlRecord.Create());",
+            "DamlRecord.Create()) {",
             "DamlUnit.Instance"
         },
         {
             "Accept",
             new DamlPrimitiveType(DamlPrimitive.Unit),
-            "DamlUnit.Instance);",
+            "DamlUnit.Instance) {",
             "DamlRecord.Create()"
         },
     };

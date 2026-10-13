@@ -91,6 +91,7 @@ public static class TransactionTreeExtensions
                     {
                         InterfaceIds = created.InterfaceIds,
                         UndecodedPayload = created.UndecodedCreateArguments,
+                        PackageName = created.PackageName,
                     });
                     break;
                 case TreeEvent.Exercised exercised:
@@ -103,7 +104,10 @@ public static class TransactionTreeExtensions
                         exercised.ExerciseResult,
                         exercised.Consuming,
                         exercised.ActingParties,
-                        exercised.WitnessParties));
+                        exercised.WitnessParties)
+                    {
+                        PackageName = exercised.PackageName,
+                    });
                     if (exercised.Consuming)
                     {
                         archivedContractIds.Add(exercised.ContractId);

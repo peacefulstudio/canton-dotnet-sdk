@@ -82,7 +82,7 @@ public sealed class GrpcExternalSigningEncodingTests
         var (clients, invoker) = ClientsOverRecordingInvoker();
         var allocation = new ExternalPartyAllocation(
             new SynchronizerId("sync::1"),
-            [],
+            [GoldenExternalPartyOnboarding.UnsignedTransaction()],
             [new LedgerSignature((SignatureFormat)99, new byte[] { 8 }, "fp-b", SigningAlgorithm.Ed25519)],
             null,
             null,

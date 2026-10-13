@@ -66,6 +66,7 @@ public sealed class GrpcChoiceResultProjectionParityTests : ChoiceResultProjecti
         {
             ContractId = exercise.ContractId,
             TemplateId = DamlValueConverter.ToProtoIdentifier(exercise.TemplateId),
+            PackageName = exercise.PackageName,
             Choice = exercise.Choice,
             ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
             ExerciseResult = DamlValueConverter.ToProtoValue(exercise.Result),

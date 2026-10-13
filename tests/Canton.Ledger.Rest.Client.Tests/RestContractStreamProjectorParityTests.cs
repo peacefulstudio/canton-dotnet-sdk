@@ -296,6 +296,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
         omitTemplateId
             ? string.Empty
             : $$"""
+              "packageName": "{{ActiveContractScenario.PackageName}}",
               "templateId": {
                 "packageId": "tmpl-pkg",
                 "moduleName": "{{ActiveContractScenario.ModuleName}}",
@@ -383,6 +384,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
           {{OffsetField(scenario.OmitCreatedEventOffset ? null : ActiveContractScenario.CreatedOffset)}}
           "nodeId": 0,
           "contractId": "{{ActiveContractScenario.ContractId}}",
+          "packageName": "{{ActiveContractScenario.PackageName}}",
           "templateId": {
             "packageId": "tmpl-pkg",
             "moduleName": "{{ActiveContractScenario.ModuleName}}",

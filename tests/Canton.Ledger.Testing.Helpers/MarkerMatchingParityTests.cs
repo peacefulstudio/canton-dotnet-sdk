@@ -12,8 +12,9 @@ namespace Canton.Ledger.Testing.Helpers;
 /// <summary>
 /// Behavioural parity suite over marker matching, run against each transport's
 /// marker matcher (<c>GrpcMarkerMatcher</c>, <c>RestMarkerMatcher</c>) through one shared set of test bodies. It pins the decisions both
-/// transports must agree on: that a marker is matched by module and entity name regardless of
-/// package, that an interface marker is matched only through an identity the event implements,
+/// transports must agree on: that a template marker is matched by package name, module and entity
+/// regardless of package id and never when the event names no package, that an interface marker is
+/// matched only through an identity the event implements, by exact package id,
 /// that an unassigned event needs no client-side interface check because the participant's
 /// reassignment filter already scoped it, and the package-name reference format a stream filter
 /// names the marker by. The wire encodings themselves stay per-transport.
@@ -70,7 +71,7 @@ public abstract class MarkerMatchingParityTests
     [InlineData(MarkerWireEvent.Archived)]
     [InlineData(MarkerWireEvent.Exercised)]
     [InlineData(MarkerWireEvent.Unassigned)]
-    public void MatchesWireEvent_matches_a_template_marker_by_module_and_entity_name_across_packages(
+    public void MatchesWireEvent_matches_a_template_marker_by_package_name_module_and_entity_across_package_ids(
         MarkerWireEvent wireEvent)
     {
         MatchesWireEvent(DamlTypeKind.Template, new MarkerMatchScenario { Event = wireEvent })
@@ -88,6 +89,49 @@ public abstract class MarkerMatchingParityTests
         MatchesWireEvent(
             DamlTypeKind.Template,
             new MarkerMatchScenario { Event = wireEvent, TemplateId = MarkerMatchScenario.OtherTemplateId })
+            .Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(MarkerWireEvent.Created)]
+    [InlineData(MarkerWireEvent.Archived)]
+    [InlineData(MarkerWireEvent.Exercised)]
+    [InlineData(MarkerWireEvent.Unassigned)]
+    public void MatchesWireEvent_does_not_match_a_template_marker_of_the_same_module_and_entity_in_another_package(
+        MarkerWireEvent wireEvent)
+    {
+        MatchesWireEvent(
+            DamlTypeKind.Template,
+            new MarkerMatchScenario { Event = wireEvent, PackageName = MarkerMatchScenario.OtherPackageName })
+            .Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(MarkerWireEvent.Created)]
+    [InlineData(MarkerWireEvent.Archived)]
+    [InlineData(MarkerWireEvent.Exercised)]
+    [InlineData(MarkerWireEvent.Unassigned)]
+    public void MatchesWireEvent_does_not_match_a_template_marker_on_an_event_that_names_no_package(
+        MarkerWireEvent wireEvent)
+    {
+        MatchesWireEvent(DamlTypeKind.Template, new MarkerMatchScenario { Event = wireEvent, PackageName = null })
+            .Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(MarkerWireEvent.Created)]
+    [InlineData(MarkerWireEvent.Archived)]
+    [InlineData(MarkerWireEvent.Exercised)]
+    public void MatchesWireEvent_does_not_match_an_interface_marker_through_the_same_interface_name_in_another_package(
+        MarkerWireEvent wireEvent)
+    {
+        MatchesWireEvent(
+            DamlTypeKind.Interface,
+            new MarkerMatchScenario
+            {
+                Event = wireEvent,
+                ImplementedInterface = MarkerMatchScenario.OtherPackageInterfaceId,
+            })
             .Should().BeFalse();
     }
 
@@ -150,10 +194,37 @@ public abstract class MarkerMatchingParityTests
     }
 
     [Fact]
-    public void MatchesCreatedContract_matches_a_template_marker_by_module_and_entity_name_across_packages()
+    public void MatchesCreatedContract_matches_a_template_marker_by_package_name_module_and_entity_across_package_ids()
     {
         MatchesCreatedContract(DamlTypeKind.Template, CreatedContractWith(MarkerMatchScenario.MatchingTemplateId))
             .Should().BeTrue();
+    }
+
+    [Fact]
+    public void MatchesCreatedContract_does_not_match_a_template_marker_of_the_same_module_and_entity_in_another_package()
+    {
+        MatchesCreatedContract(
+            DamlTypeKind.Template,
+            CreatedContractWith(MarkerMatchScenario.MatchingTemplateId, packageName: MarkerMatchScenario.OtherPackageName))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void MatchesCreatedContract_does_not_match_a_template_marker_on_a_contract_that_names_no_package()
+    {
+        MatchesCreatedContract(
+            DamlTypeKind.Template,
+            CreatedContractWith(MarkerMatchScenario.MatchingTemplateId, packageName: null))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void MatchesCreatedContract_does_not_match_an_interface_marker_through_the_same_interface_name_in_another_package()
+    {
+        MatchesCreatedContract(
+            DamlTypeKind.Interface,
+            CreatedContractWith(MarkerMatchScenario.MatchingTemplateId, MarkerMatchScenario.OtherPackageInterfaceId))
+            .Should().BeFalse();
     }
 
     [Fact]
@@ -189,9 +260,14 @@ public abstract class MarkerMatchingParityTests
     }
 
     private static CreatedContract CreatedContractWith(
-        RuntimeIdentifier templateId, RuntimeIdentifier? implementedInterface = null) =>
+        RuntimeIdentifier templateId,
+        RuntimeIdentifier? implementedInterface = null,
+        string? packageName = TemplateMarkerPackageName) =>
         new("event-0", "00holding", templateId, DamlRecord.Create(), [], [], [], ContractKey: null)
         {
             InterfaceIds = implementedInterface is null ? [] : [implementedInterface],
+            PackageName = packageName,
         };
+
+    private const string TemplateMarkerPackageName = "token-impl";
 }

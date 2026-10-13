@@ -340,7 +340,7 @@ public sealed class AdminClientFailureContractTests : IDisposable
     }
 
     [Fact]
-    public async Task ListKnownPartiesAsync_lets_a_token_failure_before_a_later_page_escape_unchanged()
+    public async Task ListKnownPartiesAsync_reports_a_token_failure_before_a_later_page_as_a_never_sent_read()
     {
         var tokenFailure = new FormatException("the token is not valid base64");
         var tokenProvider = Substitute.For<ITokenProvider>();
@@ -352,7 +352,10 @@ public sealed class AdminClientFailureContractTests : IDisposable
 
         var act = () => CreateClient(tokenProvider).ListKnownPartiesAsync(TestContext.Current.CancellationToken);
 
-        (await act.Should().ThrowAsync<FormatException>()).Which.Should().BeSameAs(tokenFailure);
+        var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<TokenAcquisitionException>().Which.InnerException.Should().BeSameAs(tokenFailure);
     }
 
     [Fact]

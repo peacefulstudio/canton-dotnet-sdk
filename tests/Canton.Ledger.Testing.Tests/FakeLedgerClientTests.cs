@@ -123,9 +123,83 @@ public class FakeLedgerClientTests
         var result = await client.TryExerciseAsync<string>(
             DemoExercise(),
             submitter: Alice,
+            commandId: (CommandId)"cmd-3",
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().BeSameAs(outcome);
+        result.Should().Be(new ExerciseOutcome<string>.One("choice-result") { CommandId = "cmd-3" });
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_stamps_the_caller_supplied_command_id_on_the_staged_outcome()
+    {
+        var client = FakeLedgerClient.Create().WithExerciseResult(LedgerOutcomes.One("choice-result")).Build();
+
+        var result = await client.TryExerciseAsync<string>(
+            DemoExercise(),
+            submitter: Alice,
+            commandId: (CommandId)"cmd-9",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(new ExerciseOutcome<string>.One("choice-result") { CommandId = "cmd-9" });
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_stamps_the_minted_command_id_it_also_records()
+    {
+        var client = FakeLedgerClient.Create().WithExerciseResult(LedgerOutcomes.DamlError<string>(
+            DamlErrorCategory.InvalidGivenCurrentSystemStateOther, "CONTRACT_NOT_FOUND", "gone", new Dictionary<string, string>())).Build();
+
+        var result = await client.TryExerciseAsync<string>(
+            DemoExercise(),
+            submitter: Alice,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        result.CommandId.Should().Be(client.LastSubmittedCommandId!.Value.Value);
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_stamps_the_caller_supplied_command_id_on_the_staged_outcome()
+    {
+        var client = FakeLedgerClient.Create()
+            .WithCreateResult(LedgerOutcomes.One(new ContractId<DemoAsset>("cid1")))
+            .Build();
+
+        var result = await client.TryCreateAsync(
+            new DemoAsset(Alice, Alice, "GOLD", 1m),
+            Alice,
+            commandId: (CommandId)"cmd-9",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        result.CommandId.Should().Be("cmd-9");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_stamps_the_submission_command_id_on_the_staged_outcome()
+    {
+        var client = FakeLedgerClient.Create()
+            .WithSubmissionOutcome(LedgerOutcomes.DamlError<TransactionResult>(
+                DamlErrorCategory.InvalidGivenCurrentSystemStateOther, "CONTRACT_NOT_FOUND", "gone", new Dictionary<string, string>()))
+            .Build();
+        var submission = DemoSubmission().WithCommandId((CommandId)"cmd-9");
+
+        var result = await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.CommandId.Should().Be("cmd-9");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_stamps_a_minted_command_id_when_the_submission_carries_none()
+    {
+        var client = FakeLedgerClient.Create()
+            .WithSubmissionOutcome(LedgerOutcomes.DamlError<TransactionResult>(
+                DamlErrorCategory.InvalidGivenCurrentSystemStateOther, "CONTRACT_NOT_FOUND", "gone", new Dictionary<string, string>()))
+            .Build();
+
+        var result = await client.TrySubmitAndWaitForTransactionAsync(
+            DemoSubmission(), cancellationToken: TestContext.Current.CancellationToken);
+
+        Guid.TryParse(result.CommandId, out _).Should().BeTrue();
     }
 
     [Fact]
@@ -148,9 +222,10 @@ public class FakeLedgerClientTests
         var result = await client.TryCreateAsync(
             new DemoAsset(Alice, Alice, "GOLD", 1m),
             Alice,
+            commandId: (CommandId)"cmd-3",
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().BeSameAs(outcome);
+        result.Should().Be(new ExerciseOutcome<ContractId<DemoAsset>>.One(new ContractId<DemoAsset>("cid1")) { CommandId = "cmd-3" });
     }
 
     public static TheoryData<ExerciseOutcome<TransactionResult>> SubmissionOutcomes => new()
@@ -177,9 +252,9 @@ public class FakeLedgerClientTests
         var client = FakeLedgerClient.Create().WithSubmissionOutcome(outcome).Build();
 
         var result = await client.TrySubmitAndWaitForTransactionAsync(
-            DemoSubmission(), cancellationToken: TestContext.Current.CancellationToken);
+            DemoSubmission().WithCommandId((CommandId)"cmd-staged"), cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().BeSameAs(outcome);
+        result.Should().Be(outcome with { CommandId = "cmd-staged" });
     }
 
     [Fact]
@@ -190,9 +265,47 @@ public class FakeLedgerClientTests
         var client = FakeLedgerClient.Create().WithSubmissionOutcome(outcome).Build();
 
         var result = await client.TrySubmitAndWaitForTransactionAsync(
-            DemoSubmission(), Alice, cancellationToken: TestContext.Current.CancellationToken);
+            DemoSubmission().WithCommandId((CommandId)"cmd-staged"), Alice, cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().BeSameAs(outcome);
+        result.Should().Be(outcome with { CommandId = "cmd-staged" });
+    }
+
+    private sealed record IStagedGadget : IDamlInterface
+    {
+        public static Identifier InterfaceId { get; } = new("gadget-pkg", "Acme.Gadget", "IGadget");
+        public static string PackageId => "gadget-pkg";
+        public static string PackageName => "gadget-package";
+        public static Version PackageVersion { get; } = new(0, 1, 0);
+        public static DamlTypeDescriptor DamlTypeId { get; } = new(InterfaceId, DamlTypeKind.Interface, PackageName);
+
+        public DamlRecord ToRecord() => DamlRecord.Create();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_records_the_interface_views_the_submission_requested_on_the_staged_result()
+    {
+        var stagedContract = new CreatedContract(
+            EventId: "evt-1",
+            ContractId: "cid-1",
+            TemplateId: new Identifier("pkg", "Module", "Template"),
+            Payload: DamlRecord.Create(),
+            WitnessParties: [Alice],
+            Signatories: [Alice],
+            Observers: [])
+        {
+            PackageName = "pkg-name",
+            InterfaceIds = [IStagedGadget.InterfaceId],
+        };
+        var staged = LedgerOutcomes.One(LedgerResults.Transaction(
+            "update-1", LedgerOffset.At(5), [stagedContract], [], (CommandId)"cmd-1"));
+        var client = FakeLedgerClient.Create().WithSubmissionOutcome(staged).Build();
+
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(
+            DemoSubmission().WithInterfaceViewRequest<IStagedGadget>(),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>().Subject.Result;
+        result.Single<IStagedGadget>().Value.Should().Be("cid-1");
     }
 
     [Fact]

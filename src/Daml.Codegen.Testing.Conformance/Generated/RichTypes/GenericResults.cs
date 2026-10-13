@@ -28,13 +28,13 @@ public sealed partial record GenericResults(
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<GenericResults>, global::Daml.Runtime.Data.IDamlRecord<GenericResults>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68", "RichTypes", "GenericResults");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "GenericResults");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    public static string PackageId => "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-hbefba41fabc8";
+    public static string PackageName => "richtypes-ha8d30776aa45";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -334,7 +334,7 @@ public static class GenericResultsExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnContractIds"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -348,7 +348,7 @@ public static class GenericResultsExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="owner">Controller party from the Daml <c>controller</c> clause, routed into the submission's <c>actAs</c> set.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -389,7 +389,7 @@ public static class GenericResultsExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -423,7 +423,7 @@ public static class GenericResultsExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="argument">The choice argument.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -464,7 +464,7 @@ public static class GenericResultsExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -555,7 +555,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("Archive"),
-            global::Daml.Runtime.Data.DamlRecord.Create());
+            global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -567,7 +567,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="client">The ledger client.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -605,7 +605,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnBox"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -618,7 +618,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -657,7 +657,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnEither"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -670,7 +670,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -709,7 +709,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnGenMap"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -722,7 +722,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -761,7 +761,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnNestedOptional"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -774,7 +774,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -813,7 +813,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnNonEmpty"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -826,7 +826,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -865,7 +865,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnOptionalSuit"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -878,7 +878,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -917,7 +917,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnOptionalText"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -930,7 +930,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -969,7 +969,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnOutcome"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -982,7 +982,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1021,7 +1021,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnOutcomes"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1034,7 +1034,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1073,7 +1073,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnProfiles"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1086,7 +1086,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1125,7 +1125,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnSet"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1138,7 +1138,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1177,7 +1177,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnSlot"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1190,7 +1190,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1229,7 +1229,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnSuit"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1242,7 +1242,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1281,7 +1281,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnTextMap"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1294,7 +1294,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -1333,7 +1333,7 @@ public static class GenericResultsNonContractExtensions
             global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.TemplateId,
             contractId,
             new global::Daml.Runtime.Commands.ChoiceName("ReturnTuple"),
-            argument.ToRecord());
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.GenericResults.PackageName };
     }
 
     /// <summary>
@@ -1346,7 +1346,7 @@ public static class GenericResultsNonContractExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
-    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted, and a minted id is not reported back on a failed submission. Supply and retain your own id to make a retry of a lost-but-accepted submission deduplicable, so the ledger deduplicates the resubmission instead of re-executing the choice.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
     /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

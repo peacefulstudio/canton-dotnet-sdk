@@ -68,9 +68,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         _invoker = new LedgerCallInvoker(_options, tokenProvider);
         _submissionClient = new SubmissionClient(
             _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
-            (offset, submitter, token) => GetUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token),
-            (offset, submitter, token) => GetAcsDeltaUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, token),
-            (offset, submitter, token) => GetUpdateTreeByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token));
+            (offset, submitter, interfaceViews, token) =>
+                ReadTransactionByOffsetAsync(LedgerOffset.At(offset), submitter, interfaceViews, token));
 
         CallContextHelper.LogStartupDiagnostics(
             _logger, tokenProvider, _options.GrpcAddress, nameof(LedgerClient), "AddLedgerClient");
@@ -145,9 +144,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         _invoker = new LedgerCallInvoker(_options, tokenProvider);
         _submissionClient = new SubmissionClient(
             _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
-            (offset, submitter, token) => GetUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token),
-            (offset, submitter, token) => GetAcsDeltaUpdateByOffsetAsync(LedgerOffset.At(offset), submitter, token),
-            (offset, submitter, token) => GetUpdateTreeByOffsetAsync(LedgerOffset.At(offset), submitter, cancellationToken: token));
+            (offset, submitter, interfaceViews, token) =>
+                ReadTransactionByOffsetAsync(LedgerOffset.At(offset), submitter, interfaceViews, token));
     }
 
     /// <inheritdoc />
@@ -297,9 +295,12 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
     /// <see cref="Canton.Ledger.Abstractions.ITokenProvider.None"/> sends no
     /// <c>authorization</c> header, and a caller-supplied <c>authorization</c> metadata entry wins
     /// over the resolved token. Unary calls carry the configured
-    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none
-    /// and run through the configured <see cref="LedgerClientOptions.Retry"/> pipeline, with auth
-    /// headers and deadline recomputed on each attempt; a caller-supplied deadline is kept verbatim.
+    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none;
+    /// a caller-supplied deadline is kept verbatim. The SDK cannot tell whether a raw call is
+    /// idempotent, so a unary call is sent exactly once even when
+    /// <see cref="LedgerClientOptions.Retry"/> is enabled. Start the call inside a
+    /// <see cref="Canton.Ledger.Kernel.Resilience.RawCallReplay.Allow"/> scope to run it through the
+    /// retry pipeline, with auth headers and deadline recomputed on each attempt.
     /// Streaming calls attach auth headers but carry no default deadline — a server stream may
     /// legitimately outlive any unary budget — and are never retried. Because retried unary calls
     /// only surface the winning attempt, <c>AsyncUnaryCall&lt;TResponse&gt;.ResponseHeadersAsync</c>

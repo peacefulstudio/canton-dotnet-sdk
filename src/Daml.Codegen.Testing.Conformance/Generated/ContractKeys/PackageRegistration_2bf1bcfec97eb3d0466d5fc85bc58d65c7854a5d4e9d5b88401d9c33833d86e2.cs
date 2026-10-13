@@ -7,7 +7,7 @@
 
 namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 
-internal static class PackageRegistration_33f0e87d5b88878f27b92868bb308be19850408c8e8fb40f3fe753e04ace8fe5
+internal static class PackageRegistration_2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2
 {
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()

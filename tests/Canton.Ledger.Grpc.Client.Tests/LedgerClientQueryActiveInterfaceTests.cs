@@ -39,7 +39,7 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
 
     private static readonly ProtoIdentifier ViewedInterface = new()
     {
-        PackageId = "any-pkg",
+        PackageId = "viewed-pkg",
         ModuleName = "Token.Api",
         EntityName = "IViewedHolding",
     };
@@ -243,6 +243,7 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
                 CreatedEvent = new ProtoCreatedEvent
                 {
                     ContractId = contractId,
+                    PackageName = "token-impl",
                     TemplateId = ImplementingTemplate,
                     CreateArguments = new ProtoRecord(),
                     Offset = offset,

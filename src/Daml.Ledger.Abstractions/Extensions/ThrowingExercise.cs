@@ -32,9 +32,9 @@ public static class ThrowingExercise
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        WriterExtensionHelpers.ThrowIfDefault(commandId);
-        var outcome = await writer.TryExerciseAsync<TResult>(command, submitter, workflowId, commandId, timeout, cancellationToken).ConfigureAwait(false);
-        return outcome.GetResultOrThrow(cancellationToken);
+        var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
+        var outcome = await writer.TryExerciseAsync<TResult>(command, submitter, workflowId, submittedCommandId, timeout, cancellationToken).ConfigureAwait(false);
+        return outcome.GetResultOrThrow(submittedCommandId, cancellationToken);
     }
 
     /// <summary>
@@ -64,18 +64,20 @@ public static class ThrowingExercise
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(writer);
+        var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
         var outcome = await writer
-            .TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken)
+            .TrySubmitSingleAsync(command, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken)
             .ConfigureAwait(false);
-        OutcomeUnwrapPolicy.Discard(outcome, DiscardIntent.RejectNone, "TrySubmitSingleAsync", cancellationToken);
+        OutcomeUnwrapPolicy.Discard(outcome, DiscardIntent.RejectNone, "TrySubmitSingleAsync", submittedCommandId, cancellationToken);
     }
 
-    private static T GetResultOrThrow<T>(this ExerciseOutcome<T> outcome, CancellationToken cancellationToken) =>
+    private static T GetResultOrThrow<T>(this ExerciseOutcome<T> outcome, CommandId commandId, CancellationToken cancellationToken) =>
         OutcomeUnwrapPolicy.Value(
             outcome,
             ValueIntent.RequireOne,
             "TryExerciseAsync",
             static () => "TryExerciseAsync returned no result (None); expected exactly one. Use TryExerciseAsync for structured handling.",
             static count => $"TryExerciseAsync returned Many ({count} results); use TryCreateManyByExerciseAsync to collect created contract ids, or inspect the TransactionResult directly.",
+            commandId,
             cancellationToken);
 }

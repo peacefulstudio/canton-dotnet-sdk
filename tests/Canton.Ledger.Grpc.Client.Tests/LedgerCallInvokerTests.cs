@@ -51,7 +51,7 @@ public class LedgerCallInvokerTests
     }
 
     [Fact]
-    public async Task GetHeadersAsync_throws_when_the_provider_returns_an_empty_token()
+    public async Task GetHeadersAsync_reports_an_empty_token_as_a_TokenAcquisitionException()
     {
         var emptyProvider = Substitute.For<ITokenProvider>();
         emptyProvider.GetTokenAsync(Arg.Any<CancellationToken>()).Returns("   ");
@@ -59,7 +59,7 @@ public class LedgerCallInvokerTests
 
         var act = () => invoker.GetHeadersAsync(TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*returned an empty token*");
+        await act.Should().ThrowAsync<TokenAcquisitionException>().WithMessage("*returned an empty token*");
     }
 
     [Fact]
@@ -350,7 +350,7 @@ public class LedgerCallInvokerTests
             },
             TestContext.Current.CancellationToken);
 
-        escaped.Should().BeSameAs(format);
+        AssertNeverSentTokenFailure(escaped, format);
     }
 
     [Fact]
@@ -375,7 +375,16 @@ public class LedgerCallInvokerTests
             },
             TestContext.Current.CancellationToken);
 
-        escaped.Should().HaveCount(2).And.AllSatisfy(failure => failure.Should().BeSameAs(format));
+        escaped.Should().HaveCount(2);
+        escaped.Should().AllSatisfy(failure => AssertNeverSentTokenFailure(failure, format));
+    }
+
+    private static void AssertNeverSentTokenFailure(Exception? failure, Exception tokenFailure)
+    {
+        var thrown = failure.Should().BeOfType<LedgerOperationException>().Subject;
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.InnerException.Should().BeOfType<TokenAcquisitionException>().Which.InnerException.Should().BeSameAs(tokenFailure);
     }
 
     private static ITokenProvider FailingTokenProvider(Exception failure)

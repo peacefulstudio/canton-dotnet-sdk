@@ -34,10 +34,14 @@ public enum MarkerWireEvent
 public sealed record MarkerMatchScenario
 {
     /// <summary>
-    /// The package id every scenario identity carries. It is deliberately not the marker's own
-    /// package: matching is by module and entity name, so the package id must never decide it.
+    /// The package id every scenario template identity carries. It is deliberately not the marker's
+    /// own package id: a template is matched by package name, module and entity, so a template's
+    /// package id must never decide it.
     /// </summary>
     public const string UnrelatedPackageId = "unrelated-pkg";
+
+    /// <summary>A package name no marker declares.</summary>
+    public const string OtherPackageName = "other-package";
 
     /// <summary><see cref="TemplateMarker"/>'s module and entity, in an unrelated package.</summary>
     public static RuntimeIdentifier MatchingTemplateId { get; } = new(
@@ -47,19 +51,25 @@ public sealed record MarkerMatchScenario
     public static RuntimeIdentifier OtherTemplateId { get; } = new(
         UnrelatedPackageId, TemplateMarker.TemplateId.ModuleName, "Other");
 
-    /// <summary><see cref="InterfaceMarker"/>'s module and entity, in an unrelated package.</summary>
-    public static RuntimeIdentifier MatchingInterfaceId { get; } = new(
+    /// <summary><see cref="InterfaceMarker"/>'s own identity: an interface is matched by exact package id.</summary>
+    public static RuntimeIdentifier MatchingInterfaceId { get; } = InterfaceMarker.InterfaceId;
+
+    /// <summary><see cref="InterfaceMarker"/>'s module and entity, in an unrelated package, which must not match.</summary>
+    public static RuntimeIdentifier OtherPackageInterfaceId { get; } = new(
         UnrelatedPackageId, InterfaceMarker.InterfaceId.ModuleName, InterfaceMarker.InterfaceId.EntityName);
 
-    /// <summary>An interface identity in <see cref="InterfaceMarker"/>'s module that must not match.</summary>
+    /// <summary>An interface identity in <see cref="InterfaceMarker"/>'s own package and module that must not match.</summary>
     public static RuntimeIdentifier OtherInterfaceId { get; } = new(
-        UnrelatedPackageId, InterfaceMarker.InterfaceId.ModuleName, "IOther");
+        InterfaceMarker.InterfaceId.PackageId, InterfaceMarker.InterfaceId.ModuleName, "IOther");
 
     /// <summary>Which wire event shape to render.</summary>
     public required MarkerWireEvent Event { get; init; }
 
     /// <summary>The template identity the rendered event carries.</summary>
     public RuntimeIdentifier TemplateId { get; init; } = MatchingTemplateId;
+
+    /// <summary>The package name the rendered event carries, or <c>null</c> for an event that names none.</summary>
+    public string? PackageName { get; init; } = TemplateMarker.PackageName;
 
     /// <summary>The interface identity the rendered event implements, or <c>null</c> to implement none.</summary>
     public RuntimeIdentifier? ImplementedInterface { get; init; }

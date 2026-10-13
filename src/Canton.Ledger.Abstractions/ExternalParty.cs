@@ -36,11 +36,14 @@ public sealed record ExternalPartyTopologyRequest(
 /// The topology transactions that onboard an external party, and the hash to sign over them.
 /// </summary>
 /// <remarks>
-/// Equality compares the byte fields by buffer identity, not by content.
+/// Equality compares the byte fields by buffer identity, not by content. The client returns it only
+/// after decoding <paramref name="TopologyTransactions"/> and recomputing <paramref name="MultiHash"/>,
+/// and checking both against the request, as
+/// <see cref="IAdminClient.GenerateExternalPartyTopologyAsync"/> describes.
 /// </remarks>
 /// <param name="Party">The id the party will have once onboarded.</param>
 /// <param name="PublicKeyFingerprint">The fingerprint of the party's public key.</param>
-/// <param name="TopologyTransactions">The serialized topology transactions, opaque to the SDK.</param>
+/// <param name="TopologyTransactions">The serialized topology transactions, as the participant produced them.</param>
 /// <param name="MultiHash">
 /// The hash covering every transaction in <paramref name="TopologyTransactions"/>; signing it
 /// authorizes them all at once.

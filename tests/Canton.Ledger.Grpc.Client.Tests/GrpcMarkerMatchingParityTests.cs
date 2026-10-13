@@ -63,6 +63,7 @@ public sealed class GrpcMarkerMatchingParityTests : MarkerMatchingParityTests
         {
             ContractId = ContractId,
             TemplateId = ToProto(scenario.TemplateId),
+            PackageName = scenario.PackageName ?? string.Empty,
         };
         if (scenario.ImplementedInterface is { } implemented)
         {
@@ -77,6 +78,7 @@ public sealed class GrpcMarkerMatchingParityTests : MarkerMatchingParityTests
         {
             ContractId = ContractId,
             TemplateId = ToProto(scenario.TemplateId),
+            PackageName = scenario.PackageName ?? string.Empty,
         };
         if (scenario.ImplementedInterface is { } implemented)
         {
@@ -91,6 +93,7 @@ public sealed class GrpcMarkerMatchingParityTests : MarkerMatchingParityTests
         {
             ContractId = ContractId,
             TemplateId = ToProto(scenario.TemplateId),
+            PackageName = scenario.PackageName ?? string.Empty,
         };
         if (scenario.ImplementedInterface is { } implemented)
         {
@@ -103,6 +106,7 @@ public sealed class GrpcMarkerMatchingParityTests : MarkerMatchingParityTests
     {
         ContractId = ContractId,
         TemplateId = ToProto(scenario.TemplateId),
+        PackageName = scenario.PackageName ?? string.Empty,
     };
 
     private static ProtoIdentifier ToProto(RuntimeIdentifier identifier) => new()

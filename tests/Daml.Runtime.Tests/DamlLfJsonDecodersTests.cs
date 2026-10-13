@@ -1841,7 +1841,7 @@ public class DamlLfJsonDecodersTests
         var lookupUnderADifferentPackage = new Identifier(
             "pkg-registry-fallback-lookup", "Registry.Module", "FallbackRecord");
 
-        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderADifferentPackage);
+        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderADifferentPackage, "RegistryPackage");
 
         var resolved = lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>().Subject;
         resolved.Value.Should().Be((DamlLfElementReader)RegistryFallbackRecord.__ReadDamlLfJson);
@@ -1883,7 +1883,7 @@ public class DamlLfJsonDecodersTests
         var lookupUnderAThirdPackage = new Identifier(
             "pkg-registry-ambiguous-lookup", "Registry.Module", "AmbiguousRecord");
 
-        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderAThirdPackage);
+        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderAThirdPackage, "RegistryPackage");
 
         var ambiguous = lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Ambiguous>().Subject;
         ambiguous.Candidates.Should().Equal(
@@ -1929,7 +1929,7 @@ public class DamlLfJsonDecodersTests
         var lookupUnderAThirdPackage = new Identifier(
             "pkg-registry-ambiguous-lookup", "Registry.Module", "AmbiguousRecord");
 
-        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderAThirdPackage);
+        var lookup = GeneratedTypeReaders.FindRecordReader(lookupUnderAThirdPackage, "RegistryPackage");
 
         lookup.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Ambiguous>().Subject.Candidates.Should().Equal(
             "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryAmbiguousRecordA",
@@ -1958,7 +1958,7 @@ public class DamlLfJsonDecodersTests
         var exact = GeneratedTypeReaders.FindRecordReader(RegistryConcurrentRecord.DamlTypeId.Identifier);
         var lookupUnderADifferentPackage = new Identifier(
             "pkg-registry-concurrent-lookup", "Registry.Module", "ConcurrentRecord");
-        var byFallback = GeneratedTypeReaders.FindRecordReader(lookupUnderADifferentPackage);
+        var byFallback = GeneratedTypeReaders.FindRecordReader(lookupUnderADifferentPackage, "RegistryPackage");
 
         exact.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>();
         byFallback.Should().BeOfType<RegistryLookup<DamlLfElementReader>.Resolved>();
@@ -2026,7 +2026,7 @@ public class DamlLfJsonDecodersTests
         var lookupUnderAThirdPackage = new Identifier(
             "pkg-registry-choice-lookup", "Registry.ChoiceModule", "ChoiceRecord");
 
-        var lookup = GeneratedTypeReaders.FindChoice(lookupUnderAThirdPackage, new ChoiceName("Added"));
+        var lookup = GeneratedTypeReaders.FindChoice(lookupUnderAThirdPackage, new ChoiceName("Added"), "RegistryPackage");
 
         lookup.Should().BeOfType<RegistryLookup<IChoice>.Ambiguous>().Subject.Candidates.Should().Equal(
             "Daml.Runtime.Tests.DamlLfJsonDecodersTests+RegistryChoiceOwnerV1",

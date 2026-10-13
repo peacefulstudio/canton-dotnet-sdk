@@ -123,6 +123,7 @@ internal static class RestTransactionResultProjector
         {
             InterfaceIds = ToInterfaceIds(created),
             UndecodedPayload = payload.Undecoded,
+            PackageName = created.PackageName,
         };
     }
 
@@ -162,7 +163,10 @@ internal static class RestTransactionResultProjector
             payloads.Result,
             exercised.Consuming ?? false,
             RestWireConversions.ToPartyList(exercised.ActingParties),
-            RestWireConversions.ToPartyList(exercised.WitnessParties));
+            RestWireConversions.ToPartyList(exercised.WitnessParties))
+        {
+            PackageName = exercised.PackageName,
+        };
     }
 
     private static RuntimeIdentifier ToRuntimeIdentifier(WireIdentifier identifier) =>

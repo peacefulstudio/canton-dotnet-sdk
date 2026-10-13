@@ -144,6 +144,7 @@ public class RestContractStreamProjectorInterfaceViewTests
           "offset": "{{offset}}",
           "nodeId": 0,
           "contractId": "00holding",
+          "packageName": "token-impl",
           "templateId": {{templateIdJson}},
           {{(includeCreateArgument ? $@"""createArgument"": {CreateArgumentJson}," : string.Empty)}}
           "interfaceViews": [{{interfaceViewsJson}}],

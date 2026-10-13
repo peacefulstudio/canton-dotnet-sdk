@@ -35,7 +35,10 @@ public class KeyDescriptorWitnessTests
             TTemplate.TemplateId,
             TTemplate.Key.KeyEncoder(key),
             new ChoiceName("Archive"),
-            DamlRecord.Create());
+            DamlRecord.Create())
+        {
+            PackageName = TTemplate.PackageName,
+        };
     }
 
     [Fact]

@@ -28,7 +28,10 @@ public class TryInspectAsyncTests
             ExerciseResult: result,
             Consuming: false,
             ActingParties: [Alice],
-            WitnessParties: [Alice]);
+            WitnessParties: [Alice])
+        {
+            PackageName = "contractkeys-hcc6e8a4f16d9",
+        };
 
     private static FakeLedgerClient ClientCommitting(params ExercisedEvent[] exercised) =>
         new(_ => new ExerciseOutcome<TransactionResult>.One(

@@ -27,7 +27,7 @@ namespace Canton.Ledger.Grpc.Client.Tests;
 /// </summary>
 internal static class GrpcUntouchedBindingScenarios
 {
-    private const string RichTypesPackageId = "e2f1475ac77ca53e35a5ac260f1cd3999b8262bd1b1846d81dd55530375bda68";
+    private const string RichTypesPackageId = "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
 
     private sealed record GenericResultsMarker : IDamlType
     {
@@ -113,6 +113,7 @@ internal static class GrpcUntouchedBindingScenarios
             Exercised = new Com.Daml.Ledger.Api.V2.ExercisedEvent
             {
                 ContractId = "00results",
+                PackageName = GenericResultsMarker.DamlTypeId.PackageName,
                 TemplateId = DamlValueConverter.ToProtoIdentifier(GenericResultsMarker.DamlTypeId.Identifier),
                 Choice = "ReturnOutcome",
                 ChoiceArgument = new ProtoValue { Unit = new Google.Protobuf.WellKnownTypes.Empty() },

@@ -143,7 +143,10 @@ ILedgerClient happy = FakeLedgerClient.Create()
                 DamlRecord.Create(),
                 WitnessParties: [],
                 Signatories: [],
-                Observers: []),
+                Observers: [])
+            {
+                PackageName = DemoAsset.PackageName,
+            },
         ],
         archivedContractIds: [],
         (CommandId)"cmd-1")))

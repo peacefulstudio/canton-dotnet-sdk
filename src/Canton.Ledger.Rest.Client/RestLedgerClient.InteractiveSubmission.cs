@@ -29,6 +29,7 @@ internal sealed partial class RestLedgerClient
     /// <exception cref="ArgumentNullException"><paramref name="submission"/> is <see langword="null"/>.</exception>
     public Task<PreparedSubmission> PrepareSubmissionAsync(
         RuntimeCommands.CommandsSubmission submission,
+        HashingSchemeVersion? hashingSchemeVersion = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -36,9 +37,10 @@ internal sealed partial class RestLedgerClient
 
         return _calls.SendAsync<ServedPrepareSubmissionResponse, PreparedSubmission>(
             new RestCall(
-                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission),
+                HttpMethod.Post, PrepareSubmissionPath, BuildPrepareSubmissionRequest(submission, hashingSchemeVersion),
                 MissingBody("prepared submission"), MalformedBody("prepared submission"), LedgerCallKind.Read),
-            ProjectPreparedSubmission,
+            body => PreparedSubmissionIntegrity.RequireWellFormed(
+                ProjectPreparedSubmission(body), hashingSchemeVersion),
             timeout,
             cancellationToken);
     }
@@ -162,7 +164,8 @@ internal sealed partial class RestLedgerClient
     }
 
     private ServedPrepareSubmissionRequest BuildPrepareSubmissionRequest(
-        RuntimeCommands.CommandsSubmission submission)
+        RuntimeCommands.CommandsSubmission submission,
+        HashingSchemeVersion? hashingSchemeVersion)
     {
         var commands = RestCommandBuilder.BuildCommands(submission, _userId);
         return new ServedPrepareSubmissionRequest(
@@ -174,7 +177,10 @@ internal sealed partial class RestLedgerClient
             commands.ReadAs,
             commands.DisclosedContracts is { Count: > 0 } disclosedContracts ? disclosedContracts : null,
             commands.SynchronizerId ?? string.Empty,
-            []);
+            commands.PackageIdSelectionPreference ?? [],
+            hashingSchemeVersion is { } scheme
+                ? ServedEnums.HashingSchemeVersions.NameOf(scheme, nameof(hashingSchemeVersion))
+                : null);
     }
 
     private ServedExecuteSubmissionRequest BuildExecuteSubmissionRequest(

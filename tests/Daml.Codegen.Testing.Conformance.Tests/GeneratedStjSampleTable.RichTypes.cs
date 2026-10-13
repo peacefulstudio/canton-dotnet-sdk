@@ -103,6 +103,7 @@ internal static partial class GeneratedStjSampleTable
         samples[typeof(Grade)] = [new Grade()];
         samples[typeof(HoldingView)] = [new HoldingView(5.5m)];
         samples[typeof(Marker)] = [new Marker(Alice)];
+        samples[typeof(Marker.Mint)] = [new Marker.Mint(12.5m)];
         samples[typeof(NestedOptionalShapes)] =
         [
             new NestedOptionalShapes(

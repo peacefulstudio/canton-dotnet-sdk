@@ -137,9 +137,18 @@ internal sealed partial class LedgerClient
 
         LogSubscribeStarted(_logger, typeof(TInterface).Name, fromOffset ?? 0L);
 
+        var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
+        if (opening.Fault is { } openingFault)
+        {
+            LogSubscribeStreamError(_logger, typeof(TInterface).Name, openingFault.Status, openingFault.Message);
+            yield return new InterfaceStreamEvent<TInterface, TView>.StreamError(
+                openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
+            yield break;
+        }
+
         using var call = _updateService.GetUpdates(
             request,
-            headers: await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false),
+            headers: opening.Headers,
             deadline: null,
             cancellationToken: cancellationToken);
 
@@ -181,7 +190,14 @@ internal sealed partial class LedgerClient
 
         var effectiveOffset = activeAtOffset
             ?? (await GetLedgerEndForSnapshotAsync(cancellationToken).ConfigureAwait(false)).Offset;
-        var sharedHeaders = await _invoker.GetHeadersAsync(cancellationToken).ConfigureAwait(false);
+        var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
+        if (opening.Fault is { } openingFault)
+        {
+            LogSubscribeStreamError(_logger, typeof(TInterface).Name, openingFault.Status, openingFault.Message);
+            yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.StreamError(
+                openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
+            yield break;
+        }
 
         var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
             submitter, interfaceFilterId, effectiveOffset, SubscribesAsAnInterface, includeDisclosure);
@@ -190,7 +206,7 @@ internal sealed partial class LedgerClient
 
         using var call = _stateService.GetActiveContracts(
             request,
-            headers: sharedHeaders,
+            headers: opening.Headers,
             deadline: null,
             cancellationToken: cancellationToken);
 

@@ -64,6 +64,7 @@ public sealed class GrpcContractKeyHashParityTests : ContractKeyHashParityTests
         {
             NodeId = 0,
             ContractId = "00keyed",
+            PackageName = TemplateMarker.PackageName,
             TemplateId = TemplateId,
             CreateArguments = OwnerRecord(),
             ContractKey = new ProtoValue { Party = KeyParty },

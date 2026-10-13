@@ -192,12 +192,28 @@ public class FakeCantonLedgerClientTests
             new ContractId<DemoAsset>("00cid"), LedgerOffset.At(1), (SynchronizerId)"src", (SynchronizerId)"tgt", "reassign-1", 0, [Alice]);
         var outcome = LedgerOutcomes.One(unassigned);
         var client = FakeLedgerClient.Create().WithReassignmentResult(outcome).Build();
+        var submission = ReassignmentSubmission
+            .Of(new UnassignCommand("00cid", (SynchronizerId)"src", (SynchronizerId)"tgt"), Alice)
+            .WithCommandId((CommandId)"cmd-reassign");
+
+        var result = await client.TrySubmitAndWaitForReassignmentAsync<DemoAsset>(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(new ExerciseOutcome<Daml.Runtime.Streams.ContractStreamEvent<DemoAsset>>.One(unassigned) { CommandId = "cmd-reassign" });
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_stamps_a_minted_command_id_when_the_submission_carries_none()
+    {
+        var unassigned = ContractEvents.Unassigned<DemoAsset>(
+            new ContractId<DemoAsset>("00cid"), LedgerOffset.At(1), (SynchronizerId)"src", (SynchronizerId)"tgt", "reassign-1", 0, [Alice]);
+        var client = FakeLedgerClient.Create().WithReassignmentResult(LedgerOutcomes.One(unassigned)).Build();
         var submission = ReassignmentSubmission.Of(new UnassignCommand("00cid", (SynchronizerId)"src", (SynchronizerId)"tgt"), Alice);
 
         var result = await client.TrySubmitAndWaitForReassignmentAsync<DemoAsset>(
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().BeSameAs(outcome);
+        Guid.TryParse(result.CommandId, out _).Should().BeTrue();
     }
 
     [Fact]
@@ -237,9 +253,21 @@ public class FakeCantonLedgerClientTests
         var client = FakeLedgerClient.Create().WithTransactionTree(outcome).Build();
 
         var result = await client.TrySubmitAndWaitForTransactionTreeAsync(
+            SubmissionCreatingDemoAsset().WithCommandId((CommandId)"cmd-tree"), Alice,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(new ExerciseOutcome<TransactionTree>.One(TreeWithOneCreate()) { CommandId = "cmd-tree" });
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionTreeAsync_stamps_a_minted_command_id_when_the_submission_carries_none()
+    {
+        var client = FakeLedgerClient.Create().WithTransactionTree(LedgerOutcomes.One(TreeWithOneCreate())).Build();
+
+        var result = await client.TrySubmitAndWaitForTransactionTreeAsync(
             SubmissionCreatingDemoAsset(), Alice, cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().BeSameAs(outcome);
+        Guid.TryParse(result.CommandId, out _).Should().BeTrue();
     }
 
     [Fact]

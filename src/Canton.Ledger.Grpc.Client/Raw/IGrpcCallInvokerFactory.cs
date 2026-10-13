@@ -10,7 +10,7 @@ namespace Canton.Ledger.Grpc.Client.Raw;
 /// stubs — services or overloads the typed
 /// <see cref="Canton.Ledger.Abstractions.ICantonLedgerClient"/> and
 /// <see cref="Canton.Ledger.Abstractions.IAdminClient"/> surfaces do not cover — through the same
-/// authentication, deadline and retry plumbing the typed clients use. Opt in with
+/// authentication and deadline plumbing the typed clients use. Opt in with
 /// <c>AddLedgerRawGrpc</c> and resolve it like any other service; prefer the typed surfaces for
 /// anything they already cover.
 /// </summary>
@@ -28,9 +28,12 @@ public interface IGrpcCallInvokerFactory
     /// <see cref="Canton.Ledger.Abstractions.ITokenProvider.None"/> sends no
     /// <c>authorization</c> header, and a caller-supplied <c>authorization</c> metadata entry wins
     /// over the resolved token. Unary calls carry the configured
-    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none
-    /// and run through the configured <see cref="LedgerClientOptions.Retry"/> pipeline, with auth
-    /// headers and deadline recomputed on each attempt; a caller-supplied deadline is kept verbatim.
+    /// <see cref="LedgerClientOptions.Timeout"/> as a per-attempt deadline when the caller sets none;
+    /// a caller-supplied deadline is kept verbatim. The SDK cannot tell whether a raw call is
+    /// idempotent, so a unary call is sent exactly once even when
+    /// <see cref="LedgerClientOptions.Retry"/> is enabled. Start the call inside a
+    /// <see cref="Canton.Ledger.Kernel.Resilience.RawCallReplay.Allow"/> scope to run it through the
+    /// retry pipeline, with auth headers and deadline recomputed on each attempt.
     /// Streaming calls attach auth headers but carry no default deadline — a server stream may
     /// legitimately outlive any per-call budget — and are never retried.
     /// The invoker runs on the one channel the container shares across every client it registers, so

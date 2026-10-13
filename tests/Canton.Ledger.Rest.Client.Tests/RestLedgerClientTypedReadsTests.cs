@@ -30,6 +30,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
     private const string CreatedEventJson =
         """
         {"offset": "42", "contractId": "00abc", "nodeId": 0,
+         "packageName": "pkg-name",
          "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
          "createArgument": {"owner": "party::alice"}, "witnessParties": ["party::alice", "party::bob"]}
         """;
@@ -269,6 +270,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
             HttpStatusCode.OK,
             """
             {"archived": {"archivedEvent": {"offset": "50", "contractId": "",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
                 "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"}}
             """);
@@ -304,6 +306,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
             $$$"""
             {"created": {"createdEvent": {{{CreatedEventJson}}}, "synchronizerId": "sync::a"},
              "archived": {"archivedEvent": {"offset": "50", "contractId": "00abc",
+                "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
                 "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"}}
             """);
@@ -338,6 +341,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
     private const string DisclosedCreatedJson =
         """
         {"created": {"createdEvent": {"offset": "42", "contractId": "00abc", "nodeId": 0,
+           "packageName": "pkg-name",
            "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
            "createdEventBlob": "AQID", "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"}}
         """;
@@ -397,9 +401,11 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
             HttpStatusCode.OK,
             """
             {"created": {"createdEvent": {"offset": "42", "contractId": "00abc", "nodeId": 0,
+               "packageName": "pkg-name",
                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
                "createdEventBlob": "AQID", "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"},
              "archived": {"archivedEvent": {"offset": "50", "contractId": "00abc",
+               "packageName": "pkg-name",
                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
                "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"}}
             """);

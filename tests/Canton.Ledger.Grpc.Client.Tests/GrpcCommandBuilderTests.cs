@@ -555,4 +555,80 @@ public class GrpcCommandBuilderTests
                 $"an uninitialized {position} synchronizer id cannot silently reach the wire")
             .WithMessage("*default (uninitialized) SynchronizerId*");
     }
+
+    [Fact]
+    public void BuildCommands_maps_the_package_id_selection_preference_in_order()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithPackageIdSelectionPreference("pkg-b", "pkg-a");
+
+        var commands = Builder().BuildCommands(submission);
+
+        commands.PackageIdSelectionPreference.Should().Equal("pkg-b", "pkg-a");
+    }
+
+    [Fact]
+    public void BuildCommands_leaves_the_package_id_selection_preference_empty_when_the_submission_sets_none()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create()).WithActAs(Alice);
+
+        Builder().BuildCommands(submission).PackageIdSelectionPreference.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BuildCommands_addresses_a_create_command_by_package_name_by_default()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create() with { PackageName = "pkg-name" })
+            .WithActAs(Alice);
+
+        var create = Builder().BuildCommands(submission).Commands_.Should().ContainSingle().Subject.Create;
+
+        create.TemplateId.PackageId.Should().Be("#pkg-name");
+        create.TemplateId.ModuleName.Should().Be("Module");
+        create.TemplateId.EntityName.Should().Be("Template");
+    }
+
+    [Fact]
+    public void BuildCommands_addresses_an_exercise_command_by_package_name_by_default()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Exercise() with { PackageName = "pkg-name" })
+            .WithActAs(Alice);
+
+        var exercise = Builder().BuildCommands(submission).Commands_.Should().ContainSingle().Subject.Exercise;
+
+        exercise.TemplateId.PackageId.Should().Be("#pkg-name");
+    }
+
+    [Fact]
+    public void BuildCommands_addresses_an_exercise_by_key_command_by_package_name_by_default()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(ExerciseByKey() with { PackageName = "pkg-name" })
+            .WithActAs(Alice);
+
+        var exerciseByKey = Builder().BuildCommands(submission).Commands_.Should().ContainSingle().Subject.ExerciseByKey;
+
+        exerciseByKey.TemplateId.PackageId.Should().Be("#pkg-name");
+    }
+
+    [Fact]
+    public void BuildCommands_addresses_a_create_and_exercise_command_by_package_name_by_default()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(CreateAndExercise() with { PackageName = "pkg-name" })
+            .WithActAs(Alice);
+
+        var createAndExercise = Builder().BuildCommands(submission).Commands_.Should().ContainSingle().Subject.CreateAndExercise;
+
+        createAndExercise.TemplateId.PackageId.Should().Be("#pkg-name");
+    }
+
+    [Fact]
+    public void BuildCommands_leaves_a_command_that_names_no_package_on_its_package_id()
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create()).WithActAs(Alice);
+
+        var create = Builder().BuildCommands(submission).Commands_.Should().ContainSingle().Subject.Create;
+
+        create.TemplateId.PackageId.Should().Be("pkg");
+    }
 }

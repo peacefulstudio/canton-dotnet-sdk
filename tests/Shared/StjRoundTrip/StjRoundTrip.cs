@@ -86,7 +86,7 @@ internal static class StjRoundTrip
     }
 
     private static bool IsJsonIgnored(IMemberInfo member) =>
-        member.DeclaringType.GetProperty(member.Name)?.IsDefined(typeof(JsonIgnoreAttribute)) == true;
+        member.DeclaringType.GetProperty(member.Name)?.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition == JsonIgnoreCondition.Always;
 
     private static bool HasMembersToCompare(object sample) =>
         sample.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Length > 0

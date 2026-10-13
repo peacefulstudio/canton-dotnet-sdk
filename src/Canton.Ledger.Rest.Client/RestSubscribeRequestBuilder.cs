@@ -4,6 +4,7 @@
 using System.Globalization;
 using Canton.Ledger.Kernel.Streams;
 using Daml.Runtime;
+using Daml.Runtime.Contracts;
 using RuntimeCommands = Daml.Runtime.Commands;
 using WireCompletionStreamRequest = Canton.Ledger.Rest.Client.Raw.CompletionStreamRequest;
 using WireCumulativeFilter = Canton.Ledger.Rest.Client.Raw.CumulativeFilter;
@@ -100,8 +101,10 @@ internal static class RestSubscribeRequestBuilder
         where T : IDamlType =>
         BuildEventFormat<T>(submitter);
 
-    public static WireUpdateFormat BuildTransactionUpdateFormat(RuntimeCommands.SubmitterInfo submitter) =>
-        BuildTransactionUpdateFormat(BuildTransactionFormat(submitter));
+    public static WireUpdateFormat BuildTransactionUpdateFormat(
+        RuntimeCommands.SubmitterInfo submitter,
+        IReadOnlyList<DamlTypeDescriptor>? interfaceViews = null) =>
+        BuildTransactionUpdateFormat(BuildTransactionFormat(submitter, interfaceViews));
 
     public static WireUpdateFormat BuildTransactionUpdateFormat(WireTransactionFormat transactionFormat) =>
         new()
@@ -109,14 +112,16 @@ internal static class RestSubscribeRequestBuilder
             IncludeTransactions = transactionFormat,
         };
 
-    public static WireTransactionFormat BuildTransactionFormat(RuntimeCommands.SubmitterInfo submitter) =>
+    public static WireTransactionFormat BuildTransactionFormat(
+        RuntimeCommands.SubmitterInfo submitter,
+        IReadOnlyList<DamlTypeDescriptor>? interfaceViews = null) =>
         new()
         {
             EventFormat = new WireEventFormat
             {
                 Verbose = true,
                 FiltersByParty = BuildFiltersByParty(
-                    submitter, static () => new WireFilters { Cumulative = [] }),
+                    submitter, () => BuildWildcardWithInterfaceViews(interfaceViews ?? [])),
             },
             TransactionShape = Raw.TransactionFormatTransactionShape.TRANSACTION_SHAPE_LEDGER_EFFECTS,
         };
@@ -136,6 +141,36 @@ internal static class RestSubscribeRequestBuilder
             Verbose = true,
             FiltersByParty = BuildFiltersByParty(submitter, BuildWildcardBlobFilters),
         };
+
+    private static WireFilters BuildWildcardWithInterfaceViews(IReadOnlyList<DamlTypeDescriptor> interfaceViews) =>
+        interfaceViews.Count == 0
+            ? new WireFilters { Cumulative = [] }
+            : new WireFilters
+            {
+                Cumulative =
+                [
+                    new WireCumulativeFilter
+                    {
+                        IdentifierFilter = new WireIdentifierFilter { WildcardFilter = new WireWildcardFilter() },
+                    },
+                    .. interfaceViews.Select(static interfaceView => new WireCumulativeFilter
+                    {
+                        IdentifierFilter = new WireIdentifierFilter
+                        {
+                            InterfaceFilter = new WireInterfaceFilter
+                            {
+                                InterfaceId = new Raw.Identifier
+                                {
+                                    PackageId = $"#{interfaceView.PackageName}",
+                                    ModuleName = interfaceView.Identifier.ModuleName,
+                                    EntityName = interfaceView.Identifier.EntityName,
+                                },
+                                IncludeInterfaceView = true,
+                            },
+                        },
+                    }),
+                ],
+            };
 
     private static WireFilters BuildWildcardBlobFilters() =>
         new()

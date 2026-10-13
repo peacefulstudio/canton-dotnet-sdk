@@ -18,19 +18,20 @@ internal sealed partial class LedgerClient
         RuntimeCommands.SubmitterInfo submitter,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default) =>
-        GetTransactionByOffsetAsync(offset, submitter, GrpcTransactionResultProjector.Project, timeout, cancellationToken);
+        GetTransactionByOffsetAsync(offset, submitter, [], GrpcTransactionResultProjector.Project, timeout, cancellationToken);
 
-    internal Task<TransactionResult> GetAcsDeltaUpdateByOffsetAsync(
+    internal Task<Transaction> ReadTransactionByOffsetAsync(
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
+        IReadOnlyList<DamlTypeDescriptor> interfaceViews,
         CancellationToken cancellationToken) =>
-        GetTransactionByOffsetAsync(
-            offset, submitter, GrpcTransactionResultProjector.ProjectAcsDelta, timeout: null, cancellationToken);
+        GetTransactionByOffsetAsync(offset, submitter, interfaceViews, transaction => transaction, timeout: null, cancellationToken);
 
-    private Task<TransactionResult> GetTransactionByOffsetAsync(
+    private Task<TProjection> GetTransactionByOffsetAsync<TProjection>(
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
-        Func<Transaction, TransactionResult> project,
+        IReadOnlyList<DamlTypeDescriptor> interfaceViews,
+        Func<Transaction, TProjection> project,
         TimeSpan? timeout,
         CancellationToken cancellationToken)
     {
@@ -39,10 +40,10 @@ internal sealed partial class LedgerClient
         var request = new GetUpdateByOffsetRequest
         {
             Offset = offset.Value,
-            UpdateFormat = GrpcSubscribeRequestBuilder.BuildTransactionUpdateFormat(submitter),
+            UpdateFormat = GrpcSubscribeRequestBuilder.BuildTransactionUpdateFormat(submitter, interfaceViews),
         };
 
-        return _invoker.InvokeTracedAsync<LedgerClient, GetUpdateResponse, TransactionResult>(
+        return _invoker.InvokeTracedAsync<LedgerClient, GetUpdateResponse, TProjection>(
             LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             UpdateService.Descriptor,
@@ -94,31 +95,8 @@ internal sealed partial class LedgerClient
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
-
-        var request = new GetUpdateByOffsetRequest
-        {
-            Offset = offset.Value,
-            UpdateFormat = GrpcSubscribeRequestBuilder.BuildTransactionUpdateFormat(submitter),
-        };
-
-        return _invoker.InvokeTracedAsync<LedgerClient, GetUpdateResponse, TransactionTree>(
-            LedgerCallKind.Read,
-            LedgerCallInvoker.Source,
-            UpdateService.Descriptor,
-            "GetUpdateByOffset",
-            (headers, deadline, token) => _updateService.GetUpdateByOffsetAsync(request, headers, deadline, token),
-            response => ProjectPointRead(response, $"offset {offset.Value}", GrpcTransactionTreeProjector.Project),
-            cancellationToken,
-            timeout: timeout,
-            configureActivity: activity =>
-            {
-                activity?.SetTag(LedgerActivityTagNames.CantonOffset, offset.Value);
-                activity.SetSubmitterTags(submitter, _options);
-            });
-    }
+        CancellationToken cancellationToken = default) =>
+        GetTransactionByOffsetAsync(offset, submitter, [], GrpcTransactionTreeProjector.Project, timeout, cancellationToken);
 
     private static TransactionResult ProjectPointReadTransaction(GetUpdateResponse response, string lookupDescription) =>
         ProjectPointRead(response, lookupDescription, GrpcTransactionResultProjector.Project);

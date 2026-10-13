@@ -17,14 +17,15 @@ namespace Daml.Runtime.Serialization;
 /// Every registration is stored under its full identifier (package id, module and entity), never a
 /// <see cref="Type"/>. A lookup tries the full identifier first. Two distinct declaring types
 /// registered for the same full identifier make that identifier ambiguous, and registering the same
-/// declaring type again changes nothing. Only if the full identifier is unknown does a lookup fall
-/// back to the <c>(ModuleName, EntityName)</c> pair, and that fallback resolves only when exactly one
-/// registered declaring type carries the pair. Keying on module and entity alone would collide
-/// whenever two versions of one package are in play, the normal state of a Splice deployment
-/// mid-upgrade. A choice name absent on the declaring type a lookup resolved is a miss, not a
-/// reason to try another type. A module initializer runs on first access to its module, not when its
-/// assembly loads, so the first lookup that finds no entry for its exact identifier loads every library the host's deps.json lists
-/// that depends on <c>Daml.Runtime</c>, runs each one's module initializer, and looks again. That runs at
+/// declaring type again changes nothing. Only if the full identifier is unknown, and the caller
+/// supplied the event's package name, does a lookup fall back to the
+/// <c>(PackageName, ModuleName, EntityName)</c> triple, and that fallback resolves only when exactly one
+/// registered declaring type carries the triple. A lookup without a package name never falls back, and
+/// a package name never matches another package's module and entity. Two versions of one package share a
+/// package name, the normal state of a Splice deployment mid-upgrade, so the triple can still be ambiguous. A choice name absent on the declaring type a lookup resolved is a
+/// miss, not a reason to try another type. A module initializer runs on first access to its module, not
+/// when its assembly loads, so the first lookup that finds no entry for its exact identifier loads every
+/// library the host's deps.json lists that depends on <c>Daml.Runtime</c>, runs each one's module initializer, and looks again. That runs at
 /// most once per process; a host with no deps.json runs a generated assembly's module constructor itself.
 /// </remarks>
 /// <threadsafety>
@@ -53,12 +54,12 @@ public static class GeneratedTypeReaders
     public static void ForChoices<T>() where T : IDamlType, IHasChoices<T> =>
         Shared.ForChoices<T>();
 
-    internal static RegistryLookup<DamlLfElementReader> FindRecordReader(Identifier identifier) =>
-        Shared.FindRecordReader(identifier);
+    internal static RegistryLookup<DamlLfElementReader> FindRecordReader(Identifier identifier, string? packageName = null) =>
+        Shared.FindRecordReader(identifier, packageName);
 
-    internal static RegistryLookup<IKeyDescriptor> FindKeyDescriptor(Identifier identifier) =>
-        Shared.FindKeyDescriptor(identifier);
+    internal static RegistryLookup<IKeyDescriptor> FindKeyDescriptor(Identifier identifier, string? packageName = null) =>
+        Shared.FindKeyDescriptor(identifier, packageName);
 
-    internal static RegistryLookup<IChoice> FindChoice(Identifier identifier, ChoiceName choice) =>
-        Shared.FindChoice(identifier, choice);
+    internal static RegistryLookup<IChoice> FindChoice(Identifier identifier, ChoiceName choice, string? packageName = null) =>
+        Shared.FindChoice(identifier, choice, packageName);
 }

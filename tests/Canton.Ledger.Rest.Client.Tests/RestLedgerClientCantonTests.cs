@@ -109,6 +109,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                   "createdEvent": {
                     "offset": "9",
                     "contractId": "{{{contractId}}}",
+                    "packageName": "pkg-name",
                     "templateId": {"packageId": "impl-pkg", "moduleName": "Token.Impl", "entityName": "Asset"},
                     "createArgument": {"amount": "999"},
                     "interfaceViews": [{{{interfaceViewJson}}}],
@@ -705,6 +706,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                         "reassignmentId": "reassign-1",
                         "reassignmentCounter": "1",
                         "contractId": "00cid",
+                        "packageName": "pkg-name",
                         "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "CantonTemplate"},
                         "source": "sync-a",
                         "target": "sync-b",
@@ -828,6 +830,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                       "offset": "7",
                       "contractId": "00holding",
                       "nodeId": 0,
+                      "packageName": "pkg-name",
                       "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "CantonTemplate"},
                       "createArgument": {"owner": "party::alice"}
                     }

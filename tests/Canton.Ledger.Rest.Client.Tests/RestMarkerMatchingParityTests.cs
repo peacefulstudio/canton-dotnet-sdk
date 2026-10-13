@@ -64,6 +64,7 @@ public sealed class RestMarkerMatchingParityTests : MarkerMatchingParityTests
     {
         ContractId = ContractId,
         TemplateId = ToWire(scenario.TemplateId),
+        PackageName = scenario.PackageName!,
         InterfaceViews = scenario.ImplementedInterface is { } implemented
             ? [new WireInterfaceView { InterfaceId = ToWire(implemented) }]
             : [],
@@ -73,6 +74,7 @@ public sealed class RestMarkerMatchingParityTests : MarkerMatchingParityTests
     {
         ContractId = ContractId,
         TemplateId = ToWire(scenario.TemplateId),
+        PackageName = scenario.PackageName!,
         ImplementedInterfaces = scenario.ImplementedInterface is { } implemented ? [ToWire(implemented)] : [],
     };
 
@@ -80,6 +82,7 @@ public sealed class RestMarkerMatchingParityTests : MarkerMatchingParityTests
     {
         ContractId = ContractId,
         TemplateId = ToWire(scenario.TemplateId),
+        PackageName = scenario.PackageName!,
         ImplementedInterfaces = scenario.ImplementedInterface is { } implemented ? [ToWire(implemented)] : [],
     };
 
@@ -87,6 +90,7 @@ public sealed class RestMarkerMatchingParityTests : MarkerMatchingParityTests
     {
         ContractId = ContractId,
         TemplateId = ToWire(scenario.TemplateId),
+        PackageName = scenario.PackageName!,
     };
 
     private static WireIdentifier ToWire(RuntimeIdentifier identifier) => new()

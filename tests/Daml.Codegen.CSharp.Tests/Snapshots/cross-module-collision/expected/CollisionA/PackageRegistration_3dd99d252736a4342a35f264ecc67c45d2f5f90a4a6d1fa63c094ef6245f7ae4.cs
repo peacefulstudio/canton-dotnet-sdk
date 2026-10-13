@@ -7,7 +7,7 @@
 
 namespace CollisionA;
 
-internal static class PackageRegistration_9414f712310d27d4016c88e5e09a61e7ee7bc086ea838d3f6d02d28821b1e6ba
+internal static class PackageRegistration_3dd99d252736a4342a35f264ecc67c45d2f5f90a4a6d1fa63c094ef6245f7ae4
 {
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()
