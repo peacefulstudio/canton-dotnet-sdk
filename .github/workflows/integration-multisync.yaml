@@ -60,8 +60,8 @@ jobs:
           set -euo pipefail
           nohup sh -c 'while true; do echo "$(date +%s) $(free -m | awk "/^Mem:/ {print \$3, \$7}")"; sleep 5; done' > "${MEMORY_SAMPLES}" 2>&1 &
 
-      - name: Boot the multi-synchronizer LocalNet (canton-localnet v0.9.0-2, Splice 0.9.0, Canton 3.6.1)
-        uses: peacefulstudio/canton-localnet@0d76d01899efe76386480d386265ba21b4dad9d4 # v0.9.0-2
+      - name: Boot the multi-synchronizer LocalNet (canton-localnet v0.9.1-1, Splice 0.9.1, Canton 3.6.1)
+        uses: peacefulstudio/canton-localnet@872978f3caccd5429e98fe5f7516116a2311b874 # v0.9.1-1
         with:
           validators: a b c d
           multi-sync: 'true'
@@ -181,4 +181,4 @@ jobs:
 
       - name: Tear down LocalNet
         if: always()
-        uses: peacefulstudio/canton-localnet/teardown@0d76d01899efe76386480d386265ba21b4dad9d4 # v0.9.0-2
+        uses: peacefulstudio/canton-localnet/teardown@872978f3caccd5429e98fe5f7516116a2311b874 # v0.9.1-1

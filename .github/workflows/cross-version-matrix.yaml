@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {order: 1, cell: 'Canton 3.6.1 (SDK baseline)', localnet-ref: v0.9.0-2, image-tag: '', expected-canton: 3.6.1, gating: true}
+          - {order: 1, cell: 'Canton 3.6.1 (SDK baseline)', localnet-ref: v0.9.1-1, image-tag: '', expected-canton: 3.6.1, gating: true}
           - {order: 9, cell: 'LocalNet unreleased (dev)', localnet-ref: dev, image-tag: '', expected-canton: '', gating: false}
     env:
       LOCALNET_DIR: ${{ github.workspace }}/canton-localnet
