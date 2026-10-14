@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --version 0.7.0-preview.1
+dotnet add package Daml.Runtime --version 0.7.0
 ```
 
 ## Usage

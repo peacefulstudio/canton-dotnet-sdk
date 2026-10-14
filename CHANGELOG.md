@@ -34,6 +34,15 @@ because they are versioned in lockstep:
 > sections below record internal development milestones whose packages were
 > never published to a public feed.
 
+## [Unreleased]
+
+## [0.7.0] — 2026-10-14
+
+### Changed
+
+- **`0.7.0` is the stable release of the Canton 3.6 line.** It contains the code of `0.7.0-preview.1` plus the dependency moves below. It targets Canton 3.6 (3.6.1), Daml SDK 3.6.0 and Splice 0.9.1, and every package moves to `0.7.0` together. Upgrade from `0.7.0-preview.1` by changing the version. Upgrading from `0.6.x` means moving to Canton 3.6: the `0.7.0-preview.1` section below lists every breaking change. If you're on Canton 3.5, stay on `0.6.x`.
+- **Dependency minimums move** (`Canton.Ledger.Kernel`, `Canton.Ledger.Rest.Client`, `Canton.Ledger.Grpc`, `Canton.Ledger.Grpc.Client`, `Daml.Runtime.Grpc`, `Canton.Ledger.Pqs.Client`, `Canton.Ledger.OpenTelemetry`, `Daml.Codegen.CSharp`). Every `Microsoft.Extensions.*` reference moves from `10.0.12` to `10.0.13`. A consumer holding an explicit lower pin on any of them must raise it, or the restore reports a downgrade.
+
 ## [0.7.0-preview.1] — 2026-10-13
 
 ### Changed — BREAKING
@@ -3686,6 +3695,8 @@ the GitHub Packages NuGet feed
 (`nuget.pkg.github.com/peacefulstudio`) during development and have
 since been pruned. They are not supported.
 
+[Unreleased]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.7.0-preview.1...v0.7.0
 [0.7.0-preview.1]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0...v0.7.0-preview.1
 [0.6.0]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.4...v0.6.0
 [0.6.0-preview.4]: https://github.com/peacefulstudio/canton-dotnet-sdk/compare/v0.6.0-preview.3...v0.6.0-preview.4

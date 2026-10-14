@@ -103,7 +103,7 @@ NuGet packages of step 4 share one version, so pin them together:
 name: quickstart-codegen
 version: 0.0.1
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.0-preview.1
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.0
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -157,9 +157,9 @@ In the `quickstart/` folder, create `Quickstart.csproj` next to `Generated/` and
 
 ```bash
 dotnet new console --name Quickstart --output . --force
-dotnet add package Daml.Runtime --version 0.7.0-preview.1
-dotnet add package Daml.Ledger.Abstractions --version 0.7.0-preview.1
-dotnet add package Canton.Ledger.Grpc.Client --version 0.7.0-preview.1
+dotnet add package Daml.Runtime --version 0.7.0
+dotnet add package Daml.Ledger.Abstractions --version 0.7.0
+dotnet add package Canton.Ledger.Grpc.Client --version 0.7.0
 dotnet add package Microsoft.Extensions.DependencyInjection
 ```
 
