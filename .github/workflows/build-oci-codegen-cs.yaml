@@ -830,7 +830,7 @@ jobs:
   attach-standalone-assets-to-draft-release:
     name: Attach standalone dar-to-proto assets to draft release
     needs: [validate-inputs, build-jvm-helper, build-per-rid, build-intermediate-fixtures]
-    if: needs.validate-inputs.outputs.should_build == 'true' && needs.validate-inputs.outputs.push == 'true'
+    if: needs.validate-inputs.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
