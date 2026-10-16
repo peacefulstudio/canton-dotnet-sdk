@@ -804,13 +804,17 @@ jobs:
         run: |
           set -euo pipefail
           TAG="v${RESOLVED_VERSION}"
-          if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
+          if release_is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>&1); then
             :
-          elif printf '%s' "$release_err" | grep -qi 'release not found'; then
+          elif printf '%s' "$release_is_draft" | grep -qi 'release not found'; then
             echo "::notice::no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
             exit 0
           else
-            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_err"
+            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_is_draft"
+            exit 1
+          fi
+          if [ "$release_is_draft" != "true" ]; then
+            echo "::error::release $TAG is not a draft — refusing to upload with --clobber over published assets"
             exit 1
           fi
           shopt -s nullglob
@@ -856,13 +860,17 @@ jobs:
         run: |
           set -euo pipefail
           TAG="v${RESOLVED_VERSION}"
-          if release_err=$(gh release view "$TAG" 2>&1 >/dev/null); then
+          if release_is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>&1); then
             :
-          elif printf '%s' "$release_err" | grep -qi 'release not found'; then
+          elif printf '%s' "$release_is_draft" | grep -qi 'release not found'; then
             echo "::notice::no draft release $TAG (orchestrator bootstrap should have created it); skipping attach"
             exit 0
           else
-            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_err"
+            echo "::error::gh release view $TAG failed for a reason other than not-found: $release_is_draft"
+            exit 1
+          fi
+          if [ "$release_is_draft" != "true" ]; then
+            echo "::error::release $TAG is not a draft — refusing to upload with --clobber over published assets"
             exit 1
           fi
 
