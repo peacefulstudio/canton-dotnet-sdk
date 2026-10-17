@@ -179,53 +179,68 @@ jobs:
       - name: Assert richtypes.dar full-decode matches the determinism oracle (tests/determinism/shas/intermediate.sha256)
         run: .github/scripts/check-intermediate-oracle.sh jvm-helper-artifact/daml-dar-to-proto.jar
 
-      - name: Decode every corpus DAR (--schema-only) and convert to canonical JSON
+      - name: Decode every corpus DAR in both tiers and convert to canonical JSON
         run: |
           set -euo pipefail
-          mkdir -p fixtures
+          mkdir -p fixtures/full fixtures/shape
           : > "${RUNNER_TEMP}/manifest-entries.jsonl"
 
           mapfile -t dars < <(find conformance -name '*.dar' | LC_ALL=C sort)
-          expected_dars=4
+          expected_dars=5
           if [ "${#dars[@]}" -ne "${expected_dars}" ]; then
             echo "::error::expected ${expected_dars} corpus DAR(s) under conformance/, found ${#dars[@]} — a new/removed corpus DAR needs this count updated deliberately, not silently."
             printf '  found: %s\n' "${dars[@]:-<none>}"
             exit 1
           fi
 
-          for dar in "${dars[@]}"; do
-            name="$(basename "${dar}" .dar)"
-            java -jar jvm-helper-artifact/daml-dar-to-proto.jar \
-              --schema-only --dar "${dar}" --out "fixtures/${name}.binpb"
+          decode_tier() {
+            local tier="$1" dar="$2" name="$3"
+            shift 3
+            local binpb="fixtures/${tier}/${name}.binpb" json="fixtures/${tier}/${name}.json"
+            java -jar jvm-helper-artifact/daml-dar-to-proto.jar "$@" --dar "${dar}" --out "${binpb}"
             buf convert proto/intermediate_dar.proto \
               --type daml.codegen.intermediate.IntermediateDar \
-              --from "fixtures/${name}.binpb#format=binpb" \
-              --to "${RUNNER_TEMP}/${name}.raw.json#format=json"
-            jq -S . "${RUNNER_TEMP}/${name}.raw.json" > "fixtures/${name}.json"
-            rm "${RUNNER_TEMP}/${name}.raw.json"
+              --from "${binpb}#format=binpb" \
+              --to "${RUNNER_TEMP}/${tier}-${name}.raw.json#format=json"
+            jq -S . "${RUNNER_TEMP}/${tier}-${name}.raw.json" > "${json}"
+            rm "${RUNNER_TEMP}/${tier}-${name}.raw.json"
 
-            [ -s "fixtures/${name}.binpb" ] || { echo "::error::fixtures/${name}.binpb is empty"; exit 1; }
-            [ -s "fixtures/${name}.json" ] || { echo "::error::fixtures/${name}.json is empty"; exit 1; }
+            [ -s "${binpb}" ] || { echo "::error::${binpb} is empty"; exit 1; }
+            [ -s "${json}" ] || { echo "::error::${json} is empty"; exit 1; }
             jq -e '[.main.modules[]? | ((.dataTypes // []) + (.templates // []) + (.interfaces // []))] | flatten | length > 0' \
-              "fixtures/${name}.json" > /dev/null \
-              || { echo "::error::fixtures/${name}.json's main package carries no data types, templates or interfaces — refusing to pin a hollow schema-only decode."; exit 1; }
+              "${json}" > /dev/null \
+              || { echo "::error::${json}'s main package carries no data types, templates or interfaces — refusing to pin a hollow ${tier} decode."; exit 1; }
+          }
+
+          tier_entry() {
+            local tier="$1" name="$2"
+            jq -n -c \
+              --arg binpb "${tier}/${name}.binpb" \
+              --arg binpbSha256 "$(sha256sum "fixtures/${tier}/${name}.binpb" | awk '{print $1}')" \
+              --arg json "${tier}/${name}.json" \
+              --arg jsonSha256 "$(sha256sum "fixtures/${tier}/${name}.json" | awk '{print $1}')" \
+              '{binpb: $binpb, binpbSha256: $binpbSha256, json: $json, jsonSha256: $jsonSha256}'
+          }
+
+          for dar in "${dars[@]}"; do
+            name="$(basename "${dar}" .dar)"
+            decode_tier full "${dar}" "${name}"
+            decode_tier shape "${dar}" "${name}" --schema-only
 
             jq -n -c \
               --arg name "${name}" \
               --arg dar "${dar}" \
               --arg darSha256 "$(sha256sum "${dar}" | awk '{print $1}')" \
-              --arg binpb "${name}.binpb" \
-              --arg binpbSha256 "$(sha256sum "fixtures/${name}.binpb" | awk '{print $1}')" \
-              --arg json "${name}.json" \
-              --arg jsonSha256 "$(sha256sum "fixtures/${name}.json" | awk '{print $1}')" \
-              '{name: $name, dar: $dar, darSha256: $darSha256, binpb: $binpb, binpbSha256: $binpbSha256, json: $json, jsonSha256: $jsonSha256}' \
+              --argjson full "$(tier_entry full "${name}")" \
+              --argjson shape "$(tier_entry shape "${name}")" \
+              '{name: $name, source: {kind: "corpus", dar: $dar, darSha256: $darSha256, license: "LICENSE"}, full: $full, shape: $shape}' \
               >> "${RUNNER_TEMP}/manifest-entries.jsonl"
           done
 
           jq -n \
             --arg version "${VERSION_INPUT}" \
             --slurpfile fixtures "${RUNNER_TEMP}/manifest-entries.jsonl" \
-            '{version: $version, schemaOnly: true, fixtures: $fixtures}' \
+            '{version: $version, producer: {name: "daml-dar-to-proto", version: $version}, tiers: {full: {flags: []}, shape: {flags: ["--schema-only"]}}, fixtures: $fixtures}' \
             | jq -S . > fixtures/manifest.json
 
           find fixtures -type f | LC_ALL=C sort
