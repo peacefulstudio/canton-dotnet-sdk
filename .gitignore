@@ -128,12 +128,18 @@ conformance/**/.daml/
 !tests/Daml.Codegen.CSharp.Tests/QuickstartSample/*.dar
 # Conformance corpus DAR is the committed source of truth.
 !conformance/**/*.dar
+# The Splice wallet DAR read by the DarParser CLI tests and the parity Splice bindings.
+!tests/Daml.Codegen.DarParser.Cli.Tests/Fixtures/*.dar
 
 # OS specific
 .DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Daml.Codegen.CSharp.MSBuild bundled tools and generated bundle-version stamp
+src/Daml.Codegen.CSharp.MSBuild/tools/
+src/Daml.Codegen.CSharp.MSBuild/build/Daml.Codegen.CSharp.MSBuild.BundleVersion.g.txt
 
 # Code generation test output
 output/
