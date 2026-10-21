@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  LOCALNET_REF: v0.9.1-1
+  LOCALNET_REF: v0.9.3-1
   LOCALNET_GRPC_URL: http://localhost:11901
   LOCALNET_JSON_API_URL: http://localhost:11975
   LOCALNET_KEYCLOAK_RELAY_URL: http://localhost:18082
@@ -291,8 +291,8 @@ jobs:
           set -euo pipefail
           nohup sh -c 'while true; do echo "$(date +%s) $(free -m | awk "/^Mem:/ {print \$3, \$7}")"; sleep 5; done' > "${MEMORY_SAMPLES}" 2>&1 &
 
-      - name: Boot LocalNet with PQS on a-validator-1 (canton-localnet v0.9.1-1, Splice 0.9.1, Canton 3.6.1)
-        uses: peacefulstudio/canton-localnet@872978f3caccd5429e98fe5f7516116a2311b874 # v0.9.1-1
+      - name: Boot LocalNet with PQS on a-validator-1 (canton-localnet v0.9.3-1, Splice 0.9.3, Canton 3.6.3)
+        uses: peacefulstudio/canton-localnet@3773c156c6d0abccbaf112fd32cdd79d13b5ab4c # v0.9.3-1
         with:
           validators: a
           pqs: 'true'
@@ -386,4 +386,4 @@ jobs:
 
       - name: Tear down LocalNet
         if: always()
-        uses: peacefulstudio/canton-localnet/teardown@872978f3caccd5429e98fe5f7516116a2311b874 # v0.9.1-1
+        uses: peacefulstudio/canton-localnet/teardown@3773c156c6d0abccbaf112fd32cdd79d13b5ab4c # v0.9.3-1
