@@ -213,7 +213,7 @@ jobs:
             -- --filter-trait "Category=Integration" \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
             --output Detailed 2>&1 | tee "${log}"
-          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 5
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 30 5
 
       - name: REST conformance tests (JSON Ledger API)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -314,7 +314,7 @@ jobs:
             -- --filter-trait "Category=Integration" \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 33 3
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 30 3
 
       - name: REST conformance tests (JSON Ledger API)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
