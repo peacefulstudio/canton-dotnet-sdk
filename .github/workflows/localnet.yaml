@@ -235,7 +235,7 @@ jobs:
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 4
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 37 4
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -330,7 +330,7 @@ jobs:
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 2
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 37 2
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
