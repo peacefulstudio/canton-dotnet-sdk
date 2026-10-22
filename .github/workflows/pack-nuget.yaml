@@ -54,7 +54,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Verify the packed set and its dependency-first push order
-        run: scripts/order-nuget-push.sh output/nuget
+        run: dotnet run scripts/order-nuget-push.cs -- output/nuget
       - name: Attach packages to the draft release (upload only; never create/publish)
         env:
           GH_TOKEN: ${{ github.token }}
