@@ -55,7 +55,7 @@ jobs:
           pattern: release-counters-snapshot-*
           path: output/counters
       - name: Verify the core set and its dependency-first push order
-        run: scripts/order-nuget-push.sh output/nuget/core
+        run: dotnet run scripts/order-nuget-push.cs -- output/nuget/core
       - name: NuGet login (OIDC -> short-lived key)
         id: login
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
@@ -64,7 +64,7 @@ jobs:
       - name: Push core packages in dependency order
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
-        run: scripts/order-nuget-push.sh output/nuget/core --push "$NUGET_SOURCE"
+        run: dotnet run scripts/order-nuget-push.cs -- output/nuget/core --push "$NUGET_SOURCE"
       - name: Push Splice packages
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
