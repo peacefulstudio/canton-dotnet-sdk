@@ -17,6 +17,15 @@ public sealed record ExpectedPayment(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("sender")] global::Daml.Runtime.Data.Party Sender
 ) : global::Daml.Runtime.Data.IDamlRecord<ExpectedPayment>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Dso, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Sender, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("dso", Dso.ToDamlValue()),
@@ -25,8 +34,8 @@ public sealed record ExpectedPayment(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static ExpectedPayment FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ExpectedPayment(
-        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso").As<global::Daml.Runtime.Data.DamlParty>()),
-        Sender: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("sender").As<global::Daml.Runtime.Data.DamlParty>())
+        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Sender: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("sender", 1).As<global::Daml.Runtime.Data.DamlParty>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record ExpectedPayment(
             global::Daml.Runtime.Data.DamlField.Create("sender", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "sender"), context.Field("sender")))
         );
     }
-
 }

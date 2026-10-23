@@ -529,12 +529,8 @@ public class EmittedViewFieldCollisionCompilesTests
             "the enriched marker still carries its View witness");
     }
 
-    private static IReadOnlyList<GeneratedFile> EmitInterfaceChoiceWithLocalArgTypeNamed(string argTypeName)
+    private static IReadOnlyList<GeneratedFile> EmitInterfaceChoiceWithLocalArgTypeNamedAfterMarkerMember(string argTypeName)
     {
-        // The interface choice descriptor encoder/decoder emit bare type names inside the marker body.
-        // If the arg type's C# name matches a member the marker already declares (e.g. InterfaceId,
-        // View, or Choice{X}), the bare name resolves to the property instead of the type → CS0426.
-        // The emitter must use global::-qualified names for all decoder expressions.
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -579,7 +575,7 @@ public class EmittedViewFieldCollisionCompilesTests
         string argTypeName,
         string collision)
     {
-        var files = EmitInterfaceChoiceWithLocalArgTypeNamed(argTypeName);
+        var files = EmitInterfaceChoiceWithLocalArgTypeNamedAfterMarkerMember(argTypeName);
 
         ShouldCompileCleanly(files, $"the emitter must global::-qualify decoder receivers rather than emit uncompilable C#: {collision}");
     }

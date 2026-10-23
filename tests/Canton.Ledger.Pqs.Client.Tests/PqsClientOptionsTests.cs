@@ -46,4 +46,12 @@ public class PqsClientOptionsTests
 
         isValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void EmitPartyAndContractSpanTags_is_off_by_default()
+    {
+        var options = new PqsClientOptions { ConnectionString = "Host=localhost" };
+
+        options.EmitPartyAndContractSpanTags.Should().BeFalse();
+    }
 }

@@ -14,6 +14,9 @@ namespace Daml.Runtime.Data;
 /// </summary>
 public sealed record DamlInt64(long Value) : DamlValue
 {
+    /// <inheritdoc/>
+    public override int GetHashCode() => DamlHash.Int64(Value);
+
     /// <summary>Unwraps the underlying 64-bit integer.</summary>
     public static implicit operator long(DamlInt64 value) => value.Value;
 
@@ -35,12 +38,8 @@ public sealed record DamlInt64(long Value) : DamlValue
 /// exactly.
 /// <para>
 /// Equality and hashing compare the numeric value only, normalized by stripping
-/// trailing mantissa zeros: <see cref="Scale"/> is not part of the wire format
-/// (<see cref="Serialization.DamlJsonSerializer"/> never writes it and
-/// deserialization reconstructs the default of 10), so two Numerics with the same
-/// value but different <see cref="Scale"/> hints — or different mantissa
-/// precision, e.g. <c>1.50</c> vs <c>1.5</c> — are equal. The <see cref="Scale"/>
-/// property is retained as the hook for future scale-padded reading.
+/// trailing mantissa zeros, so two Numerics with the same value but different mantissa
+/// precision, e.g. <c>1.50</c> vs <c>1.5</c>, are equal.
 /// </para>
 /// </remarks>
 public sealed record DamlNumeric : DamlValue
@@ -48,7 +47,6 @@ public sealed record DamlNumeric : DamlValue
     private const int MaxSignificantDigits = 38;
     private const int MaxMantissaScale = 37;
     private const int MaxDecimalMantissaScale = 28;
-    private const int DefaultScale = 10;
 
     private static readonly BigInteger MaxDecimalUnscaledMagnitude = (BigInteger.One << 96) - 1;
     private static readonly BigInteger UInt32Mask = uint.MaxValue;
@@ -57,21 +55,18 @@ public sealed record DamlNumeric : DamlValue
     private readonly BigInteger _unscaledMagnitude;
     private readonly int _mantissaScale;
 
-    /// <summary>The scale (number of decimal places) of the numeric; not part of the wire format.</summary>
-    public int Scale { get; }
-
     /// <summary>Creates a Daml Numeric from a <see cref="decimal"/>, preserving its exact bit pattern.</summary>
-    public DamlNumeric(decimal value, int scale = DefaultScale)
-        : this(DecomposeDecimal(value), scale)
+    public DamlNumeric(decimal value)
+        : this(DecomposeDecimal(value))
     {
     }
 
-    private DamlNumeric((bool IsNegative, BigInteger UnscaledMagnitude, int MantissaScale) decomposed, int scale)
-        : this(decomposed.IsNegative, decomposed.UnscaledMagnitude, decomposed.MantissaScale, scale)
+    private DamlNumeric((bool IsNegative, BigInteger UnscaledMagnitude, int MantissaScale) decomposed)
+        : this(decomposed.IsNegative, decomposed.UnscaledMagnitude, decomposed.MantissaScale)
     {
     }
 
-    private DamlNumeric(bool isNegative, BigInteger unscaledMagnitude, int mantissaScale, int scale)
+    private DamlNumeric(bool isNegative, BigInteger unscaledMagnitude, int mantissaScale)
     {
         if (unscaledMagnitude.Sign < 0)
         {
@@ -93,7 +88,6 @@ public sealed record DamlNumeric : DamlValue
         _isNegative = isNegative && !unscaledMagnitude.IsZero;
         _unscaledMagnitude = unscaledMagnitude;
         _mantissaScale = mantissaScale;
-        Scale = scale;
     }
 
     /// <summary>
@@ -140,7 +134,9 @@ public sealed record DamlNumeric : DamlValue
 
     /// <summary>
     /// Formats this value in the exact canonical wire shape: no scientific notation,
-    /// trailing mantissa zeros stripped down to a single guaranteed fractional digit.
+    /// trailing mantissa zeros stripped down to a single guaranteed fractional digit. A value
+    /// with 38 integer digits has no room for that digit, so it takes the participant's bare
+    /// trailing-dot <c>Numeric 0</c> form instead, e.g. <c>99999999999999999999999999999999999999.</c>.
     /// </summary>
     /// <returns>The canonical decimal string (<c>-?digits.digits</c>), losslessly
     /// round-trippable through <see cref="TryParseCanonical"/> even for magnitudes or
@@ -152,7 +148,7 @@ public sealed record DamlNumeric : DamlValue
         var fractionalPart = digits[^_mantissaScale..].TrimEnd('0');
         if (fractionalPart.Length == 0)
         {
-            fractionalPart = "0";
+            fractionalPart = integerPart.Length == MaxSignificantDigits ? string.Empty : "0";
         }
         return _isNegative ? $"-{integerPart}.{fractionalPart}" : $"{integerPart}.{fractionalPart}";
     }
@@ -200,7 +196,7 @@ public sealed record DamlNumeric : DamlValue
         }
 
         var unscaledMagnitude = BigInteger.Parse(integerPart + fractionalPart, CultureInfo.InvariantCulture);
-        result = new DamlNumeric(isNegative, unscaledMagnitude, mantissaScale, DefaultScale);
+        result = new DamlNumeric(isNegative, unscaledMagnitude, mantissaScale);
         return true;
     }
 
@@ -229,13 +225,11 @@ public sealed record DamlNumeric : DamlValue
     /// <exception cref="OverflowException">The stored value has more precision than <see cref="decimal"/> can represent exactly.</exception>
     public static implicit operator decimal(DamlNumeric value) => value.Value;
 
-    /// <summary>Wraps a decimal as a Daml Numeric with the default scale of 10.</summary>
+    /// <summary>Wraps a decimal as a Daml Numeric.</summary>
     public static implicit operator DamlNumeric(decimal value) => new(value);
 
     /// <summary>
-    /// Compares by numeric value only, normalized across differing mantissa precision;
-    /// <see cref="Scale"/> never reaches the wire, so including it would break round-trip
-    /// equality for any non-default scale.
+    /// Compares by numeric value only, normalized across differing mantissa precision.
     /// </summary>
     public bool Equals(DamlNumeric? other)
     {
@@ -395,6 +389,9 @@ public sealed record DamlDate(DateOnly Value) : DamlValue
 /// </summary>
 public sealed record DamlTimestamp(DateTimeOffset Value) : DamlValue
 {
+    /// <inheritdoc/>
+    public override int GetHashCode() => DamlHash.Int64(Value.UtcTicks);
+
     private const long TicksPerMicrosecond = 10;
     private static readonly long MinTicksSinceEpoch = (DateTimeOffset.MinValue - DateTimeOffset.UnixEpoch).Ticks;
     private static readonly long MaxTicksSinceEpoch =

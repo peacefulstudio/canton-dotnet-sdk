@@ -54,6 +54,15 @@ public abstract record Validation<TErrs, TA> where TErrs : notnull where TA : no
     public sealed record Errors(global::Daml.Runtime.Stdlib.NonEmpty<TErrs> Value) : Validation<TErrs, TA>
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.NonEmpty<TErrs>>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "Errors";
 
         /// <inheritdoc />
@@ -64,10 +73,18 @@ public abstract record Validation<TErrs, TA> where TErrs : notnull where TA : no
     public sealed record Success(TA Value) : Validation<TErrs, TA>
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<TA>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "Success";
 
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant(global::System.Func<TErrs, global::Daml.Runtime.Data.DamlValue> convertTErrs, global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlVariant.Create("Success", convertTA(Value));
     }
-
 }

@@ -76,7 +76,7 @@ public class ChoiceEmitterContractIdExerciserTests
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
 
         var exerciserSb = new StringBuilder();
-        var exerciserIndent = new IndentWriter(exerciserSb) { CurrentTypeName = template.Name };
+        var exerciserIndent = new IndentWriter(exerciserSb);
         emitter.WriteChoiceAsyncExercisersClass(exerciserIndent, template, template.Name, fixture.Fields);
 
         return exerciserSb.ToString();

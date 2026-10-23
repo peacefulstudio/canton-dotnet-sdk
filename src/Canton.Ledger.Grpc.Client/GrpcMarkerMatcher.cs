@@ -5,7 +5,6 @@ using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Google.Rpc;
 using ProtoArchivedEvent = Com.Daml.Ledger.Api.V2.ArchivedEvent;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
@@ -20,7 +19,7 @@ internal static class GrpcMarkerMatcher<TMarker>
 {
     private const bool InterfaceReassignmentFilterSelectsUnassignedEventsServerSide = true;
 
-    private static readonly DamlTypeDescriptor MarkerDescriptor = ResolveMarkerDescriptor();
+    private static readonly DamlTypeDescriptor MarkerDescriptor = MarkerDescriptors.Of<TMarker>();
 
     public static bool IsInterface { get; } = MarkerDescriptor.Kind == DamlTypeKind.Interface;
 
@@ -118,16 +117,4 @@ internal static class GrpcMarkerMatcher<TMarker>
     private static bool MatchesInterface(ProtoIdentifier? interfaceId) =>
         interfaceId is not null
         && MarkerMatch.Interface(MarkerDescriptor, interfaceId.PackageId, interfaceId.ModuleName, interfaceId.EntityName);
-
-    private static DamlTypeDescriptor ResolveMarkerDescriptor()
-    {
-        if (!typeof(IDamlInterface).IsAssignableFrom(typeof(TMarker))
-            && !typeof(ITemplate).IsAssignableFrom(typeof(TMarker)))
-        {
-            throw new InvalidOperationException(
-                $"{typeof(TMarker).FullName} implements IDamlType but is neither IDamlInterface nor ITemplate.");
-        }
-
-        return TMarker.DamlTypeId;
-    }
 }

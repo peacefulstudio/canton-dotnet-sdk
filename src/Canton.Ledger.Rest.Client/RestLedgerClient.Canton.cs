@@ -147,7 +147,7 @@ internal sealed partial class RestLedgerClient
         {
             return new ExerciseOutcome<ContractStreamEvent<T>>.One(ProjectReassignmentResult<T>(reassignment));
         }
-        catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
+        catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
         {
             LogReassignmentUndecodable(_logger, decodeFailure);
             return new ExerciseOutcome<ContractStreamEvent<T>>.CommittedUndecodable(

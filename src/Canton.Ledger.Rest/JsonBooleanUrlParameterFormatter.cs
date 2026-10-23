@@ -14,9 +14,8 @@ namespace Canton.Ledger.Rest.Client;
 /// <see cref="IDarApi.UploadDar"/>'s <c>vetAllPackages</c>.
 /// </summary>
 /// <remarks>
-/// Not retired by digital-asset/canton#527: the delta is Refit's
-/// <see cref="DefaultUrlParameterFormatter"/> rather than the served document, so it retires when
-/// Refit's own default spells a boolean as JSON does.
+/// The delta is Refit's <see cref="DefaultUrlParameterFormatter"/> rather than the served document,
+/// so this formatter is needed for as long as Refit's own default does not spell a boolean as JSON does.
 /// </remarks>
 internal sealed class JsonBooleanUrlParameterFormatter : DefaultUrlParameterFormatter
 {

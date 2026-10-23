@@ -44,8 +44,6 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         return new MapTypeNameVisitor(this, context, resolver, depth).Dispatch(type);
     }
 
-    private const string FallbackTypeName = "object";
-
     /// <summary>
     /// True for the <see cref="DamlPrimitive"/> members the catalog records as
     /// <see cref="DamlPrimitiveDisposition.SignatureOnly"/>: structural type-formers that
@@ -75,10 +73,9 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
     /// <summary>
     /// The loud failure for a builtin application no supported arm names: a signature-only
     /// builtin applied in a data position (named as such), or a supported type constructor
-    /// applied to the wrong number of arguments. Both once fell through to the silent
-    /// <see cref="FallbackTypeName"/> catch-all, which emitted knowingly-wrong C# — an
-    /// <c>object</c> member backed by <c>GenericStub</c> stubs — instead of failing codegen;
-    /// no cataloged builtin shape may reach that fallback anymore.
+    /// applied to the wrong number of arguments. Both once fell through to a silent
+    /// <c>object</c> catch-all, which emitted knowingly-wrong C# — an <c>object</c> member backed
+    /// by <c>GenericStub</c> stubs — instead of failing codegen; no builtin shape may reach it.
     /// </summary>
     private static NotSupportedException UnsupportedPrimitiveApplication(DamlPrimitive primitive, int argumentCount) =>
         IsSignatureOnlyPrimitive(primitive)
@@ -120,9 +117,6 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
 
     private static string FallbackToValueStub(string fieldName) =>
         $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.GenericStub)}.NotImplemented<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)}>(\"{fieldName}\")";
-
-    private static string FallbackFromValueStub(string valueName) =>
-        $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.GenericStub)}.NotImplemented<{FallbackTypeName}>(\"{valueName.Replace("\"", "\\\"", StringComparison.Ordinal)}\")";
 
     /// <summary>
     /// True when <see cref="MapType(DamlType)"/> renders <paramref name="type"/> as a C#
@@ -296,6 +290,9 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         OptionalEncoding.NestedChain => "ToChainValue",
     };
 #pragma warning restore CS8524
+
+    internal static string EqualityComparerFor(string csharpType) =>
+        $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlEqualityComparer)}<{csharpType}>.Default";
 
     /// <remarks>Suppresses CS8524 for the reason given on <see cref="WrappedOptionalSerializer"/>.</remarks>
 #pragma warning disable CS8524
@@ -704,9 +701,12 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         + "The C# code generator does not support this type shape, so generation fails "
         + "here instead of emitting a silent 'default!' fallback into generated code.");
 
-    /// <summary>
-    /// The JSON-reader twin of <see cref="UnclassifiableGenericApplication"/>.
-    /// </summary>
+    private static CodegenException UnrepresentableApplication(DamlTypeApp application) => new(
+        $"Cannot emit a type variable applied to {application.Arguments.Count} type argument(s) "
+        + $"(head '{(application.Base is DamlTypeVar head ? head.Name : application.Base.GetType().Name)}'). "
+        + "C# cannot represent a higher-kinded type, so generation fails here instead of emitting "
+        + "an 'object' placeholder or a stub that throws when the value is used.");
+
     private static CodegenException UnclassifiableGenericJsonApplication(DamlType type) => new(
         $"Cannot emit a JSON-decode expression for Daml type '{type}'. "
         + "The C# code generator does not support this type shape, so generation fails "
@@ -733,16 +733,11 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
 
         protected int Depth { get; } = depth;
 
-        /// <summary>
-        /// Dispatches <paramref name="type"/>: the emitter's own wrapper structurally,
-        /// every public node through its own visitor arm.
-        /// </summary>
         public TResult Dispatch(DamlType type) =>
             type is DamlWrappedOptional wrapped
                 ? VisitWrappedOptional(wrapped)
                 : type.Accept(this);
 
-        /// <summary>Handles the emitter's own optional-representation node.</summary>
         protected abstract TResult VisitWrappedOptional(DamlWrappedOptional wrapped);
 
         public TResult VisitTypeApp(DamlTypeApp type)
@@ -769,12 +764,11 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         /// <summary>Handles the <c>Numeric n</c> scale pun, whose argument rides a type variable.</summary>
         protected abstract TResult VisitNumericApplication(DamlTypeApp application);
 
-        /// <summary>Handles an application of a user-defined type constructor.</summary>
         protected abstract TResult VisitGenericApplication(DamlTypeApp application);
 
         /// <summary>
         /// Handles an application whose base the emitter cannot represent — a type variable
-        /// or a nested application — which the mapper maps to its fallback type name.
+        /// or a nested application — which no emit arm may paper over with a placeholder.
         /// </summary>
         protected abstract TResult VisitUnrepresentableApplication(DamlTypeApp application);
 
@@ -840,16 +834,10 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
                 ? $"{resolver.Resolve((DamlTypeRef)application.Base, context)}<{string.Join(", ", application.Arguments.Select(argument => Mapper.MapType(argument, Depth + 1)))}>"
                 : resolver.Resolve((DamlTypeRef)application.Base, context);
 
-        protected override string VisitUnrepresentableApplication(DamlTypeApp application) => FallbackTypeName;
+        protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
+            throw DamlTypeMapper.UnrepresentableApplication(application);
     }
 
-    /// <summary>
-    /// The collection-shape operation: <see cref="CollectionShape.List"/> for the nodes the
-    /// mapper writes as <c>IReadOnlyList&lt;T&gt;</c>, <see cref="CollectionShape.Map"/> for
-    /// the dictionaries, <see cref="CollectionShape.None"/> for everything else — with the
-    /// same loud failure the shape arms carried for a signature-only builtin in a data
-    /// position, bare or applied.
-    /// </summary>
     private sealed class ClassifyCollectionVisitor(DamlTypeMapper mapper, int depth)
         : TypeOperation<CollectionShape>(mapper, depth)
     {
@@ -921,10 +909,6 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         protected override bool VisitUnrepresentableApplication(DamlTypeApp application) => false;
     }
 
-    /// <summary>
-    /// The Optional-encoding operation: the wrapper's own encoding, <see cref="OptionalEncoding.Flat"/>
-    /// for a surviving <see cref="DamlOptionalType"/>, and <c>null</c> for every non-Optional node.
-    /// </summary>
     private sealed class OptionalWireEncodingVisitor(DamlTypeMapper mapper, int depth)
         : TypeOperation<OptionalEncoding?>(mapper, depth)
     {
@@ -1039,7 +1023,7 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         }
 
         protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
-            FallbackToValueStub(fieldName);
+            throw DamlTypeMapper.UnrepresentableApplication(application);
     }
 
     /// <summary>
@@ -1103,7 +1087,8 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
             $"({TypeReferenceQualifier.Qualify("IReadOnlyDictionary")}<{Mapper.MapType(type.Key, Depth + 1)}, {Mapper.MapType(type.Value, Depth + 1)}>)"
             + $"{valueName}.As<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlGenMap)}>().Entries"
             + $".ToDictionary(kv => {Mapper.FromValue(type.Key, "kv.Key", typeVarDelegates, Depth + 1)}, "
-            + $"kv => {Mapper.FromValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)})";
+            + $"kv => {Mapper.FromValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)}, "
+            + $"{DamlTypeMapper.EqualityComparerFor(Mapper.MapType(type.Key, Depth + 1))})";
 
         public override string VisitContractId(DamlContractIdType type) =>
             $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{Mapper.MapType(type.Payload, Depth + 1)}>"
@@ -1138,7 +1123,7 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         }
 
         protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
-            FallbackFromValueStub(valueName);
+            throw DamlTypeMapper.UnrepresentableApplication(application);
     }
 
     /// <summary>
@@ -1218,7 +1203,7 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         }
 
         protected override string VisitUnrepresentableApplication(DamlTypeApp application) =>
-            ReadUnsupported(application.ToString());
+            throw DamlTypeMapper.UnrepresentableApplication(application);
 
         private string ElementReader(DamlType argument) =>
             Mapper.FromJsonElementReader(argument, typeVarReaders, Depth);

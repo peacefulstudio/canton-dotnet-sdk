@@ -531,11 +531,6 @@ public class LedgerClientSubmitterInfoTests
         }
     }
 
-    /// <summary>
-    /// Minimal <see cref="ITemplate"/> for routing tests. Carries no payload —
-    /// the assertions here are about which submitter reaches the primitive,
-    /// not about template encoding.
-    /// </summary>
     private sealed record FakeTemplate : ITemplate, IDamlRecord<FakeTemplate>
     {
         public static Identifier TemplateId { get; } =
@@ -554,10 +549,6 @@ public class LedgerClientSubmitterInfoTests
             throw new NotSupportedException();
     }
 
-    /// <summary>
-    /// Minimal <see cref="IDamlInterface"/> marker for routing tests, paired with
-    /// <see cref="FakeInterfaceView"/> through <see cref="FakeViewDescriptor"/>.
-    /// </summary>
     private sealed record FakeInterfaceMarker : IDamlInterface, IHasView<FakeInterfaceView>
     {
         public static Identifier InterfaceId { get; } = new("pkg", "Module", "FakeInterface");

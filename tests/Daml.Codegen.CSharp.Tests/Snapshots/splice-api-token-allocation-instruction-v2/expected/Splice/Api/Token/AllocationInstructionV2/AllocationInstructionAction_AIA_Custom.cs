@@ -16,6 +16,14 @@ public sealed record AllocationInstructionAction_AIA_Custom(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
 ) : global::Daml.Runtime.Data.IDamlRecord<AllocationInstructionAction_AIA_Custom>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Id, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("id", new global::Daml.Runtime.Data.DamlText(Id))
@@ -23,7 +31,7 @@ public sealed record AllocationInstructionAction_AIA_Custom(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationInstructionAction_AIA_Custom FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationInstructionAction_AIA_Custom(
-        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
+        Id: record.GetRequiredField("id", 0).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record AllocationInstructionAction_AIA_Custom(
             global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
         );
     }
-
 }

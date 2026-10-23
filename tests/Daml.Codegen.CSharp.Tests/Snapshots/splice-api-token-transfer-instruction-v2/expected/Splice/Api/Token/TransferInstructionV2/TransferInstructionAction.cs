@@ -84,10 +84,18 @@ public abstract record TransferInstructionAction : global::Daml.Runtime.Data.IDa
     public sealed record TIA_Custom(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction_TIA_Custom Value) : TransferInstructionAction
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionAction_TIA_Custom>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "TIA_Custom";
 
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TIA_Custom", Value.ToRecord());
     }
-
 }

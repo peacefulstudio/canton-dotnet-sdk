@@ -51,7 +51,7 @@ public sealed record ChoiceContext(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static ChoiceContext FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ChoiceContext(
-        Values: (global::System.Collections.Generic.IReadOnlyDictionary<string, global::Splice.Api.Token.MetadataV1.AnyValue>)record.GetRequiredField("values").As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => global::Splice.Api.Token.MetadataV1.AnyValue.FromVariant(kv.Value.As<global::Daml.Runtime.Data.DamlVariant>()))
+        Values: (global::System.Collections.Generic.IReadOnlyDictionary<string, global::Splice.Api.Token.MetadataV1.AnyValue>)record.GetRequiredField("values", 0).As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => global::Splice.Api.Token.MetadataV1.AnyValue.FromVariant(kv.Value.As<global::Daml.Runtime.Data.DamlVariant>()))
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -63,5 +63,4 @@ public sealed record ChoiceContext(
             global::Daml.Runtime.Data.DamlField.Create("values", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "values"), context.Field("values"), (__json0, __ctx0) => global::Splice.Api.Token.MetadataV1.AnyValue.__ReadDamlLfJson(__json0, __ctx0)))
         );
     }
-
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
@@ -28,6 +29,12 @@ internal sealed partial class RestAdminClient : IAdminClient
     private const string VettedPackagesPath = "/v2/package-vetting/list";
     private const string UpdateVettedPackagesPath = "/v2/package-vetting/update";
     private const string IdentityProviderConfigsPath = "/v2/idps";
+    private const string PartyPathTemplate = "/v2/parties/{party}";
+    private const string UserPathTemplate = "/v2/users/{userId}";
+    private const string UserRightsPathTemplate = "/v2/users/{userId}/rights";
+    private const string UserIdentityProviderPathTemplate = "/v2/users/{userId}/identity-provider-id";
+    private const string IdentityProviderConfigPathTemplate = "/v2/idps/{identityProviderId}";
+    private const string PackagePathTemplate = "/v2/packages/{packageId}";
     private const string DarsPath = "/v2/dars";
     private const string ValidateDarPath = "/v2/dars/validate";
 
@@ -49,7 +56,8 @@ internal sealed partial class RestAdminClient : IAdminClient
     private static readonly ActivitySource ActivitySource = LedgerActivitySource.Create<RestAdminClient>();
 
     private readonly RestCallEnvelope _calls;
-    private readonly ILogger<RestAdminClient> _logger;
+    private readonly ILogger _logger;
+    private readonly bool _emitPartyAndContractSpanTags;
 
     internal RestAdminClient(
         IHttpClientFactory httpClientFactory,
@@ -58,11 +66,13 @@ internal sealed partial class RestAdminClient : IAdminClient
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
-        _logger = logger ?? NullLogger<RestAdminClient>.Instance;
+        _emitPartyAndContractSpanTags = options?.Value.EmitPartyAndContractSpanTags ?? false;
+        _logger = (logger ?? NullLogger<RestAdminClient>.Instance).RedactingExceptionsUnless(_emitPartyAndContractSpanTags);
         _calls = new RestCallEnvelope(
             httpClientFactory,
             _logger,
-            options?.Value.MaxResponseBodyBytes ?? RestLedgerClientOptions.DefaultMaxResponseBodyBytes);
+            options?.Value.MaxResponseBodyBytes ?? RestLedgerClientOptions.DefaultMaxResponseBodyBytes,
+            options is null ? RestLedgerClientOptions.DefaultTimeout : options.Value.Timeout);
     }
 
     public Task<string> GetParticipantIdAsync(CancellationToken cancellationToken = default) =>
@@ -87,7 +97,14 @@ internal sealed partial class RestAdminClient : IAdminClient
         SynchronizerId? synchronizerId,
         CancellationToken cancellationToken)
     {
-        LogAllocatingParty(_logger, partyIdHint);
+        if (_emitPartyAndContractSpanTags)
+        {
+            LogAllocatingParty(_logger, partyIdHint);
+        }
+        else
+        {
+            LogAllocatingParty(_logger);
+        }
 
         var request = new Raw.AllocatePartyRequest { PartyIdHint = partyIdHint };
         if (synchronizerId is { } synchronizer)
@@ -99,7 +116,10 @@ internal sealed partial class RestAdminClient : IAdminClient
             timeout: null,
             cancellationToken).ConfigureAwait(false);
 
-        LogPartyAllocated(_logger, details.Party.Value);
+        if (_emitPartyAndContractSpanTags)
+            LogPartyAllocated(_logger, details.Party.Value);
+        else
+            LogPartyAllocatedWithoutId(_logger);
         return details;
     }
 
@@ -121,7 +141,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         foreach (var party in parties)
         {
             details.AddRange(await _calls.SendAsync<Raw.GetPartiesResponse, IReadOnlyList<PartyDetails>>(
-                Read($"{PartiesPath}/{Uri.EscapeDataString(party.Value)}", "party details"),
+                Read($"{PartiesPath}/{Uri.EscapeDataString(party.Value)}", "party details", PartyPathTemplate),
                 response => (response.PartyDetails ?? []).Select(FromWire).ToList(),
                 timeout: null,
                 cancellationToken).ConfigureAwait(false));
@@ -156,12 +176,19 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(CreateUserAsync),
             () => CreateUserCoreAsync(request, cancellationToken),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     private async Task<UserDetails> CreateUserCoreAsync(Raw.CreateUserRequest request, CancellationToken cancellationToken)
     {
-        LogCreatingUser(_logger, request.User.Id);
+        if (_emitPartyAndContractSpanTags)
+        {
+            LogCreatingUser(_logger, request.User.Id);
+        }
+        else
+        {
+            LogCreatingUser(_logger);
+        }
 
         var details = await _calls.SendAsync<Raw.CreateUserResponse, UserDetails>(
             Mutate(HttpMethod.Post, UsersPath, request, "created user"),
@@ -169,7 +196,10 @@ internal sealed partial class RestAdminClient : IAdminClient
             timeout: null,
             cancellationToken).ConfigureAwait(false);
 
-        LogUserCreated(_logger, request.User.Id);
+        if (_emitPartyAndContractSpanTags)
+            LogUserCreated(_logger, request.User.Id);
+        else
+            LogUserCreatedWithoutId(_logger);
         return details;
     }
 
@@ -180,12 +210,12 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(GetUserAsync),
             () => NullWhenNotFoundAsync(GetUserCoreAsync(userId, cancellationToken)),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     private Task<UserDetails?> GetUserCoreAsync(string userId, CancellationToken cancellationToken) =>
         _calls.SendAsync<Raw.GetUserResponse, UserDetails?>(
-            Read(userId.Length == 0 ? AuthenticatedUserPath : UserPath(userId), "user"),
+            Read(userId.Length == 0 ? AuthenticatedUserPath : UserPath(userId), "user", userId.Length == 0 ? null : UserPathTemplate),
             response => FromWire(response.User),
             timeout: null,
             cancellationToken);
@@ -202,7 +232,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(GrantUserRightsAsync),
             () => GrantUserRightsCoreAsync(request, cancellationToken),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     private async Task<Raw.GrantUserRightsResponse> GrantUserRightsCoreAsync(
@@ -210,12 +240,15 @@ internal sealed partial class RestAdminClient : IAdminClient
         CancellationToken cancellationToken)
     {
         var response = await _calls.SendAsync<Raw.GrantUserRightsResponse, Raw.GrantUserRightsResponse>(
-            Mutate(HttpMethod.Post, UserRightsPath(request.UserId), request, "granted rights"),
+            Mutate(HttpMethod.Post, UserRightsPath(request.UserId), request, "granted rights", UserRightsPathTemplate),
             granted => granted,
             timeout: null,
             cancellationToken).ConfigureAwait(false);
 
-        LogRightsGranted(_logger, request.UserId);
+        if (_emitPartyAndContractSpanTags)
+            LogRightsGranted(_logger, request.UserId);
+        else
+            LogRightsGrantedWithoutId(_logger);
         return response;
     }
 
@@ -231,7 +264,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(RevokeUserRightsAsync),
             () => RevokeUserRightsCoreAsync(request, cancellationToken),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     private async Task<Raw.RevokeUserRightsResponse> RevokeUserRightsCoreAsync(
@@ -239,12 +272,15 @@ internal sealed partial class RestAdminClient : IAdminClient
         CancellationToken cancellationToken)
     {
         var response = await _calls.SendAsync<Raw.RevokeUserRightsResponse, Raw.RevokeUserRightsResponse>(
-            Mutate(HttpMethod.Patch, UserRightsPath(request.UserId), request, "revoked rights"),
+            Mutate(HttpMethod.Patch, UserRightsPath(request.UserId), request, "revoked rights", UserRightsPathTemplate),
             revoked => revoked,
             timeout: null,
             cancellationToken).ConfigureAwait(false);
 
-        LogRightsRevoked(_logger, request.UserId);
+        if (_emitPartyAndContractSpanTags)
+            LogRightsRevoked(_logger, request.UserId);
+        else
+            LogRightsRevokedWithoutId(_logger);
         return response;
     }
 
@@ -257,7 +293,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(ListUserRightsAsync),
             () => NullWhenNotFoundAsync(ListUserRightsCoreAsync(userId, cancellationToken)),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     private async Task<IReadOnlyList<UserRight>?> ListUserRightsCoreAsync(string userId, CancellationToken cancellationToken)
@@ -267,7 +303,7 @@ internal sealed partial class RestAdminClient : IAdminClient
             : userId;
 
         return await _calls.SendAsync<Raw.ListUserRightsResponse, IReadOnlyList<UserRight>?>(
-            Read(UserRightsPath(resolvedUserId), "user rights"),
+            Read(UserRightsPath(resolvedUserId), "user rights", UserRightsPathTemplate),
             response => (response.Rights ?? []).Select(FromWire).ToList(),
             timeout: null,
             cancellationToken).ConfigureAwait(false);
@@ -308,11 +344,11 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(UpdateUserAsync),
             () => _calls.SendAsync<Raw.UpdateUserResponse, UserDetails>(
-                Mutate(HttpMethod.Patch, UserPath(userId), request, "updated user"),
+                Mutate(HttpMethod.Patch, UserPath(userId), request, "updated user", UserPathTemplate),
                 response => FromWire(response.User),
                 timeout: null,
                 cancellationToken),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     public Task DeleteUserAsync(
@@ -329,11 +365,11 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(DeleteUserAsync),
             () => _calls.SendAsync(
-                new RestCall(HttpMethod.Delete, path, Body: null, MissingBody("user deletion"), MalformedBody("user deletion"), LedgerCallKind.EffectAppliedWrite, Replayable: false),
+                new RestCall(HttpMethod.Delete, path, Body: null, MissingBody("user deletion"), MalformedBody("user deletion"), LedgerCallKind.EffectAppliedWrite, Replayable: false, PathTemplate: UserPathTemplate),
                 IgnoreBodyAsync,
                 timeout: null,
                 cancellationToken),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     public Task UpdateUserIdentityProviderIdAsync(
@@ -352,11 +388,11 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(UpdateUserIdentityProviderIdAsync),
             () => _calls.SendAsync(
-                Mutate(HttpMethod.Patch, $"{UserPath(userId)}/identity-provider-id", request, "user identity provider update"),
+                Mutate(HttpMethod.Patch, $"{UserPath(userId)}/identity-provider-id", request, "user identity provider update", UserIdentityProviderPathTemplate),
                 IgnoreBodyAsync,
                 timeout: null,
                 cancellationToken),
-            (LedgerActivityTagNames.CantonUserId, userId));
+            UserIdTag(userId));
     }
 
     public Task<PartyDetails> UpdatePartyDetailsAsync(
@@ -377,7 +413,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(UpdatePartyDetailsAsync),
             () => _calls.SendAsync<Raw.UpdatePartyDetailsResponse, PartyDetails>(
-                Mutate(HttpMethod.Patch, $"{PartiesPath}/{Uri.EscapeDataString(party.Value)}", request, "updated party"),
+                Mutate(HttpMethod.Patch, $"{PartiesPath}/{Uri.EscapeDataString(party.Value)}", request, "updated party", PartyPathTemplate),
                 response => FromWire(response.PartyDetails),
                 timeout: null,
                 cancellationToken));
@@ -419,7 +455,8 @@ internal sealed partial class RestAdminClient : IAdminClient
                     MissingBody("package archive"),
                     MalformedBody("package archive"),
                     LedgerCallKind.Read,
-                    Accept: RestCallEnvelope.OctetStream),
+                    Accept: RestCallEnvelope.OctetStream,
+                    PathTemplate: PackagePathTemplate),
                 ReadPackageArchiveAsync,
                 timeout: null,
                 cancellationToken),
@@ -462,7 +499,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(GetIdentityProviderConfigAsync),
             () => NullWhenNotFoundAsync(_calls.SendAsync<Raw.GetIdentityProviderConfigResponse, IdentityProviderConfig?>(
-                Read(IdentityProviderConfigPath(identityProviderId), "identity provider config"),
+                Read(IdentityProviderConfigPath(identityProviderId), "identity provider config", IdentityProviderConfigPathTemplate),
                 response => FromWire(response.IdentityProviderConfig),
                 timeout: null,
                 cancellationToken)));
@@ -497,7 +534,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         return TracedAsync(
             nameof(UpdateIdentityProviderConfigAsync),
             () => _calls.SendAsync<Raw.UpdateIdentityProviderConfigResponse, IdentityProviderConfig>(
-                Mutate(HttpMethod.Patch, IdentityProviderConfigPath(identityProviderId), request, "updated identity provider config"),
+                Mutate(HttpMethod.Patch, IdentityProviderConfigPath(identityProviderId), request, "updated identity provider config", IdentityProviderConfigPathTemplate),
                 response => FromWire(response.IdentityProviderConfig),
                 timeout: null,
                 cancellationToken));
@@ -519,7 +556,8 @@ internal sealed partial class RestAdminClient : IAdminClient
                     MissingBody("identity provider config deletion"),
                     MalformedBody("identity provider config deletion"),
                     LedgerCallKind.EffectAppliedWrite,
-                    Replayable: false),
+                    Replayable: false,
+                    PathTemplate: IdentityProviderConfigPathTemplate),
                 IgnoreBodyAsync,
                 timeout: null,
                 cancellationToken));
@@ -669,7 +707,19 @@ internal sealed partial class RestAdminClient : IAdminClient
             ? $"{path}?synchronizerId={Uri.EscapeDataString(synchronizer.Value)}"
             : path;
 
-    private static async Task<T> TracedAsync<T>(
+    private (string Name, string Value)? UserIdTag(string userId) =>
+        _emitPartyAndContractSpanTags ? (LedgerActivityTagNames.CantonUserId, userId) : null;
+
+    private string StatusDescriptionOf(Exception failure) =>
+        _emitPartyAndContractSpanTags ? failure.Message : failure switch
+        {
+            LedgerOperationException { Status: TransportStatus.Http http } => ((int)http.StatusCode).ToString(CultureInfo.InvariantCulture),
+            LedgerOperationException { Status: TransportStatus.NoResponse } => failure.Message,
+            LedgerOperationException { Status: { } status } => status.GetType().Name,
+            _ => failure.GetType().Name,
+        };
+
+    private async Task<T> TracedAsync<T>(
         string operation,
         Func<Task<T>> call,
         (string Name, string Value)? tag = null)
@@ -684,7 +734,7 @@ internal sealed partial class RestAdminClient : IAdminClient
         }
         catch (Exception failure)
         {
-            activity.RecordException(failure);
+            activity.RecordException(failure, StatusDescriptionOf(failure));
             throw;
         }
     }
@@ -741,11 +791,11 @@ internal sealed partial class RestAdminClient : IAdminClient
     private static bool IsNotFound(LedgerOperationException rejection) =>
         LedgerCallOutcome.ReportsAbsence(rejection.Status, rejection.Category);
 
-    private static RestCall Read(string path, string subject) =>
-        new(HttpMethod.Get, path, Body: null, MissingBody(subject), MalformedBody(subject), LedgerCallKind.Read);
+    private static RestCall Read(string path, string subject, string? pathTemplate = null) =>
+        new(HttpMethod.Get, path, Body: null, MissingBody(subject), MalformedBody(subject), LedgerCallKind.Read, PathTemplate: pathTemplate);
 
-    private static RestCall Mutate(HttpMethod method, string path, object body, string subject) =>
-        new(method, path, body, MissingBody(subject), MalformedBody(subject), LedgerCallKind.EffectAppliedWrite, Replayable: false);
+    private static RestCall Mutate(HttpMethod method, string path, object body, string subject, string? pathTemplate = null) =>
+        new(method, path, body, MissingBody(subject), MalformedBody(subject), LedgerCallKind.EffectAppliedWrite, Replayable: false, PathTemplate: pathTemplate);
 
     private static string MissingBody(string subject) =>
         $"Server returned a successful response but no body was present for the {subject}.";
@@ -905,11 +955,20 @@ internal sealed partial class RestAdminClient : IAdminClient
         },
     };
 
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Allocating party")]
+    private static partial void LogAllocatingParty(ILogger logger);
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "Allocating party with hint: {PartyIdHint}")]
     private static partial void LogAllocatingParty(ILogger logger, string partyIdHint);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Party allocated: {PartyId}")]
     private static partial void LogPartyAllocated(ILogger logger, string partyId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Party allocated")]
+    private static partial void LogPartyAllocatedWithoutId(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Creating user")]
+    private static partial void LogCreatingUser(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Creating user: {UserId}")]
     private static partial void LogCreatingUser(ILogger logger, string userId);
@@ -917,11 +976,20 @@ internal sealed partial class RestAdminClient : IAdminClient
     [LoggerMessage(Level = LogLevel.Information, Message = "User created: {UserId}")]
     private static partial void LogUserCreated(ILogger logger, string userId);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "User created")]
+    private static partial void LogUserCreatedWithoutId(ILogger logger);
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Rights granted to user {UserId}")]
     private static partial void LogRightsGranted(ILogger logger, string userId);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rights granted")]
+    private static partial void LogRightsGrantedWithoutId(ILogger logger);
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Rights revoked from user {UserId}")]
     private static partial void LogRightsRevoked(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rights revoked")]
+    private static partial void LogRightsRevokedWithoutId(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Uploading DAR file ({DarSize} bytes)")]
     private static partial void LogUploadingDar(ILogger logger, int darSize);

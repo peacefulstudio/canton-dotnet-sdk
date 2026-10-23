@@ -60,8 +60,6 @@ internal sealed class InterfaceEmitter(
             }
         }
 
-        indent.CurrentTypeName = interfaceName;
-
         var interfacesList = new List<string> { TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlInterface) };
         if (viewType is not null)
         {
@@ -86,7 +84,7 @@ internal sealed class InterfaceEmitter(
 
         if (stampedViewRecord is not null)
         {
-            WriteViewFieldProperties(indent, stampedViewRecord);
+            WriteViewFieldProperties(indent, interfaceName, stampedViewRecord);
         }
 
         if (iface.Choices.Count > 0)
@@ -95,6 +93,7 @@ internal sealed class InterfaceEmitter(
             choiceEmitter.WriteChoicesAggregateProperty(indent, iface.Choices, interfaceName);
         }
 
+        indent.TrimTrailingBlankLine();
         indent.Dedent();
         indent.AppendLine("}");
 
@@ -123,12 +122,12 @@ internal sealed class InterfaceEmitter(
         indent.AppendLine();
     }
 
-    private void WriteViewFieldProperties(IndentWriter indent, DamlRecordDefinition viewRecord)
+    private void WriteViewFieldProperties(IndentWriter indent, string interfaceName, DamlRecordDefinition viewRecord)
     {
         foreach (var field in viewRecord.Fields)
         {
             var csharpType = mapper.MapType(field.Type);
-            var memberName = Identifiers.MemberName(field.Name, indent.CurrentTypeName);
+            var memberName = Identifiers.MemberName(field.Name, interfaceName);
             StdlibPackages.RequireForFieldType(resolver, context.Package, indent, field.Type);
             if (options.GenerateXmlDocs)
             {

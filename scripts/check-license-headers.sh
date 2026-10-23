@@ -7,7 +7,7 @@ export LC_ALL=C
 
 usage() {
   cat <<EOF
-Usage: $0 [--fix] [--print-scan-paths] [ROOT]
+Usage: $0 [--fix] [--root ROOT] [PATH...]
 
 Assert that every file under SCAN_PATHS whose type can carry a comment opens
 with this repository's two-line SPDX header:
@@ -48,9 +48,15 @@ in. A tree git knows nothing about is walked whole: like a missing
 
 With --fix, insert the header into any file reported as missing one, below a
 shebang or an '@echo off' line where one leads the file.
-With --print-scan-paths, list the scan paths and exit; list-agreement gates
-derive their scope from that output rather than restating it.
-ROOT defaults to the repository root; pass one to check a tree elsewhere.
+ROOT defaults to the repository root; pass --root to check a tree elsewhere.
+
+With PATH arguments, ROOT-relative or absolute, only those files are checked:
+the ones inside the scan paths and outside .licenseignore and the pruned
+directories. Every other PATH is skipped silently, as is one that is not a
+file. The per-file rules are unchanged; the tree is not walked, and the check
+that each classified comment type matches at least one file is not made,
+since a handful of files cannot satisfy it. This is the mode the pre-commit
+hook runs in. With no PATH, the whole tree is checked.
 
 Exit codes: 0 all headers present, 1 at least one header missing or malformed,
 2 the check could not be carried out.
@@ -111,19 +117,26 @@ TYPES_CARRYING_NO_HEADER=(
 HOLDER="Peaceful Studio OÜ"
 SPDX_LINE="SPDX-License-Identifier: Apache-2.0"
 HEADER_SEARCH_LINES=10
+PRUNED_DIRECTORY_NAMES=(bin obj target .daml .git Snapshots Generated)
 IGNORE_FILE=".licenseignore"
 SCRIPT_TYPE="shebang script"
 
 FIX=""
+ROOT_ARGUMENT=""
+requested_paths=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -h | --help)
       usage
       exit 0
       ;;
-    --print-scan-paths)
-      printf '%s\n' "${SCAN_PATHS[@]}" "${INTERNAL_ONLY_SCAN_PATHS[@]}"
-      exit 0
+    --root)
+      if [ "$#" -lt 2 ]; then
+        echo "check-license-headers.sh: --root needs a directory" >&2
+        exit 2
+      fi
+      ROOT_ARGUMENT="$2"
+      shift 2
       ;;
     --fix)
       FIX="1"
@@ -135,17 +148,13 @@ while [ "$#" -gt 0 ]; do
       exit 2
       ;;
     *)
-      break
+      requested_paths+=("$1")
+      shift
       ;;
   esac
 done
 
-if [ "$#" -gt 1 ]; then
-  echo "check-license-headers.sh: unexpected extra arguments: ${*:2}" >&2
-  exit 2
-fi
-
-root="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+root="${ROOT_ARGUMENT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 if [ ! -d "$root" ]; then
   echo "check-license-headers.sh: root is not a directory: $root" >&2
   exit 2
@@ -268,9 +277,12 @@ insert_header() {
 }
 
 walked_files() {
+  local prune_expression=() name
+  for name in "${PRUNED_DIRECTORY_NAMES[@]}"; do
+    prune_expression+=(-o -name "$name")
+  done
   find "${SCAN_PATHS[@]}" \
-    \( -type d \( -name bin -o -name obj -o -name target -o -name .daml \
-    -o -name .git -o -name Snapshots -o -name Generated \) -prune \) -o \
+    \( -type d \( "${prune_expression[@]:1}" \) -prune \) -o \
     \( -type f -print \) \
     | sort
 }
@@ -291,15 +303,29 @@ scan_files() {
   comm -12 <(printf '%s\n' "$walked") <(printf '%s\n' "$tracked")
 }
 
-declare -A files_checked_by_type=()
+checked_types=$'\n'
+checked_type_count=0
 unclassified_types=()
 data_files_without_extension=()
 missing_header=0
 checked_total=0
 
+type_was_checked() {
+  case "$checked_types" in
+    *$'\n'"$1"$'\n'*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+record_checked_type() {
+  type_was_checked "$1" && return 0
+  checked_types="$checked_types$1"$'\n'
+  checked_type_count=$((checked_type_count + 1))
+}
+
 assert_header() {
   local file="$1" prefix="$2" type="$3"
-  files_checked_by_type["$type"]=$((${files_checked_by_type["$type"]:-0} + 1))
+  record_checked_type "$type"
   checked_total=$((checked_total + 1))
   if header_matches "$file" "$prefix"; then
     return 0
@@ -312,7 +338,48 @@ assert_header() {
   missing_header=1
 }
 
-listing="$(scan_files)" || {
+relative_to_root() {
+  local path="${1#"$PWD"/}"
+  printf '%s' "${path#./}"
+}
+
+is_inside_pruned_directory() {
+  local directory="/${1%/*}/" name
+  for name in "${PRUNED_DIRECTORY_NAMES[@]}"; do
+    case "$directory" in
+      *"/$name/"*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+is_within_scan_paths() {
+  local file="$1" scan_path
+  for scan_path in "${SCAN_PATHS[@]}"; do
+    case "$file" in
+      "$scan_path" | "$scan_path"/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+requested_files_in_scope() {
+  local requested file
+  for requested in "${requested_paths[@]}"; do
+    file="$(relative_to_root "$requested")"
+    if [ -f "$file" ] && ! is_inside_pruned_directory "$file" && is_within_scan_paths "$file"; then
+      printf '%s\n' "$file"
+    fi
+  done
+}
+
+if [ "${#requested_paths[@]}" -gt 0 ]; then
+  listing_source=requested_files_in_scope
+else
+  listing_source=scan_files
+fi
+
+listing="$($listing_source)" || {
   echo "check-license-headers.sh: could not enumerate the scan paths (see above)." >&2
   echo "Part of the tree was unreadable, so those files were never checked." >&2
   exit 2
@@ -359,16 +426,18 @@ if [ "${#data_files_without_extension[@]}" -gt 0 ]; then
   exit 2
 fi
 
-for entry in "${COMMENT_PREFIX_BY_TYPE[@]}" "$SCRIPT_TYPE:#"; do
-  classified_type="${entry%%:*}"
-  if [ "${files_checked_by_type["$classified_type"]:-0}" -eq 0 ]; then
-    echo "check-license-headers.sh: no $classified_type files matched under the scan paths." >&2
-    echo "A classified type that matches nothing means the check is not running rather" >&2
-    echo "than that it passed. Remove the type or fix the scan paths." >&2
-    exit 2
-  fi
-done
+if [ "${#requested_paths[@]}" -eq 0 ]; then
+  for entry in "${COMMENT_PREFIX_BY_TYPE[@]}" "$SCRIPT_TYPE:#"; do
+    classified_type="${entry%%:*}"
+    if ! type_was_checked "$classified_type"; then
+      echo "check-license-headers.sh: no $classified_type files matched under the scan paths." >&2
+      echo "A classified type that matches nothing means the check is not running rather" >&2
+      echo "than that it passed. Remove the type or fix the scan paths." >&2
+      exit 2
+    fi
+  done
+fi
 
-echo "checked $checked_total file(s) across ${#files_checked_by_type[@]} comment type(s)" >&2
+echo "checked $checked_total file(s) across $checked_type_count comment type(s)" >&2
 
 exit "$missing_header"

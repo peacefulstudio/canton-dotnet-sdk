@@ -39,11 +39,13 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     private readonly IReadOnlyDictionary<Type, object> _exerciseResults;
     private readonly IReadOnlyDictionary<Type, object> _createResults;
     private readonly ExerciseOutcome<TransactionResult>? _submissionOutcome;
+    private readonly SubmitAndWaitResult? _submitAndWaitResult;
     private readonly LedgerOffset? _ledgerEnd;
     private readonly FakeCantonSurface _canton;
     private readonly FakeInteractiveSurface _interactive;
     private readonly FakeInterfaceStreams _interfaces;
     private readonly ConcurrentQueue<CommandId> _submittedCommandIds = new();
+    private readonly ConcurrentQueue<RecordedSubmission> _submissions = new();
     private long _committedWrites;
 
     internal LedgerOperationException? ThrowingCallFailure { get; init; }
@@ -55,6 +57,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         IReadOnlyDictionary<Type, object> exerciseResults,
         IReadOnlyDictionary<Type, object> createResults,
         ExerciseOutcome<TransactionResult>? submissionOutcome,
+        SubmitAndWaitResult? submitAndWaitResult,
         LedgerOffset? ledgerEnd,
         FakeCantonSurface canton,
         FakeInteractiveSurface interactive,
@@ -66,6 +69,7 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         _exerciseResults = exerciseResults;
         _createResults = createResults;
         _submissionOutcome = submissionOutcome;
+        _submitAndWaitResult = submitAndWaitResult;
         _ledgerEnd = ledgerEnd;
         _canton = canton;
         _interactive = interactive;
@@ -85,6 +89,27 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     /// before any such write.
     /// </summary>
     public CommandId? LastSubmittedCommandId => SubmittedCommandIds is [.., var last] ? last : null;
+
+    /// <summary>
+    /// Every write the client was handed, one entry per call, in the order the calls were made, so
+    /// a test can assert both what each write carried and the sequence of writes. Select one kind
+    /// with <c>OfType&lt;RecordedSubmission.Commands&gt;()</c>,
+    /// <c>OfType&lt;RecordedSubmission.Reassignment&gt;()</c> or
+    /// <c>OfType&lt;RecordedSubmission.Execution&gt;()</c>.
+    /// </summary>
+    /// <remarks>
+    /// Covers <see cref="TryCreateAsync{TTemplate}"/>, <see cref="TryExerciseAsync{TResult}"/>, both
+    /// <c>SubmitAndWaitAsync</c> and <c>TrySubmitAndWaitForTransactionAsync</c> overloads,
+    /// <see cref="SubmitAsync"/>, <see cref="TrySubmitAndWaitForTransactionTreeAsync"/>,
+    /// <see cref="SubmitReassignmentAsync"/>, <see cref="TrySubmitAndWaitForReassignmentAsync{T}"/> and
+    /// the three interactive executes (<see cref="ExecuteSubmissionAsync"/>,
+    /// <see cref="ExecuteSubmissionAndWaitAsync"/> and
+    /// <see cref="ExecuteSubmissionAndWaitForTransactionAsync"/>), the last recorded without its
+    /// <c>submitter</c>, which only shapes the transaction it returns.
+    /// <see cref="EstimateTrafficCostAsync"/> takes a submission but submits nothing, so it is not
+    /// recorded.
+    /// </remarks>
+    public IReadOnlyList<RecordedSubmission> Submissions => [.. _submissions];
 
     /// <summary>Starts a new fluent builder for a <see cref="FakeLedgerClient"/>.</summary>
     /// <returns>An empty builder; stage behaviour on it, then call <see cref="FakeLedgerClientBuilder.Build"/>.</returns>
@@ -156,7 +181,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var effectiveCommandId = RecordSubmittedCommandId(commandId);
+        var effectiveCommandId = RecordSingleCommandSubmission(
+            command, submitter, workflowId ?? $"exercise-{command.Choice.Value.ToLowerInvariant()}", commandId);
         return Task.FromResult(
             AdvancingLedgerEndOnCommit(
                 Staged<ExerciseOutcome<TResult>>(
@@ -175,7 +201,11 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         where TTemplate : ITemplate
     {
         ArgumentNullException.ThrowIfNull(payload);
-        var effectiveCommandId = RecordSubmittedCommandId(commandId);
+        var effectiveCommandId = RecordSingleCommandSubmission(
+            CreateCommand.For(payload),
+            submitter,
+            workflowId ?? $"create-{typeof(TTemplate).Name.ToLowerInvariant()}",
+            commandId);
         return Task.FromResult(
             AdvancingLedgerEndOnCommit(
                 Staged<ExerciseOutcome<ContractId<TTemplate>>>(
@@ -190,7 +220,14 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Answering<SubmitAndWaitResult>(() => throw Unsupported(nameof(SubmitAndWaitAsync)));
+        var sent = Recorded(submission);
+        return Answering(() =>
+        {
+            var staged = _submitAndWaitResult ?? throw StagingMissing(
+                "submit-and-wait result", nameof(SubmitAndWaitAsync), "WithSubmitAndWaitResult");
+            Interlocked.Increment(ref _committedWrites);
+            return staged with { CommandId = sent.CommandId!.Value };
+        });
     }
 
     /// <inheritdoc />
@@ -211,10 +248,11 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
+        var sent = Recorded(submission);
         var staged = _submissionOutcome ?? throw StagingMissing(
             "submission outcome", nameof(TrySubmitAndWaitForTransactionAsync), "WithSubmissionOutcome");
         return Task.FromResult(AdvancingLedgerEndOnCommit(
-            RecordingRequestedInterfaces(staged, submission).WithCommandId(SentCommandId(submission.CommandId))));
+            RecordingRequestedInterfaces(staged, submission).WithCommandId(SentCommandId(sent.CommandId))));
     }
 
     /// <inheritdoc />
@@ -233,9 +271,11 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     /// Returns the staged seed advanced by one offset for every outcome-returning write
     /// (<see cref="TryCreateAsync{TTemplate}"/>, <see cref="TryExerciseAsync{TResult}"/>,
     /// <see cref="TrySubmitAndWaitForTransactionAsync(CommandsSubmission, TimeSpan?, CancellationToken)"/>,
+    /// <see cref="TrySubmitAndWaitForTransactionTreeAsync"/>,
     /// <see cref="TrySubmitAndWaitForReassignmentAsync{T}"/>) that committed since this client was
-    /// built, so two reads either side of a committed write bracket that write. The fire-and-forget
-    /// <see cref="SubmitAsync"/> and <see cref="SubmitReassignmentAsync"/> report no outcome and so
+    /// built, and for every <see cref="SubmitAndWaitAsync(CommandsSubmission, TimeSpan?, CancellationToken)"/>
+    /// that returned its staged result, so two reads either side of a committed write bracket that
+    /// write. The fire-and-forget <see cref="SubmitAsync"/> and <see cref="SubmitReassignmentAsync"/> report no outcome and so
     /// never advance it.
     /// </remarks>
     public Task<LedgerOffset> GetLedgerEndAsync(
@@ -265,9 +305,34 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         return effective;
     }
 
+    private CommandId RecordSingleCommandSubmission(
+        ICommand command, SubmitterInfo submitter, string workflowId, CommandId? commandId)
+    {
+        var effective = RecordSubmittedCommandId(commandId);
+        _submissions.Enqueue(new RecordedSubmission.Commands(CommandsSubmission.Single(command)
+            .WithSubmitter(submitter)
+            .WithCommandId(effective)
+            .WithWorkflowId(new WorkflowId(workflowId))));
+        return effective;
+    }
+
+    private CommandsSubmission Recorded(CommandsSubmission submission)
+    {
+        var sent = submission.CommandId is null ? submission.WithCommandId(MintedCommandId()) : submission;
+        _submissions.Enqueue(new RecordedSubmission.Commands(sent));
+        return sent;
+    }
+
+    private ReassignmentSubmission RecordedReassignment(ReassignmentSubmission submission)
+    {
+        var sent = submission.CommandId is null ? submission.WithCommandId(MintedCommandId()) : submission;
+        _submissions.Enqueue(new RecordedSubmission.Reassignment(sent));
+        return sent;
+    }
+
     private static string SentCommandId(CommandId? commandId) => (commandId ?? MintedCommandId()).Value;
 
-    private static CommandId MintedCommandId() => new(Guid.NewGuid().ToString());
+    private static CommandId MintedCommandId() => IdMinting.MintCommandId();
 
     private static ExerciseOutcome<TransactionResult> RecordingRequestedInterfaces(
         ExerciseOutcome<TransactionResult> staged, CommandsSubmission submission) =>
@@ -301,10 +366,6 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
             $"FakeLedgerClient has no {what} staged for Daml type '{key.Name}'. Stage one with " +
             $"FakeLedgerClient.Create().{builderCall}(...).Build() before exercising this path.");
     }
-
-    private static NotSupportedException Unsupported(string member) =>
-        new($"FakeLedgerClient does not implement '{member}'. This fake replays only the stream reads and command " +
-            $"outcomes staged through FakeLedgerClient.Create(); '{member}' has no staged behaviour.");
 
     private static async IAsyncEnumerable<TItem> Replay<TItem>(
         IReadOnlyList<TItem> items,

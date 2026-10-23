@@ -5,8 +5,8 @@ namespace Daml.Runtime.Outcomes;
 
 /// <summary>
 /// Closed set of Canton's documented gRPC error categories.
-/// Mirrors the categories listed in the Canton error-codes reference —
-/// search for "error categories" on https://docs.digitalasset.com.
+/// Mirrors the categories listed in the
+/// <see href="https://docs.canton.network/appdev/reference/error-codes">Canton error-codes reference</see>.
 ///
 /// Canton transports the category as a string in <c>ErrorInfo.metadata["category"]</c>;
 /// values that don't match any known category map to <see cref="Unknown"/>.

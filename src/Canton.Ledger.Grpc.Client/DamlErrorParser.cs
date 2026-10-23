@@ -30,13 +30,13 @@ internal static class DamlErrorParser
         var status = TryReadStatus(exception.Trailers);
         if (status is null)
         {
-            return new ParsedLedgerError.Unstructured(exception.Status.Detail, transportStatus);
+            return UnstructuredWithRecoveredAuthCategory(exception.StatusCode, exception.Status.Detail, transportStatus);
         }
 
         var errorInfo = GrpcErrorDetails.FindErrorInfo(status);
         if (errorInfo is null)
         {
-            return WithoutErrorInfo(exception.StatusCode, status.Message, transportStatus);
+            return UnstructuredWithRecoveredAuthCategory(exception.StatusCode, status.Message, transportStatus);
         }
 
         var metadata = GrpcErrorDetails.ToMetadata(errorInfo);
@@ -49,7 +49,7 @@ internal static class DamlErrorParser
             Status: transportStatus);
     }
 
-    private static ParsedLedgerError WithoutErrorInfo(
+    private static ParsedLedgerError UnstructuredWithRecoveredAuthCategory(
         StatusCode statusCode, string? message, TransportStatus transportStatus) =>
         new ParsedLedgerError.Unstructured(
             message,

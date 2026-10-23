@@ -23,16 +23,13 @@ internal sealed record LiveTransport(
 
 internal static class LiveTransports
 {
-    private const string GrpcUrlEnv = "CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL";
-    private const string DefaultGrpcUrl = "http://localhost:11901";
-
     internal static LiveTransport Grpc { get; } = new(
         "Skipping: set CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL, _CLIENT_ID, _CLIENT_SECRET "
         + "(or the legacy un-namespaced CANTON_LOCALNET_* globals) and bring up the localnet "
         + "(canton-localnet up && canton-localnet wait-ready) to run this parity test.",
         fixture =>
         {
-            var grpcAddress = Environment.GetEnvironmentVariable(GrpcUrlEnv) ?? DefaultGrpcUrl;
+            var grpcAddress = LocalnetLedgerServices.GrpcAddress;
             return new ServiceCollection()
                 .AddSingleton<ITokenProvider>(new LocalnetTokenProvider(fixture.TokenProvider.GetAccessTokenAsync))
                 .AddAdminClient(options =>
@@ -87,6 +84,27 @@ internal static class LiveTransports
     internal static Task<CapabilityLane<ExternalSigningCapability>> OpenKeyedExternalSigningAsync(
         LiveTransport transport, CancellationToken cancellationToken) =>
         OpenExternalSigningWithDarAsync(transport, ContractKeysDar.Path, cancellationToken);
+
+    internal static Task<CapabilityLane<ContractKeyCapability>> OpenContractKeysAsync(
+        LiveTransport transport,
+        Func<LiveLaneContext, Func<Party, string, CancellationToken, Task<string?>>> wireKeyHashReader,
+        CancellationToken cancellationToken) =>
+        LiveLane.OpenAsync(
+            transport.SkipMessage,
+            transport.BuildServices,
+            async (context, ct) =>
+            {
+                await transport.VerifyEndpoint(context.Services, ct).ConfigureAwait(false);
+                await context.Fixture.UploadDarAsync(ContractKeysDar.Path, ct).ConfigureAwait(false);
+                var party = await context.Fixture.AllocatePartyAsync("contract-key-parity", cancellationToken: ct)
+                    .ConfigureAwait(false);
+                await context.ActAsRights.GrantAsync(party.PartyId, ct).ConfigureAwait(false);
+                return new ContractKeyCapability(
+                    context.Services.GetRequiredService<ICantonLedgerClient>(),
+                    new Party(party.PartyId),
+                    wireKeyHashReader(context));
+            },
+            cancellationToken);
 
     private static Task<CapabilityLane<ExternalSigningCapability>> OpenExternalSigningWithDarAsync(
         LiveTransport transport, string darPath, CancellationToken cancellationToken) =>

@@ -17,6 +17,15 @@ public sealed record ScheduleKey(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
 ) : global::Daml.Runtime.Data.IDamlRecord<ScheduleKey>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Custodian, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Id, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("custodian", Custodian.ToDamlValue()),
@@ -25,8 +34,8 @@ public sealed record ScheduleKey(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static ScheduleKey FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ScheduleKey(
-        Custodian: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("custodian").As<global::Daml.Runtime.Data.DamlParty>()),
-        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
+        Custodian: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("custodian", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Id: record.GetRequiredField("id", 1).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record ScheduleKey(
             global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
         );
     }
-
 }

@@ -34,24 +34,6 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
         }
     }
 
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
-    {
-        public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "TrafficCostTemplate");
-        public static string PackageId => "pkg";
-        public static string PackageName => "pkg-name";
-        public static Version PackageVersion { get; } = new(0, 1, 0);
-        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
-        public DamlRecord ToRecord() => new(TemplateId, [new DamlField("owner", Alice.ToDamlValue())]);
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
-            TestRecordReader.Read(
-                json,
-                context,
-                ("owner", DamlLfJsonDecoders.ReadParty));
-        public static TestTemplate FromRecord(DamlRecord record) =>
-            new();
-    }
-
     private RestLedgerClient ClientWith(RecordingHttpHandler transport, string? userId = "test-user")
     {
         var factory = new StubHttpClientFactory(transport);
@@ -68,7 +50,7 @@ public sealed class RestLedgerClientTrafficCostTests : IDisposable
 
     private static RuntimeCommands.CommandsSubmission SingleCreateSubmission() =>
         RuntimeCommands.CommandsSubmission.Single(
-            RuntimeCommands.CreateCommand.For(new TestTemplate()), Alice);
+            RuntimeCommands.CreateCommand.For(new OwnedTemplate()), Alice);
 
     [Fact]
     public async Task EstimateTrafficCostAsync_projects_every_cost_component_and_the_estimation_timestamp()

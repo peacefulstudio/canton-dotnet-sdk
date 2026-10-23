@@ -72,10 +72,18 @@ public abstract record AllocationInstructionAction : global::Daml.Runtime.Data.I
     public sealed record AIA_Custom(global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionAction_AIA_Custom Value) : AllocationInstructionAction
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionAction_AIA_Custom>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AIA_Custom";
 
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AIA_Custom", Value.ToRecord());
     }
-
 }

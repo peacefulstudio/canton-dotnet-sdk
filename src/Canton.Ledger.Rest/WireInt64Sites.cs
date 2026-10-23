@@ -15,7 +15,8 @@ namespace Canton.Ledger.Rest.Client;
 /// <c>createArgument</c>, <c>contractKey</c>, <c>choiceArgument</c> and <c>exerciseResult</c>.
 /// </summary>
 /// <remarks>
-/// Retired by digital-asset/canton#527. Every entry here is one row of the compat overlay.
+/// Each entry bridges an int64 field whose JSON API wire encoding differs from the proto3 JSON our
+/// proto-derived specification describes. Every entry here is one row of the compat overlay.
 /// </remarks>
 internal static class WireInt64Sites
 {

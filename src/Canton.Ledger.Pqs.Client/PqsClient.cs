@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Diagnostics;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
@@ -28,7 +29,7 @@ internal sealed partial class PqsClient : IPqsClient
     private const string PageOffsetParameter = "@pageOffset";
 
     private readonly PqsClientOptions _options;
-    private readonly ILogger<PqsClient> _logger;
+    private readonly ILogger _logger;
     private readonly Func<CancellationToken, ValueTask<NpgsqlConnection>> _openConnectionAsync;
     private readonly Func<NpgsqlCommand, CancellationToken, Task<DbDataReader>> _executeReaderAsync;
 
@@ -44,7 +45,7 @@ internal sealed partial class PqsClient : IPqsClient
         Func<NpgsqlCommand, CancellationToken, Task<DbDataReader>>? executeReaderAsync = null)
     {
         _options = ValidateOptions(options);
-        _logger = logger ?? NullLogger<PqsClient>.Instance;
+        _logger = (logger ?? NullLogger<PqsClient>.Instance).RedactingExceptionsUnless(_options.EmitPartyAndContractSpanTags);
         _openConnectionAsync = openConnectionAsync ?? OpenConnectionFromOptionsAsync;
         _executeReaderAsync = executeReaderAsync ?? ExecuteReaderDirectlyAsync;
     }
@@ -389,13 +390,16 @@ internal sealed partial class PqsClient : IPqsClient
             LogTypeNotFound(_logger, typeId);
             return notFoundResult;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (StreamEventClassifier.IsNotCancellation(ex))
         {
             LogQueryError(_logger, ex, typeId);
-            activity.RecordException(ex);
+            activity.RecordException(ex, StatusDescriptionOf(ex));
             throw;
         }
     }
+
+    private string StatusDescriptionOf(Exception failure) =>
+        _options.EmitPartyAndContractSpanTags ? failure.Message : failure.GetType().Name;
 
     // Workaround for PQS's active() function: it raises P0001 "Identifier not found" when no
     // contracts of a given type have ever been created, which is semantically "no

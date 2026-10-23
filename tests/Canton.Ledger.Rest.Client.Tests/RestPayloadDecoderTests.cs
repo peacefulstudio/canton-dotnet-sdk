@@ -396,7 +396,7 @@ public sealed class RestPayloadDecoderTests
     public void The_generated_conformance_template_registers_its_key()
     {
         var created = CreatedEvent(
-            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:ContractKeys:Steward", "{}", contractKeyJson: "\"party::alice\"");
+            "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4:ContractKeys:Steward", "{}", contractKeyJson: "\"party::alice\"");
 
         var key = RestPayloadDecoder.ContractKeyOf(created, Steward.TemplateId);
 
@@ -407,7 +407,7 @@ public sealed class RestPayloadDecoderTests
     public void The_generated_conformance_template_registers_its_choices()
     {
         var exercised = ExercisedEvent(
-            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:ContractKeys:Account", "Archive", exerciseResultJson: "{}");
+            "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4:ContractKeys:Account", "Archive", exerciseResultJson: "{}");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, Account.TemplateId);
 
@@ -418,13 +418,13 @@ public sealed class RestPayloadDecoderTests
     public void The_generated_conformance_interface_registers_its_choices()
     {
         var exercised = ExercisedEvent(
-            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:RichTypes:Asset",
+            "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4:RichTypes:Asset",
             "Archive",
-            interfaceId: "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a:RichTypes:Holding",
+            interfaceId: "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4:RichTypes:Holding",
             exerciseResultJson: "{}");
 
         var payloads = RestPayloadDecoder.ExercisePayloadsOf(exercised, new RuntimeIdentifier(
-            "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "Asset"));
+            "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "Asset"));
 
         payloads.Result.Should().Be(DamlUnit.Instance);
     }

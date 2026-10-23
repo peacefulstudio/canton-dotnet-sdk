@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json.Serialization;
 using Daml.Runtime.Data;
 using RuntimeCommands = Daml.Runtime.Commands;
 
@@ -22,13 +23,27 @@ public interface IReassignmentCommand
 /// synchronizer ids are required — a reassignment names both endpoints explicitly,
 /// unlike the optional per-submission synchronizer pin of a normal command.
 /// </summary>
-/// <param name="ContractId">The id of the contract to unassign.</param>
+/// <param name="ContractId">The id of the contract to unassign. Must not be null, empty or
+/// whitespace; the record throws <see cref="ArgumentException"/> otherwise, at construction and
+/// through a <c>with</c> expression.</param>
 /// <param name="Source">The synchronizer the contract is currently assigned to.</param>
 /// <param name="Target">The synchronizer the contract is moving to.</param>
 public sealed record UnassignCommand(
     string ContractId,
     SynchronizerId Source,
-    SynchronizerId Target) : IReassignmentCommand;
+    SynchronizerId Target) : IReassignmentCommand
+{
+    private readonly string _contractId =
+        Daml.Runtime.Contracts.ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+    /// <summary>The id of the contract to unassign (non-null, non-whitespace).</summary>
+    [JsonPropertyOrder(-1)]
+    public string ContractId
+    {
+        get => _contractId;
+        init => _contractId = Daml.Runtime.Contracts.ReadSideContractId.Require(value, nameof(ContractId));
+    }
+}
 
 /// <summary>
 /// Completes a reassignment on the target synchronizer, referencing the <c>reassignment_id</c>

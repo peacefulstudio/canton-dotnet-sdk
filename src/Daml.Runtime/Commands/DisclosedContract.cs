@@ -1,6 +1,8 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json.Serialization;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 
 namespace Daml.Runtime.Commands;
@@ -11,7 +13,9 @@ namespace Daml.Runtime.Commands;
 /// Daml 3.x explicit disclosure. The Canton ledger client owns mapping this
 /// onto the gRPC <c>DisclosedContract</c> message; this type is transport-neutral.
 /// </summary>
-/// <param name="ContractId">The disclosed contract's identifier.</param>
+/// <param name="ContractId">The disclosed contract's identifier. Must not be null,
+/// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+/// construction and through a <c>with</c> expression.</param>
 /// <param name="TemplateId">The disclosed contract's template identifier.</param>
 /// <param name="CreatedEventBlob">
 /// The raw <c>created_event_blob</c> bytes from the gRPC <c>CreatedEvent</c>,
@@ -23,7 +27,16 @@ public sealed record DisclosedContract(
     Identifier TemplateId,
     ReadOnlyMemory<byte> CreatedEventBlob)
 {
+    private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
     private readonly ReadOnlyMemory<byte> _createdEventBlob = CreatedEventBlob.ToArray();
+
+    /// <summary>The disclosed contract's identifier (non-null, non-whitespace).</summary>
+    [JsonPropertyOrder(-1)]
+    public string ContractId
+    {
+        get => _contractId;
+        init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+    }
 
     /// <summary>
     /// The raw <c>created_event_blob</c> bytes carried by this disclosed contract. Copied

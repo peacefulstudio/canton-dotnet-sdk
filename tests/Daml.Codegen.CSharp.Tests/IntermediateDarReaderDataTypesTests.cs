@@ -164,7 +164,7 @@ public partial class IntermediateDarReaderTests
                             {
                                 TypeCon = new PbTypeConName
                                 {
-                                    PackageId = "other-pkg",
+                                    PackageId = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
                                     ModuleNameSegments = { "Foo", "Bar" },
                                     NameSegments = { "Inner" },
                                 },
@@ -178,7 +178,7 @@ public partial class IntermediateDarReaderTests
         var model = IntermediateDarReader.Read(proto);
         var record = (DamlRecordDefinition)model.MainPackage.Modules[0].DataTypes[0].Definition;
         var typeRef = record.Fields[0].Type.Should().BeOfType<DamlTypeRef>().Subject;
-        typeRef.PackageId.Should().Be("other-pkg");
+        typeRef.PackageId.Should().Be("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         typeRef.Module.Should().Be("Foo.Bar");
         typeRef.Name.Should().Be("Inner");
     }
@@ -277,7 +277,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p",
+                PackageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
@@ -315,7 +315,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p",
+                PackageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
@@ -353,7 +353,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p",
+                PackageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",

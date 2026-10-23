@@ -10,6 +10,8 @@ namespace Canton.Ledger.Grpc.Client;
 
 internal static partial class CallContextHelper
 {
+    internal const string AuthorizationHeaderName = "authorization";
+
     internal static void LogStartupDiagnostics(
         ILogger logger,
         ITokenProvider? tokenProvider,
@@ -49,10 +51,10 @@ internal static partial class CallContextHelper
 
         return new Metadata
         {
-            { "authorization", $"Bearer {token}" }
+            { AuthorizationHeaderName, $"Bearer {token}" }
         };
     }
 
-    internal static DateTime? GetDeadline(TimeSpan? timeout) =>
-        timeout is null ? null : DateTime.UtcNow.Add(timeout.Value);
+    internal static DateTime? GetDeadline(TimeSpan? timeout, TimeProvider timeProvider) =>
+        timeout is null ? null : timeProvider.GetUtcNow().UtcDateTime.Add(timeout.Value);
 }

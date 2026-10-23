@@ -10,7 +10,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public class RestEndpointCoverageTests
 {
-    private const string RawNamespace = "Canton.Ledger.Rest.Client.Raw";
+    private static readonly string RawNamespace = typeof(Canton.Ledger.Rest.Client.Raw.GetLedgerEndResponse).Namespace!;
     private const string PathsKey = "paths:";
     private const string OperationIdKey = "operationId";
     private const int PathIndent = 4;

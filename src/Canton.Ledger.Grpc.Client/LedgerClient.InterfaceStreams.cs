@@ -140,7 +140,7 @@ internal sealed partial class LedgerClient
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
-            LogSubscribeStreamError(_logger, typeof(TInterface).Name, openingFault.Status, openingFault.Message);
+            LogSubscribeStreamError(_logger, typeof(TInterface).Name, openingFault.Status, _options.StatusDescriptionOf(openingFault.Status, openingFault.Message));
             yield return new InterfaceStreamEvent<TInterface, TView>.StreamError(
                 openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
             yield break;
@@ -157,9 +157,9 @@ internal sealed partial class LedgerClient
         while (true)
         {
             var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (step.RecordFault(activity) is { } fault)
+            if (step.RecordFault(activity, _options) is { } fault)
             {
-                LogSubscribeStreamError(_logger, typeof(TInterface).Name, fault.Status, fault.Message);
+                LogSubscribeStreamError(_logger, typeof(TInterface).Name, fault.Status, _options.StatusDescriptionOf(fault.Status, fault.Message));
                 yield return new InterfaceStreamEvent<TInterface, TView>.StreamError(
                     fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
                 yield break;
@@ -193,7 +193,7 @@ internal sealed partial class LedgerClient
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
-            LogSubscribeStreamError(_logger, typeof(TInterface).Name, openingFault.Status, openingFault.Message);
+            LogSubscribeStreamError(_logger, typeof(TInterface).Name, openingFault.Status, _options.StatusDescriptionOf(openingFault.Status, openingFault.Message));
             yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.StreamError(
                 openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
             yield break;
@@ -215,9 +215,9 @@ internal sealed partial class LedgerClient
         while (true)
         {
             var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (step.RecordFault(activity) is { } fault)
+            if (step.RecordFault(activity, _options) is { } fault)
             {
-                LogSubscribeStreamError(_logger, typeof(TInterface).Name, fault.Status, fault.Message);
+                LogSubscribeStreamError(_logger, typeof(TInterface).Name, fault.Status, _options.StatusDescriptionOf(fault.Status, fault.Message));
                 yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.StreamError(
                     fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
                 yield break;

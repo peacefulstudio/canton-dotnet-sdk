@@ -8,7 +8,6 @@ using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

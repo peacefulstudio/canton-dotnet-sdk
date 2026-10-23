@@ -29,6 +29,17 @@ public sealed partial record AmuletConversionRateFeed(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("amuletConversionRate")] decimal AmuletConversionRate
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<AmuletConversionRateFeed>, global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Publisher, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Dso, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(NextUpdateAfter, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset?>.Default);
+        hash.Add(AmuletConversionRate, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Gets the template identifier.</summary>
     public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("cc7d11e790174d2b18ad3e148d8762340e58de35616b399f9397a1b1d5b752f1", "Splice.Ans.AmuletConversionRateFeed", "AmuletConversionRateFeed");
 
@@ -54,10 +65,10 @@ public sealed partial record AmuletConversionRateFeed(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AmuletConversionRateFeed FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed(
-        Publisher: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("publisher").As<global::Daml.Runtime.Data.DamlParty>()),
-        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso").As<global::Daml.Runtime.Data.DamlParty>()),
-        NextUpdateAfter: record.GetOptionalField("nextUpdateAfter").AsOptional().HasValue ? record.GetOptionalField("nextUpdateAfter").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
-        AmuletConversionRate: record.GetRequiredField("amuletConversionRate").As<global::Daml.Runtime.Data.DamlNumeric>().Value
+        Publisher: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("publisher", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Dso: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("dso", 1).As<global::Daml.Runtime.Data.DamlParty>()),
+        NextUpdateAfter: record.GetOptionalField("nextUpdateAfter", 2).AsOptional().HasValue ? record.GetOptionalField("nextUpdateAfter", 2).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        AmuletConversionRate: record.GetRequiredField("amuletConversionRate", 3).As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -124,7 +135,6 @@ public sealed partial record AmuletConversionRateFeed(
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceAmuletConversionRateFeed_ArchiveAsDso, ChoiceAmuletConversionRateFeed_Update, ChoiceArchive];
-
 }
 
 
@@ -219,7 +229,7 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_ArchiveAsDsoResult>> TryAmuletConversionRateFeed_ArchiveAsDsoAsync(
@@ -271,7 +281,7 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed_UpdateResult>> TryAmuletConversionRateFeed_UpdateAsync(
@@ -319,7 +329,7 @@ public static class AmuletConversionRateFeedNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(

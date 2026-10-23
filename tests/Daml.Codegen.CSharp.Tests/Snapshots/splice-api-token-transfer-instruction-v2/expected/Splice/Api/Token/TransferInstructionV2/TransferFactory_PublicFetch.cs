@@ -51,7 +51,7 @@ public sealed record TransferFactory_PublicFetch(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TransferFactory_PublicFetch FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferFactory_PublicFetch(
-        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList()
+        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors", 0).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -63,5 +63,4 @@ public sealed record TransferFactory_PublicFetch(
             global::Daml.Runtime.Data.DamlField.Create("actors", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "actors"), context.Field("actors"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0)))
         );
     }
-
 }

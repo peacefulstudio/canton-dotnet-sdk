@@ -17,7 +17,7 @@ namespace Canton.Ledger.Grpc.Client.Tests;
 
 public class AuthenticatedCallInvokerTests
 {
-    private const string AuthorizationKey = "authorization";
+    private const string AuthorizationKey = CallContextHelper.AuthorizationHeaderName;
 
     private static readonly Method<GetLedgerEndRequest, GetLedgerEndResponse> UnaryMethod =
         Method(MethodType.Unary, "GetLedgerEnd", GetLedgerEndRequest.Parser, GetLedgerEndResponse.Parser);

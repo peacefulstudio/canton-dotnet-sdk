@@ -4,7 +4,10 @@
 using System.Net;
 using AwesomeAssertions;
 using Daml.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Canton.Ledger.Rest.Client.Tests;
@@ -43,8 +46,8 @@ public class RestLedgerHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck, HealthStatus.Degraded), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Degraded);
-        result.Exception.Should().BeOfType<LedgerOperationException>()
-            .Which.InnerException.Should().BeOfType<HttpRequestException>();
+        result.Exception!.Message.Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
+        result.Exception.ToString().Should().Contain("System.Net.Http.HttpRequestException");
     }
 
     [Fact]
@@ -68,8 +71,8 @@ public class RestLedgerHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Exception.Should().BeOfType<LedgerOperationException>()
-            .Which.InnerException.Should().BeOfType<TaskCanceledException>();
+        result.Exception!.Message.Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
+        result.Exception.ToString().Should().Contain("System.Threading.Tasks.TaskCanceledException");
     }
 
     [Fact]
@@ -92,5 +95,58 @@ public class RestLedgerHealthCheckTests
         var act = () => new RestLedgerHealthCheck(null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("restLedgerClient");
+    }
+
+    private static async Task<(Exception? Logged, Exception? InResult)> ExceptionsOfAnUnreachableParticipant(bool emitIdentifiers)
+    {
+        var transport = new RecordingHttpHandler()
+            .WithTransportException(new HttpRequestException("user 'alice-user' has no rights"));
+        using var logs = new CapturingLoggerFactory();
+        var options = Options.Create(new RestLedgerClientOptions
+        {
+            HttpAddress = "http://localhost:7575",
+            EmitPartyAndContractSpanTags = emitIdentifiers,
+        });
+        var healthCheck = new RestLedgerHealthCheck(
+            new RestLedgerClient(new StubHttpClientFactory(transport)),
+            logs.CreateLogger<RestLedgerHealthCheck>(),
+            options);
+
+        var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck), TestContext.Current.CancellationToken);
+
+        return (logs.Records.Single(record => record.Level == LogLevel.Warning).Exception, result.Exception);
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_logs_only_the_exception_type_of_a_failure_by_default()
+    {
+        var (logged, _) = await ExceptionsOfAnUnreachableParticipant(emitIdentifiers: false);
+
+        logged!.Message.Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_logs_the_exception_of_a_failure_when_party_and_contract_tags_are_opted_in()
+    {
+        var (logged, _) = await ExceptionsOfAnUnreachableParticipant(emitIdentifiers: true);
+
+        logged.Should().BeOfType<LedgerOperationException>();
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_reports_only_the_exception_type_in_the_result_of_a_failure_by_default()
+    {
+        var (_, inResult) = await ExceptionsOfAnUnreachableParticipant(emitIdentifiers: false);
+
+        inResult!.Message.Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
+        inResult.ToString().Should().NotContain("alice-user");
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_reports_the_exception_in_the_result_of_a_failure_when_party_and_contract_tags_are_opted_in()
+    {
+        var (_, inResult) = await ExceptionsOfAnUnreachableParticipant(emitIdentifiers: true);
+
+        inResult.Should().BeOfType<LedgerOperationException>();
     }
 }

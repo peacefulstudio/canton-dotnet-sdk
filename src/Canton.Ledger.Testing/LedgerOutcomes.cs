@@ -30,7 +30,7 @@ public static class LedgerOutcomes
     /// <returns>The multiple-result outcome.</returns>
     /// <exception cref="ArgumentException"><paramref name="contractIds"/> has fewer than two
     /// entries — <c>Many</c> exists to report more than one match; use <see cref="One{T}"/> or
-    /// <see cref="None{T}"/> for zero or one.</exception>
+    /// <see cref="None{T}"/> for zero or one — or an entry that is null, empty or whitespace.</exception>
     public static ExerciseOutcome<T> Many<T>(EquatableArray<string> contractIds) =>
         new ExerciseOutcome<T>.Many(contractIds);
 

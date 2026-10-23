@@ -19,6 +19,14 @@ public sealed partial record AnsEntry
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("extension")] global::Daml.Runtime.Stdlib.RelTime Extension
     ) : global::Daml.Runtime.Data.IDamlRecord<AnsEntry_Renew>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Extension, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.RelTime>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("extension", Extension.ToRecord())
@@ -26,7 +34,7 @@ public sealed partial record AnsEntry
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static AnsEntry_Renew FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntry_Renew(
-            Extension: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("extension").As<global::Daml.Runtime.Data.DamlRecord>())
+            Extension: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("extension", 0).As<global::Daml.Runtime.Data.DamlRecord>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -38,6 +46,5 @@ public sealed partial record AnsEntry
                 global::Daml.Runtime.Data.DamlField.Create("extension", global::Daml.Runtime.Stdlib.RelTime.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extension"), context.Field("extension")))
             );
         }
-
     }
 }

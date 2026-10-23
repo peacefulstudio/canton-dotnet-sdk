@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Diagnostics;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Pqs.Client;
 using Canton.Ledger.Rest.Client;
 using Canton.Ledger.Testing.Localnet;
@@ -23,7 +24,6 @@ namespace Canton.Ledger.Grpc.Client.Integration.Tests;
 [Trait("Category", "Integration")]
 public class PqsRoundTripTests
 {
-    private const string PqsConnectionStringEnv = "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING";
     private const string OpenTelemetryParentActivitySourceName = "Canton.Ledger.OpenTelemetry.Tests.SharedTrace";
 
     private const string LocalnetSkipMessage =
@@ -32,16 +32,12 @@ public class PqsRoundTripTests
         + "(canton-localnet up && canton-localnet wait-ready) to run this integration test.";
 
     private const string PqsSkipMessage =
-        "Skipping: set " + PqsConnectionStringEnv + " to a PQS PostgreSQL connection string "
+        "Skipping: set " + LocalnetEnvironment.PqsConnectionString + " to a PQS PostgreSQL connection string "
         + "(the LocalNet compose exposes the a-validator-1 store as "
         + "'Host=localhost;Port=5432;Database=pqs-a-validator-1;Username=cnadmin;Password=…') "
         + "to exercise the PQS read path. The integration lane sets this automatically.";
 
-    // The LocalNet scribe JVMs run under tight PQS resource limits
-    // (mem_limit 1g / -Xmx768m) and get OOM-killed under the test run's own
-    // memory spike on the shared runner; the deadline must ride out a full
-    // scribe restart + package re-registration cycle.
-    private static readonly TimeSpan ProjectionTimeout = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan ProjectionTimeoutSpanningScribeRestart = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private static readonly ActivitySource OpenTelemetryParentSource = new(OpenTelemetryParentActivitySourceName);
 
@@ -170,7 +166,7 @@ public class PqsRoundTripTests
         Assert.NotEmpty(traceActivities);
 
         var grpcLedgerClientSpans = traceActivities
-            .Where(a => a.Source.Name == "Canton.Ledger.Grpc.Client.LedgerClient")
+            .Where(a => a.Source.Name == LedgerActivitySourceNames.GrpcLedgerClient)
             .ToList();
 
         var submitSpan = Assert.Single(grpcLedgerClientSpans, a => a.DisplayName == "SubmissionClient.TryCreateAsync");
@@ -181,9 +177,9 @@ public class PqsRoundTripTests
 
         var restSubmitSpan = Assert.Single(
             traceActivities,
-            a => a.Source.Name == "Canton.Ledger.Rest.Client.RestLedgerClient"
+            a => a.Source.Name == LedgerActivitySourceNames.RestLedgerClient
                 && a.DisplayName == "POST"
-                && a.GetTagItem("url.full") is string url
+                && a.GetTagItem(RestActivityHandler.UrlFull) is string url
                 && url.EndsWith("/v2/commands/submit-and-wait-for-transaction", StringComparison.Ordinal));
         Assert.Equal(sharedParentSpanId, restSubmitSpan.ParentSpanId);
         Assert.Equal(ActivityKind.Client, restSubmitSpan.Kind);
@@ -204,7 +200,7 @@ public class PqsRoundTripTests
             pqsQuerySpan.GetTagItem("db.namespace"));
 
         var pqsClientSpan = Assert.Single(traceActivities, a => a.SpanId == pqsQuerySpan.ParentSpanId);
-        Assert.Equal("Canton.Ledger.Pqs.Client.PqsClient", pqsClientSpan.Source.Name);
+        Assert.Equal(LedgerActivitySourceNames.PqsClient, pqsClientSpan.Source.Name);
         Assert.Equal(sharedParentSpanId, pqsClientSpan.ParentSpanId);
     }
 
@@ -226,7 +222,7 @@ public class PqsRoundTripTests
             Assert.Skip(LocalnetSkipMessage);
         }
 
-        var pqsConnectionString = Environment.GetEnvironmentVariable(PqsConnectionStringEnv);
+        var pqsConnectionString = Environment.GetEnvironmentVariable(LocalnetEnvironment.PqsConnectionString);
         if (string.IsNullOrWhiteSpace(pqsConnectionString))
         {
             Assert.Skip(PqsSkipMessage);
@@ -258,7 +254,7 @@ public class PqsRoundTripTests
     private static async Task<T?> PollForFetchAsync<T>(Func<Task<T?>> fetch)
         where T : class
     {
-        var deadline = DateTimeOffset.UtcNow.Add(ProjectionTimeout);
+        var deadline = DateTimeOffset.UtcNow.Add(ProjectionTimeoutSpanningScribeRestart);
         while (DateTimeOffset.UtcNow < deadline)
         {
             var projected = await fetch();

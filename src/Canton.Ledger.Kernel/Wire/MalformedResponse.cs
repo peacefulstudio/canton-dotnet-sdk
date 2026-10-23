@@ -11,6 +11,11 @@ internal static class MalformedResponse
     internal static MalformedResponseException MissingRequiredField(string detail) =>
         new($"{detail}, though the Ledger API marks the field as required.");
 
+    internal static string RequireContractId(string? wireContractId, string eventDescription) =>
+        string.IsNullOrWhiteSpace(wireContractId)
+            ? throw MissingRequiredField($"{eventDescription} has no contract_id")
+            : wireContractId;
+
     internal static MalformedResponseException WithDetail(string detail) =>
         new(detail);
 

@@ -11,7 +11,12 @@ Two layers share one flag surface:
   CLI below on the proto. This is the only place the DAR → IntermediateDar
   decode ships.
 - **`Daml.Codegen.CSharp.Cli`** — the emitter CLI in this repo. Takes the
-  IntermediateDar proto via `--intermediate`; it does not read `.dar` files.
+  IntermediateDar proto via `--intermediate`; it does not read `.dar` files, and a `.dar`
+  handed to `--intermediate` fails with a message pointing at `dar2intermediate` and
+  `dpm codegen-cs`.
+- **`Daml.Codegen.DarParser.Cli dar2intermediate <dar> -o <proto>`** — the JDK-free C#
+  DAR to IntermediateDar decode used by the `Standalone` MSBuild mode. It takes the same
+  `-v, --verbosity <0-3>` flag as the emitter CLI.
 
 ## Bundle usage
 
@@ -57,6 +62,13 @@ Options:
   --version                                 Show version information
 ```
 
+Each run writes a `.codegen-manifest` file in the output directory listing every file it
+emitted, one relative path per line. The next run into the same directory deletes the files
+the previous manifest lists that it no longer emits, along with directories that become
+empty, so regenerating from a DAR that dropped a template leaves no stale binding behind. Files
+the manifest does not list are never touched. Commit or ignore the manifest together with the
+generated sources.
+
 ## Standalone DAR-to-proto tool
 
 The DAR to IntermediateDar decode is packaged for standalone publication as
@@ -65,9 +77,9 @@ The DAR to IntermediateDar decode is packaged for standalone publication as
 
 From `0.6.0-preview.1`, each `v*` release attaches `daml-dar-to-proto-<version>.jar`,
 `intermediate_dar-<version>.proto`, a `SHA256SUMS` checksum file and
-`intermediate-fixtures-<version>.tar.gz` (a schema-only `.binpb` plus a canonical-JSON
-rendering per conformance-corpus DAR, with a `manifest.json` recording each DAR's and
-each output's SHA-256) to the GitHub release.
+`intermediate-fixtures-<version>.tar.gz` (for each conformance-corpus DAR, a `.binpb` plus a
+canonical-JSON rendering in two tiers, `full/` and `shape/`, with a `manifest.json` recording
+each DAR's and each output's SHA-256) to the GitHub release.
 
 ```
 java -jar daml-dar-to-proto-<version>.jar --dar contracts.dar --out intermediate.binpb

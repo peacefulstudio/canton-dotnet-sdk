@@ -48,7 +48,7 @@ public class ArchiveViaContractIdTests
                     ActingParties: [],
                     WitnessParties: [])
                 {
-                    PackageName = "richtypes-ha8d30776aa45",
+                    PackageName = "richtypes-h25b56c547fd1",
                 },
             ],
         };
@@ -121,7 +121,7 @@ public class ArchiveViaContractIdTests
     {
         var command = MarkerCid.ArchiveCommand();
 
-        command.PackageName.Should().Be("richtypes-ha8d30776aa45");
+        command.PackageName.Should().Be("richtypes-h25b56c547fd1");
     }
 
     [Fact]

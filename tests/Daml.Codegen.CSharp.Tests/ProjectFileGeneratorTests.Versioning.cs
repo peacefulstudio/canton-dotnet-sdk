@@ -31,6 +31,26 @@ public partial class ProjectFileGeneratorTests
     }
 
     [Fact]
+    public void GenerateProjectFile_should_derive_the_nuget_version_from_the_three_part_version_when_the_dar_version_is_a_snapshot()
+    {
+        var generator = new ProjectFileGenerator(CreateOptions());
+        var package = new DamlPackage
+        {
+            PackageId = "test-id",
+            Name = "daml-stdlib",
+            Version = new Version(3, 3, 0),
+            RawVersion = "3.3.0.20250502.13767.0",
+            LfVersion = "2.1",
+            Modules = [],
+            DependencyReferences = []
+        };
+
+        var file = generator.GenerateProjectFile(package);
+
+        file.Content.Should().Contain("<Version>3.3.0.0</Version>");
+    }
+
+    [Fact]
     public void GenerateProjectFile_should_throw_on_negative_EmitterCounter()
     {
         var options = new CodeGenOptions

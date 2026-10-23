@@ -271,12 +271,12 @@ public sealed class RestCallKindFailureContractTests : IDisposable
     }
 
     [Fact(Timeout = 10_000)]
-    public async Task An_effect_applied_write_without_a_call_timeout_is_bounded_by_the_HttpClient_timeout_while_reading_the_success_body()
+    public async Task An_effect_applied_write_without_any_SDK_deadline_is_bounded_by_the_HttpClient_timeout_while_reading_the_success_body()
     {
         var factory = new StubHttpClientFactory(new SuccessWithABodyThatNeverArrivesHandler(), TimeSpan.FromMilliseconds(200));
         _factories.Add(factory);
         var client = new RestLedgerClient(
-            factory, Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575" }));
+            factory, Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575", Timeout = null }));
 
         var act = () => client.SubmitAndWaitAsync(Submission(), timeout: null, TestContext.Current.CancellationToken);
 
@@ -287,11 +287,12 @@ public sealed class RestCallKindFailureContractTests : IDisposable
     }
 
     [Fact(Timeout = 10_000)]
-    public async Task A_read_without_a_call_timeout_is_bounded_by_the_HttpClient_timeout_while_reading_the_success_body()
+    public async Task A_read_without_any_SDK_deadline_is_bounded_by_the_HttpClient_timeout_while_reading_the_success_body()
     {
         var factory = new StubHttpClientFactory(new SuccessWithABodyThatNeverArrivesHandler(), TimeSpan.FromMilliseconds(200));
         _factories.Add(factory);
-        var admin = new RestAdminClient(factory);
+        var admin = new RestAdminClient(
+            factory, options: Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575", Timeout = null }));
 
         var act = () => admin.ListUsersAsync(TestContext.Current.CancellationToken);
 
@@ -547,65 +548,11 @@ public sealed class RestCallKindFailureContractTests : IDisposable
         }
     }
 
-    private sealed class HangingBodyContent : HttpContent
-    {
-        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
-            Task.CompletedTask;
-
-        protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<Stream>(new StreamThatNeverDeliversAByte());
-
-        protected override bool TryComputeLength(out long length)
-        {
-            length = 0;
-            return false;
-        }
-    }
-
-    private sealed class StreamThatNeverDeliversAByte : Stream
-    {
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
-            return 0;
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
-
     private sealed class SuccessWithABodyThatFailsHandler(Exception failure) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new FailingBodyContent(failure) });
-    }
-
-    private sealed class SuccessWithABodyThatNeverArrivesHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new HangingBodyContent() });
     }
 
     private sealed class RejectionWithAnUnreadableErrorBodyHandler : HttpMessageHandler

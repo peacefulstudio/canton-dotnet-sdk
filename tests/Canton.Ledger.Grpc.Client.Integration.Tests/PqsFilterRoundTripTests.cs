@@ -18,14 +18,12 @@ namespace Canton.Ledger.Grpc.Client.Integration.Tests;
 [Trait("Category", "Integration")]
 public class PqsFilterRoundTripTests
 {
-    private const string PqsConnectionStringEnv = "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING";
-
     private const string LocalnetSkipMessage =
         "Skipping: set CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL, _CLIENT_ID, _CLIENT_SECRET "
         + "and bring up the localnet (canton-localnet up && canton-localnet wait-ready) to run this integration test.";
 
     private const string PqsSkipMessage =
-        "Skipping: set " + PqsConnectionStringEnv + " to the a-validator-1 PQS PostgreSQL connection string "
+        "Skipping: set " + LocalnetEnvironment.PqsConnectionString + " to the a-validator-1 PQS PostgreSQL connection string "
         + "to exercise typed PQS filtering. The integration lane sets this automatically.";
 
     private static readonly TimeSpan ProjectionTimeout = TimeSpan.FromMinutes(5);
@@ -249,8 +247,11 @@ public class PqsFilterRoundTripTests
                 AsOf: new DateOnly(2026, 5, 29),
                 ObservedAt: new DateTimeOffset(2026, 5, 29, 13, 30, 0, TimeSpan.Zero),
                 Note: "hello",
+                NestedNote: new Optional<Optional<string>>.None(),
                 Tags: ["urgent", "blue"],
                 Attributes: new Dictionary<string, string> { ["k1"] = "v1", ["k2"] = "v2" },
+                GenMap: new Dictionary<Party, long>(),
+                UnitField: DamlUnit.Instance,
                 Marker: marker,
                 HoldingCid: holding,
                 HoldingCids: [holding],
@@ -271,8 +272,11 @@ public class PqsFilterRoundTripTests
                 AsOf: new DateOnly(2026, 5, 29),
                 ObservedAt: new DateTimeOffset(2026, 5, 29, 13, 30, 0, TimeSpan.Zero),
                 Note: null,
+                NestedNote: new Optional<Optional<string>>.None(),
                 Tags: [],
                 Attributes: new Dictionary<string, string>(),
+                GenMap: new Dictionary<Party, long>(),
+                UnitField: DamlUnit.Instance,
                 Marker: marker,
                 HoldingCid: holding,
                 HoldingCids: [],
@@ -384,7 +388,7 @@ public class PqsFilterRoundTripTests
         if (!EndpointDiscovery.IsLocalnetAvailable())
             Assert.Skip(LocalnetSkipMessage);
 
-        var connectionString = Environment.GetEnvironmentVariable(PqsConnectionStringEnv);
+        var connectionString = Environment.GetEnvironmentVariable(LocalnetEnvironment.PqsConnectionString);
         if (string.IsNullOrWhiteSpace(connectionString))
             Assert.Skip(PqsSkipMessage);
 

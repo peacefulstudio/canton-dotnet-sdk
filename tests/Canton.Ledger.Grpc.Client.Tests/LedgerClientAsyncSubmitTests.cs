@@ -327,9 +327,6 @@ public sealed class LedgerClientAsyncSubmitTests : IDisposable
     [Fact]
     public async Task CompletionStreamAsync_StreamError_message_falls_back_to_status_string_when_detail_empty()
     {
-        // gRPC surfaces a server status with no message as Status.Detail == "" (empty,
-        // not null), so a plain ?? never falls back — the StreamError diagnostic must
-        // still be non-empty.
         StubCompletionStreamFailure(new RpcException(new Status(StatusCode.Unavailable, string.Empty)));
 
         var client = CreateClient();

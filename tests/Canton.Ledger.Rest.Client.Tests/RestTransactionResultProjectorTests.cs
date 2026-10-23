@@ -322,6 +322,101 @@ public class RestTransactionResultProjectorTests
                 + "though the Ledger API marks the field as required.");
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_a_created_event_with_a_blank_contract_id(string contractId)
+    {
+        var transaction = TransactionFrom(
+            $$"""
+            {
+              "transaction": {
+                "updateId": "upd-1",
+                "offset": "1",
+                "events": [
+                  {
+                    "CreatedEvent": {
+                      "offset": "1",
+                      "contractId": "{{contractId}}",
+                      "nodeId": 0,
+                      "packageName": "token-impl",
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
+                      "createArgument": {"owner": "alice::ns1"}
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+
+        var act = () => RestTransactionResultProjector.Project(transaction);
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: a created event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_an_exercised_event_with_a_blank_contract_id(string contractId)
+    {
+        var transaction = TransactionFrom(
+            $$"""
+            {
+              "transaction": {
+                "updateId": "upd-1",
+                "offset": "1",
+                "events": [
+                  {
+                    "ExercisedEvent": {
+                      "offset": "1",
+                      "contractId": "{{contractId}}",
+                      "packageName": "token-impl",
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
+                      "choice": "Archive",
+                      "choiceArgument": {},
+                      "actingParties": ["alice::ns1"],
+                      "consuming": true,
+                      "witnessParties": ["alice::ns1"],
+                      "exerciseResult": {}
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+
+        var act = () => RestTransactionResultProjector.Project(transaction);
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: an exercised event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_an_archived_event_with_a_blank_contract_id(string contractId)
+    {
+        var transaction = TransactionFrom(
+            $$$"""
+            {
+              "transaction": {
+                "updateId": "upd-1",
+                "offset": "1",
+                "events": [
+                  {"ArchivedEvent": {"offset": "1", "contractId": "00kept"}},
+                  {"ArchivedEvent": {"offset": "1", "contractId": "{{{contractId}}}"}}
+                ]
+              }
+            }
+            """);
+
+        var act = () => RestTransactionResultProjector.Project(transaction);
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: an archived event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
     [Fact]
     public void Project_refuses_a_created_event_that_carries_no_nodeId()
     {

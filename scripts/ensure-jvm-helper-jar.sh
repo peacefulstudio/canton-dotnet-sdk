@@ -65,7 +65,7 @@ sha256_stream() {
 assembly_input_hash() {
   cd "$PROJECT_ROOT"
   {
-    find "${ASSEMBLY_INPUTS[@]}" -type f -print \
+    find "${ASSEMBLY_INPUTS[@]}" -type f -not -path '*/target/*' -print \
       | LC_ALL=C sort \
       | while IFS= read -r path; do
           printf '%s  %s\n' "$(sha256_stream < "$path" | awk '{print $1}')" "$path"

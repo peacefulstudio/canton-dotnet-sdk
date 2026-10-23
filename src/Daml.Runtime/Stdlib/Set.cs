@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Stdlib;
 
@@ -107,7 +108,7 @@ public sealed record Set<T>
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(convertElement);
-        var map = record.GetRequiredField("map").As<DamlGenMap>();
+        var map = record.GetRequiredField("map", 0).As<DamlGenMap>();
         var elements = map.Entries.Select(entry => convertElement(entry.Key));
         return new Set<T>(elements);
     }
@@ -127,7 +128,7 @@ public sealed record Set<T>
         var hash = 0;
         foreach (var element in Elements)
         {
-            hash ^= EqualityComparer<T>.Default.GetHashCode(element);
+            hash ^= DamlEqualityComparer<T>.Default.GetHashCode(element);
         }
         return hash;
     }
@@ -181,7 +182,7 @@ internal sealed class SetJsonConverterFactory : JsonConverterFactory
 internal sealed class SetJsonConverter<T> : JsonConverter<Set<T>>
     where T : notnull
 {
-    private static readonly string TypeName = $"{nameof(Set<object>)}<{Describe(typeof(T))}>";
+    private static readonly string TypeName = $"{nameof(Set<object>)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
 
     /// <remarks>
     /// The posture <see cref="Serialization.ContractIdJsonConverterFactory"/> already holds: a null
@@ -258,18 +259,5 @@ internal sealed class SetJsonConverter<T> : JsonConverter<Set<T>>
         {
             throw new JsonException($"Cannot write element {index} of {TypeName}: {ex.Message}", ex);
         }
-    }
-
-    private static string Describe(Type type)
-    {
-        var arity = type.Name.IndexOf('`', StringComparison.Ordinal);
-        var name = arity < 0 ? type.Name : type.Name[..arity];
-        return type switch
-        {
-            { IsGenericType: true } =>
-                $"{name}<{string.Join(", ", type.GetGenericArguments().Select(Describe))}>",
-            { DeclaringType: not null } => $"{type.DeclaringType.Name}.{name}",
-            _ => name,
-        };
     }
 }

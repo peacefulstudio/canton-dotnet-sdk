@@ -10,9 +10,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\conformance\richtypes\wire\*.json" LinkBase="wire" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\conformance\contractkeys\wire\*.json" LinkBase="wire" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
     <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions.Testing.Conformance\Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
-    <ProjectReference Include="..\..\src\Daml.Runtime.Grpc\Daml.Runtime.Grpc.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Grpc.Client\Canton.Ledger.Grpc.Client.csproj" />
   </ItemGroup>
 
 </Project>

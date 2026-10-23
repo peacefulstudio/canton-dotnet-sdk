@@ -28,14 +28,24 @@ public sealed partial record OptionalCounts(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("maybeCount")] long? MaybeCount
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<OptionalCounts>, global::Daml.Runtime.Data.IDamlRecord<OptionalCounts>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Owner, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Label, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(MaybeCount, global::Daml.Runtime.Data.DamlEqualityComparer<long?>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "OptionalCounts");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "OptionalCounts");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
+    public static string PackageId => "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-ha8d30776aa45";
+    public static string PackageName => "richtypes-h25b56c547fd1";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -52,9 +62,9 @@ public sealed partial record OptionalCounts(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static OptionalCounts FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new OptionalCounts(
-        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
-        Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value,
-        MaybeCount: record.GetOptionalField("maybeCount").AsOptional().HasValue ? record.GetOptionalField("maybeCount").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlInt64>().Value : null
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Label: record.GetRequiredField("label", 1).As<global::Daml.Runtime.Data.DamlText>().Value,
+        MaybeCount: record.GetOptionalField("maybeCount", 2).AsOptional().HasValue ? record.GetOptionalField("maybeCount", 2).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlInt64>().Value : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -90,7 +100,6 @@ public sealed partial record OptionalCounts(
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive];
-
 }
 
 
@@ -164,7 +173,7 @@ public static class OptionalCountsNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(

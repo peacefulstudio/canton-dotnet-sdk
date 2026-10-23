@@ -59,7 +59,7 @@ public sealed record FinalizedAllocation(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(AllocationCid);
+        hash.Add(AllocationCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(ExtraTransferLegSides));
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(NextIterationFunding));
         return hash.ToHashCode();
@@ -74,9 +74,9 @@ public sealed record FinalizedAllocation(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static FinalizedAllocation FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new FinalizedAllocation(
-        AllocationCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetRequiredField("allocationCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-        ExtraTransferLegSides: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide>)record.GetRequiredField("extraTransferLegSides").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLegSide.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
-        NextIterationFunding: record.GetOptionalField("nextIterationFunding").AsOptional().HasValue ? (global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlNumeric>().Value) : null
+        AllocationCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetRequiredField("allocationCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        ExtraTransferLegSides: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLegSide>)record.GetRequiredField("extraTransferLegSides", 1).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLegSide.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        NextIterationFunding: record.GetOptionalField("nextIterationFunding", 2).AsOptional().HasValue ? (global::System.Collections.Generic.IReadOnlyDictionary<string, decimal>)record.GetOptionalField("nextIterationFunding", 2).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlNumeric>().Value) : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -90,5 +90,4 @@ public sealed record FinalizedAllocation(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nextIterationFunding", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nextIterationFunding"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(__json1, __ctx1))));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

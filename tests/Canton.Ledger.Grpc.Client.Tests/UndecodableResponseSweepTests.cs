@@ -23,7 +23,6 @@ public sealed class UndecodableResponseSweepTests
         "point reads only project transaction-shaped updates",
         "which cannot be read as",
         "its interface view is unavailable",
-        "was served without field labels and is not visible to the event query",
         "pagination is not progressing",
         "pagination did not complete after",
     ];

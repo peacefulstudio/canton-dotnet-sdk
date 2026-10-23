@@ -20,22 +20,18 @@ public class IDamlTypeTests
     [Fact]
     public void ITemplate_is_assignable_to_IDamlType()
     {
-        // The whole point of the marker is to be a common base; ITemplate must extend it.
         typeof(IDamlType).IsAssignableFrom(typeof(ITemplate)).Should().BeTrue();
     }
 
     [Fact]
     public void IDamlInterface_is_assignable_to_IDamlType()
     {
-        // Sibling marker: future interface-typed exercise helpers will rely on this.
         typeof(IDamlType).IsAssignableFrom(typeof(IDamlInterface)).Should().BeTrue();
     }
 
     [Fact]
     public void Concrete_template_instance_is_an_IDamlType()
     {
-        // A generated `record Foo : ITemplate` flows through `IDamlType`-constrained APIs
-        // because ITemplate : IDamlType.
         ITemplate template = new SampleTemplate("alice");
 
         typeof(IDamlType).IsAssignableFrom(template.GetType()).Should().BeTrue();
@@ -44,8 +40,6 @@ public class IDamlTypeTests
     [Fact]
     public void ExerciseOutcome_accepts_arbitrary_IDamlType_payload()
     {
-        // ExerciseOutcome<T> imposes no constraint on T, so any IDamlType (template or
-        // interface marker) flows through unchanged. Compiles == passes.
         var template = new SampleTemplate("alice");
         var outcome = new ExerciseOutcome<SampleTemplate>.One(template);
 
@@ -56,8 +50,6 @@ public class IDamlTypeTests
     [Fact]
     public void IDamlType_constrained_helper_compiles_for_concrete_template()
     {
-        // Demonstrates that a generic helper widened to `where T : IDamlType` is callable
-        // with a concrete ITemplate. This is the migration story for interface markers.
         var id = IdentityOf<SampleTemplate>();
 
         id.Should().Be<SampleTemplate>();
@@ -85,10 +77,8 @@ public class IDamlTypeTests
 
     private static DamlTypeDescriptor DescriptorOf<T>() where T : IDamlType => T.DamlTypeId;
 
-    /// <summary>Static helper standing in for a future <c>IDamlType</c>-constrained helper.</summary>
     private static Type IdentityOf<T>() where T : IDamlType => typeof(T);
 
-    /// <summary>Pass-through that forces an instance through an <c>IDamlType</c> reference.</summary>
     private static void AcceptDamlType(IDamlType value)
     {
         value.Should().NotBeNull();

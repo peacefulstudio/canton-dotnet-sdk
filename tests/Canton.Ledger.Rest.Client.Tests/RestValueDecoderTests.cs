@@ -55,17 +55,30 @@ public class RestValueDecoderTests
     }
 
     [Fact]
-    public void ToDamlRecord_normalises_an_offset_bearing_Time_to_UTC()
+    public void ToDamlRecord_reads_a_Z_terminated_Time_as_UTC()
     {
         var record = JsonSerializer.Deserialize<WireRecord>(
-            """{"at": "2026-09-02T12:00:00+02:00"}""", RestRefitSettings.SerializerOptions)!;
+            """{"at": "2026-09-02T10:00:00.123456Z"}""", RestRefitSettings.SerializerOptions)!;
 
         var decoded = (DateTimeOffset)RestValueDecoder.ToDamlRecord<AtRecord>(record)
             .Fields.Should().ContainSingle().Subject.Value
             .Should().BeOfType<DamlTimestamp>().Subject;
 
-        decoded.Offset.Should().Be(TimeSpan.Zero, "every REST-decoded Time reads UTC");
+        decoded.Offset.Should().Be(TimeSpan.Zero);
         decoded.Hour.Should().Be(10);
+        decoded.Ticks.Should().Be(new DateTime(2026, 9, 2, 10, 0, 0).AddTicks(1_234_560).Ticks);
+    }
+
+    [Fact]
+    public void ToDamlRecord_blames_the_participant_when_a_Time_carries_a_numeric_offset()
+    {
+        var record = JsonSerializer.Deserialize<WireRecord>(
+            """{"at": "2026-09-02T12:00:00+02:00"}""", RestRefitSettings.SerializerOptions)!;
+
+        var thrown = Record.Exception(() => RestValueDecoder.ToDamlRecord<AtRecord>(record));
+
+        thrown.Should().BeOfType<MalformedResponseException>()
+            .Which.Message.Should().Contain("'2026-09-02T12:00:00+02:00' at 'AtRecord.at' is not a valid Daml Timestamp");
     }
 
     [Fact]

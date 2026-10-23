@@ -29,6 +29,5 @@ public sealed partial record OptionalTails
             global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
             return global::Daml.Runtime.Data.DamlRecord.Create();
         }
-
     }
 }

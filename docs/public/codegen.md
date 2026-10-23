@@ -73,6 +73,7 @@ helpers project it back to typed contract ids:
 
 ```csharp
 using Daml.Runtime.Contracts;
+using IouContract = Iou.Iou;
 
 // tx is the TransactionResult of a committed submission
 ContractId<IouContract> issued = tx.Single<IouContract>();     // throws unless exactly one Iou was created
@@ -114,6 +115,7 @@ prefix for readability). The C# namespace is the Daml module name, so the `Iou` 
 `namespace Iou;` — from another namespace the template is `Iou.Iou`, or bind an alias such as
 `using IouContract = Iou.Iou;`:
 
+<!-- snippet: not-compiled: an excerpt of generated code with the package metadata and choice internals elided -->
 ```csharp
 namespace Iou;
 

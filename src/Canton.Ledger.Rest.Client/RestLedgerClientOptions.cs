@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Security;
+using Canton.Ledger.Kernel.Validation;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -14,7 +15,8 @@ namespace Canton.Ledger.Rest.Client;
 public sealed class RestLedgerClientOptions : IValidatableObject
 {
     /// <summary>
-    /// The JSON Ledger API base address (e.g., "http://localhost:7575").
+    /// The JSON Ledger API base address (e.g., "http://localhost:7575"), an absolute <c>http</c> or
+    /// <c>https</c> URI that validation requires at startup.
     /// </summary>
     [Required]
     public required string HttpAddress { get; set; }
@@ -24,6 +26,30 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// participant derives it from the caller's access token.
     /// </summary>
     public string? UserId { get; set; }
+
+    /// <summary>
+    /// The deadline each attempt of a call is granted when its caller supplies no <c>timeout</c>,
+    /// mirroring <c>LedgerClientOptions.Timeout</c> on the gRPC client. Defaults to 30 seconds;
+    /// <see langword="null"/> applies no SDK-side deadline, leaving the caller's
+    /// <see cref="CancellationToken"/> and the named <see cref="HttpClient"/>'s own
+    /// <see cref="HttpClient.Timeout"/> as the only bounds. A <c>timeout</c> supplied on a call takes
+    /// precedence.
+    /// </summary>
+    /// <remarks>
+    /// This is a <em>per-attempt</em> deadline: when <see cref="Retry"/> is enabled, every attempt is
+    /// granted a fresh budget rather than sharing one across the retry sequence, and an attempt that
+    /// outlasts it is retried like any other transient failure. The worst case for one call is
+    /// therefore the timeout times one more than <see cref="RetryOptions.MaxRetryAttempts"/>, plus
+    /// the backoff between attempts; a caller who needs a hard cap passes a
+    /// <see cref="CancellationToken"/>. The deadline bounds the wait for the participant's answer, and
+    /// reading a response body that has begun to arrive gets a fresh budget of the same length. The
+    /// named <see cref="HttpClient"/>'s own <see cref="HttpClient.Timeout"/> still bounds the whole
+    /// call, retries included, and the raw APIs from <c>AddRestLedgerRawApis</c> and the stream
+    /// windows of a followed read are not subject to this deadline.
+    /// </remarks>
+    public TimeSpan? Timeout { get; set; } = DefaultTimeout;
+
+    internal static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// The opt-in retry pipeline applied to each HTTP request. Disabled by default, so the client's
@@ -182,6 +208,28 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     internal const long DefaultMaxResponseBodyBytes = 100L * 1024 * 1024;
 
     /// <summary>
+    /// Whether the client's admin spans and logs carry the identifiers of the call they trace: the
+    /// <c>canton.user_id</c> span tag, the party and user ids in the <c>Party allocated</c>,
+    /// <c>User created</c>, <c>Rights granted</c> and <c>Rights revoked</c> log lines, and the
+    /// server's error message in the status of a failed call's span and in the stream-window and
+    /// retried-duplicate warnings. Off by default, so anyone with
+    /// read access to the tracing backend or the logs cannot read who the participant administers;
+    /// every other span attribute is emitted either way. Off, the log lines omit the id and a
+    /// failed call's span status and those warnings carry the HTTP status, such as <c>404</c>,
+    /// instead of the server's message, which can name a party, user or contract, and every logged
+    /// exception is recorded as a redaction
+    /// wrapper whose <c>exception.type</c> is the wrapper, whose message is the original type's full name
+    /// and whose stack is the original's, because decode-failure messages embed contract ids. Alerting
+    /// that keys on the original <c>exception.type</c> needs this option on.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c> on the gRPC client. Opt in
+    /// only where the tracing backend and the logs are trusted with the same data as the ledger
+    /// itself: the identifiers are exported verbatim, with no hashing or truncation.
+    /// </remarks>
+    public bool EmitPartyAndContractSpanTags { get; set; }
+
+    /// <summary>
     /// Recurses into <see cref="Retry"/> and <see cref="Tls"/> so their validation runs under the
     /// same <c>ValidateDataAnnotations().ValidateOnStart()</c> pipeline as this type — runtime
     /// data-annotation validation does not descend into nested options on its own — surfacing a
@@ -191,6 +239,13 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var results = new List<ValidationResult>();
+        var addressFailure = AddressValidation.RequireAbsoluteHttpUri(
+            HttpAddress, nameof(HttpAddress), "http://localhost:7575");
+        if (addressFailure is not null)
+        {
+            results.Add(addressFailure);
+        }
+
         Validator.TryValidateObject(
             Retry, new ValidationContext(Retry), results, validateAllProperties: true);
         Validator.TryValidateObject(
@@ -204,6 +259,13 @@ public sealed class RestLedgerClientOptions : IValidatableObject
                 $"{nameof(Tls)} is configured, but {nameof(HttpAddress)} uses plaintext http. "
                 + "TLS identity and trust settings require https.",
                 [nameof(Tls), nameof(HttpAddress)]));
+        }
+
+        if (Timeout is { } timeout && timeout <= TimeSpan.Zero)
+        {
+            results.Add(new ValidationResult(
+                $"{nameof(Timeout)} must be positive when set, but was {timeout}.",
+                [nameof(Timeout)]));
         }
 
         if (StreamWindowLimit <= 0)

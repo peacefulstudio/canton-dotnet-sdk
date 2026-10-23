@@ -36,7 +36,8 @@ public sealed class ProjectFileGenerator
         DamlPackage package,
         IReadOnlyList<DamlPackage>? externalReferences = null)
     {
-        var packageName = SanitizePackageName(package.Name);
+        RequireDistinctNuGetIds(package, externalReferences ?? []);
+        var packageName = ToDottedPascalCaseName(package.Name);
         var projectFileName = $"{packageName}.csproj";
 
         var content = GenerateProjectFileContent(
@@ -53,7 +54,7 @@ public sealed class ProjectFileGenerator
     /// </summary>
     public GeneratedFile GenerateReadme(DamlPackage package)
     {
-        var packageId = SanitizePackageName(package.Name);
+        var packageId = ToDottedPascalCaseName(package.Name);
         var content = GenerateReadmeContent(package, packageId);
         return GeneratedFile.Text("README.md", content);
     }
@@ -165,7 +166,7 @@ public sealed class ProjectFileGenerator
 
         foreach (var dep in externalReferences.OrderBy(p => p.Name, StringComparer.Ordinal))
         {
-            var depPackageName = SanitizePackageName(dep.Name);
+            var depPackageName = ToDottedPascalCaseName(dep.Name);
             sb.AppendLine(CultureInfo.InvariantCulture, $"    <PackageReference Include=\"{depPackageName}\" Version=\"{FormatDependencyPackageVersion(dep.Version)}\" />");
         }
 
@@ -243,17 +244,34 @@ public sealed class ProjectFileGenerator
         return metadataSeparator >= 0 ? informational[..metadataSeparator] : informational;
     }
 
-    /// <summary>
-    /// Sanitizes a Daml package name to be a valid .NET package/project name.
-    /// Converts to PascalCase and joins with dots (e.g., "cats-markets" -> "Cats.Markets").
-    /// </summary>
-    private static string SanitizePackageName(string name)
+    private static string ToDottedPascalCaseName(string name)
     {
-        var parts = name.Split('-', '_')
-            .Select(ToPascalCase)
-            .Select(SanitizeIdentifier)
-            .Where(segment => segment.Length > 0);
-        return string.Join(".", parts);
+        var id = string.Join(
+            ".",
+            name.Split('-', StringSplitOptions.RemoveEmptyEntries)
+                .Select(segment => ToPascalCase(Identifiers.SanitizeBare(segment))));
+        if (id.Length == 0)
+        {
+            throw new CodegenException(
+                $"Daml package name '{name}' leaves no NuGet package id: it needs at least one segment between its hyphens.");
+        }
+        return id;
+    }
+
+    private static void RequireDistinctNuGetIds(DamlPackage package, IReadOnlyList<DamlPackage> externalReferences)
+    {
+        var packageByNuGetId = new Dictionary<string, DamlPackage>(StringComparer.OrdinalIgnoreCase);
+        foreach (var candidate in externalReferences.Prepend(package))
+        {
+            var nuGetId = ToDottedPascalCaseName(candidate.Name);
+            if (packageByNuGetId.TryGetValue(nuGetId, out var earlier))
+            {
+                throw new CodegenException(
+                    $"Daml packages '{earlier.Name}' ({earlier.PackageId}) and '{candidate.Name}' ({candidate.PackageId}) both map to the NuGet package id {nuGetId}. " +
+                    "A project cannot reference a package it also produces, and two references cannot share an id; rename one of the Daml packages.");
+            }
+            packageByNuGetId[nuGetId] = candidate;
+        }
     }
 
     private static string ToPascalCase(string s)
@@ -264,17 +282,5 @@ public sealed class ProjectFileGenerator
         }
 
         return char.ToUpperInvariant(s[0]) + s[1..];
-    }
-
-    private static string SanitizeIdentifier(string name)
-    {
-        var sanitized = string.Concat(name.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '_'));
-
-        if (sanitized.Length > 0 && char.IsDigit(sanitized[0]))
-        {
-            sanitized = "_" + sanitized;
-        }
-
-        return sanitized;
     }
 }

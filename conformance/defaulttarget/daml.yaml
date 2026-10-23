@@ -1,7 +1,7 @@
 # Copyright 2026 Peaceful Studio OÜ
 # SPDX-License-Identifier: Apache-2.0
 sdk-version: 3.6.0
-name: defaulttarget
+name: defaulttarget-h4f032a323aad
 source: .
 version: 0.0.1
 dependencies:

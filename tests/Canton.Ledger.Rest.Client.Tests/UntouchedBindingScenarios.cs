@@ -23,7 +23,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 internal static class UntouchedBindingScenarios
 {
     private const string ConformanceAssemblyName = "Daml.Codegen.Testing.Conformance";
-    private const string RichTypesPackageId = "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
+    private const string RichTypesPackageId = "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
 
     private sealed record HoldingMarker : IDamlType
     {
@@ -163,7 +163,7 @@ internal static class UntouchedBindingScenarios
                   "offset": "1",
                   "nodeId": 0,
                   "contractId": "00asset",
-                  "packageName": "richtypes-ha8d30776aa45",
+                  "packageName": "richtypes-h25b56c547fd1",
                   "templateId": {"packageId": "{{RichTypesPackageId}}", "moduleName": "RichTypes", "entityName": "Asset"},
                   "interfaceId": {"packageId": "{{RichTypesPackageId}}", "moduleName": "RichTypes", "entityName": "Holding"},
                   "choice": "Describe",

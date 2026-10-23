@@ -19,14 +19,12 @@ namespace Canton.Ledger.Client.Parity.Tests;
 [Trait("Category", "Integration")]
 public sealed class LivePqsFilterParityTests : PqsFilterParityTests
 {
-    private const string PqsConnectionStringEnv = "CANTON_LOCALNET_A_VALIDATOR_1_PQS_CONNECTION_STRING";
-
     private const string LocalnetSkipMessage =
         "Skipping: set CANTON_LOCALNET_A_VALIDATOR_1_JSON_API_URL, _CLIENT_ID, _CLIENT_SECRET "
         + "and bring up the localnet (canton-localnet up && canton-localnet wait-ready) to run this parity test.";
 
     private const string PqsSkipMessage =
-        "Skipping: set " + PqsConnectionStringEnv + " to the a-validator-1 PQS PostgreSQL connection string "
+        "Skipping: set " + LocalnetEnvironment.PqsConnectionString + " to the a-validator-1 PQS PostgreSQL connection string "
         + "to compare the fake's filter evaluation with live PQS. The integration lane sets this automatically.";
 
     private static readonly TimeSpan ProjectionTimeout = TimeSpan.FromMinutes(5);
@@ -130,7 +128,7 @@ public sealed class LivePqsFilterParityTests : PqsFilterParityTests
         if (!EndpointDiscovery.IsLocalnetAvailable())
             Assert.Skip(LocalnetSkipMessage);
 
-        var connectionString = Environment.GetEnvironmentVariable(PqsConnectionStringEnv);
+        var connectionString = Environment.GetEnvironmentVariable(LocalnetEnvironment.PqsConnectionString);
         if (string.IsNullOrWhiteSpace(connectionString))
             Assert.Skip(PqsSkipMessage);
 

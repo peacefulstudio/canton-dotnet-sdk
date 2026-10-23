@@ -16,8 +16,7 @@ namespace Canton.Ledger.Rest.Client;
 /// <c>Text</c> arm.
 /// </summary>
 /// <remarks>
-/// Not retired by digital-asset/canton#527; the Daml-LF JSON encoding is type-directed and cannot be
-/// expressed in any OpenAPI schema.
+/// The Daml-LF JSON encoding is type-directed and cannot be expressed in any OpenAPI schema.
 /// </remarks>
 internal sealed class WireValueJsonConverter : JsonConverter<Value>
 {

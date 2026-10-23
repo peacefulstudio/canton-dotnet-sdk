@@ -18,6 +18,15 @@ public sealed record AnnotationView(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("nested")] global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> Nested
 ) : global::Daml.Codegen.Testing.Conformance.RichTypes.IAnnotated, global::Daml.Runtime.Data.IDamlRecord<AnnotationView>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Label, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Nested, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("label", new global::Daml.Runtime.Data.DamlText(Label)),
@@ -26,8 +35,8 @@ public sealed record AnnotationView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AnnotationView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnnotationView(
-        Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Nested: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("nested"), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value))
+        Label: record.GetRequiredField("label", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Nested: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("nested", 1), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value))
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -40,5 +49,4 @@ public sealed record AnnotationView(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nested", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(present, context.Field("nested"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

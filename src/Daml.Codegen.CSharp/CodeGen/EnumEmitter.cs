@@ -104,6 +104,7 @@ internal sealed class EnumEmitter(CodeGenOptions options)
 
         WriteReadDamlLfJsonMethod(indent, enumName, enumDef);
 
+        indent.TrimTrailingBlankLine();
         indent.Dedent();
         indent.AppendLine("}");
     }

@@ -17,6 +17,15 @@ public sealed record Profile(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("level")] long Level
 ) : global::Daml.Runtime.Data.IDamlRecord<Profile>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Nickname, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Level, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("nickname", new global::Daml.Runtime.Data.DamlText(Nickname)),
@@ -25,8 +34,8 @@ public sealed record Profile(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Profile FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Profile(
-        Nickname: record.GetRequiredField("nickname").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Level: record.GetRequiredField("level").As<global::Daml.Runtime.Data.DamlInt64>().Value
+        Nickname: record.GetRequiredField("nickname", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Level: record.GetRequiredField("level", 1).As<global::Daml.Runtime.Data.DamlInt64>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record Profile(
             global::Daml.Runtime.Data.DamlField.Create("level", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "level"), context.Field("level")))
         );
     }
-
 }

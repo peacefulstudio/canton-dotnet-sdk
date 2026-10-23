@@ -172,7 +172,6 @@ public partial class ProjectFileGeneratorTests
     [Fact]
     public void GenerateProjectFile_should_include_runtime_package_reference()
     {
-        // Arrange
         var options = CreateOptions(runtimeVersion: "1.2.3");
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -185,10 +184,8 @@ public partial class ProjectFileGeneratorTests
             DependencyReferences = []
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package);
 
-        // Assert
         file.Content.Should().Contain("<PackageReference Include=\"Daml.Runtime\" Version=\"1.2.3\" />");
         file.Content.Should().NotContain("Daml.Codegen.CSharp.Runtime");
     }
@@ -196,7 +193,6 @@ public partial class ProjectFileGeneratorTests
     [Fact]
     public void GenerateProjectFile_should_default_runtime_reference_to_the_emitter_lockstep_version()
     {
-        // Arrange
         var options = CreateOptions(runtimeVersion: null);
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -209,10 +205,8 @@ public partial class ProjectFileGeneratorTests
             DependencyReferences = []
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package);
 
-        // Assert
         var lockstepVersion = typeof(ProjectFileGenerator).Assembly
             .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()!
             .InformationalVersion.Split('+')[0];
@@ -231,7 +225,6 @@ public partial class ProjectFileGeneratorTests
     [Fact]
     public void GenerateProjectFile_should_include_dependency_references()
     {
-        // Arrange
         var options = CreateOptions();
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -256,10 +249,8 @@ public partial class ProjectFileGeneratorTests
             }
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package, externalReferences);
 
-        // Assert
         file.Content.Should().Contain("<PackageReference Include=\"My.Dependency\" Version=\"2.0.0.*-*\" />");
     }
 
@@ -319,7 +310,6 @@ public partial class ProjectFileGeneratorTests
     [Fact]
     public void GenerateProjectFile_should_emit_one_PackageReference_per_external_dependency()
     {
-        // Arrange
         var options = CreateOptions();
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -353,10 +343,8 @@ public partial class ProjectFileGeneratorTests
             }
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package, externalReferences);
 
-        // Assert
         file.Content.Should().Contain("<PackageReference Include=\"Another.Known.Dep\" Version=\"3.0.0.*-*\" />");
         file.Content.Should().Contain("<PackageReference Include=\"Known.Dep\" Version=\"2.0.0.*-*\" />");
     }
@@ -412,17 +400,4 @@ public partial class ProjectFileGeneratorTests
             $"| Runtime dependency  | `Daml.Runtime` `{lockstepVersion}` |",
             "with --runtime-version omitted the README must document the same lockstep runtime the csproj pins");
     }
-
-    // Removed test "should_handle_dependency_without_name": no longer applicable.
-    // ProjectFileGenerator now receives a list of resolved DamlPackage instances; the
-    // codegen filters out unknown/unresolved package ids before calling it. The case
-    // a comment-only fallback used to handle simply cannot reach this layer anymore.
-
-    // Removed test "should_handle_dependency_without_version": no longer applicable.
-    // External references are passed as concrete DamlPackage instances whose Version is
-    // non-nullable, so the version-missing case cannot arise.
-
-    // Removed test "should_truncate_long_package_id_in_comment": no longer applicable.
-    // The new generator does not emit per-dependency comments; it only emits the
-    // PackageReference itself. Package id truncation/preview lived only in those comments.
 }

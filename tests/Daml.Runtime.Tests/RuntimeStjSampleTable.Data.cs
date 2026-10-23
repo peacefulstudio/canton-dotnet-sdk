@@ -35,6 +35,7 @@ internal static partial class RuntimeStjSampleTable
             DamlList.Create(new DamlInt64(1), new DamlInt64(2)),
             DamlTextMap.Create(("first", new DamlInt64(1)), ("second", new DamlInt64(2))),
             DamlGenMap.Create((new DamlText("k1"), new DamlInt64(1)), (new DamlText("k2"), new DamlInt64(2))),
+            DamlGenMap.Create((new DamlParty(Alice.Value), DamlList.Create(new DamlInt64(1))), (new DamlText(Alice.Value), DamlOptional.None)),
             DamlRecord.Create(SampleIdentifier, DamlField.Create("amount", new DamlInt64(42)), DamlField.Create("owner", new DamlParty(Alice.Value))),
             DamlVariant.Create(SampleIdentifier, "Left", new DamlText("payload")),
             DamlEnum.Create(SampleIdentifier, "Red"),

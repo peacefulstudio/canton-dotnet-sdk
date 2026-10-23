@@ -4,6 +4,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Canton.Ledger.Testing.Localnet;
 
 namespace Canton.Ledger.Client.Parity.Tests;
 
@@ -15,7 +16,6 @@ namespace Canton.Ledger.Client.Parity.Tests;
 /// </summary>
 internal sealed class LocalnetValidatorWallet
 {
-    private const string ValidatorApiUrlEnv = "CANTON_LOCALNET_A_VALIDATOR_1_VALIDATOR_API_URL";
     private const string DefaultValidatorApiUrl = "http://localhost:11903";
     private const string WalletTapPath = "api/validator/v0/wallet/tap";
 
@@ -45,12 +45,12 @@ internal sealed class LocalnetValidatorWallet
 
     /// <summary>
     /// The a-validator-1 wallet, reached on the Splice validator admin API port LocalNet publishes
-    /// unless <c>CANTON_LOCALNET_A_VALIDATOR_1_VALIDATOR_API_URL</c> overrides it, and
+    /// unless <see cref="LocalnetEnvironment.ValidatorApiUrl"/> overrides it, and
     /// authenticated through <paramref name="tokenEndpoint"/>, the a-validator-1 realm's
     /// token endpoint.
     /// </summary>
     internal static LocalnetValidatorWallet ForAValidator1(Uri tokenEndpoint, Func<string, string?> getEnvironmentVariable)
-        => new(new Uri(getEnvironmentVariable(ValidatorApiUrlEnv) ?? DefaultValidatorApiUrl), tokenEndpoint);
+        => new(new Uri(getEnvironmentVariable(LocalnetEnvironment.ValidatorApiUrl) ?? DefaultValidatorApiUrl), tokenEndpoint);
 
     /// <summary>Mints <paramref name="amount"/> DevNet Amulet to the validator operator party.</summary>
     internal async Task TapAsync(string amount, CancellationToken cancellationToken)

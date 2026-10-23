@@ -14,11 +14,8 @@ namespace Canton.Ledger.Grpc.Client.Integration.Tests;
 /// </summary>
 internal static class LocalnetLedgerServices
 {
-    private const string GrpcUrlEnv = "CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL";
-    private const string DefaultGrpcUrl = "http://localhost:11901";
-
     internal static string GrpcAddress =>
-        Environment.GetEnvironmentVariable(GrpcUrlEnv) ?? DefaultGrpcUrl;
+        Environment.GetEnvironmentVariable(LocalnetEnvironment.GrpcUrl) ?? LocalnetEnvironment.DefaultGrpcUrl;
 
     internal static ServiceProvider ForValidator(LocalnetFixture fixture, string userId)
     {

@@ -113,7 +113,7 @@ public class CantonLedgerTracerProviderBuilderExtensionsTests
             .AddInMemoryExporter(exportedItems)
             .Build();
 
-        using var source = new ActivitySource("Canton.Ledger.Rest.Client.RestAdminClient");
+        using var source = new ActivitySource(LedgerActivitySourceNames.RestAdminClient);
         using (source.StartActivity("test-rest-admin-client"))
         {
         }

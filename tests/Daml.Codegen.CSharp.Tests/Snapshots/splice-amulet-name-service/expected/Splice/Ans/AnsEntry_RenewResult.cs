@@ -17,6 +17,14 @@ public sealed record AnsEntry_RenewResult(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("entryCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry> EntryCid
 ) : global::Daml.Runtime.Data.IDamlRecord<AnsEntry_RenewResult>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(EntryCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("entryCid", EntryCid.ToDamlValue())
@@ -24,7 +32,7 @@ public sealed record AnsEntry_RenewResult(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AnsEntry_RenewResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntry_RenewResult(
-        EntryCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>(record.GetRequiredField("entryCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
+        EntryCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>(record.GetRequiredField("entryCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,5 +44,4 @@ public sealed record AnsEntry_RenewResult(
             global::Daml.Runtime.Data.DamlField.Create("entryCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "entryCid"), context.Field("entryCid")))
         );
     }
-
 }

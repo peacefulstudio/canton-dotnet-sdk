@@ -58,5 +58,4 @@ public static class OrderingExtensions
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 
     private static readonly string[] ExpectedConstructors = ["LT", "EQ", "GT"];
-
 }

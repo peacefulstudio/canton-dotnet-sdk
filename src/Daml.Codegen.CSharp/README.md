@@ -8,7 +8,7 @@ data types, and interfaces.
 ## Installation
 
 ```bash
-dotnet add package Daml.Codegen.CSharp --version 0.7.0
+dotnet add package Daml.Codegen.CSharp --version 0.7.1
 ```
 
 ## Usage
@@ -32,8 +32,7 @@ await using (var stream = File.OpenRead("intermediate.binpb"))
 var dar = IntermediateDarReader.Read(proto);
 
 using var loggerFactory = LoggerFactory.Create(builder =>
-    builder.AddProvider(new VerbosityConsoleLoggerProvider(verbosity: 1))
-           .SetMinimumLevel(LogLevel.Trace));
+    builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
 var generator = new CSharpCodeGenerator(
     new CodeGenOptions(),
@@ -53,12 +52,9 @@ foreach (var file in files)
 the generator stays silent, so a host already wired for logging simply hands it
 an `ILogger<CSharpCodeGenerator>` from its own factory.
 
-`VerbosityConsoleLoggerProvider` is included for hosts that just want
-severity-prefixed console output — errors and warnings on stderr, everything
-else on stdout. Its verbosity maps to a minimum level: `0` errors only, `1`
-warnings, `2` information, `3` or more debug. Building a factory around it, as
-the sample above does, needs the `Microsoft.Extensions.Logging` package; the
-library itself depends only on `Microsoft.Extensions.Logging.Abstractions`.
+The sample above builds its factory with `AddConsole()` from the
+`Microsoft.Extensions.Logging.Console` package; the library itself depends only
+on `Microsoft.Extensions.Logging.Abstractions`.
 
 Generated code targets the lockstep-versioned `Daml.Runtime` and
 `Daml.Ledger.Abstractions` packages.

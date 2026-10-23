@@ -32,8 +32,11 @@ public sealed partial record RichRecord(
     global::System.DateOnly AsOf,
     global::System.DateTimeOffset ObservedAt,
     string? Note,
+    global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> NestedNote,
     global::System.Collections.Generic.IReadOnlyList<string> Tags,
     global::System.Collections.Generic.IReadOnlyDictionary<string, string> Attributes,
+    global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long> GenMap,
+    global::Daml.Runtime.Data.DamlUnit UnitField,
     global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker> Marker,
     global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding> HoldingCid,
     global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>> HoldingCids,
@@ -75,6 +78,10 @@ public sealed partial record RichRecord(
     [global::Daml.Runtime.Data.DamlFieldAttribute("note")]
     public string? Note { get; init; } = Note;
 
+    /// <summary>The Daml field <c>nestedNote</c>.</summary>
+    [global::Daml.Runtime.Data.DamlFieldAttribute("nestedNote")]
+    public global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>> NestedNote { get; init; } = NestedNote;
+
     private readonly global::System.Collections.Generic.IReadOnlyList<string> _tags = global::Daml.Runtime.Data.DamlFieldCollections.Copy(Tags);
 
     /// <summary>The Daml field <c>tags</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
@@ -94,6 +101,20 @@ public sealed partial record RichRecord(
         get => _attributes;
         init => _attributes = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
     }
+
+    private readonly global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long> _genMap = global::Daml.Runtime.Data.DamlFieldCollections.Copy(GenMap);
+
+    /// <summary>The Daml field <c>genMap</c>. Copied when this value is constructed and on <c>init</c>, so a later change to the caller's collection cannot alter this value's equality or hash code.</summary>
+    [global::Daml.Runtime.Data.DamlFieldAttribute("genMap")]
+    public global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long> GenMap
+    {
+        get => _genMap;
+        init => _genMap = global::Daml.Runtime.Data.DamlFieldCollections.Copy(value);
+    }
+
+    /// <summary>The Daml field <c>unitField</c>.</summary>
+    [global::Daml.Runtime.Data.DamlFieldAttribute("unitField")]
+    public global::Daml.Runtime.Data.DamlUnit UnitField { get; init; } = UnitField;
 
     /// <summary>The Daml field <c>marker</c>.</summary>
     [global::Daml.Runtime.Data.DamlFieldAttribute("marker")]
@@ -142,8 +163,11 @@ public sealed partial record RichRecord(
         && global::System.Collections.Generic.EqualityComparer<global::System.DateOnly>.Default.Equals(AsOf, other.AsOf)
         && global::System.Collections.Generic.EqualityComparer<global::System.DateTimeOffset>.Default.Equals(ObservedAt, other.ObservedAt)
         && global::System.Collections.Generic.EqualityComparer<string?>.Default.Equals(Note, other.Note)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>.Default.Equals(NestedNote, other.NestedNote)
         && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Tags, other.Tags)
         && global::Daml.Runtime.Data.DamlFieldCollections.Equal(Attributes, other.Attributes)
+        && global::Daml.Runtime.Data.DamlFieldCollections.Equal(GenMap, other.GenMap)
+        && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Data.DamlUnit>.Default.Equals(UnitField, other.UnitField)
         && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker>>.Default.Equals(Marker, other.Marker)
         && global::System.Collections.Generic.EqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>.Default.Equals(HoldingCid, other.HoldingCid)
         && global::Daml.Runtime.Data.DamlFieldCollections.Equal(HoldingCids, other.HoldingCids)
@@ -156,34 +180,37 @@ public sealed partial record RichRecord(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Owner);
-        hash.Add(Count);
-        hash.Add(Amount);
-        hash.Add(Label);
-        hash.Add(Active);
-        hash.Add(AsOf);
-        hash.Add(ObservedAt);
-        hash.Add(Note);
+        hash.Add(Owner, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Count, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        hash.Add(Amount, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        hash.Add(Label, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Active, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+        hash.Add(AsOf, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateOnly>.Default);
+        hash.Add(ObservedAt, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset>.Default);
+        hash.Add(Note, global::Daml.Runtime.Data.DamlEqualityComparer<string?>.Default);
+        hash.Add(NestedNote, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Tags));
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Attributes));
-        hash.Add(Marker);
-        hash.Add(HoldingCid);
+        hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(GenMap));
+        hash.Add(UnitField, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.DamlUnit>.Default);
+        hash.Add(Marker, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker>>.Default);
+        hash.Add(HoldingCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(HoldingCids));
-        hash.Add(Profile);
-        hash.Add(Outcome);
-        hash.Add(Suit);
-        hash.Add(Fee);
+        hash.Add(Profile, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>.Default);
+        hash.Add(Outcome, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>.Default);
+        hash.Add(Suit, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Suit>.Default);
+        hash.Add(Fee, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
         return hash.ToHashCode();
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "RichRecord");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "RichRecord");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
+    public static string PackageId => "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-ha8d30776aa45";
+    public static string PackageName => "richtypes-h25b56c547fd1";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -201,8 +228,11 @@ public sealed partial record RichRecord(
         global::Daml.Runtime.Data.DamlField.Create("asOf", new global::Daml.Runtime.Data.DamlDate(AsOf)),
         global::Daml.Runtime.Data.DamlField.Create("observedAt", new global::Daml.Runtime.Data.DamlTimestamp(ObservedAt)),
         global::Daml.Runtime.Data.DamlField.Create("note", Note is { } __Note ? new global::Daml.Runtime.Data.DamlOptional(new global::Daml.Runtime.Data.DamlText(__Note)) : global::Daml.Runtime.Data.DamlOptional.None),
+        global::Daml.Runtime.Data.DamlField.Create("nestedNote", NestedNote.ToChainValue(__optional0 => __optional0.ToChainValue(__optional1 => new global::Daml.Runtime.Data.DamlText(__optional1)))),
         global::Daml.Runtime.Data.DamlField.Create("tags", new global::Daml.Runtime.Data.DamlList(Tags.Select(x => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(x)).ToList())),
         global::Daml.Runtime.Data.DamlField.Create("attributes", new global::Daml.Runtime.Data.DamlTextMap(Attributes.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(kv.Value)))),
+        global::Daml.Runtime.Data.DamlField.Create("genMap", new global::Daml.Runtime.Data.DamlGenMap(GenMap.Select(kv => ((global::Daml.Runtime.Data.DamlValue)kv.Key.ToDamlValue(), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlInt64(kv.Value))).ToList())),
+        global::Daml.Runtime.Data.DamlField.Create("unitField", global::Daml.Runtime.Data.DamlUnit.Instance),
         global::Daml.Runtime.Data.DamlField.Create("marker", Marker.ToDamlValue()),
         global::Daml.Runtime.Data.DamlField.Create("holdingCid", HoldingCid.ToDamlValue()),
         global::Daml.Runtime.Data.DamlField.Create("holdingCids", new global::Daml.Runtime.Data.DamlList(HoldingCids.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToDamlValue()).ToList())),
@@ -214,23 +244,26 @@ public sealed partial record RichRecord(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static RichRecord FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new RichRecord(
-        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
-        Count: record.GetRequiredField("count").As<global::Daml.Runtime.Data.DamlInt64>().Value,
-        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-        Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Active: record.GetRequiredField("active").As<global::Daml.Runtime.Data.DamlBool>().Value,
-        AsOf: record.GetRequiredField("asOf").As<global::Daml.Runtime.Data.DamlDate>().Value,
-        ObservedAt: record.GetRequiredField("observedAt").As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
-        Note: record.GetOptionalField("note").AsOptional().HasValue ? record.GetOptionalField("note").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null,
-        Tags: (global::System.Collections.Generic.IReadOnlyList<string>)record.GetRequiredField("tags").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList(),
-        Attributes: (global::System.Collections.Generic.IReadOnlyDictionary<string, string>)record.GetRequiredField("attributes").As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value),
-        Marker: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker>(record.GetRequiredField("marker").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-        HoldingCid: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(record.GetRequiredField("holdingCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-        HoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>)record.GetRequiredField("holdingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
-        Profile: global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.FromRecord(record.GetRequiredField("profile").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Outcome: global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.FromVariant(record.GetRequiredField("outcome").As<global::Daml.Runtime.Data.DamlVariant>()),
-        Suit: global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.FromDamlEnum(record.GetRequiredField("suit").As<global::Daml.Runtime.Data.DamlEnum>()),
-        Fee: record.GetRequiredField("fee").As<global::Daml.Runtime.Data.DamlNumeric>().Value
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Count: record.GetRequiredField("count", 1).As<global::Daml.Runtime.Data.DamlInt64>().Value,
+        Amount: record.GetRequiredField("amount", 2).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        Label: record.GetRequiredField("label", 3).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Active: record.GetRequiredField("active", 4).As<global::Daml.Runtime.Data.DamlBool>().Value,
+        AsOf: record.GetRequiredField("asOf", 5).As<global::Daml.Runtime.Data.DamlDate>().Value,
+        ObservedAt: record.GetRequiredField("observedAt", 6).As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
+        Note: record.GetOptionalField("note", 7).AsOptional().HasValue ? record.GetOptionalField("note", 7).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null,
+        NestedNote: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("nestedNote", 8), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value)),
+        Tags: (global::System.Collections.Generic.IReadOnlyList<string>)record.GetRequiredField("tags", 9).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList(),
+        Attributes: (global::System.Collections.Generic.IReadOnlyDictionary<string, string>)record.GetRequiredField("attributes", 10).As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value),
+        GenMap: (global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long>)record.GetRequiredField("genMap", 11).As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Daml.Runtime.Data.Party.FromDamlValue(kv.Key.As<global::Daml.Runtime.Data.DamlParty>()), kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default),
+        UnitField: record.GetRequiredField("unitField", 12).As<global::Daml.Runtime.Data.DamlUnit>(),
+        Marker: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.Marker>(record.GetRequiredField("marker", 13).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        HoldingCid: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(record.GetRequiredField("holdingCid", 14).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        HoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>>)record.GetRequiredField("holdingCids", 15).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        Profile: global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.FromRecord(record.GetRequiredField("profile", 16).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Outcome: global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.FromVariant(record.GetRequiredField("outcome", 17).As<global::Daml.Runtime.Data.DamlVariant>()),
+        Suit: global::Daml.Codegen.Testing.Conformance.RichTypes.SuitExtensions.FromDamlEnum(record.GetRequiredField("suit", 18).As<global::Daml.Runtime.Data.DamlEnum>()),
+        Fee: record.GetRequiredField("fee", 19).As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -238,7 +271,7 @@ public sealed partial record RichRecord(
     public static global::Daml.Runtime.Data.DamlRecord __ReadDamlLfJson(global::System.Text.Json.JsonElement json, global::Daml.Runtime.Serialization.DamlLfJsonDecodeContext context)
     {
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
-        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(17);
+        var fields = new global::System.Collections.Generic.List<global::Daml.Runtime.Data.DamlField>(20);
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("owner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "owner"), context.Field("owner"))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("count", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "count"), context.Field("count"))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount"))));
@@ -247,8 +280,11 @@ public sealed partial record RichRecord(
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("asOf", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadDate(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "asOf"), context.Field("asOf"))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("observedAt", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "observedAt"), context.Field("observedAt"))));
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "note", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("note"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)));
+        global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nestedNote", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(present, context.Field("nestedNote"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptionalChain(__json0, __ctx0, (__json1, __ctx1) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json1, __ctx1))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("tags", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "tags"), context.Field("tags"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("attributes", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "attributes"), context.Field("attributes"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("genMap", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadGenMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "genMap"), context.Field("genMap"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(__json0, __ctx0), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(__json0, __ctx0))));
+        fields.Add(global::Daml.Runtime.Data.DamlField.Create("unitField", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "unitField"), context.Field("unitField"))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("marker", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "marker"), context.Field("marker"))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("holdingCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holdingCid"), context.Field("holdingCid"))));
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("holdingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holdingCids"), context.Field("holdingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0))));
@@ -279,6 +315,34 @@ public sealed partial record RichRecord(
     };
 
     /// <summary>
+    /// Exercise the DescribeOutcome choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<RichRecord, DescribeOutcome, global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome> ChoiceDescribeOutcome { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("DescribeOutcome"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => DescribeOutcome.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = val => global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.FromVariant(val.As<global::Daml.Runtime.Data.DamlVariant>()),
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.DescribeOutcome.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome.__ReadDamlLfJson(json, context),
+    };
+
+    /// <summary>
+    /// Exercise the Ping choice.
+    /// </summary>
+    public static global::Daml.Runtime.Commands.Choice<RichRecord, Ping, global::Daml.Runtime.Data.DamlUnit> ChoicePing { get; } = new()
+    {
+        Name = new global::Daml.Runtime.Commands.ChoiceName("Ping"),
+        Consuming = false,
+        ArgumentEncoder = arg => arg.ToRecord(),
+        ArgumentDecoder = val => Ping.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),
+        ResultDecoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,
+        ArgumentJsonReader = (json, context) => global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Ping.__ReadDamlLfJson(json, context),
+        ResultJsonReader = (json, context) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadUnit(json, context),
+    };
+
+    /// <summary>
     /// Exercise the Relabel choice.
     /// </summary>
     public static global::Daml.Runtime.Commands.Choice<RichRecord, Relabel, global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>> ChoiceRelabel { get; } = new()
@@ -293,8 +357,7 @@ public sealed partial record RichRecord(
     };
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
-    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceRelabel];
-
+    public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceDescribeOutcome, ChoicePing, ChoiceRelabel];
 }
 
 
@@ -336,7 +399,7 @@ public static class RichRecordExtensions
     /// <param name="owner">Controller party from the Daml <c>controller</c> clause, routed into the submission's <c>actAs</c> set.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>>> TryRelabelAsync(
@@ -377,7 +440,7 @@ public static class RichRecordExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>>> TryRelabelAsync(
@@ -411,7 +474,7 @@ public static class RichRecordExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>>> TryRelabelAsync(
@@ -452,7 +515,7 @@ public static class RichRecordExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord>>> TryRelabelAsync(
@@ -555,7 +618,7 @@ public static class RichRecordNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(
@@ -577,6 +640,116 @@ public static class RichRecordNonContractExtensions
         return outcome.ProjectCommitted(tx => ProjectArchiveResult(tx, contractId.Value));
     }
 
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the DescribeOutcome choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand DescribeOutcomeCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.DescribeOutcome argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("DescribeOutcome"),
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.PackageName };
+    }
+
+    /// <summary>
+    /// Exercises the DescribeOutcome choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome>> TryDescribeOutcomeAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.DescribeOutcome argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.DescribeOutcomeCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectDescribeOutcomeResult(tx, contractId.Value));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="global::Daml.Runtime.Commands.ExerciseCommand"/> for the Ping choice on this contract id.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="argument">The choice argument.</param>
+    public static global::Daml.Runtime.Commands.ExerciseCommand PingCommand(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord> contractId,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Ping argument)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(contractId);
+        global::System.ArgumentNullException.ThrowIfNull(argument);
+        return new global::Daml.Runtime.Commands.ExerciseCommand(
+            global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.TemplateId,
+            contractId,
+            new global::Daml.Runtime.Commands.ChoiceName("Ping"),
+            argument.ToRecord()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.PackageName };
+    }
+
+    /// <summary>
+    /// Exercises the Ping choice and lifts the choice's exercise result to
+    /// <see cref="ExerciseOutcome{T}"/> over <c>global::Daml.Runtime.Data.DamlUnit</c>. Structured Canton/Daml errors
+    /// and infrastructure/transport errors pass through unchanged.
+    /// </summary>
+    /// <param name="contractId">The contract on which to exercise the choice.</param>
+    /// <param name="client">The ledger client.</param>
+    /// <param name="argument">The choice argument.</param>
+    /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryPingAsync(
+        this global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord> contractId,
+        global::Daml.Ledger.Abstractions.ILedgerWriter client,
+        global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.Ping argument,
+        global::Daml.Runtime.Commands.SubmitterInfo submitter,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
+        global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
+        global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        global::System.ArgumentNullException.ThrowIfNull(client);
+
+        var command = contractId.PingCommand(argument);
+
+        var outcome = await client.TrySubmitSingleAsync(command, submitter, workflowId, commandId, timeout, configure, cancellationToken).ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(tx => ProjectPingResult(tx, contractId.Value));
+    }
+
     private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectArchiveResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
         tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.ChoiceArchive, contractId);
+
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome> ProjectDescribeOutcomeResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.ChoiceDescribeOutcome, contractId);
+
+    private static global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit> ProjectPingResult(global::Daml.Runtime.Contracts.TransactionResult tx, string contractId) =>
+        tx.ProjectChoiceResult(global::Daml.Codegen.Testing.Conformance.RichTypes.RichRecord.ChoicePing, contractId);
 }

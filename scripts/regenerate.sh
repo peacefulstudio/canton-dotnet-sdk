@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-ENTRIES="crossmodule-dar snapshots quickstart conformance determinism"
+ENTRIES="snapshots quickstart conformance determinism runtime-stdlib parity-splice-bindings"
 
 usage() {
   cat <<EOF
@@ -39,17 +39,22 @@ the C# emitter CLI is rebuilt in Release, so a stale binary can never stage stal
 output.
 
 Entries (default: all):
-  crossmodule-dar  tests/Daml.Codegen.CSharp.Tests/Snapshots/cross-module-collision/
-                   cross-module-collision.dar, a byte copy of
-                   conformance/crossmodulecollision/crossmodulecollision.dar
   snapshots        every Snapshots/<name>/intermediate.binpb (JVM helper, from the
-                   DAR vendored beside it) and Snapshots/<name>/expected/ (emitter)
+                   DAR vendored beside it, or from conformance/<name>/<name>.dar for
+                   ${CORPUS_SNAPSHOTS[*]}) and Snapshots/<name>/expected/ (emitter;
+                   none for ${SHIPPED_PACKAGES[*]}, whose expected tree is the
+                   conformance entry's Generated folders)
   quickstart       QuickstartSample/intermediate.binpb (JVM helper, from the vendored
                    quickstart DAR) and samples/QuickstartExample/Generated (emitter)
   conformance      src/Daml.Codegen.Testing.Conformance/Generated, one folder per
                    Daml module of every shipped fixture: ${SHIPPED_PACKAGES[*]}
   determinism      tests/determinism/shas/ pins of the richtypes pipeline
-Entries in this checkout: $ENTRIES
+  runtime-stdlib   src/Daml.Runtime/Stdlib/Generated, the stdlib bindings the DAR
+                   decoder generates from conformance/stable-packages
+  parity-splice-bindings
+                   the splice-wallet proto under
+                   tests/Canton.Ledger.Client.Parity.SpliceBindings/Fixtures, decoded
+                   from the DAR beside the decoder tests
 
 Options:
   --only <entry>        Restrict to this entry. Repeatable.
@@ -57,9 +62,7 @@ Options:
                         it). Repeatable; replaces only the module folders that
                         package emits.
   --snapshot <name>     Restrict the snapshots entry to this snapshot (and select
-                        it). Repeatable. Selecting the cross-module-collision
-                        snapshot selects crossmodule-dar too, so the snapshot never
-                        decodes a stale copy of the conformance DAR.
+                        it). Repeatable.
   --keep-protos         Treat the vendored intermediate.binpb files as inputs: do
                         not decode their DARs, regenerate only what the emitter
                         derives from them (no JDK needed for snapshots/quickstart).
@@ -69,6 +72,11 @@ Options:
   --cli-bin <path>      Daml.Codegen.CSharp.Cli binary. Overriding skips the rebuild;
                         you own the binary's currency.
                         (default: built from src/Daml.Codegen.CSharp.Cli, Release)
+
+Environment:
+  REGENERATE_DECODER_BIN  Daml.Codegen.DarParser.Cli binary. Setting it skips the rebuild;
+                          you own the binary's currency.
+                          (default: built from src/Daml.Codegen.DarParser.Cli, Release)
   --base <base-name>    rebuild-dar only: the package-name base.
 EOF
   exit "${1:-1}"
@@ -82,18 +90,22 @@ die() {
 SHIPPED_PACKAGES=(richtypes contractkeys defaulttarget)
 
 SNAPSHOTS_REL="tests/Daml.Codegen.CSharp.Tests/Snapshots"
-CROSSMODULE_SOURCE_DAR_REL="conformance/crossmodulecollision/crossmodulecollision.dar"
-CROSSMODULE_SNAPSHOT_FAMILY="cross-module-collision"
-CROSSMODULE_SNAPSHOT_DAR_REL="$SNAPSHOTS_REL/$CROSSMODULE_SNAPSHOT_FAMILY/$CROSSMODULE_SNAPSHOT_FAMILY.dar"
+CORPUS_SNAPSHOTS=(crossmodulecollision richtypes contractkeys defaulttarget nonserializable)
 QUICKSTART_DAR_REL="tests/Daml.Codegen.CSharp.Tests/QuickstartSample/quickstart-0.0.1.dar"
 QUICKSTART_PROTO_REL="tests/Daml.Codegen.CSharp.Tests/QuickstartSample/intermediate.binpb"
 QUICKSTART_GENERATED_REL="samples/QuickstartExample/Generated"
 CONFORMANCE_GENERATED_REL="src/Daml.Codegen.Testing.Conformance/Generated"
 CONFORMANCE_ROOT_NAMESPACE="Daml.Codegen.Testing.Conformance"
-CONFORMANCE_ROOT_NAMESPACE_PATH="${CONFORMANCE_ROOT_NAMESPACE//./\/}"
+CONFORMANCE_ROOT_NAMESPACE_PATH="${CONFORMANCE_ROOT_NAMESPACE//.//}"
 DETERMINISM_DAR_REL="conformance/richtypes/richtypes.dar"
 DETERMINISM_SHAS_REL="tests/determinism/shas"
 EMITTER_PROJECT_REL="src/Daml.Codegen.CSharp.Cli"
+STDLIB_PACKAGES_REL="conformance/stable-packages"
+RUNTIME_STDLIB_GENERATED_REL="src/Daml.Runtime/Stdlib/Generated"
+PARITY_BINDINGS_FIXTURES_REL="tests/Canton.Ledger.Client.Parity.SpliceBindings/Fixtures"
+PARITY_DAR_FIXTURES_REL="tests/Daml.Codegen.DarParser.Cli.Tests/Fixtures"
+DECODER_PROJECT_REL="src/Daml.Codegen.DarParser.Cli"
+DECODER_BIN="${REGENERATE_DECODER_BIN:-}"
 
 PINNED_EMITTER_ARGS=(
   --target-framework net10.0
@@ -104,11 +116,6 @@ PINNED_EMITTER_ARGS=(
   --emitter-counter 0
   --verbosity 1
 )
-
-UNPROMOTED_ENTRIES_FILE="$SCRIPT_DIR/regenerate-unpromoted-entries.sh"
-if [[ -f "$UNPROMOTED_ENTRIES_FILE" ]]; then
-  source "$UNPROMOTED_ENTRIES_FILE"
-fi
 
 [[ $# -ge 1 ]] || usage
 MODE="$1"
@@ -206,11 +213,11 @@ entry_is_known() {
   return 1
 }
 
-snapshot_is_selected() {
-  local family
-  [[ ${#SNAPSHOTS[@]} -gt 0 ]] || return 0
-  for family in "${SNAPSHOTS[@]}"; do
-    [[ "$family" == "$1" ]] && return 0
+is_listed() {
+  local candidate="$1" item
+  shift
+  for item in "$@"; do
+    [[ "$item" == "$candidate" ]] && return 0
   done
   return 1
 }
@@ -225,9 +232,6 @@ select_entries() {
   fi
   [[ ${#PACKAGES[@]} -eq 0 ]] || requested="$requested conformance"
   [[ ${#SNAPSHOTS[@]} -eq 0 ]] || requested="$requested snapshots"
-  if [[ " $requested " == *" snapshots "* ]] && snapshot_is_selected "$CROSSMODULE_SNAPSHOT_FAMILY"; then
-    requested="$requested crossmodule-dar"
-  fi
 
   SELECTED=""
   for entry in $ENTRIES; do
@@ -273,8 +277,6 @@ resolve_snapshot_families() {
   [[ ${#FAMILIES[@]} -gt 0 ]] || die "no snapshot families found under $SNAPSHOTS_REL"
 }
 
-tools_crossmodule_dar() { :; }
-
 tools_snapshots() {
   echo emitter
   [[ "$KEEP_PROTOS" == true ]] || echo helper
@@ -285,6 +287,10 @@ tools_quickstart() { tools_snapshots; }
 tools_conformance() { printf 'emitter\nhelper\n'; }
 
 tools_determinism() { printf 'emitter\nhelper\n'; }
+
+tools_runtime_stdlib() { echo decoder; }
+
+tools_parity_splice_bindings() { echo decoder; }
 
 prepare_helper() {
   command -v "$JAVA_BIN" >/dev/null 2>&1 || die "'$JAVA_BIN' not found"
@@ -301,6 +307,14 @@ prepare_emitter() {
     CLI_BIN="$PROJECT_ROOT/$EMITTER_PROJECT_REL/bin/Release/net10.0/Daml.Codegen.CSharp.Cli"
   fi
   [[ -x "$CLI_BIN" ]] || die "emitter CLI not found or not executable: $CLI_BIN"
+}
+
+prepare_decoder() {
+  if [[ -z "$DECODER_BIN" ]]; then
+    dotnet build "$PROJECT_ROOT/$DECODER_PROJECT_REL" -c Release --nologo -v quiet -clp:NoSummary
+    DECODER_BIN="$PROJECT_ROOT/$DECODER_PROJECT_REL/bin/Release/net10.0/Daml.Codegen.DarParser.Cli"
+  fi
+  [[ -x "$DECODER_BIN" ]] || die "DAR decoder not found or not executable: $DECODER_BIN"
 }
 
 prepare_tools() {
@@ -336,7 +350,7 @@ decode_with_helper() {
   PROTO="$STAGE/protos/$dar_rel.binpb"
   [[ ! -f "$PROTO" ]] || return 0
   dar="$(input_path "$dar_rel")"
-  [[ -f "$dar" ]] || die "fixture DAR not found: $dar_rel (a snapshot vendors the DAR its intermediate.binpb is generated from; vendor it, or pass --keep-protos to keep the vendored proto)"
+  [[ -f "$dar" ]] || die "fixture DAR not found: $dar_rel (a snapshot decodes the DAR its intermediate.binpb is generated from; restore it, or pass --keep-protos to keep the vendored proto)"
   mkdir -p "$(dirname "$PROTO")"
   "$JAVA_BIN" -jar "$HELPER_JAR" --dar "$dar" --out "$PROTO" >/dev/null || die "the JVM helper failed on $dar_rel"
 }
@@ -346,15 +360,16 @@ emit() {
   shift 2
   mkdir -p "$out_dir"
   "$CLI_BIN" --intermediate "$proto" -o "$out_dir" "${PINNED_EMITTER_ARGS[@]}" "$@" >/dev/null || die "the emitter failed on $proto"
+  rm -f "$out_dir/.codegen-manifest"
 }
 
-produce_crossmodule_dar() {
-  local source
-  source="$PROJECT_ROOT/$CROSSMODULE_SOURCE_DAR_REL"
-  [[ -f "$source" ]] || die "fixture DAR not found: $CROSSMODULE_SOURCE_DAR_REL"
-  mkdir -p "$(dirname "$STAGE/out/$CROSSMODULE_SNAPSHOT_DAR_REL")"
-  cp "$source" "$STAGE/out/$CROSSMODULE_SNAPSHOT_DAR_REL"
-  claim crossmodule-dar "$CROSSMODULE_SNAPSHOT_DAR_REL"
+snapshot_dar_rel() {
+  local family="$1"
+  if is_listed "$family" "${CORPUS_SNAPSHOTS[@]}"; then
+    printf 'conformance/%s/%s.dar\n' "$family" "$family"
+  else
+    printf '%s/%s/%s.dar\n' "$SNAPSHOTS_REL" "$family" "$family"
+  fi
 }
 
 vendored_or_decoded_proto() {
@@ -383,8 +398,9 @@ produce_snapshots() {
   for family in "${FAMILIES[@]}"; do
     family_rel="$SNAPSHOTS_REL/$family"
     expected_rel="$family_rel/expected"
-    vendored_or_decoded_proto "$family_rel/$family.dar" "$family_rel/intermediate.binpb"
+    vendored_or_decoded_proto "$(snapshot_dar_rel "$family")" "$family_rel/intermediate.binpb"
     stage_proto snapshots "$family_rel/intermediate.binpb"
+    ! is_listed "$family" "${SHIPPED_PACKAGES[@]}" || continue
     emit "$PROTO" "$STAGE/out/$expected_rel"
     if [[ -f "$PROJECT_ROOT/$expected_rel/.gitkeep" && -z "$(find "$STAGE/out/$expected_rel" -type f | head -n 1)" ]]; then
       cp "$PROJECT_ROOT/$expected_rel/.gitkeep" "$STAGE/out/$expected_rel/.gitkeep"
@@ -450,6 +466,7 @@ run_determinism_pipeline() {
   mkdir -p "$run_dir/out"
   "$JAVA_BIN" -jar "$HELPER_JAR" --dar "$PROJECT_ROOT/$DETERMINISM_DAR_REL" --out "$run_dir/intermediate.binpb" >/dev/null || return 1
   "$CLI_BIN" --intermediate "$run_dir/intermediate.binpb" -o "$run_dir/out" "${PINNED_EMITTER_ARGS[@]}" >/dev/null || return 1
+  rm -f "$run_dir/out/.codegen-manifest"
 }
 
 build_cs_manifest() {
@@ -473,11 +490,30 @@ produce_determinism() {
   run_determinism_pipeline "$run_dir" || die "the determinism pipeline failed on $DETERMINISM_DAR_REL"
   mkdir -p "$shas_dir"
   sha256_of "$run_dir/intermediate.binpb" | awk '{printf "%s  intermediate.binpb\n", $1}' > "$shas_dir/intermediate.sha256"
-  build_cs_manifest "$run_dir/out" "$shas_dir/cs-tree.manifest"
-  sha256_of "$shas_dir/cs-tree.manifest" | awk '{printf "%s  cs-tree.manifest\n", $1}' > "$shas_dir/cs-tree.sha256"
   claim determinism "$DETERMINISM_SHAS_REL/intermediate.sha256"
-  claim determinism "$DETERMINISM_SHAS_REL/cs-tree.manifest"
-  claim determinism "$DETERMINISM_SHAS_REL/cs-tree.sha256"
+}
+
+produce_runtime_stdlib() {
+  [[ -d "$PROJECT_ROOT/$STDLIB_PACKAGES_REL" ]] || die "stable packages directory not found: $STDLIB_PACKAGES_REL"
+  mkdir -p "$STAGE/out/$RUNTIME_STDLIB_GENERATED_REL"
+  "$DECODER_BIN" stdlib-runtime "$PROJECT_ROOT/$STDLIB_PACKAGES_REL" -o "$STAGE/out/$RUNTIME_STDLIB_GENERATED_REL" >/dev/null \
+    || die "the stdlib generator failed on $STDLIB_PACKAGES_REL"
+  claim runtime-stdlib "$RUNTIME_STDLIB_GENERATED_REL"
+}
+
+produce_parity_splice_bindings() {
+  local dars dar proto_rel
+  shopt -s nullglob
+  dars=("$PROJECT_ROOT/$PARITY_DAR_FIXTURES_REL"/splice-wallet-*.dar)
+  shopt -u nullglob
+  [[ ${#dars[@]} -eq 1 ]] || die "expected exactly one splice-wallet-*.dar under $PARITY_DAR_FIXTURES_REL, found ${#dars[@]}"
+
+  dar="${dars[0]}"
+  proto_rel="$PARITY_BINDINGS_FIXTURES_REL/$(basename "${dar%.dar}").binpb"
+  mkdir -p "$(dirname "$STAGE/out/$proto_rel")"
+  "$DECODER_BIN" dar2intermediate "$dar" -o "$STAGE/out/$proto_rel" --verbosity 1 >/dev/null \
+    || die "the DAR decoder failed on $dar"
+  claim parity-splice-bindings "$proto_rel"
 }
 
 repeat_determinism() {

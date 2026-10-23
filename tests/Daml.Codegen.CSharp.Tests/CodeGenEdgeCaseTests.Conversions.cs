@@ -25,12 +25,12 @@ public partial class CodeGenEdgeCaseTests
     [InlineData(
         "App.Records",
         true,
-        """global::App.Records.Token.FromRecord(record.GetRequiredField("t").As<global::Daml.Runtime.Data.DamlRecord>())""",
+        """global::App.Records.Token.FromRecord(record.GetRequiredField("t", 0).As<global::Daml.Runtime.Data.DamlRecord>())""",
         "TokenExtensions.FromDamlEnum")]
     [InlineData(
         "App.Config",
         true,
-        """global::App.Config.TokenExtensions.FromDamlEnum(record.GetRequiredField("t").As<global::Daml.Runtime.Data.DamlEnum>())""",
+        """global::App.Config.TokenExtensions.FromDamlEnum(record.GetRequiredField("t", 0).As<global::Daml.Runtime.Data.DamlEnum>())""",
         null)]
     [InlineData(
         "App.Config",
@@ -160,10 +160,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_round_trip_variant_case_with_record_payload_through_ToRecord_and_FromRecord()
     {
-        // A Daml-LF variant constructor carries exactly one type argument; when that
-        // argument is a (synthesized) record, the case payload round-trips through the
-        // record's ToRecord/FromRecord — no per-field flattening. This is the path the
-        // primitive-payload spec does not exercise.
         var module = new DamlModule
         {
             Name = "App.Module",
@@ -195,19 +191,15 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var shape = files.FirstOrDefault(f => f.RelativePath.EndsWith("Shape.cs", global::System.StringComparison.Ordinal));
 
-        // Assert — no throwing path survives.
         shape.Should().NotBeNull();
-        shape!.Content.Should().NotContain("NotImplementedException");
+        shape!.Content.Should().NotContain("NotImplementedException", because: "no throwing path survives");
 
-        // The record-payload case carries the record under the variant tag.
         shape.Content.Should().Contain("public sealed record Rect(global::App.Module.Rectangle Value) : Shape");
         shape.Content.Should().Contain("public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create(\"Rect\", Value.ToRecord());");
 
-        // FromVariant decodes the payload back through the record's FromRecord.
         shape.Content.Should().Contain("\"Rect\" => new Rect(global::App.Module.Rectangle.FromRecord(variant.Value.As<global::Daml.Runtime.Data.DamlRecord>())),");
         shape.Content.Should().Contain("\"Point\" => new Point(),");
     }
@@ -219,8 +211,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_emit_DamlGenMap_for_GenMap_field_to_value_path()
     {
-        // GenMap is the catch-all map for non-string keys. ToValue must materialise a
-        // DamlGenMap from the dictionary; FromValue must reverse it via Entries.
         var module = new DamlModule
         {
             Name = "App.Module",
@@ -247,15 +237,13 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var bag = files.FirstOrDefault(f => f.RelativePath.EndsWith("Bag.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         bag.Should().NotBeNull();
         bag!.Content.Should().Contain("IReadOnlyDictionary<string, long> Counts");
         bag.Content.Should().Contain("new global::Daml.Runtime.Data.DamlGenMap(Counts.Select(kv => ((global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlText(kv.Key), (global::Daml.Runtime.Data.DamlValue)new global::Daml.Runtime.Data.DamlInt64(kv.Value))).ToList())");
-        bag.Content.Should().Contain("record.GetRequiredField(\"counts\").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value)");
+        bag.Content.Should().Contain("record.GetRequiredField(\"counts\", 0).As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default)");
     }
 
     #endregion
@@ -342,7 +330,7 @@ public partial class CodeGenEdgeCaseTests
 
         code.Should().Contain("global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<long>> Entries");
         code.Should().Contain("(global::System.Collections.Generic.IReadOnlyList<long>)");
-        code.Should().NotContain("Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlInt64>().Value).ToList())");
+        code.Should().NotContain("Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlInt64>().Value).ToList(), global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default)");
     }
 
     #endregion

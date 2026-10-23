@@ -160,7 +160,7 @@ public class EmittedRecordOmittedFieldDecodeTests
 
         record.Fields.Should().Equal(DamlField.Create("text", new DamlText("inner")));
         record.GetField("remark").Should().BeNull();
-        record.GetOptionalField("remark").Should().Be(DamlOptional.None);
+        record.GetOptionalField("remark", 1).Should().Be(DamlOptional.None);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class EmittedRecordOmittedFieldDecodeTests
         record.Fields.Should().Equal(
             DamlField.Create("text", new DamlText("head")),
             DamlField.Create("tail", new DamlText("end")));
-        record.GetOptionalField("mid").Should().Be(DamlOptional.None);
+        record.GetOptionalField("mid", 1).Should().Be(DamlOptional.None);
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public class EmittedRecordOmittedFieldDecodeTests
 
         record.Fields.Should().Equal(DamlField.Create("text", new DamlText("inner")));
         record.GetField("tailMaybe").Should().BeNull();
-        record.GetOptionalChainField("tailMaybe").Should().Be(DamlOptionalChain.None);
+        record.GetOptionalChainField("tailMaybe", 1).Should().Be(DamlOptionalChain.None);
     }
 
     [Fact]

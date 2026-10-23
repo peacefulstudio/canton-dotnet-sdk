@@ -17,10 +17,8 @@ public class DamlModelTests
     [Fact]
     public void DamlTypeRef_should_store_package_module_name()
     {
-        // Arrange & Act
         var typeRef = new DamlTypeRef("pkg-123", "My.Module", "MyType");
 
-        // Assert
         typeRef.PackageId.Should().Be("pkg-123");
         typeRef.Module.Should().Be("My.Module");
         typeRef.Name.Should().Be("MyType");
@@ -29,14 +27,11 @@ public class DamlModelTests
     [Fact]
     public void DamlTypeApp_should_store_base_and_arguments()
     {
-        // Arrange
         var baseType = new DamlPrimitiveType(DamlPrimitive.TextMap);
         var argType = new DamlPrimitiveType(DamlPrimitive.Int64);
 
-        // Act
         var typeApp = new DamlTypeApp(baseType, [argType]);
 
-        // Assert
         typeApp.Base.Should().Be(baseType);
         typeApp.Arguments.Should().HaveCount(1);
         typeApp.Arguments[0].Should().Be(argType);
@@ -49,7 +44,6 @@ public class DamlModelTests
     [Fact]
     public void DamlPrimitive_should_have_all_types()
     {
-        // Assert - verify all primitive types exist by creating instances
         var primitives = new[]
         {
             DamlPrimitive.Unit,
@@ -69,7 +63,6 @@ public class DamlModelTests
 
         primitives.Should().HaveCount(13);
 
-        // Verify we can create DamlPrimitiveType with each
         foreach (var primitive in primitives)
         {
             var type = new DamlPrimitiveType(primitive);
@@ -84,17 +77,14 @@ public class DamlModelTests
     [Fact]
     public void DamlRecordDefinition_should_store_fields()
     {
-        // Arrange
         var fields = new[]
         {
             new DamlFieldDefinition("name", new DamlPrimitiveType(DamlPrimitive.Text)),
             new DamlFieldDefinition("value", new DamlPrimitiveType(DamlPrimitive.Int64))
         };
 
-        // Act
         var definition = new DamlRecordDefinition(fields);
 
-        // Assert
         definition.Fields.Should().HaveCount(2);
         definition.Fields[0].Name.Should().Be("name");
         definition.Fields[1].Name.Should().Be("value");
@@ -103,17 +93,14 @@ public class DamlModelTests
     [Fact]
     public void DamlVariantDefinition_should_store_constructors()
     {
-        // Arrange
         var constructors = new[]
         {
             new DamlVariantConstructor("Left", new DamlPrimitiveType(DamlPrimitive.Text)),
             new DamlVariantConstructor("Right", new DamlPrimitiveType(DamlPrimitive.Int64))
         };
 
-        // Act
         var definition = new DamlVariantDefinition(constructors);
 
-        // Assert
         definition.Constructors.Should().HaveCount(2);
         definition.Constructors[0].Name.Should().Be("Left");
         definition.Constructors[1].Name.Should().Be("Right");
@@ -122,10 +109,8 @@ public class DamlModelTests
     [Fact]
     public void DamlVariantConstructor_should_store_name_and_type()
     {
-        // Arrange & Act
         var constructor = new DamlVariantConstructor("Some", new DamlPrimitiveType(DamlPrimitive.Text));
 
-        // Assert
         constructor.Name.Should().Be("Some");
         constructor.ArgumentType.Should().NotBeNull();
         constructor.ArgumentType.Should().BeOfType<DamlPrimitiveType>();
@@ -134,10 +119,8 @@ public class DamlModelTests
     [Fact]
     public void DamlVariantConstructor_should_allow_null_argument()
     {
-        // Arrange & Act
         var constructor = new DamlVariantConstructor("None", null);
 
-        // Assert
         constructor.Name.Should().Be("None");
         constructor.ArgumentType.Should().BeNull();
     }
@@ -145,10 +128,8 @@ public class DamlModelTests
     [Fact]
     public void DamlEnumDefinition_should_store_constructors()
     {
-        // Arrange & Act
         var definition = new DamlEnumDefinition(["Red", "Green", "Blue"]);
 
-        // Assert
         definition.Constructors.Should().HaveCount(3);
         definition.Constructors.Should().Contain("Red");
         definition.Constructors.Should().Contain("Green");
@@ -158,17 +139,14 @@ public class DamlModelTests
     [Fact]
     public void DamlDataType_should_store_name_and_definition()
     {
-        // Arrange
         var recordDef = new DamlRecordDefinition([new DamlFieldDefinition("value", new DamlPrimitiveType(DamlPrimitive.Text))]);
 
-        // Act
         var dataType = new DamlDataType
         {
             Name = "MyRecord",
             Definition = recordDef
         };
 
-        // Assert
         dataType.Name.Should().Be("MyRecord");
         dataType.Definition.Should().Be(recordDef);
     }
@@ -180,10 +158,8 @@ public class DamlModelTests
     [Fact]
     public void DamlFieldDefinition_should_store_name_and_type()
     {
-        // Arrange & Act
         var field = new DamlFieldDefinition("myField", new DamlPrimitiveType(DamlPrimitive.Bool));
 
-        // Assert
         field.Name.Should().Be("myField");
         field.Type.Should().BeOfType<DamlPrimitiveType>();
         ((DamlPrimitiveType)field.Type).Primitive.Should().Be(DamlPrimitive.Bool);
@@ -196,7 +172,6 @@ public class DamlModelTests
     [Fact]
     public void DamlTemplate_should_store_all_properties()
     {
-        // Arrange
         var choices = new[]
         {
             new DamlChoice
@@ -208,7 +183,6 @@ public class DamlModelTests
             }
         };
 
-        // Act
         var template = new DamlTemplate
         {
             Name = "MyTemplate",
@@ -221,7 +195,6 @@ public class DamlModelTests
             ]
         };
 
-        // Assert
         template.Name.Should().Be("MyTemplate");
         template.Choices.Should().HaveCount(1);
         template.Key.Should().NotBeNull();
@@ -231,28 +204,24 @@ public class DamlModelTests
     [Fact]
     public void DamlTemplate_Key_should_be_optional()
     {
-        // Arrange & Act
         var template = new DamlTemplate
         {
             Name = "KeylessTemplate",
             Choices = []
         };
 
-        // Assert
         template.Key.Should().BeNull();
     }
 
     [Fact]
     public void DamlTemplate_Implements_should_default_to_empty()
     {
-        // Arrange & Act
         var template = new DamlTemplate
         {
             Name = "SimpleTemplate",
             Choices = []
         };
 
-        // Assert
         template.Implements.Should().BeEmpty();
     }
 
@@ -263,7 +232,6 @@ public class DamlModelTests
     [Fact]
     public void DamlChoice_should_store_all_properties()
     {
-        // Arrange & Act
         var choice = new DamlChoice
         {
             Name = "Transfer",
@@ -274,7 +242,6 @@ public class DamlModelTests
                 [new DamlTypeRef("", "Module", "Asset")])
         };
 
-        // Assert
         choice.Name.Should().Be("Transfer");
         choice.Consuming.Should().BeTrue();
         choice.ArgumentType.Should().BeOfType<DamlTypeRef>();
@@ -284,7 +251,6 @@ public class DamlModelTests
     [Fact]
     public void DamlChoice_Consuming_should_be_false_for_non_consuming()
     {
-        // Arrange & Act
         var choice = new DamlChoice
         {
             Name = "View",
@@ -293,7 +259,6 @@ public class DamlModelTests
             ReturnType = new DamlPrimitiveType(DamlPrimitive.Text)
         };
 
-        // Assert
         choice.Consuming.Should().BeFalse();
     }
 
@@ -304,7 +269,6 @@ public class DamlModelTests
     [Fact]
     public void DamlInterface_should_store_name_and_methods()
     {
-        // Arrange
         var methods = new[]
         {
             new DamlChoice
@@ -316,7 +280,6 @@ public class DamlModelTests
             }
         };
 
-        // Act
         var iface = new DamlInterface
         {
             Name = "Holdable",
@@ -324,7 +287,6 @@ public class DamlModelTests
             ViewType = new DamlTypeRef("", "Module", "HoldableView")
         };
 
-        // Assert
         iface.Name.Should().Be("Holdable");
         iface.Choices.Should().HaveCount(1);
         iface.ViewType.Should().NotBeNull();
@@ -333,25 +295,21 @@ public class DamlModelTests
     [Fact]
     public void DamlInterface_ViewType_should_be_optional()
     {
-        // Arrange & Act
         var iface = new DamlInterface
         {
             Name = "Viewless",
             Choices = []
         };
 
-        // Assert
         iface.ViewType.Should().BeNull();
     }
 
     [Fact]
     public void DamlInterfaceMethod_should_carry_name_and_return_type()
     {
-        // Arrange
         var method = new DamlInterfaceMethod("holder", new DamlPrimitiveType(DamlPrimitive.Party));
         var equalMethod = new DamlInterfaceMethod("holder", new DamlPrimitiveType(DamlPrimitive.Party));
 
-        // Act & Assert
         method.Name.Should().Be("holder");
         method.ReturnType.Should().Be(new DamlPrimitiveType(DamlPrimitive.Party));
         method.Should().Be(equalMethod,
@@ -362,14 +320,12 @@ public class DamlModelTests
     [Fact]
     public void DamlInterface_Methods_should_default_to_empty()
     {
-        // Arrange & Act
         var iface = new DamlInterface
         {
             Name = "Methodless",
             Choices = []
         };
 
-        // Assert
         iface.Methods.Should().NotBeNull(
             "a freshly constructed DamlInterface without Methods set must yield an empty list, "
             + "never null — existing construction sites (the .NET DalfReader producer among them) "
@@ -384,7 +340,6 @@ public class DamlModelTests
     [Fact]
     public void DamlPackage_should_store_all_properties()
     {
-        // Arrange
         var modules = new[]
         {
             new DamlModule
@@ -396,7 +351,6 @@ public class DamlModelTests
             }
         };
 
-        // Act
         var package = new DamlPackage
         {
             PackageId = "abc123",
@@ -407,7 +361,6 @@ public class DamlModelTests
             DependencyReferences = []
         };
 
-        // Assert
         package.PackageId.Should().Be("abc123");
         package.Name.Should().Be("my-package");
         package.Version.Should().Be(new Version(1, 2, 3));
@@ -422,7 +375,6 @@ public class DamlModelTests
     [Fact]
     public void DamlModule_should_store_all_collections()
     {
-        // Arrange
         var templates = new[]
         {
             new DamlTemplate { Name = "Template1", Choices = [] }
@@ -436,7 +388,6 @@ public class DamlModelTests
             new DamlInterface { Name = "Interface1", Choices = [] }
         };
 
-        // Act
         var module = new DamlModule
         {
             Name = "Full.Module",
@@ -445,7 +396,6 @@ public class DamlModelTests
             Interfaces = interfaces
         };
 
-        // Assert
         module.Name.Should().Be("Full.Module");
         module.Templates.Should().HaveCount(1);
         module.DataTypes.Should().HaveCount(1);
@@ -467,7 +417,6 @@ public class DamlModelTests
     [Fact]
     public void DarModel_AllPackages_should_include_main_and_dependencies()
     {
-        // Arrange
         var mainPackage = new DamlPackage
         {
             PackageId = "main-id",
@@ -498,14 +447,12 @@ public class DamlModelTests
             DependencyReferences = []
         };
 
-        // Act
         var dar = new DarModel
         {
             MainPackage = mainPackage,
             Dependencies = [dep1, dep2]
         };
 
-        // Assert
         var allPackages = ((IDarSource)dar).AllPackages.ToList();
         allPackages.Should().HaveCount(3);
         allPackages[0].Should().Be(mainPackage);
@@ -516,7 +463,6 @@ public class DamlModelTests
     [Fact]
     public void DarModel_AllPackages_should_work_with_no_dependencies()
     {
-        // Arrange
         var mainPackage = new DamlPackage
         {
             PackageId = "main-id",
@@ -527,14 +473,12 @@ public class DamlModelTests
             DependencyReferences = []
         };
 
-        // Act
         var dar = new DarModel
         {
             MainPackage = mainPackage,
             Dependencies = []
         };
 
-        // Assert
         var allPackages = ((IDarSource)dar).AllPackages.ToList();
         allPackages.Should().HaveCount(1);
         allPackages[0].Should().Be(mainPackage);

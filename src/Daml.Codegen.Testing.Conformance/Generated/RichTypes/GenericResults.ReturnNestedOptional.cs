@@ -19,6 +19,15 @@ public sealed partial record GenericResults
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("inner")] bool Inner
     ) : global::Daml.Runtime.Data.IDamlRecord<ReturnNestedOptional>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Outer, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+            hash.Add(Inner, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("outer", new global::Daml.Runtime.Data.DamlBool(Outer)),
@@ -27,8 +36,8 @@ public sealed partial record GenericResults
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static ReturnNestedOptional FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ReturnNestedOptional(
-            Outer: record.GetRequiredField("outer").As<global::Daml.Runtime.Data.DamlBool>().Value,
-            Inner: record.GetRequiredField("inner").As<global::Daml.Runtime.Data.DamlBool>().Value
+            Outer: record.GetRequiredField("outer", 0).As<global::Daml.Runtime.Data.DamlBool>().Value,
+            Inner: record.GetRequiredField("inner", 1).As<global::Daml.Runtime.Data.DamlBool>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -41,6 +50,5 @@ public sealed partial record GenericResults
                 global::Daml.Runtime.Data.DamlField.Create("inner", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "inner"), context.Field("inner")))
             );
         }
-
     }
 }

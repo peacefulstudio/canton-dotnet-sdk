@@ -119,10 +119,6 @@ public class NuGetPackIntegrationTests
         }
     }
 
-    /// <summary>
-    /// Returns the vendored upstream DAR of <paramref name="snapshotName"/>, copied next to the
-    /// test assembly by the <c>Snapshots\**\*</c> content item, failing the test when it is absent.
-    /// </summary>
     private static string RequireSnapshotDar(string snapshotName)
     {
         var darPath = Path.Combine(AppContext.BaseDirectory, "Snapshots", snapshotName, $"{snapshotName}.dar");
@@ -200,10 +196,6 @@ public class NuGetPackIntegrationTests
         return csproj!;
     }
 
-    /// <summary>
-    /// Returns the one pack of <paramref name="packageId"/> under <paramref name="packOutput"/>,
-    /// failing the test when the folder holds no such pack or more than one.
-    /// </summary>
     private static string RequireNupkg(string packOutput, string packageId)
     {
         var produced = Directory.GetFiles(packOutput, "*.nupkg");
@@ -388,12 +380,9 @@ $@"<?xml version=""1.0"" encoding=""utf-8""?>
         TimeSpan timeout,
         CancellationToken ct)
     {
-        // Windows can't CreateProcess a .cmd/.bat directly — launch it via cmd.exe.
         var program = fileName;
         var argList = new List<string>(arguments);
-        if (OperatingSystem.IsWindows()
-            && (fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
-                || fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase)))
+        if (OperatingSystem.IsWindows() && IsBatchScriptRequiringCmdExe(fileName))
         {
             program = "cmd.exe";
             argList.Insert(0, fileName);
@@ -422,20 +411,22 @@ $@"<?xml version=""1.0"" encoding=""utf-8""?>
         }
         catch (TimeoutException)
         {
-            KillProcessTree(proc);
+            KillProcessTreeIgnoringAlreadyExitedOrDenied(proc);
             throw new TimeoutException($"`{program} {string.Join(' ', argList)}` did not exit within {timeout}.");
         }
         catch (OperationCanceledException)
         {
-            // The test's cancellation token fired (Ctrl-C / CI timeout): don't orphan
-            // the spawned generator/dotnet process — it can hold locks on the temp workspace.
-            KillProcessTree(proc);
+            KillProcessTreeIgnoringAlreadyExitedOrDenied(proc);
             throw;
         }
         return (proc.ExitCode, await stdoutTask, await stderrTask);
     }
 
-    private static void KillProcessTree(Process proc)
+    private static bool IsBatchScriptRequiringCmdExe(string fileName) =>
+        fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
+        || fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase);
+
+    private static void KillProcessTreeIgnoringAlreadyExitedOrDenied(Process proc)
     {
         try
         {
@@ -443,11 +434,9 @@ $@"<?xml version=""1.0"" encoding=""utf-8""?>
         }
         catch (InvalidOperationException)
         {
-            // Process already exited.
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            // Access denied / already gone.
         }
     }
 }

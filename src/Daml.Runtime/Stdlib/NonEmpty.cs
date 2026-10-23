@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Stdlib;
 
@@ -106,8 +107,8 @@ public sealed record NonEmpty<T>(T Hd, IReadOnlyList<T> Tl)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(convertElement);
-        var hd = convertElement(record.GetRequiredField("hd"));
-        var tl = record.GetRequiredField("tl").As<DamlList>().Values
+        var hd = convertElement(record.GetRequiredField("hd", 0));
+        var tl = record.GetRequiredField("tl", 1).As<DamlList>().Values
             .Select(convertElement)
             .ToList();
         return new NonEmpty<T>(hd, tl);
@@ -128,11 +129,11 @@ public sealed record NonEmpty<T>(T Hd, IReadOnlyList<T> Tl)
     public override int GetHashCode()
     {
         var hash = new HashCode();
-        hash.Add(Hd);
+        hash.Add(Hd, DamlEqualityComparer<T>.Default);
         hash.Add(Tl.Count);
         foreach (var item in Tl)
         {
-            hash.Add(item);
+            hash.Add(item, DamlEqualityComparer<T>.Default);
         }
         return hash.ToHashCode();
     }
@@ -179,7 +180,7 @@ internal sealed class NonEmptyJsonConverterFactory : JsonConverterFactory
 internal sealed class NonEmptyJsonConverter<T> : JsonConverter<NonEmpty<T>>
     where T : notnull
 {
-    private static readonly string TypeName = $"{nameof(NonEmpty<object>)}<{Describe(typeof(T))}>";
+    private static readonly string TypeName = $"{nameof(NonEmpty<object>)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
 
     /// <remarks>
     /// The posture <see cref="SetJsonConverter{T}"/> already holds: a null token is read as the
@@ -312,17 +313,4 @@ internal sealed class NonEmptyJsonConverter<T> : JsonConverter<NonEmpty<T>>
         (options.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingDefault
             && EqualityComparer<TProperty>.Default.Equals(value, default!))
         || (options.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull && value is null);
-
-    private static string Describe(Type type)
-    {
-        var arity = type.Name.IndexOf('`', StringComparison.Ordinal);
-        var name = arity < 0 ? type.Name : type.Name[..arity];
-        return type switch
-        {
-            { IsGenericType: true } =>
-                $"{name}<{string.Join(", ", type.GetGenericArguments().Select(Describe))}>",
-            { DeclaringType: not null } => $"{type.DeclaringType.Name}.{name}",
-            _ => name,
-        };
-    }
 }

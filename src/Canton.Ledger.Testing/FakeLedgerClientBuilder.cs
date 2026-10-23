@@ -37,6 +37,7 @@ public sealed partial class FakeLedgerClientBuilder
     private IReadOnlyList<ConnectedSynchronizer>? _connectedSynchronizers;
     private string? _ledgerApiVersion;
     private ExerciseOutcome<TransactionResult>? _submissionOutcome;
+    private SubmitAndWaitResult? _submitAndWaitResult;
     private ExerciseOutcome<TransactionTree>? _transactionTreeOutcome;
     private StagedTrafficCostEstimate? _trafficCostEstimate;
     private PreparedSubmission? _preparedSubmission;
@@ -260,6 +261,22 @@ public sealed partial class FakeLedgerClientBuilder
     {
         ArgumentNullException.ThrowIfNull(outcome);
         _submissionOutcome = outcome;
+        return this;
+    }
+
+    /// <summary>
+    /// Stages the result that
+    /// <see cref="FakeLedgerClient.SubmitAndWaitAsync(CommandsSubmission, TimeSpan?, CancellationToken)"/>
+    /// (and its <see cref="SubmitterInfo"/>-carrying overload) returns for every submission, with
+    /// its <see cref="SubmitAndWaitResult.CommandId"/> replaced by the command id the submission
+    /// carried, as a participant reports it.
+    /// </summary>
+    /// <param name="result">The result to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithSubmitAndWaitResult(SubmitAndWaitResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        _submitAndWaitResult = result;
         return this;
     }
 
@@ -492,6 +509,7 @@ public sealed partial class FakeLedgerClientBuilder
         new Dictionary<Type, object>(_exerciseResults),
         new Dictionary<Type, object>(_createResults),
         _submissionOutcome,
+        _submitAndWaitResult,
         _ledgerEnd,
         new FakeCantonSurface(
             new Dictionary<Type, object>(_reassignmentResults),

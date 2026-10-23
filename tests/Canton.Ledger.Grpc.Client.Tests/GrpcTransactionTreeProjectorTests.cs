@@ -313,6 +313,29 @@ public class GrpcTransactionTreeProjectorTests
     private static readonly ProtoIdentifier InterfaceId =
         new() { PackageId = "iface-pkg", ModuleName = "Token.Api", EntityName = "IAsset" };
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_a_created_node_with_a_blank_contract_id(string contractId)
+    {
+        var act = () => GrpcTransactionTreeProjector.Project(Transaction(Created(nodeId: 0, contractId)));
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: a created event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_an_exercised_node_with_a_blank_contract_id(string contractId)
+    {
+        var act = () => GrpcTransactionTreeProjector.Project(Transaction(
+            Exercised(nodeId: 0, lastDescendantNodeId: 0, contractId, "Archive")));
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: an exercised event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
     private static Transaction Transaction(params Event[] events)
     {
         var transaction = new Transaction { UpdateId = "update-1", Offset = 42L, CommandId = "cmd-1" };

@@ -50,8 +50,9 @@ public static class SingleCommandExtensions
     /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
-    /// Optional per-call deadline, applied best-effort by the transport; transports without a
-    /// server-side deadline apply a client-side bound only. <c>null</c> applies no deadline.
+    /// Optional per-attempt deadline, applied best-effort by the transport; transports without a
+    /// server-side deadline apply a client-side bound only. <c>null</c> falls back to the
+    /// client-wide <c>Timeout</c> option (30 seconds unless changed).
     /// </param>
     /// <param name="configure">
     /// Optional hook that receives the submission built for this call, already carrying the
@@ -83,7 +84,7 @@ public static class SingleCommandExtensions
         WriterExtensionHelpers.ThrowIfDefault(commandId);
 
         var submission = CommandsSubmission.Single(command)
-            .WithCommandId(commandId ?? new CommandId(Guid.NewGuid().ToString()))
+            .WithCommandId(commandId ?? IdMinting.MintCommandId())
             .WithOptionalWorkflowId(workflowId);
 
         return SubmitAsync(writer, ApplyConfigure(submission, command, configure), submitter, timeout, cancellationToken);
@@ -138,7 +139,8 @@ public static class SingleCommandExtensions
     /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
-    /// Optional per-call deadline, applied best-effort by the transport. <c>null</c> applies no deadline.
+    /// Optional per-attempt deadline, applied best-effort by the transport. <c>null</c> falls back to
+    /// the client-wide <c>Timeout</c> option (30 seconds unless changed).
     /// </param>
     /// <param name="configure">
     /// Optional hook that receives the submission built for this call, already carrying the

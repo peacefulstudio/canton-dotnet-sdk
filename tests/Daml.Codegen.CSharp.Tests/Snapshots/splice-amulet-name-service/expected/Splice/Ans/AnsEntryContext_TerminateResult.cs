@@ -27,5 +27,4 @@ public sealed record AnsEntryContext_TerminateResult : global::Daml.Runtime.Data
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return global::Daml.Runtime.Data.DamlRecord.Create();
     }
-
 }

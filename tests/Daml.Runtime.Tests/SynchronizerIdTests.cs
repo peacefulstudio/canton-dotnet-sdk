@@ -10,10 +10,8 @@ namespace Daml.Runtime.Tests;
 
 public class SynchronizerIdTests
 {
-    // Canton 3.4 shape: <name>::<fingerprint>
     private const string Canton34Id = "global_sync::12204457ac942c4d839331d402f82ecc941c6232de06a88097ade653350a2d6fc9c5";
 
-    // Canton 3.5 shape: <name>::<fingerprint>::<protocol-version>
     private const string Canton35Id = "global_sync::12204457ac942c4d839331d402f82ecc941c6232de06a88097ade653350a2d6fc9c5::35-0";
 
     private static readonly JsonSerializerOptions CaseInsensitiveOptions =
@@ -33,10 +31,6 @@ public class SynchronizerIdTests
     [Fact]
     public void Construct_should_store_id_verbatim_for_3_5_shape_treating_id_as_opaque()
     {
-        // Per Canton's official guidance, SynchronizerId metadata should be treated
-        // as an opaque string. The wrapper deliberately does NOT decompose into
-        // name/fingerprint/version — that would lock in a format that's already
-        // changed once.
         var sid = new SynchronizerId(Canton35Id);
         sid.Value.Should().Be(Canton35Id);
     }
@@ -133,11 +127,6 @@ public class SynchronizerIdTests
     [Fact]
     public void Post_LSU_3_4_and_3_5_strings_should_NOT_compare_equal_as_raw_ids()
     {
-        // Documented caveat: post-Logical-Synchronizer-Upgrade, a 3.4 id and a
-        // 3.5 id refer to the SAME synchronizer, but their wrapper-level
-        // equality is raw-string equality. Higher-level migration code must
-        // handle the cross-format comparison itself; the wrapper preserves the
-        // wire representation.
         new SynchronizerId(Canton34Id).Should().NotBe(new SynchronizerId(Canton35Id));
     }
 
@@ -169,8 +158,6 @@ public class SynchronizerIdTests
     [Fact]
     public void Json_should_round_trip_inside_a_record_payload()
     {
-        // The actual production shape: SynchronizerId arrives as a string field
-        // inside a containing record (Assigned/Unassigned, or PQS reassignment rows).
         var json = $"{{\"source\":\"{Canton35Id}\",\"note\":\"reassign-1\"}}";
 
         var payload = JsonSerializer.Deserialize<ReassignmentPayload>(json, CaseInsensitiveOptions);
@@ -197,9 +184,6 @@ public class SynchronizerIdTests
     [Fact]
     public void Json_should_throw_when_non_nullable_field_receives_null()
     {
-        // The actual PQS failure mode we're defending against: a payload where a
-        // required SynchronizerId field comes back as JSON null. Must fail loudly,
-        // not silently produce default(SynchronizerId).
         var json = "{\"source\":null,\"note\":\"reassign-1\"}";
 
         Action act = () => JsonSerializer.Deserialize<ReassignmentPayload>(json, CaseInsensitiveOptions);
@@ -258,13 +242,6 @@ public class SynchronizerIdTests
     [Fact]
     public void Json_should_serialize_null_inside_nullable_wrapper()
     {
-        // Locks in STJ's Nullable<T> short-circuit: when SynchronizerId?'s
-        // HasValue is false, STJ writes `null` directly without invoking
-        // SynchronizerIdJsonConverter.Write — so a legitimately-absent
-        // SynchronizerId? field doesn't over-fire the serialize-uninitialized
-        // JsonException guard. (A SynchronizerId? whose HasValue is true with
-        // an uninitialized inner Value still invokes the converter and throws,
-        // which is the intended behavior.)
         var payload = new OptionalSynchronizerPayload(Target: null, Note: "none");
 
         var json = JsonSerializer.Serialize(payload);

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>dpm</AssemblyName>
+    <RootNamespace>Daml.Codegen.MSBuild.Fixtures.FakeDpm</RootNamespace>
+  </PropertyGroup>
+
+</Project>

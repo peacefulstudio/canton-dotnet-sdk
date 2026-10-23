@@ -13,6 +13,7 @@ using Daml.Runtime.Outcomes;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime.Serialization;
 using Daml.Runtime.Streams;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 using RuntimeCommands = Daml.Runtime.Commands;
@@ -74,7 +75,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
 
         public static CountRequiringTemplate FromRecord(DamlRecord record)
         {
-            record.GetTypeParameterField("count", value => value, absentReadsAs: null);
+            record.GetTypeParameterField("count", 0, value => value, absentReadsAs: null);
             return new();
         }
     }
@@ -93,7 +94,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
 
         public static CountRequiringInterfaceMarker FromRecord(DamlRecord record)
         {
-            record.GetTypeParameterField("count", value => value, absentReadsAs: null);
+            record.GetTypeParameterField("count", 0, value => value, absentReadsAs: null);
             return new();
         }
     }
@@ -109,11 +110,21 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
         public DamlRecord ToRecord() => DamlRecord.Create();
     }
 
-    private RestLedgerClient ClientWith(RecordingHttpHandler transport)
+    private RestLedgerClient ClientWith(
+        RecordingHttpHandler transport,
+        ILogger<RestLedgerClient>? logger = null,
+        bool emitPartyAndContractSpanTags = false)
     {
         var factory = new StubHttpClientFactory(transport);
         _factories.Add(factory);
-        return new RestLedgerClient(factory, Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575" }));
+        return new RestLedgerClient(
+            factory,
+            Options.Create(new RestLedgerClientOptions
+            {
+                HttpAddress = "http://localhost:7575",
+                EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+            }),
+            logger);
     }
 
     [Fact]
@@ -345,6 +356,61 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
            "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"},
            "createdEventBlob": "AQID", "witnessParties": ["party::alice"]}, "synchronizerId": "sync::a"}}
         """;
+
+    private async Task<IEnumerable<string>> WarningsOfADisclosureWhoseBlobIsNotBase64(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, DisclosedCreatedJson.Replace("AQID", "not base64!", StringComparison.Ordinal));
+        using var logs = new CapturingLoggerFactory();
+
+        await ClientWith(transport, logs.CreateLogger<RestLedgerClient>(), emitPartyAndContractSpanTags).GetDisclosureAsync(
+            new ContractId<TypedReadTemplate>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        return logs.Records.Where(r => r.Level == LogLevel.Warning).Select(r => r.Message).ToList();
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_warns_about_a_blob_that_is_not_base64_without_the_contract_id_by_default()
+    {
+        (await WarningsOfADisclosureWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: false)).Should().Equal(
+            "The created_event_blob of a contract in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
+
+    [Fact]
+    public async Task GetDisclosureAsync_warns_about_a_blob_that_is_not_base64_with_the_contract_id_when_opted_in()
+    {
+        (await WarningsOfADisclosureWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: true)).Should().Equal(
+            "The created_event_blob of contract 00abc in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
+
+    private async Task<List<string>> WarningsOfAPageWhoseBlobIsNotBase64(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """
+            {"activeAtOffset": "10", "activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "TypedReadTemplate"}, "createArgument": {"owner": "party::alice"}, "createdEventBlob": "not base64!", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
+            """);
+        using var logs = new CapturingLoggerFactory();
+
+        await ClientWith(transport, logs.CreateLogger<RestLedgerClient>(), emitPartyAndContractSpanTags).GetActiveContractsPageAsync<TypedReadTemplate>(
+            Submitter, LedgerOffset.At(10), includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        return logs.Records.Where(r => r.Level == LogLevel.Warning).Select(r => r.Message).ToList();
+    }
+
+    [Fact]
+    public async Task GetActiveContractsPageAsync_warns_about_a_blob_that_is_not_base64_without_the_contract_id_by_default()
+    {
+        (await WarningsOfAPageWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: false)).Should().Equal(
+            "The created_event_blob of a contract in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
+
+    [Fact]
+    public async Task GetActiveContractsPageAsync_warns_about_a_blob_that_is_not_base64_with_the_contract_id_when_opted_in()
+    {
+        (await WarningsOfAPageWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: true)).Should().Equal(
+            "The created_event_blob of contract 00holding in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
 
     [Fact]
     public async Task GetDisclosureAsync_asks_for_the_created_event_blob_through_a_wildcard_filter_for_every_submitter_party()

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using AwesomeAssertions;
+using Canton.Ledger.Testing.Localnet;
 using Xunit;
 
 namespace Canton.Ledger.Client.Parity.Tests;
@@ -24,7 +25,7 @@ public sealed class LocalnetValidatorWalletTests
     {
         var wallet = LocalnetValidatorWallet.ForAValidator1(
             TokenEndpoint,
-            name => name == "CANTON_LOCALNET_A_VALIDATOR_1_VALIDATOR_API_URL" ? "http://validator.example:4000" : null);
+            name => name == LocalnetEnvironment.ValidatorApiUrl ? "http://validator.example:4000" : null);
 
         wallet.TapUri.Should().Be(new Uri("http://validator.example:4000/api/validator/v0/wallet/tap"));
     }

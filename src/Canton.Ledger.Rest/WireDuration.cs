@@ -20,6 +20,7 @@ internal static class WireDuration
 
     private const int NanosPerSecond = 1_000_000_000;
     private const int NanoDigits = 9;
+    private const long NanosPerTick = 100;
 
     /// <summary>
     /// Splits a proto3-canonical duration string into the seconds and nanoseconds the served
@@ -61,6 +62,19 @@ internal static class WireDuration
     /// </summary>
     internal static string CanonicalOf(JsonElement duration) =>
         CanonicalOf(IntegerOf(duration, SecondsProperty), IntegerOf(duration, NanosProperty));
+
+    /// <summary>
+    /// Renders a non-negative <see cref="TimeSpan"/> as the proto3-canonical string, at the
+    /// <c>100 ns</c> resolution of a tick.
+    /// </summary>
+    internal static string CanonicalOf(TimeSpan value)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(value, TimeSpan.Zero);
+
+        return CanonicalOf(
+            value.Ticks / TimeSpan.TicksPerSecond,
+            value.Ticks % TimeSpan.TicksPerSecond * NanosPerTick);
+    }
 
     /// <summary>
     /// Renders seconds and nanoseconds as the proto3-canonical string, with the fraction cut to the

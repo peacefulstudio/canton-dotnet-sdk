@@ -120,8 +120,11 @@ template RichRecord
     asOf : Date
     observedAt : Time
     note : Optional Text
+    nestedNote : Optional (Optional Text)
     tags : [Text]
     attributes : TextMap Text
+    genMap : Map Party Int
+    unitField : ()
     marker : ContractId Marker
     holdingCid : ContractId Holding
     holdingCids : [ContractId Holding]
@@ -138,6 +141,18 @@ template RichRecord
       controller owner
       do
         create this with label = newLabel
+
+    nonconsuming choice DescribeOutcome : Outcome
+      with
+        probe : Optional Int
+      controller owner
+      do
+        pure outcome
+
+    nonconsuming choice Ping : ()
+      controller owner
+      do
+        pure ()
 
 template TypeCorners
   with

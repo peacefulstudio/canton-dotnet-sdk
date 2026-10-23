@@ -34,8 +34,7 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     private readonly CancellationTokenSource _disposal = new();
 
     private Task<string>? _refreshInFlight;
-    private string? _cachedToken;
-    private long _refreshAtTicks;
+    private CachedToken? _cached;
     private Task<string>? _cooldownFailure;
     private long _cooldownEndsAtTicks;
     private TimeSpan _cooldownWindow;
@@ -179,10 +178,12 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
 
     private bool TryGetUnexpiredCachedToken([NotNullWhen(true)] out string? cachedToken)
     {
-        cachedToken = Volatile.Read(ref _cachedToken);
-        return cachedToken is not null
-            && _timeProvider.GetUtcNow().Ticks < Volatile.Read(ref _refreshAtTicks);
+        var cached = Volatile.Read(ref _cached);
+        cachedToken = cached?.Value;
+        return cached is not null && _timeProvider.GetUtcNow().Ticks < cached.RefreshAtTicks;
     }
+
+    private sealed record CachedToken(string Value, long RefreshAtTicks);
 
     private async Task<string> RequestTokenAsync(CancellationToken disposalToken)
     {
@@ -234,8 +235,11 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
                 throw new InvalidOperationException(
                     $"Token endpoint {_tokenEndpoint} returned an invalid expires_in value '{tokenResponse.ExpiresIn}'. A positive value is required.");
 
-            Volatile.Write(ref _cachedToken, tokenResponse.AccessToken);
-            Volatile.Write(ref _refreshAtTicks, RefreshAtTicks(TimeSpan.FromSeconds(tokenResponse.ExpiresIn)));
+            Volatile.Write(
+                ref _cached,
+                new CachedToken(
+                    tokenResponse.AccessToken,
+                    RefreshAtTicks(TimeSpan.FromSeconds(tokenResponse.ExpiresIn))));
 
             LogTokenAcquired(_logger, _tokenEndpoint);
 

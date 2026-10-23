@@ -46,7 +46,7 @@ public sealed record Branch(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Label);
+        hash.Add(Label, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Children));
         return hash.ToHashCode();
     }
@@ -59,8 +59,8 @@ public sealed record Branch(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Branch FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Branch(
-        Label: record.GetRequiredField("label").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Children: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch>)record.GetRequiredField("children").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList()
+        Label: record.GetRequiredField("label", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Children: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch>)record.GetRequiredField("children", 1).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -73,5 +73,4 @@ public sealed record Branch(
             global::Daml.Runtime.Data.DamlField.Create("children", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "children"), context.Field("children"), (__json0, __ctx0) => global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.__ReadDamlLfJson(__json0, __ctx0)))
         );
     }
-
 }

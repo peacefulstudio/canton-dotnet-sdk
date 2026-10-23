@@ -27,8 +27,8 @@ internal sealed partial class RestLedgerClient
     /// told not to; the request carries no <c>estimateTrafficCost</c> hints because Canton 3.5.19
     /// rejects the hints object unless it spells out both <c>disabled</c> and
     /// <c>expectedSignatures</c>. The per-call
-    /// <paramref name="timeout"/> bounds the request; when <see langword="null"/> the call runs under
-    /// the <see cref="HttpClient"/>'s own timeout. The cost does not reach a span, because this
+    /// <paramref name="timeout"/> bounds each attempt of the request; when <see langword="null"/> the call
+    /// runs under <see cref="RestLedgerClientOptions.Timeout"/>. The cost does not reach a span, because this
     /// client's spans are emitted per HTTP request by the pipeline handler rather than per client
     /// method.
     /// </remarks>

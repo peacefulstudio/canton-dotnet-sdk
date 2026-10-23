@@ -127,6 +127,7 @@ public static class TransactionTreeExtensions
             null)
         {
             ExercisedEvents = EquatableArray.Create(exercisedEvents),
+            PaidTrafficCost = tree.PaidTrafficCost,
         };
     }
 }

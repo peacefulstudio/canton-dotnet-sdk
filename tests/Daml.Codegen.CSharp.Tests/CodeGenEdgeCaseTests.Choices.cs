@@ -16,7 +16,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_choice_with_party_return_type()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -51,11 +50,9 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         contractFile.Should().NotBeNull();
         var code = contractFile!.Content;
 
@@ -66,7 +63,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_choice_with_complex_return_type()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -82,7 +78,6 @@ public partial class CodeGenEdgeCaseTests
                             Name = "GetData",
                             Consuming = false,
                             ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
-                            // Complex return type that falls back to FromRecord
                             ReturnType = new DamlTypeApp(
                                 new DamlPrimitiveType(DamlPrimitive.List),
                                 [new DamlPrimitiveType(DamlPrimitive.Text)])
@@ -104,19 +99,16 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         contractFile.Should().NotBeNull();
         var code = contractFile!.Content;
 
-        // Complex types decode element-by-element through the field-conversion helper.
-        // The previous expectation `IReadOnlyList<string>.FromRecord(...)` was a known
-        // codegen bug — IReadOnlyList<T> has no FromRecord, so it never compiled.
         code.Should().Contain("global::Daml.Runtime.Commands.Choice<Asset, global::Daml.Runtime.Data.DamlUnit, global::System.Collections.Generic.IReadOnlyList<string>>");
-        code.Should().Contain("ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyList<string>)val.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList()");
+        code.Should().Contain(
+            "ResultDecoder = val => (global::System.Collections.Generic.IReadOnlyList<string>)val.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList()",
+            because: "list results decode element by element, since IReadOnlyList<T> has no FromRecord");
     }
 
     #endregion
@@ -126,7 +118,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_get_fields_from_the_same_named_data_type()
     {
-        // Arrange - fields come from the corresponding data type
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -156,15 +147,12 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         assetFile.Should().NotBeNull();
         var code = assetFile!.Content;
 
-        // Should have fields from the data type
         code.Should().Contain("Party Owner");
         code.Should().Contain("decimal Value");
     }
@@ -176,7 +164,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_not_create_separate_data_type_for_template()
     {
-        // Arrange - Data type with same name as template should only appear as template
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -192,12 +179,12 @@ public partial class CodeGenEdgeCaseTests
             [
                 new DamlDataType
                 {
-                    Name = "Token", // Same name as template
+                    Name = "Token",
                     Definition = new DamlRecordDefinition([new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))])
                 },
                 new DamlDataType
                 {
-                    Name = "OtherType", // Different name
+                    Name = "OtherType",
                     Definition = new DamlRecordDefinition([new DamlFieldDefinition("value", new DamlPrimitiveType(DamlPrimitive.Text))])
                 }
             ],
@@ -207,17 +194,13 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
 
-        // Assert - Should have Token.cs (template) and OtherType.cs (data type), not two Token.cs
         var tokenFiles = files.Where(f => f.RelativePath.EndsWith("Token.cs", global::System.StringComparison.Ordinal)).ToList();
-        tokenFiles.Should().HaveCount(1);
+        tokenFiles.Should().HaveCount(1, because: "a data type named like its template must not produce a second Token.cs");
 
-        // The Token should be a template (has ITemplate)
         tokenFiles[0].Content.Should().Contain(": global::Daml.Runtime.Contracts.ITemplate");
 
-        // OtherType should exist as a data type
         var otherTypeFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("OtherType.cs", global::System.StringComparison.Ordinal));
         otherTypeFile.Should().NotBeNull();
         otherTypeFile!.Content.Should().Contain(": global::Daml.Runtime.Data.IDamlRecord<OtherType>");
@@ -230,7 +213,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_variant_constructor_without_argument()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -253,17 +235,13 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var maybeFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Maybe.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         maybeFile.Should().NotBeNull();
         var code = maybeFile!.Content;
 
-        // Nothing has no argument
         code.Should().Contain("public sealed record Nothing() : Maybe");
-        // Just has an argument
         code.Should().Contain("public sealed record Just(string Value) : Maybe");
     }
 

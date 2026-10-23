@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    $(DamlGeneratedDir) has no default here: its default is $(IntermediateOutputPath)DamlGenerated/,
+    but $(IntermediateOutputPath) isn't set by the .NET SDK until after every NuGet package's
+    props AND targets have been imported, so a file-scope default here would silently snapshot
+    it empty. See Daml.Codegen.CSharp.MSBuild.Shared.targets' DamlResolveGeneratedDir target,
+    which every target that reads $(DamlGeneratedDir) depends on instead.
+  -->
+  <PropertyGroup>
+    <DamlNamespace Condition="'$(DamlNamespace)' == ''"></DamlNamespace>
+    <DamlIncludeDependencies Condition="'$(DamlIncludeDependencies)' == ''">false</DamlIncludeDependencies>
+    <DamlVerbosity Condition="'$(DamlVerbosity)' == ''">1</DamlVerbosity>
+    <DamlNullable Condition="'$(DamlNullable)' == ''">true</DamlNullable>
+  </PropertyGroup>
+</Project>

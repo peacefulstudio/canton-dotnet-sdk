@@ -16,6 +16,8 @@ using NSubstitute;
 using Xunit;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime.Outcomes;
+using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Testing.Helpers;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
 using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
@@ -24,6 +26,7 @@ using Status = Grpc.Core.Status;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
 
+[Collection("LedgerClient global ActivitySource")]
 public sealed class LedgerClientTypedReadsTests : IDisposable
 {
     private static readonly Party Alice = new("alice::ns1");
@@ -110,7 +113,7 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
     }
 
     [Fact]
-    public async Task GetContractAsync_reads_the_labelled_payload_from_the_event_query_when_the_contract_service_omits_field_labels()
+    public async Task GetContractAsync_decodes_the_unlabelled_payload_of_its_one_GetContract_call()
     {
         var unlabelled = CreatedEvent("00abc", offset: 0L, "alice::ns1");
         foreach (var field in unlabelled.CreateArguments.Fields)
@@ -121,21 +124,17 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
         _contractService
             .GetContractAsync(Arg.Any<GetContractRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(Unary(new GetContractResponse { CreatedEvent = unlabelled }));
-        GetEventsByContractIdRequest? eventQuery = null;
-        _eventQueryService
-            .GetEventsByContractIdAsync(Arg.Do<GetEventsByContractIdRequest>(r => eventQuery = r), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(Unary(new GetEventsByContractIdResponse
-            {
-                Created = new Created { CreatedEvent = CreatedEvent("00abc", 5L, "alice::ns1"), SynchronizerId = "sync::a" },
-            }));
 
         var contract = await CreateClient().GetContractAsync(
             new ContractId<FooBar>("00abc"), Submitter, cancellationToken: TestContext.Current.CancellationToken);
 
-        eventQuery!.ContractId.Should().Be("00abc");
         contract.ContractId.Value.Should().Be("00abc");
         contract.Payload.Owner.Should().Be("alice::ns1");
         contract.WitnessParties.Select(p => p.Value).Should().Equal("alice::ns1");
+        _ = _contractService.Received(1).GetContractAsync(
+            Arg.Any<GetContractRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+        _ = _eventQueryService.DidNotReceive().GetEventsByContractIdAsync(
+            Arg.Any<GetEventsByContractIdRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -221,6 +220,62 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
 
         lifecycle.Created.Should().NotBeNull();
         lifecycle.Archived.Should().BeNull();
+    }
+
+    public static TheoryData<string> ContractReadsTaggingTheContractId => new()
+    {
+        "GetContract",
+        "GetEventsByContractId",
+        "GetDisclosure",
+    };
+
+    private async Task ReadContract(string read)
+    {
+        var contractId = new ContractId<FooBar>("00abc");
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var client = CreateClient();
+        switch (read)
+        {
+            case "GetContract":
+                _contractService
+                    .GetContractAsync(Arg.Any<GetContractRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+                    .Returns(Unary(new GetContractResponse { CreatedEvent = CreatedEvent("00abc", offset: 42L, "alice::ns1", "bob::ns1") }));
+                await client.GetContractAsync(contractId, Submitter, cancellationToken: cancellationToken);
+                break;
+            case "GetEventsByContractId":
+                StubEventsByContractId(onRequest: null, DisclosedCreated("00abc"));
+                await client.GetEventsByContractIdAsync(contractId, Submitter, cancellationToken: cancellationToken);
+                break;
+            case "GetDisclosure":
+                StubEventsByContractId(onRequest: null, DisclosedCreated("00abc"));
+                await client.GetDisclosureAsync(contractId, Submitter, cancellationToken: cancellationToken);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(read), read, null);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ContractReadsTaggingTheContractId))]
+    public async Task Contract_read_leaves_the_contract_id_off_the_span_by_default(string read)
+    {
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        await ReadContract(read);
+
+        capture.Activities.Should().ContainSingle().Subject.GetTagItem(LedgerActivityTagNames.DamlContractId).Should().BeNull();
+    }
+
+    [Theory]
+    [MemberData(nameof(ContractReadsTaggingTheContractId))]
+    public async Task Contract_read_tags_the_contract_id_when_opted_in(string read)
+    {
+        _options.EmitPartyAndContractSpanTags = true;
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        await ReadContract(read);
+
+        capture.Activities.Should().ContainSingle().Subject.GetTagItem(LedgerActivityTagNames.DamlContractId).Should().Be("00abc");
     }
 
     [Fact]

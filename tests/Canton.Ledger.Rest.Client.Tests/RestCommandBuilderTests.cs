@@ -130,7 +130,48 @@ public class RestCommandBuilderTests
 
         var commands = RestCommandBuilder.BuildCommands(submission, userId: "test-user");
 
-        commands.MinLedgerTimeRel.Should().Be("1.5s");
+        commands.MinLedgerTimeRel.Should().Be("1.500s");
+    }
+
+    [Theory]
+    [InlineData(0L, """{"seconds":0,"nanos":0}""")]
+    [InlineData(1L, """{"seconds":0,"nanos":100}""")]
+    [InlineData(5_000_000L, """{"seconds":0,"nanos":500000000}""")]
+    [InlineData(15_000_000L, """{"seconds":1,"nanos":500000000}""")]
+    [InlineData(50_000_000L, """{"seconds":5,"nanos":0}""")]
+    [InlineData(15_000_001L, """{"seconds":1,"nanos":500000100}""")]
+    public void BuildCommands_writes_a_relative_min_ledger_time_to_the_wire_as_seconds_and_nanos(
+        long ticks, string expectedWireObject)
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithCommandId(TestCommandId)
+            .WithMinLedgerTime(new RuntimeCommands.MinLedgerTime.Relative(TimeSpan.FromTicks(ticks)));
+
+        var json = JsonSerializer.Serialize(
+            RestCommandBuilder.BuildCommands(submission, userId: null), RestRefitSettings.SerializerOptions);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("minLedgerTimeRel").GetRawText().Should().Be(expectedWireObject);
+    }
+
+    [Theory]
+    [InlineData(1L, """{"DeduplicationDuration":{"value":{"seconds":0,"nanos":100}}}""")]
+    [InlineData(15_000_000L, """{"DeduplicationDuration":{"value":{"seconds":1,"nanos":500000000}}}""")]
+    [InlineData(50_000_000L, """{"DeduplicationDuration":{"value":{"seconds":5,"nanos":0}}}""")]
+    public void BuildCommands_writes_a_deduplication_duration_to_the_wire_as_seconds_and_nanos(
+        long ticks, string expectedWirePeriod)
+    {
+        var submission = RuntimeCommands.CommandsSubmission.Single(Create())
+            .WithActAs(Alice)
+            .WithCommandId(TestCommandId)
+            .WithDeduplicationPeriod(new RuntimeCommands.DeduplicationPeriod.Duration(TimeSpan.FromTicks(ticks)));
+
+        var json = JsonSerializer.Serialize(
+            RestCommandBuilder.BuildCommands(submission, userId: null), RestRefitSettings.SerializerOptions);
+
+        using var document = JsonDocument.Parse(json);
+        document.RootElement.GetProperty("deduplicationPeriod").GetRawText().Should().Be(expectedWirePeriod);
     }
 
     [Fact]
@@ -178,7 +219,7 @@ public class RestCommandBuilderTests
 
         act.Should().Throw<ArgumentOutOfRangeException>(
             "a do-not-commit-before bound that has already passed is not a bound, so the bound type "
-            + "refuses it before RestWireConversions.ToWireDuration is ever reached");
+            + "refuses it before WireDuration.CanonicalOf is ever reached");
     }
 
     [Fact]
@@ -580,19 +621,6 @@ public class RestCommandBuilderTests
             RestRefitSettings.SerializerOptions);
 
         json.Should().NotContain("\"assignCommand\"");
-    }
-
-    [Fact]
-    public void BuildReassignmentCommands_rejects_an_unassign_with_an_empty_contract_id_naming_the_field()
-    {
-        var submission = ReassignmentSubmission.Of(
-            new UnassignCommand("", new SynchronizerId("source::1220ab"), new SynchronizerId("target::1220cd")),
-            Alice);
-
-        var act = () => RestCommandBuilder.BuildReassignmentCommands(submission, "user-1");
-
-        act.Should().Throw<ArgumentException>()
-            .Which.ParamName.Should().Be("unassign contract id");
     }
 
     [Fact]

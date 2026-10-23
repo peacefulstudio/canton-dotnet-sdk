@@ -123,6 +123,12 @@ public class EmittedTemplateChoiceCompilesTests
     [Fact]
     public void Emitted_choice_returning_an_interface_contract_id_compiles()
     {
+        var holdableInterfacePlaceholderRecord = new DamlDataType
+        {
+            Name = "Holdable",
+            Definition = new DamlRecordDefinition([]),
+        };
+
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -150,13 +156,7 @@ public class EmittedTemplateChoiceCompilesTests
                     Name = "Vault",
                     Definition = new DamlRecordDefinition([new DamlFieldDefinition("owner", new DamlPrimitiveType(DamlPrimitive.Party))]),
                 },
-                // Interface marker `Holdable` also surfaces as a serializable placeholder
-                // record of the same name — this is what flags the type as an interface.
-                new DamlDataType
-                {
-                    Name = "Holdable",
-                    Definition = new DamlRecordDefinition([]),
-                },
+                holdableInterfacePlaceholderRecord,
             ],
             Interfaces = [new DamlInterface { Name = "Holdable", Choices = [], ViewType = null }],
         };
@@ -482,16 +482,6 @@ public class EmittedTemplateChoiceCompilesTests
     [Fact]
     public void Emitted_template_with_payload_derived_observers_compiles()
     {
-        // End-to-end: template with payload-derived signatories, controllers,
-        // AND observers. The codegen should emit:
-        //   - SubmissionExtensions.TryCreateAsync (payload-only)
-        //   - SubmissionExtensions.Observers(payload) doc helper
-        //   - <Template>Extensions.<Choice>Async with Party params for both
-        //     controllers (actAs) and non-controller observers (readAs)
-        //   - SubmitterInfo built locally with both actAs and readAs
-        //   - submitter passed straight to TrySubmitAndWaitForTransactionAsync
-        // All three concerns compile cleanly against the real
-        // Daml.Runtime + Daml.Ledger.Abstractions surface.
         var module = new DamlModule
         {
             Name = "Test.Module",

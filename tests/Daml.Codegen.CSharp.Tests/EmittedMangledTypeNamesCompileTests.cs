@@ -74,4 +74,19 @@ public class EmittedMangledTypeNamesCompileTests
             + "literal type Foo_u0027, not collapse onto it (CS0101); got: "
             + $"{string.Join("; ", errors.Select(d => d.ToString()))}");
     }
+
+    [Fact]
+    public void Emitted_types_from_an_astral_code_point_and_its_escaped_dollar_spelling_do_not_collide()
+    {
+        var files = CreateGenerator().Generate(TwoRecordDar("Smile$U0001f642", "Smile$$U0001f642"));
+
+        var errors = CompileEmittedFiles(files)
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToList();
+
+        errors.Should().BeEmpty(
+            "damlc mangles a Smile followed by U+1F642 to Smile$U0001f642 and a literal Smile$U0001f642 to "
+            + "Smile$$U0001f642, which must stay two distinct C# types; got: "
+            + $"{string.Join("; ", errors.Select(d => d.ToString()))}");
+    }
 }

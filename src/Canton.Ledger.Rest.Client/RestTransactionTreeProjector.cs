@@ -32,7 +32,10 @@ internal static class RestTransactionTreeProjector
         return new TransactionTree(
             transaction.UpdateId,
             LedgerOffset.At(RestWireConversions.ParseOffset(transaction.Offset)),
-            roots);
+            roots)
+        {
+            PaidTrafficCost = RestWireConversions.ToPaidTrafficCost(transaction.PaidTrafficCost),
+        };
     }
 
     private static TreeNode ToTreeNode(WireEvent? evt)
@@ -66,7 +69,7 @@ internal static class RestTransactionTreeProjector
 
         return new TreeEvent.Exercised(
             TreeShape.EventIdOf(nodeId),
-            exercised.ContractId,
+            MalformedResponse.RequireContractId(exercised.ContractId, "an exercised event"),
             runtimeTemplateId,
             exercised.InterfaceId is null ? null : RestWireConversions.ToRuntimeIdentifier(exercised.InterfaceId),
             new ChoiceName(exercised.Choice),
@@ -98,7 +101,7 @@ internal static class RestTransactionTreeProjector
 
         return new TreeEvent.Created(
             TreeShape.EventIdOf(nodeId),
-            created.ContractId,
+            MalformedResponse.RequireContractId(created.ContractId, "a created event"),
             runtimeTemplateId,
             payload.Arguments,
             RestWireConversions.ToPartyList(created.WitnessParties),

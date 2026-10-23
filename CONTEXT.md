@@ -40,6 +40,23 @@ code that depends on Digital Asset's own Scala case-class shapes; everything out
 helper depends on the Intermediate AST.
 _Avoid_: "AST converter", "Scala-to-proto mapper"
 
+**Oracle**:
+The JVM helper, in its role as the source of truth for what Intermediate DAR a `.dar` must
+produce. Any other producer of Intermediate DARs is correct exactly when it agrees with the
+oracle; when the two disagree, the other producer is wrong.
+_Avoid_: "reference implementation", "golden"
+
+**Oracle fixture**:
+The oracle's recorded Intermediate DAR for one pinned `.dar` at one oracle version. A fixture
+that disagrees with the oracle after a version bump is stale and is regenerated, never
+treated as the truth.
+_Avoid_: "golden file", "snapshot", "expected output"
+
+**Intermediate DAR oracle check**:
+The byte comparison of another producer's Intermediate DAR against the oracle fixture for the
+same `.dar`. It is what lets an SDK claim it reads DARs the way the oracle does.
+_Avoid_: "oracle check", "parity test", "differential test"
+
 **C# emitter**:
 The .NET binary that consumes an Intermediate DAR and writes `.cs` files. Implemented by
 `CSharpCodeGenerator`, which walks the model that `IntermediateDarReader` builds from the
@@ -82,6 +99,10 @@ toolchain is not distributed as a `dotnet tool`, a Docker image, or a NuGet
 package. (The `Daml.Codegen.CSharp` emitter library is separately published
 as a NuGet library for programmatic use.)
 _Avoid_: "the cli", "codegen-cs tool", "codegen-cs plugin", "the container"
+
+**Daml project**:
+A directory holding a `daml.yaml` and the `.daml` sources it builds into one DAR. A consumer names it with a `DamlProject` item, and `dotnet build` turns it into a `DamlArchive` before codegen.
+_Avoid_: "Daml package" (clashes with NuGet packages and Daml package ids), "Daml source"
 
 **Package name table**:
 The one place that decides, for a Daml package, what each of its types is called in C# and

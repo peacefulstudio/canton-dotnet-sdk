@@ -37,7 +37,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_numeric_with_scale_argument()
     {
-        // Arrange - Numeric 10 is represented as DamlTypeApp(Numeric, [10])
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -51,7 +50,7 @@ public partial class CodeGenEdgeCaseTests
                     [
                         new DamlFieldDefinition("value", new DamlTypeApp(
                             new DamlPrimitiveType(DamlPrimitive.Numeric),
-                            [new DamlTypeVar("10")])) // Numeric 10 scale
+                            [new DamlTypeVar("10")]))
                     ])
                 }
             ],
@@ -61,15 +60,12 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var amountFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Amount.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         amountFile.Should().NotBeNull();
         var code = amountFile!.Content;
 
-        // Numeric with scale still maps to decimal
         code.Should().Contain("decimal Value");
         code.Should().Contain("new global::Daml.Runtime.Data.DamlNumeric(Value)");
     }
@@ -117,7 +113,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_type_variable()
     {
-        // Arrange - Generic types have type variables
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -139,15 +134,12 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         containerFile.Should().NotBeNull();
         var code = containerFile!.Content;
 
-        // Type variables are mapped to generic type parameters (a -> TA)
         code.Should().Contain("TA Item");
     }
 

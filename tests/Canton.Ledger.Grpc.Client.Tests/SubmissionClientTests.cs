@@ -11,6 +11,7 @@ using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
 using Grpc.Core;
+using Canton.Ledger.Testing.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -98,6 +99,44 @@ public class SubmissionClientTests
         success.Result.UpdateId.Should().Be("u-original");
         readOffset.Should().Be(42L,
             "the completion_offset carried on the duplicate rejection is resolved via the injected point read");
+    }
+
+    private async Task<(string Category, LogLevel Level, string Message, Exception? Exception)> WarningOfAnUnprojectableRetriedDuplicate()
+    {
+        _options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
+        StubSubmitAndWaitForTransaction(
+            Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()),
+            Faulted<SubmitAndWaitForTransactionResponse>(DuplicateCommand(completionOffset: 42L)));
+        using var logs = new CapturingLoggerFactory();
+        var client = CreateClient(
+            readTransactionAtOffset: (_, _, _, _) => throw new InvalidOperationException("cannot read a transaction naming party::alice"),
+            logger: new Logger<LedgerClient>(logs));
+
+        await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        return logs.Records.Single(r => r.Level == LogLevel.Warning && r.Message.Contains("could not be projected", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_logs_an_unprojectable_retried_duplicate_without_its_failure_message_by_default()
+    {
+        var warning = await WarningOfAnUnprojectableRetriedDuplicate();
+
+        warning.Message.Should().Be(
+            "Retried submission test-cmd was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the update at completion offset 42 could not be projected as a transaction; surfacing the DUPLICATE_COMMAND error");
+        warning.Exception.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_logs_the_failure_message_of_an_unprojectable_retried_duplicate_when_opted_in()
+    {
+        _options.EmitPartyAndContractSpanTags = true;
+
+        var warning = await WarningOfAnUnprojectableRetriedDuplicate();
+
+        warning.Message.Should().Be(
+            "Retried submission test-cmd was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the update at completion offset 42 could not be projected as a transaction (cannot read a transaction naming party::alice); surfacing the DUPLICATE_COMMAND error");
+        warning.Exception.Should().BeOfType<InvalidOperationException>();
     }
 
     [Fact]

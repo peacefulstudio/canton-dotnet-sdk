@@ -17,6 +17,15 @@ public sealed record TrailingNote(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("remark")] string? Remark
 ) : global::Daml.Runtime.Data.IDamlRecord<TrailingNote>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Text, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Remark, global::Daml.Runtime.Data.DamlEqualityComparer<string?>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("text", new global::Daml.Runtime.Data.DamlText(Text)),
@@ -25,8 +34,8 @@ public sealed record TrailingNote(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TrailingNote FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TrailingNote(
-        Text: record.GetRequiredField("text").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Remark: record.GetOptionalField("remark").AsOptional().HasValue ? record.GetOptionalField("remark").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null
+        Text: record.GetRequiredField("text", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Remark: record.GetOptionalField("remark", 1).AsOptional().HasValue ? record.GetOptionalField("remark", 1).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record TrailingNote(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "remark", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("remark"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

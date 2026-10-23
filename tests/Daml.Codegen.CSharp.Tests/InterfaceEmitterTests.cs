@@ -359,6 +359,49 @@ public class InterfaceEmitterTests
     }
 
     [Fact]
+    public void InterfaceEmitter_closes_a_view_only_marker_right_after_its_last_view_property()
+    {
+        var output = EmitAssetWithLocalView();
+
+        output.Should().Contain("    decimal Amount { get; }\n}\n");
+    }
+
+    [Fact]
+    public void InterfaceEmitter_separates_the_view_properties_with_one_blank_line()
+    {
+        var output = EmitAssetWithLocalView(generateXmlDocs: false);
+
+        output.Should().Contain("Owner { get; }\n\n    decimal Amount { get; }\n}\n");
+    }
+
+    [Fact]
+    public void InterfaceEmitter_leaves_no_blank_line_before_the_closing_brace_of_a_marker_without_view_or_choices()
+    {
+        var output = EmitInterface(Interface("Lockable"));
+
+        output.Should().NotContain("\n\n}");
+    }
+
+    [Fact]
+    public void InterfaceEmitter_leaves_no_blank_line_before_the_closing_brace_of_a_marker_with_view_and_choices()
+    {
+        var output = EmitInterface(
+            Interface(
+                "Asset",
+                new DamlTypeRef("", ModuleName, "AssetView"),
+                new DamlChoice
+                {
+                    Name = "Transfer",
+                    Consuming = true,
+                    ArgumentType = new DamlPrimitiveType(DamlPrimitive.Party),
+                    ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                }),
+            dataTypes: [AssetViewRecord()]);
+
+        output.Should().NotContain("\n\n}");
+    }
+
+    [Fact]
     public void InterfaceEmitter_filters_interfaces_with_the_root_filter()
     {
         var options = new CodeGenOptions

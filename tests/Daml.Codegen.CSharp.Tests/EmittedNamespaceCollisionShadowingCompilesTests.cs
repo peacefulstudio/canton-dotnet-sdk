@@ -264,12 +264,6 @@ public class EmittedNamespaceCollisionShadowingCompilesTests
     [InlineData("Acme.NonEmpty.V1")]
     public void Emitted_stdlib_types_compile_when_module_namespace_shadows_a_stdlib_type(string moduleName)
     {
-        // Phase 2 of routing Daml.Runtime.Stdlib.* through the central qualifier:
-        // a record field typed as RelTime plus parametric stdlib types
-        // (Either/Tuple2/Set/Map/NonEmpty) and a Unit-returning choice, all emitted
-        // into a namespace whose tail segment shadows a stdlib simple name. The
-        // qualifier must global::-qualify the shadowed names and the file must carry
-        // `using Daml.Runtime.Stdlib;`, so the emitted code compiles with no CS0118.
         var stdlibPackage = new DamlPackage
         {
             PackageId = "daml-prim-id",

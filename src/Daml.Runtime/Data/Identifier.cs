@@ -23,7 +23,31 @@ public sealed record Identifier(
     public override string ToString() => $"{PackageId}:{ModuleName}:{EntityName}";
 
     internal Identifier AddressedByPackageName(string packageName) =>
-        PackageNames.IsPlaceholder(packageName) ? this : this with { PackageId = $"#{packageName}" };
+        PackageNames.IsPlaceholder(packageName) ? this : WithPackageNameReference(packageName);
+
+    internal Identifier WithPackageNameReference(string? packageName)
+    {
+        if (packageName is not null && packageName.StartsWith(PackageNames.ReferencePrefix, StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"Package name '{packageName}' already carries the '#' by-package-name prefix; "
+                + "pass the bare package name.",
+                nameof(packageName));
+        }
+
+        if (string.IsNullOrWhiteSpace(packageName))
+        {
+            var packageIdClause = PackageId.Length == 0 ? string.Empty : $" (package-id {PackageId})";
+            var message =
+                $"A non-empty package name is required to address {ModuleName}:{EntityName}{packageIdClause} "
+                + "by package name; Canton's ACS and update filter endpoints reject the package-id hash form on filters.";
+            throw packageName is null
+                ? new ArgumentNullException(nameof(packageName), message)
+                : new ArgumentException(message, nameof(packageName));
+        }
+
+        return this with { PackageId = $"{PackageNames.ReferencePrefix}{packageName}" };
+    }
 
     /// <summary>
     /// Parses an identifier from its string representation.

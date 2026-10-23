@@ -54,9 +54,14 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
         long? windowLimit = null,
         TimeSpan? windowIdleTimeout = null,
         ILogger<RestLedgerClient>? logger = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        bool emitPartyAndContractSpanTags = false)
     {
-        var options = new RestLedgerClientOptions { HttpAddress = "http://localhost:7575" };
+        var options = new RestLedgerClientOptions
+        {
+            HttpAddress = "http://localhost:7575",
+            EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+        };
         if (windowLimit is { } limit)
         {
             options.StreamWindowLimit = limit;
@@ -762,6 +767,79 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
         warnings[1].Should().Contain("200 consecutive windows");
     }
 
+    private const string RejectionNamingAParty =
+        """{"code": "INVALID_ARGUMENT", "cause": "party carol::1220 is unknown"}""";
+
+    private async Task<List<string>> WarningsOfARejectedWindow(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.BadRequest, RejectionNamingAParty);
+        using var logs = new CapturingLoggerFactory();
+        var client = ClientWith(
+            transport,
+            logger: logs.CreateLogger<RestLedgerClient>(),
+            emitPartyAndContractSpanTags: emitPartyAndContractSpanTags);
+
+        await foreach (var _ in client.SubscribeAsync<TestTemplate>(
+            Alice, LedgerOffset.At(5), toOffset: null, TestContext.Current.CancellationToken))
+        {
+        }
+
+        return WarningsFrom(logs);
+    }
+
+    private async Task<List<string>> WarningsOfAnUnansweredWindow(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithTransportException(new HttpRequestException("connection to carol::1220 refused"));
+        using var logs = new CapturingLoggerFactory();
+        var client = ClientWith(
+            transport,
+            logger: logs.CreateLogger<RestLedgerClient>(),
+            emitPartyAndContractSpanTags: emitPartyAndContractSpanTags);
+
+        await foreach (var _ in client.SubscribeAsync<TestTemplate>(
+            Alice, LedgerOffset.At(5), toOffset: null, TestContext.Current.CancellationToken))
+        {
+        }
+
+        return WarningsFrom(logs);
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_logs_a_rejected_window_with_its_status_but_not_the_server_message_by_default()
+    {
+        var warnings = await WarningsOfARejectedWindow(emitPartyAndContractSpanTags: false);
+
+        warnings.Should().Equal(
+            "Stream window request failed with status Http { StatusCode = BadRequest } — surfaced in-band as a terminal StreamError");
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_logs_the_server_message_of_a_rejected_window_when_opted_in()
+    {
+        var warnings = await WarningsOfARejectedWindow(emitPartyAndContractSpanTags: true);
+
+        warnings.Should().Equal(
+            "Stream window request failed with status Http { StatusCode = BadRequest } — surfaced in-band as a terminal StreamError: party carol::1220 is unknown");
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_logs_an_unanswered_window_with_its_status_but_not_the_transport_message_by_default()
+    {
+        var warnings = await WarningsOfAnUnansweredWindow(emitPartyAndContractSpanTags: false);
+
+        warnings.Should().Equal(
+            "Stream window request failed with status NoResponse { } — surfaced in-band as a terminal StreamError");
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_logs_the_transport_message_of_an_unanswered_window_when_opted_in()
+    {
+        var warnings = await WarningsOfAnUnansweredWindow(emitPartyAndContractSpanTags: true);
+
+        warnings.Should().Equal(
+            "Stream window request failed with status NoResponse { } — surfaced in-band as a terminal StreamError: connection to carol::1220 refused");
+    }
+
     private static List<string> WarningsFrom(CapturingLoggerFactory logs) =>
         [.. logs.Records.Where(record => record.Level == LogLevel.Warning).Select(record => record.Message)];
 
@@ -783,5 +861,43 @@ public sealed class RestLedgerClientWindowLoopTests : IDisposable
 
         await drain.Should().ThrowAsync<OperationCanceledException>();
         return observed;
+    }
+
+    private async Task<Exception?> ExceptionLoggedByAnUndecodableSnapshotPage(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponseSequence(
+            (HttpStatusCode.OK, ActiveContractsPage("page-2", "00a")),
+            (HttpStatusCode.OK, "[]"));
+        using var logs = new CapturingLoggerFactory();
+        var client = ClientWith(
+            transport,
+            windowLimit: 1,
+            logger: logs.CreateLogger<RestLedgerClient>(),
+            emitPartyAndContractSpanTags: emitPartyAndContractSpanTags);
+
+        await foreach (var _ in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(9), cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        return logs.Records
+            .Single(record => record.Message.StartsWith("Stream window response body from", StringComparison.Ordinal))
+            .Exception;
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_logs_only_the_exception_type_of_an_undecodable_page_by_default()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableSnapshotPage(emitPartyAndContractSpanTags: false);
+
+        exception!.Message.Should().Be("System.Text.Json.JsonException");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_logs_the_exception_of_an_undecodable_page_when_party_and_contract_tags_are_opted_in()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableSnapshotPage(emitPartyAndContractSpanTags: true);
+
+        exception.Should().BeOfType<JsonException>();
     }
 }

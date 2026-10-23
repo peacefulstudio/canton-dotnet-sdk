@@ -29,8 +29,7 @@ internal sealed class RecordEmitter(
     internal void WriteRecordType(IndentWriter indent, DamlModule module, DamlDataType dataType, DamlRecordDefinition record)
     {
         var className = context.EmittedTypeName(module.Name, dataType.Name);
-        indent.CurrentTypeName = className;
-        indent.CurrentReservedMemberNames = ReservedMemberNames.OfRecordField();
+        var reservedMemberNames = ReservedMemberNames.OfRecordField();
         var typeParams = EmitterHelpers.GetTypeParametersDeclaration(dataType.TypeParams);
         var typeParamConstraints = EmitterHelpers.GetTypeParameterConstraints(dataType.TypeParams);
         var fullClassName = $"{className}{typeParams}";
@@ -52,7 +51,7 @@ internal sealed class RecordEmitter(
         if (record.Fields.Count > 0)
         {
             indent.Append($"public sealed record {fullClassName}(");
-            serialization.WriteRecordParameters(indent, record.Fields);
+            serialization.WriteRecordParameters(indent, className, reservedMemberNames, record.Fields);
             indent.AppendLine($"){recordInterface}{typeParamConstraints}");
         }
         else
@@ -63,11 +62,12 @@ internal sealed class RecordEmitter(
         indent.AppendLine("{");
         indent.Indent();
 
-        serialization.WriteCollectionValueSemantics(indent, fullClassName, record.Fields);
-        serialization.WriteToRecordMethod(indent, record.Fields, dataType.TypeParams);
-        serialization.WriteFromRecordMethod(indent, fullClassName, record.Fields, dataType.TypeParams);
+        serialization.WriteCollectionValueSemantics(indent, fullClassName, className, reservedMemberNames, record.Fields);
+        serialization.WriteToRecordMethod(indent, className, reservedMemberNames, record.Fields, dataType.TypeParams);
+        serialization.WriteFromRecordMethod(indent, fullClassName, className, reservedMemberNames, record.Fields, dataType.TypeParams);
         serialization.WriteReadDamlLfJsonMethod(indent, record.Fields, dataType.TypeParams);
 
+        indent.TrimTrailingBlankLine();
         indent.Dedent();
         indent.AppendLine("}");
     }

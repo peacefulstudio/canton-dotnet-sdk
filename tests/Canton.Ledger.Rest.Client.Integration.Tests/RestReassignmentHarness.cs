@@ -21,7 +21,7 @@ using UnassignCommand = Canton.Ledger.Abstractions.UnassignCommand;
 namespace Canton.Ledger.Rest.Client.Integration.Tests;
 
 /// <summary>
-/// Arrange + act harness for REST reassignment conformance on the multi-synchronizer LocalNet lane:
+/// Arrange + act harness for REST reassignment live tests on the multi-synchronizer LocalNet lane:
 /// discovers two connected synchronizers, vets <c>richtypes.dar</c> on both, hosts one party on both,
 /// creates an <see cref="Asset"/> on the source synchronizer, and drives the unassign source→assign
 /// target round trip through <see cref="RestLedgerClient"/>'s two reassignment write surfaces —
@@ -43,7 +43,7 @@ internal sealed class RestReassignmentHarness
     internal const string SingleSyncMessage =
         "the participant reports fewer than two connected synchronizers, so this is the "
         + "single-synchronizer lane. Bring up a multi-synchronizer participant to run this "
-        + "reassignment conformance test.";
+        + "reassignment live test.";
 
     internal const string ReassignmentFeatureDisabledSkipMessage =
         "Skipping: the participant rejected the reassignment with \"Multi-synchronizer feature flag "
@@ -54,9 +54,9 @@ internal sealed class RestReassignmentHarness
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
 
-    private readonly RestConformanceLane _lane;
+    private readonly RestLiveLane _lane;
 
-    internal RestReassignmentHarness(RestConformanceLane lane) => _lane = lane;
+    internal RestReassignmentHarness(RestLiveLane lane) => _lane = lane;
 
     internal async Task<SynchronizerPair> DiscoverSynchronizerPairAsync(CancellationToken cancellationToken)
     {

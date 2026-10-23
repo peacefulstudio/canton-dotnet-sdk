@@ -75,7 +75,7 @@ public class FakeLedgerClientInterfaceViewTests
     {
         ICantonLedgerClient client = FakeLedgerClient.Create()
             .WithActiveInterfaceContracts<IDemoHoldingView, DemoHoldingView>(
-                new InterfaceAcsSnapshotEntry<IDemoHoldingView, DemoHoldingView>.StreamError(
+                InterfaceLedgerEvents.StreamError<IDemoHoldingView, DemoHoldingView>(
                     new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "snapshot aborted mid-stream"))
             .Build();
 

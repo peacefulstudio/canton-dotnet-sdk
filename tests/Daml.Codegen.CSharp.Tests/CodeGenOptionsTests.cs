@@ -232,37 +232,100 @@ public class CodeGenOptionsTests
     #region Combined Options Tests
 
     [Fact]
-    public void Generate_should_include_both_project_file_and_dependencies()
+    public void Generate_should_not_reference_a_dependency_it_emits_inline_when_generating_a_project_file()
     {
-        var depModule = CreateSimpleModule("Dep.Module", "DepTemplate");
+        var dar = DarWhereMainRecordHoldsDependencyType();
+        var options = new CodeGenOptions { GenerateProjectFile = true, IncludeDependencies = true, TargetFramework = "net10.0" };
+
+        var files = CreateGenerator(options).Generate(dar);
+
+        var projectFile = files.Single(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        files.Should().Contain(f => f.RelativePath.EndsWith("DepTemplate.cs", StringComparison.Ordinal));
+        files.Should().Contain(f => f.RelativePath.EndsWith("Holder.cs", StringComparison.Ordinal));
+        projectFile.Content.Should().NotContain("Dep.Package");
+        projectFile.Content.Should().Contain("<PackageReference Include=\"Daml.Runtime\"");
+    }
+
+    [Fact]
+    public void Generate_should_reference_a_dependency_it_does_not_emit_inline_when_generating_a_project_file()
+    {
+        var dar = DarWhereMainRecordHoldsDependencyType();
+        var options = new CodeGenOptions { GenerateProjectFile = true, IncludeDependencies = false, TargetFramework = "net10.0" };
+
+        var files = CreateGenerator(options).Generate(dar);
+
+        var projectFile = files.Single(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        files.Should().NotContain(f => f.RelativePath.EndsWith("DepTemplate.cs", StringComparison.Ordinal));
+        projectFile.Content.Should().Contain("<PackageReference Include=\"Dep.Package\" Version=\"2.0.0.*-*\" />");
+    }
+
+    [Fact]
+    public void Generate_should_not_reference_the_main_package_from_its_own_project_file_when_a_dependency_uses_a_main_type()
+    {
+        var dependency = new DamlPackage
+        {
+            PackageId = "dep-package-id",
+            Name = "dep-package",
+            Version = new Version(2, 0, 0),
+            LfVersion = "2.1",
+            Modules =
+            [
+                new DamlModule
+                {
+                    Name = "Dep.Module",
+                    Templates = [],
+                    DataTypes =
+                    [
+                        new DamlDataType
+                        {
+                            Name = "DepHolder",
+                            Definition = new DamlRecordDefinition(
+                                [new DamlFieldDefinition("held", new DamlTypeRef("main-package-id", "Main.Module", "MainTemplate"))])
+                        }
+                    ],
+                    Interfaces = []
+                }
+            ],
+            DependencyReferences = []
+        };
+        var dar = MainPackageDar().WithModule(CreateSimpleModule("Main.Module", "MainTemplate")).WithDependencies(dependency).Build();
+        var options = new CodeGenOptions { GenerateProjectFile = true, IncludeDependencies = true, TargetFramework = "net10.0" };
+
+        var files = CreateGenerator(options).Generate(dar);
+
+        var projectFile = files.Single(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
+        files.Should().Contain(f => f.RelativePath.EndsWith("DepHolder.cs", StringComparison.Ordinal));
+        projectFile.Content.Should().NotContain("Include=\"Main.Package\"");
+        projectFile.Content.Should().NotContain("Include=\"Dep.Package\"");
+    }
+
+    private static DarModel DarWhereMainRecordHoldsDependencyType()
+    {
         var depPackage = new DamlPackage
         {
             PackageId = "dep-package-id",
             Name = "dep-package",
             Version = new Version(2, 0, 0),
             LfVersion = "2.1",
-            Modules = [depModule],
+            Modules = [CreateSimpleModule("Dep.Module", "DepTemplate")],
             DependencyReferences = []
         };
-
-        var options = new CodeGenOptions
+        var mainModule = new DamlModule
         {
-            GenerateProjectFile = true,
-            IncludeDependencies = true,
-            TargetFramework = "net10.0"
+            Name = "Main.Module",
+            Templates = [],
+            DataTypes =
+            [
+                new DamlDataType
+                {
+                    Name = "Holder",
+                    Definition = new DamlRecordDefinition(
+                        [new DamlFieldDefinition("held", new DamlTypeRef("dep-package-id", "Dep.Module", "DepTemplate"))])
+                }
+            ],
+            Interfaces = []
         };
-        var generator = CreateGenerator(options);
-        var dar = MainPackageDar().WithModule(CreateSimpleModule()).WithDependencies(depPackage).Build();
-
-        var files = generator.Generate(dar);
-
-        var projectFile = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", StringComparison.Ordinal));
-        var mainFile = files.FirstOrDefault(f => f.RelativePath.Contains("SimpleTemplate.cs", StringComparison.Ordinal));
-        var depFile = files.FirstOrDefault(f => f.RelativePath.Contains("DepTemplate.cs", StringComparison.Ordinal));
-
-        projectFile.Should().NotBeNull();
-        mainFile.Should().NotBeNull();
-        depFile.Should().NotBeNull();
+        return MainPackageDar().WithModule(mainModule).WithDependencies(depPackage).Build();
     }
 
     [Fact]

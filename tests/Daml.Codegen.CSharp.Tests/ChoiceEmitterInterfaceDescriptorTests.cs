@@ -58,7 +58,7 @@ public class ChoiceEmitterInterfaceDescriptorTests
     {
         var emitter = Emitter(package, dependencies);
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = interfaceName };
+        var indent = new IndentWriter(sb);
         emitter.WriteInterfaceChoiceDescriptors(indent, iface, interfaceName);
         return sb.ToString();
     }
@@ -99,7 +99,7 @@ public class ChoiceEmitterInterfaceDescriptorTests
         var choice = Choice("SetDate", new DamlPrimitiveType(DamlPrimitive.Date), new DamlPrimitiveType(DamlPrimitive.Unit));
         var emitter = Emitter(Package());
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = "IAsset" };
+        var indent = new IndentWriter(sb);
 
         emitter.WriteInterfaceChoiceDescriptors(indent, Interface("IAsset", choice), "IAsset");
 

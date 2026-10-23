@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
@@ -10,7 +11,6 @@ using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Grpc.Core;
@@ -43,7 +43,7 @@ internal sealed partial class SubmissionClient
         _commandSubmissionService = commandSubmissionService;
         _commandBuilder = commandBuilder;
         _options = options;
-        _logger = logger;
+        _logger = logger.RedactingExceptionsUnless(options.EmitPartyAndContractSpanTags);
         _readTransactionAtOffset = readTransactionAtOffset;
     }
 
@@ -200,7 +200,7 @@ internal sealed partial class SubmissionClient
             {
                 projected = ProjectReassignmentResult<T>(response);
             }
-            catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
+            catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
             {
                 LogReassignmentResponseUndecodable(_logger, decodeFailure);
                 return RpcCallEnding.CommittedUndecodable(
@@ -222,7 +222,7 @@ internal sealed partial class SubmissionClient
         }
         catch (RpcException ex)
         {
-            LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
+            LogSubmitFailed(ex);
             return RpcCallEnding.SubmissionRejected(ex, afterRetry: ResponseReceipt.CurrentCallRetried).ToOutcome<ContractStreamEvent<T>>();
         }
     }
@@ -371,7 +371,7 @@ internal sealed partial class SubmissionClient
                         "Server returned a successful response but no Transaction was present.");
                 projected = project(transaction);
             }
-            catch (Exception decodeFailure) when (decodeFailure is not OperationCanceledException)
+            catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
             {
                 LogTransactionResponseUndecodable(_logger, decodeFailure);
                 return RpcCallEnding.CommittedUndecodable(
@@ -398,7 +398,7 @@ internal sealed partial class SubmissionClient
         }
         catch (RpcException ex)
         {
-            LogSubmitFailed(_logger, ex.StatusCode, ex.Status.Detail);
+            LogSubmitFailed(ex);
             var ending = RpcCallEnding.SubmissionRejected(ex, afterRetry: ResponseReceipt.CurrentCallRetried);
             var outcome = ending.ToOutcome<TProjection>();
             var verdict = ending.ToRetriedDuplicateVerdict();
@@ -445,14 +445,31 @@ internal sealed partial class SubmissionClient
     {
         if (outcome is ExerciseOutcome<TransactionResult>.One)
         {
-            LogChoiceExercised(_logger, command.Choice, command.ContractId);
+            LogChoiceExercised(_logger, command.Choice);
+            if (_options.EmitPartyAndContractSpanTags)
+            {
+                LogChoiceExercisedOn(_logger, command.Choice, command.ContractId);
+            }
+
             return;
         }
 
-        LogChoiceExerciseFailed(_logger, command.Choice, command.ContractId);
+        LogChoiceExerciseFailed(_logger, command.Choice);
     }
 
-    private static void RecordOutcome<T>(Activity? activity, ExerciseOutcome<T> outcome)
+    private void LogSubmitFailed(RpcException failure)
+    {
+        if (_options.EmitPartyAndContractSpanTags)
+        {
+            LogSubmitFailedWithDetail(_logger, failure.StatusCode, failure.Status.Detail);
+        }
+        else
+        {
+            LogSubmitFailed(_logger, failure.StatusCode);
+        }
+    }
+
+    private void RecordOutcome<T>(Activity? activity, ExerciseOutcome<T> outcome)
     {
         switch (outcome)
         {
@@ -460,10 +477,10 @@ internal sealed partial class SubmissionClient
                 activity.RecordDamlError(damlError.ErrorId);
                 break;
             case ExerciseOutcome<T>.InfraError infraError:
-                activity.RecordInfraError(infraError.Status, infraError.Message);
+                activity.RecordInfraError(infraError.Status, _options.StatusDescriptionOf(infraError.Status, infraError.Message));
                 break;
             case ExerciseOutcome<T>.CommittedUndecodable undecodable:
-                activity.RecordCommittedUndecodable(undecodable.Message);
+                activity.RecordCommittedUndecodable(_options.StatusDescriptionOfCommittedUndecodable(undecodable.Message));
                 break;
             case ExerciseOutcome<T>.One:
             case ExerciseOutcome<T>.None:
@@ -506,9 +523,17 @@ internal sealed partial class SubmissionClient
             LogRetriedDuplicatePointReadFailed(_logger, commandId, completionOffset, pointReadFailure.StatusCode);
             return duplicateError;
         }
-        catch (Exception unprojectableUpdate) when (unprojectableUpdate is not OperationCanceledException)
+        catch (Exception unprojectableUpdate) when (StreamEventClassifier.IsNotCancellation(unprojectableUpdate))
         {
-            LogRetriedDuplicateNotProjectable(_logger, commandId, completionOffset, unprojectableUpdate.Message, unprojectableUpdate);
+            if (_options.EmitPartyAndContractSpanTags)
+            {
+                LogRetriedDuplicateNotProjectable(_logger, commandId, completionOffset, unprojectableUpdate.Message, unprojectableUpdate);
+            }
+            else
+            {
+                LogRetriedDuplicateNotProjectable(_logger, commandId, completionOffset);
+            }
+
             return duplicateError;
         }
     }
@@ -541,7 +566,7 @@ internal sealed partial class SubmissionClient
             .WithCommandId(commandId ?? MintedCommandId())
             .WithWorkflowId(new RuntimeCommands.WorkflowId(workflowId));
 
-    private static RuntimeCommands.CommandId MintedCommandId() => new(Guid.NewGuid().ToString());
+    private static RuntimeCommands.CommandId MintedCommandId() => RuntimeCommands.IdMinting.MintCommandId();
 
     private RuntimeCommands.CommandsSubmission NewExerciseSubmission(
         Activity? activity,
@@ -551,9 +576,17 @@ internal sealed partial class SubmissionClient
         RuntimeCommands.CommandId? commandId)
     {
         activity?.SetTag(LedgerActivityTagNames.DamlChoice, command.Choice.Value);
-        activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.DamlContractId, command.ContractId.Value);
+        activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, command.ContractId.Value);
         activity.SetSubmitterTags(submitter, _options);
-        LogExercisingChoice(_logger, command.Choice, command.ContractId);
+        if (_options.EmitPartyAndContractSpanTags)
+        {
+            LogExercisingChoice(_logger, command.Choice, command.ContractId);
+        }
+        else
+        {
+            LogExercisingChoice(_logger, command.Choice);
+        }
+
         return NewSubmission(
             command, submitter, workflowId ?? $"exercise-{command.Choice.Value.ToLowerInvariant()}", commandId);
     }
@@ -561,14 +594,20 @@ internal sealed partial class SubmissionClient
     [LoggerMessage(Level = LogLevel.Debug, Message = "Creating contract {TemplateType}")]
     private static partial void LogCreatingContract(ILogger logger, string templateType);
 
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Exercising choice {Choice}")]
+    private static partial void LogExercisingChoice(ILogger logger, RuntimeCommands.ChoiceName choice);
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "Exercising choice {Choice} on {ContractId}")]
     private static partial void LogExercisingChoice(ILogger logger, RuntimeCommands.ChoiceName choice, ContractId contractId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Choice exercised: {Choice} on {ContractId}")]
-    private static partial void LogChoiceExercised(ILogger logger, RuntimeCommands.ChoiceName choice, ContractId contractId);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Choice exercised: {Choice}")]
+    private static partial void LogChoiceExercised(ILogger logger, RuntimeCommands.ChoiceName choice);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to exercise choice {Choice} on {ContractId}")]
-    private static partial void LogChoiceExerciseFailed(ILogger logger, RuntimeCommands.ChoiceName choice, ContractId contractId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Choice exercised: {Choice} on {ContractId}")]
+    private static partial void LogChoiceExercisedOn(ILogger logger, RuntimeCommands.ChoiceName choice, ContractId contractId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to exercise choice {Choice}")]
+    private static partial void LogChoiceExerciseFailed(ILogger logger, RuntimeCommands.ChoiceName choice);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Fire submit of {CommandCount} commands (command_id {CommandId})")]
     private static partial void LogFireSubmit(ILogger logger, string commandId, int commandCount);
@@ -588,8 +627,11 @@ internal sealed partial class SubmissionClient
     [LoggerMessage(Level = LogLevel.Information, Message = "Transaction completed: {UpdateId}, Created: {CreatedCount}, Archived: {ArchivedCount}")]
     private static partial void LogTransactionCompleted(ILogger logger, string updateId, int createdCount, int archivedCount);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Submit failed: {StatusCode}")]
+    private static partial void LogSubmitFailed(ILogger logger, StatusCode statusCode);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Submit failed: {StatusCode} — {Detail}")]
-    private static partial void LogSubmitFailed(ILogger logger, StatusCode statusCode, string? detail);
+    private static partial void LogSubmitFailedWithDetail(ILogger logger, StatusCode statusCode, string? detail);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "SubmitAndWaitForTransaction succeeded but the transaction in the response could not be decoded — surfaced as an InfraError outcome")]
     private static partial void LogTransactionResponseUndecodable(ILogger logger, Exception exception);
@@ -605,6 +647,9 @@ internal sealed partial class SubmissionClient
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the point read at completion offset {CompletionOffset} failed with {StatusCode}; surfacing the DUPLICATE_COMMAND error")]
     private static partial void LogRetriedDuplicatePointReadFailed(ILogger logger, string commandId, long completionOffset, StatusCode statusCode);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the update at completion offset {CompletionOffset} could not be projected as a transaction; surfacing the DUPLICATE_COMMAND error")]
+    private static partial void LogRetriedDuplicateNotProjectable(ILogger logger, string commandId, long completionOffset);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND — the original submission succeeded — but the update at completion offset {CompletionOffset} could not be projected as a transaction ({Detail}); surfacing the DUPLICATE_COMMAND error")]
     private static partial void LogRetriedDuplicateNotProjectable(ILogger logger, string commandId, long completionOffset, string detail, Exception exception);

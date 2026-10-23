@@ -16,7 +16,7 @@ public class DamlJsonSerializerNumericTests
     public void Serialize_should_handle_DamlNumeric_with_precision()
     {
         var record = DamlRecord.Create(
-            DamlField.Create("amount", new DamlNumeric(123.456789m, 10))
+            DamlField.Create("amount", new DamlNumeric(123.456789m))
         );
 
         var json = DamlJsonSerializer.Serialize(record);
@@ -154,18 +154,6 @@ public class DamlJsonSerializerNumericTests
     }
 
     [Fact]
-    public void RoundTrip_should_preserve_equality_for_DamlNumeric_with_non_default_scale()
-    {
-        var original = new DamlNumeric(123.456789m, 38);
-
-        var json = DamlJsonSerializer.Serialize((DamlValue)original);
-        var deserialized = DamlJsonSerializer.Deserialize(json);
-
-        deserialized.Should().Be(original,
-            "Scale is not part of the wire format, so a Numeric constructed with a non-default scale must still round-trip equal");
-    }
-
-    [Fact]
     public void RoundTrip_should_preserve_DamlNumeric_record_field()
     {
         var original = DamlRecord.Create(DamlField.Create("amount", new DamlNumeric(123.456789m)));
@@ -193,7 +181,7 @@ public class DamlJsonSerializerNumericTests
             Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
 
             var record = DamlRecord.Create(
-                DamlField.Create("amount", new DamlNumeric(123.456789m, 10))
+                DamlField.Create("amount", new DamlNumeric(123.456789m))
             );
 
             var json = DamlJsonSerializer.Serialize(record);

@@ -33,9 +33,11 @@ internal sealed class RecordSerializationEmitter(
     /// </summary>
     internal void WriteRecordParameters(
         IndentWriter indent,
+        string enclosingTypeName,
+        IReadOnlySet<string> reservedMemberNames,
         IReadOnlyList<DamlFieldDefinition> fields)
     {
-        var members = ValueMembers(indent, fields);
+        var members = ValueMembers(enclosingTypeName, reservedMemberNames, fields);
         var redeclaresProperties = CollectionValueSemanticsEmitter.NeedsValueSemantics(members);
 
         indent.AppendLine();
@@ -61,17 +63,24 @@ internal sealed class RecordSerializationEmitter(
     /// </summary>
     /// <param name="indent">Writer positioned at the top of the record body.</param>
     /// <param name="selfType">The record's own type, including type parameters.</param>
+    /// <param name="enclosingTypeName">The emitted C# type name the members are declared on.</param>
+    /// <param name="reservedMemberNames">Member names the record fields must not take.</param>
     /// <param name="fields">The record's Daml fields, in declaration order.</param>
     internal void WriteCollectionValueSemantics(
         IndentWriter indent,
         string selfType,
+        string enclosingTypeName,
+        IReadOnlySet<string> reservedMemberNames,
         IReadOnlyList<DamlFieldDefinition> fields) =>
-        _valueSemantics.Write(indent, selfType, ValueMembers(indent, fields), derivesFromRecord: false);
+        _valueSemantics.Write(indent, selfType, ValueMembers(enclosingTypeName, reservedMemberNames, fields), derivesFromRecord: false);
 
-    private IReadOnlyList<ValueMember> ValueMembers(IndentWriter indent, IReadOnlyList<DamlFieldDefinition> fields) =>
+    private IReadOnlyList<ValueMember> ValueMembers(
+        string enclosingTypeName,
+        IReadOnlySet<string> reservedMemberNames,
+        IReadOnlyList<DamlFieldDefinition> fields) =>
     [
         .. fields.Select(field => new ValueMember(
-            MemberName(field.Name, indent.CurrentTypeName, indent.CurrentReservedMemberNames),
+            MemberName(field.Name, enclosingTypeName, reservedMemberNames),
             mapper.MapType(field.Type),
             mapper.ClassifyCollection(field.Type),
             $"The Daml field <c>{field.Name}</c>.",
@@ -86,6 +95,8 @@ internal sealed class RecordSerializationEmitter(
     /// </summary>
     internal void WriteToRecordMethod(
         IndentWriter indent,
+        string enclosingTypeName,
+        IReadOnlySet<string> reservedMemberNames,
         IReadOnlyList<DamlFieldDefinition> fields,
         IReadOnlyList<string> typeParams)
     {
@@ -111,7 +122,7 @@ internal sealed class RecordSerializationEmitter(
         for (int i = 0; i < fields.Count; i++)
         {
             var field = fields[i];
-            var fieldName = MemberName(field.Name, indent.CurrentTypeName, indent.CurrentReservedMemberNames);
+            var fieldName = MemberName(field.Name, enclosingTypeName, reservedMemberNames);
             var conversion = mapper.ToValue(field.Type, fieldName, delegates);
             var comma = i < fields.Count - 1 ? "," : "";
             StdlibPackages.RequireForFieldType(resolver, context.Package, indent, field.Type);
@@ -132,6 +143,8 @@ internal sealed class RecordSerializationEmitter(
     internal void WriteFromRecordMethod(
         IndentWriter indent,
         string className,
+        string enclosingTypeName,
+        IReadOnlySet<string> reservedMemberNames,
         IReadOnlyList<DamlFieldDefinition> fields,
         IReadOnlyList<string> typeParams)
     {
@@ -162,8 +175,8 @@ internal sealed class RecordSerializationEmitter(
         for (int i = 0; i < fields.Count; i++)
         {
             var field = fields[i];
-            var fieldName = MemberName(field.Name, indent.CurrentTypeName, indent.CurrentReservedMemberNames);
-            var conversion = FieldFromValue(field, delegates);
+            var fieldName = MemberName(field.Name, enclosingTypeName, reservedMemberNames);
+            var conversion = FieldFromValue(field, i, delegates);
             var comma = i < fields.Count - 1 ? "," : "";
 
             indent.AppendLine($"{fieldName}: {conversion}{comma}");
@@ -326,17 +339,18 @@ internal sealed class RecordSerializationEmitter(
 
     private string FieldFromValue(
         DamlFieldDefinition field,
+        int fieldIndex,
         IReadOnlyDictionary<string, string> converters)
     {
-        var fieldName = $"\"{field.Name}\"";
+        var nameAndPosition = $"\"{field.Name}\", {fieldIndex}";
         if (field.Type is DamlTypeVar typeVar && converters.TryGetValue(typeVar.Name, out var convert))
         {
-            return $"record.GetTypeParameterField({fieldName}, {convert}, {converters[EmitterHelpers.AbsenceKey(typeVar.Name)]})";
+            return $"record.GetTypeParameterField({nameAndPosition}, {convert}, {converters[EmitterHelpers.AbsenceKey(typeVar.Name)]})";
         }
 
         var valueExpr = mapper.OptionalWireEncoding(field.Type) is { } encoding
-            ? $"record.{OptionalRecordAccessor(encoding)}({fieldName})"
-            : $"record.GetRequiredField({fieldName})";
+            ? $"record.{OptionalRecordAccessor(encoding)}({nameAndPosition})"
+            : $"record.GetRequiredField({nameAndPosition})";
         return mapper.FromValue(field.Type, valueExpr, converters);
     }
 

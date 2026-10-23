@@ -57,7 +57,7 @@ public static class LedgerActivityTagNames
     /// <summary>The hint the span's party allocation asked the participant to derive an id from. Emitted only when <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c> opts in.</summary>
     public const string CantonPartyIdHint = "canton.party_id_hint";
 
-    /// <summary>The user the span's operation creates, or whose rights it lists, grants or revokes.</summary>
+    /// <summary>The user the span's operation creates, or whose rights it lists, grants or revokes. Emitted only when <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c> or <c>RestLedgerClientOptions.EmitPartyAndContractSpanTags</c> opts in.</summary>
     public const string CantonUserId = "canton.user_id";
 
     /// <summary>The submission id the span's operation carried to the participant.</summary>

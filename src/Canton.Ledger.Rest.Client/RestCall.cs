@@ -14,4 +14,5 @@ internal sealed record RestCall(
     LedgerCallKind Kind,
     bool Replayable = true,
     string? Accept = null,
-    string? CommandId = null);
+    string? CommandId = null,
+    string? PathTemplate = null);

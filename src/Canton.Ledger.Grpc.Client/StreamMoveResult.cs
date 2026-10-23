@@ -47,11 +47,11 @@ internal readonly record struct StreamMoveResult
         }
     }
 
-    public StreamFault? RecordFault(Activity? activity)
+    public StreamFault? RecordFault(Activity? activity, LedgerClientOptions options)
     {
         if (Fault is not { } fault) return null;
 
-        activity.RecordGrpcError(fault);
+        activity.RecordGrpcError(fault, options);
         return RpcCallEnding.StreamFaulted(fault).ToStreamFault();
     }
 }

@@ -30,4 +30,23 @@ public sealed class PqsClientOptions
     /// </summary>
     [Required]
     public required string ConnectionString { get; set; }
+
+    /// <summary>
+    /// Whether the client's spans and logs carry what a failed query's exception says: the
+    /// exception message in the status of the failed span, and the exception itself in the
+    /// <c>PQS query failed</c> error log and in the unhealthy health check's log line and result. Off by
+    /// default, so anyone with read access to the tracing backend, the logs or the health endpoint
+    /// cannot read the contract ids, party ids or values that a PostgreSQL error message, its
+    /// <c>Detail</c> or a decode failure can echo. Off, a failed span's status carries the exception
+    /// type name, such as <c>PostgresException</c>, and every logged exception, including the one on the
+    /// health check result, is recorded as a redaction wrapper whose <c>exception.type</c> is the
+    /// wrapper, whose message is the original type's full name and whose stack is the original's.
+    /// Alerting that keys on the original <c>exception.type</c> needs this option on.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c> on the gRPC client. Opt in
+    /// only where the tracing backend and the logs are trusted with the same data as the ledger
+    /// and the PQS database themselves: the messages are exported verbatim.
+    /// </remarks>
+    public bool EmitPartyAndContractSpanTags { get; set; }
 }

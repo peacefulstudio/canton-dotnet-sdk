@@ -18,7 +18,7 @@ required.
 ## Installation
 
 ```bash
-dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.7.0
+dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.7.1
 ```
 
 A transport package subclasses it, supplying a client factory and the
@@ -72,7 +72,10 @@ row under another `SynchronizerId` than the template snapshot, or a `Created` ro
 ## Covered contracts
 
 - **Cancellation** — a cancelled live subscription surfaces
-  `OperationCanceledException`, not an in-band error. Checked on both families.
+  `OperationCanceledException`, not an in-band error, whether the token is cancelled before
+  enumeration starts or while the subscription is idle with its next read pending. The idle shape
+  needs a live subscription (no `toOffset`) that stays open after its last seeded row: one that
+  completes on its own fails. Checked on both families.
 - **Unclassified surfacing** — a snapshot row the projector cannot classify is
   yielded as `Unclassified`, never silently dropped. Checked on both families.
 - **Terminal snapshot checkpoint** — the snapshot always ends with a single
@@ -89,7 +92,8 @@ row under another `SynchronizerId` than the template snapshot, or a `Created` ro
   mid-stream; the default returns `null` because inducing a deterministic mid-snapshot
   fault is transport-specific.
 - **Offset boundaries `(fromOffset, toOffset]`** — `fromOffset` is exclusive, so
-  resuming from a returned offset does not re-deliver the event at it;
+  resuming from a returned offset does not re-deliver the event at it and delivers exactly the
+  events after it (a resumed read that returns nothing fails);
   `toOffset` is inclusive and terminal, so a bounded subscription delivers the
   event at `toOffset` and then completes. Checked on both families.
 - **Stream shapes** — the ACS-delta subscription conveys archival as a
@@ -97,7 +101,8 @@ row under another `SynchronizerId` than the template snapshot, or a `Created` ro
   subscription conveys it as a consuming `Exercised` and never an `Archived`.
   Each shape is checked in both directions: emitting the wrong variant fails,
   and so does dropping archival altogether, because the signal a shape exists to
-  carry cannot be missing from a stream that claims to carry it. Checked on both families.
+  carry cannot be missing from a stream that claims to carry it. Neither bounded window may end in a
+  transport `StreamError`. Checked on both families.
 - **Required view descriptor** — each interface read (`SubscribeActiveAsync`, `SubscribeAsync`,
   `SubscribeLedgerEffectsAsync`) called with a `null` `ViewDescriptor` throws
   `ArgumentNullException` at the call, before the stream is enumerated, so a missing descriptor
@@ -143,8 +148,9 @@ scenario:
   `ConformanceProbeView` with `amount` `42.5`, and the unclassifiable row still
   unclassifiable (an interface read that finds no view for it surfaces it as `Unclassified`);
 - an empty interface snapshot at `EmptySnapshotOffset` too;
-- at least one event on the `SubscribeAsync` stream at a known offset, with the
-  `(fromOffset, toOffset]` bounds honored;
+- at least one event on the `SubscribeAsync` stream at a known offset, and at least one more event
+  after the first position of that stream (the exclusive-`fromOffset` check resumes from the first
+  position and requires the events after it), with the `(fromOffset, toOffset]` bounds honored;
 - one archived `TProbe` at an offset no later than the seeded ledger end,
   reaching the `SubscribeAsync` stream as an `Archived` event and the
   `SubscribeLedgerEffectsAsync` stream as a consuming `Exercised` event — the
@@ -154,7 +160,8 @@ scenario:
   `SubscribeLedgerEffectsAsync(IConformanceProbe.View, …)`: each probe contract under the same
   contract id and offset with the `ConformanceProbeView` carrying `amount` `42.5`, its archival as an
   `Archived` event on the first and a consuming `Exercised` event on the second, the same
-  `(fromOffset, toOffset]` bounds, and a live subscription that honors cancellation;
+  `(fromOffset, toOffset]` bounds, at least one event after the first position, and a live
+  subscription that stays open after its last seeded row and honors cancellation;
 - each interface read throwing `ArgumentNullException` at the call for a `null` `ViewDescriptor`, not
   on the first `MoveNextAsync`: guard in a non-iterator method and delegate to the iterator;
 - on a wire-level double (a participant stub behind a gRPC or JSON transport), the kit interface
@@ -165,7 +172,9 @@ scenario:
 - an empty active-contract-set snapshot at `EmptySnapshotOffset` (defaults to
   `LedgerOffset.Begin`; override it if your transport rejects an active-contract-set
   query at offset 0 with `INVALID_ARGUMENT`, pointing it at a known-empty offset);
-- a live subscription that honors cancellation.
+- a live subscription (no `toOffset`) that replays the seeded rows, then stays open until its token is
+  cancelled and throws `OperationCanceledException` from the pending read; a seeded stream that
+  completes on its own, or that checks the token only when enumeration starts, fails.
 
 The inherited `[Fact]` methods then exercise that seeded client against the
 documented contract.

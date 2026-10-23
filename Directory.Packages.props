@@ -24,10 +24,10 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.13" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry" Version="1.20.0" />
     <PackageVersion Include="Polly.Core" Version="8.8.0" />
-    <PackageVersion Include="Refit" Version="16.3.0" />
-    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.9.1.1" />
+    <PackageVersion Include="Refit" Version="16.4.0" />
+    <PackageVersion Include="Peaceful.Canton.Localnet.Testing" Version="0.9.3.1" />
     <!-- Logging -->
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />

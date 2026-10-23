@@ -44,7 +44,7 @@ internal static class RestTransactionResultProjector
             }
             else if (evt?.ArchivedEvent is { } archived)
             {
-                archivedContractIds.Add(archived.ContractId);
+                archivedContractIds.Add(MalformedResponse.RequireContractId(archived.ContractId, "an archived event"));
             }
             else if (evt?.ExercisedEvent is { } exercised)
             {
@@ -60,6 +60,7 @@ internal static class RestTransactionResultProjector
             ToCommandId(transaction.CommandId))
         {
             ExercisedEvents = EquatableArray.Create(exercisedEvents),
+            PaidTrafficCost = RestWireConversions.ToPaidTrafficCost(transaction.PaidTrafficCost),
         };
     }
 
@@ -112,7 +113,7 @@ internal static class RestTransactionResultProjector
 
         return new CreatedContract(
             TreeShape.EventIdOf(nodeId),
-            created.ContractId,
+            MalformedResponse.RequireContractId(created.ContractId, "a created event"),
             runtimeTemplateId,
             payload.Arguments,
             RestWireConversions.ToPartyList(created.WitnessParties),
@@ -155,7 +156,7 @@ internal static class RestTransactionResultProjector
         var interfaceId = exercised.InterfaceId is null ? null : ToRuntimeIdentifier(exercised.InterfaceId);
 
         return new ExercisedEvent(
-            exercised.ContractId,
+            MalformedResponse.RequireContractId(exercised.ContractId, "an exercised event"),
             runtimeTemplateId,
             interfaceId,
             new ChoiceName(exercised.Choice),

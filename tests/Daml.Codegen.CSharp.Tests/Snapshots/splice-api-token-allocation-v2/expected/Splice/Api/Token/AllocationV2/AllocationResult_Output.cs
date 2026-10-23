@@ -54,6 +54,15 @@ public abstract record AllocationResult_Output : global::Daml.Runtime.Data.IDaml
     public sealed record AllocationResult_Pending(global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Pending Value) : AllocationResult_Output
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Pending>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AllocationResult_Pending";
 
         /// <inheritdoc />
@@ -63,6 +72,15 @@ public abstract record AllocationResult_Output : global::Daml.Runtime.Data.IDaml
     /// <summary>AllocationResult_Settled constructor.</summary>
     public sealed record AllocationResult_Settled(global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Settled Value) : AllocationResult_Output
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationV2.AllocationResult_Output_AllocationResult_Settled>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "AllocationResult_Settled";
 
@@ -89,5 +107,4 @@ public abstract record AllocationResult_Output : global::Daml.Runtime.Data.IDaml
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AllocationResult_Withdrawn", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
-
 }

@@ -22,6 +22,17 @@ public sealed partial record AnsEntryContext
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("ansRulesCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsRules> AnsRulesCid
     ) : global::Daml.Runtime.Data.IDamlRecord<AnsEntryContext_CollectEntryRenewalPayment>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(PaymentCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionPayment>>.Default);
+            hash.Add(EntryCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>>.Default);
+            hash.Add(TransferContext, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.AmuletRules.AppTransferContext>.Default);
+            hash.Add(AnsRulesCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsRules>>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("paymentCid", PaymentCid.ToDamlValue()),
@@ -32,10 +43,10 @@ public sealed partial record AnsEntryContext
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static AnsEntryContext_CollectEntryRenewalPayment FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsEntryContext_CollectEntryRenewalPayment(
-            PaymentCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionPayment>(record.GetRequiredField("paymentCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-            EntryCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>(record.GetRequiredField("entryCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-            TransferContext: global::Splice.AmuletRules.AppTransferContext.FromRecord(record.GetRequiredField("transferContext").As<global::Daml.Runtime.Data.DamlRecord>()),
-            AnsRulesCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsRules>(record.GetRequiredField("ansRulesCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
+            PaymentCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionPayment>(record.GetRequiredField("paymentCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+            EntryCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsEntry>(record.GetRequiredField("entryCid", 1).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+            TransferContext: global::Splice.AmuletRules.AppTransferContext.FromRecord(record.GetRequiredField("transferContext", 2).As<global::Daml.Runtime.Data.DamlRecord>()),
+            AnsRulesCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AnsRules>(record.GetRequiredField("ansRulesCid", 3).As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -50,6 +61,5 @@ public sealed partial record AnsEntryContext
                 global::Daml.Runtime.Data.DamlField.Create("ansRulesCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "ansRulesCid"), context.Field("ansRulesCid")))
             );
         }
-
     }
 }

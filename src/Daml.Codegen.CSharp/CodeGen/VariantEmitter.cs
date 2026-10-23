@@ -150,6 +150,7 @@ internal sealed class VariantEmitter(
             indent.AppendLine();
         }
 
+        indent.TrimTrailingBlankLine();
         indent.Dedent();
         indent.AppendLine("}");
     }

@@ -24,6 +24,7 @@ All 16 packages share one version and publish together from one `v*` tag, alongs
 | [`Daml.Runtime`](https://www.nuget.org/packages/Daml.Runtime/) | The types generated code compiles against: `Party`, `ContractId<T>`, commands, outcomes, JSON serialization. Every consumer references it. |
 | [`Daml.Codegen.CSharp`](https://www.nuget.org/packages/Daml.Codegen.CSharp/) | The C# emitter as a library, for driving code generation from your own tooling. |
 | [`Daml.Codegen.Intermediate`](https://www.nuget.org/packages/Daml.Codegen.Intermediate/) | The Intermediate DAR contract the emitter consumes. |
+| [`Daml.Codegen.CSharp.MSBuild`](https://www.nuget.org/packages/Daml.Codegen.CSharp.MSBuild/) | Code generation at `dotnet build` time from a `<DamlArchive>` DAR or a `<DamlProject>` Daml project. `DamlCodegenMode=Standalone` (the default) runs the bundled .NET decoder and emitter, with no JDK; `DamlCodegenMode=Dpm` runs `dpm codegen-cs`. |
 | [`Canton.Ledger.Grpc.Client`](https://www.nuget.org/packages/Canton.Ledger.Grpc.Client/) | The gRPC ledger and admin clients (`AddLedgerClient` / `AddAdminClient`). The default transport. |
 | [`Canton.Ledger.Rest.Client`](https://www.nuget.org/packages/Canton.Ledger.Rest.Client/) | The same client surface over the HTTP JSON Ledger API (`AddRestLedgerClient`). |
 | [`Canton.Ledger.Pqs.Client`](https://www.nuget.org/packages/Canton.Ledger.Pqs.Client/) | Typed, SQL-injection-safe queries over active contracts in the Participant Query Store. |
@@ -33,7 +34,6 @@ All 16 packages share one version and publish together from one `v*` tag, alongs
 | [`Canton.Ledger.OpenTelemetry`](https://www.nuget.org/packages/Canton.Ledger.OpenTelemetry/) | One `AddCantonLedgerInstrumentation()` call registers every Canton client `ActivitySource`. |
 | [`Canton.Ledger.Grpc`](https://www.nuget.org/packages/Canton.Ledger.Grpc/) | Raw gRPC stubs generated from the Canton Ledger API protos. |
 | [`Canton.Ledger.Rest`](https://www.nuget.org/packages/Canton.Ledger.Rest/) | Raw Refit surface over the JSON Ledger API (experimental, `CANTONREST001`). |
-| [`Daml.Runtime.Grpc`](https://www.nuget.org/packages/Daml.Runtime.Grpc/) | Conversion between Ledger API proto `Value`/`Record` and `DamlValue`/`DamlRecord`. |
 | [`Canton.Ledger.Testing`](https://www.nuget.org/packages/Canton.Ledger.Testing/) | In-memory fakes (`FakeLedgerClient`, `FakeAdminClient`, `FakePqsClient`) for unit tests without a participant. |
 | [`Daml.Ledger.Abstractions.Testing.Conformance`](https://www.nuget.org/packages/Daml.Ledger.Abstractions.Testing.Conformance/) | An abstract xUnit suite any `ILedgerClient` implementation subclasses to verify the behavioral contract. |
 | [`Daml.Codegen.Testing.Conformance`](https://www.nuget.org/packages/Daml.Codegen.Testing.Conformance/) | The conformance corpus: generated types plus their DARs, for live-ledger round-trip tests. Not for production. |
@@ -45,17 +45,15 @@ All 16 packages share one version and publish together from one `v*` tag, alongs
 The walkthrough takes the `Iou` model in
 [`samples/QuickstartExample/daml/Iou.daml`](samples/QuickstartExample/daml/Iou.daml) (a template
 signed by an `issuer`, observed by an `owner`, with a `Transfer` choice the owner controls) from
-Daml source to a contract created and transferred on a local Canton ledger. Steps 1 and 2 need no
-ledger; step 3 starts one.
+Daml source to generated C# bindings. Neither step needs a ledger.
 
 ### Prerequisites
 
 | Tool | Version | Needed for |
 |---|---|---|
-| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.100 or later (`dotnet --version`) | building and running the app |
+| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.100 or later (`dotnet --version`) | building the generated C# into your app |
 | JDK | 17 or later on `PATH` (`java -version`) | `dpm codegen-cs`, which decodes the DAR with a bundled JVM helper |
 | dpm and Daml SDK 3.6.0 | dpm 1.0.20 or later | `dpm build` and `dpm codegen-cs` |
-| Docker and Compose | Docker 27 or later, Compose 2.27 or later, about 16 GB of RAM | the local ledger of step 3 |
 
 The dpm installer takes the Daml SDK version as its argument and installs that SDK with it:
 
@@ -97,13 +95,13 @@ dependencies:
 ```
 
 `codegen/daml.yaml` lists the `dpm codegen-cs` component and nothing else. The component and the
-NuGet packages of step 4 share one version, so pin them together:
+SDK's NuGet packages share one version, so pin them together:
 
 ```yaml
 name: quickstart-codegen
 version: 0.0.1
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.0
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.1
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -128,123 +126,13 @@ Each Daml module becomes a C# namespace: here `Iou`, holding the `Iou.Iou` templ
 helpers. The checked-in output is in
 [`samples/QuickstartExample/Generated/Iou/`](samples/QuickstartExample/Generated/Iou/).
 
-### 3. Start a local ledger
+### Run it against a ledger
 
-[`canton-localnet`](https://github.com/peacefulstudio/canton-localnet) runs a complete Canton
-LocalNet in Docker. In a separate folder, clone and start it. Its `a-validator-1` slot exposes the gRPC Ledger API on `localhost:11901` over
-plain HTTP, the JSON Ledger API on `localhost:11975`, and OAuth2 through Keycloak on port 8082:
-
-```bash
-git clone https://github.com/peacefulstudio/canton-localnet.git
-cd canton-localnet
-make up
-make wait-ready
-```
-
-LocalNet requires a token. Download the `canton-localnet` binary for your platform from the
-[releases page](https://github.com/peacefulstudio/canton-localnet/releases), put it on `PATH`, and
-mint a participant-admin token for the slot from inside the clone:
-
-```bash
-export CANTON_TOKEN=$(canton-localnet auth token --slot a)
-```
-
-The token is short-lived; run the command again for a fresh one if the program reports an invalid or expired token.
-
-### 4. Connect, submit and read
-
-In the `quickstart/` folder, create `Quickstart.csproj` next to `Generated/` and add the packages:
-
-```bash
-dotnet new console --name Quickstart --output . --force
-dotnet add package Daml.Runtime --version 0.7.0
-dotnet add package Daml.Ledger.Abstractions --version 0.7.0
-dotnet add package Canton.Ledger.Grpc.Client --version 0.7.0
-dotnet add package Microsoft.Extensions.DependencyInjection
-```
-
-Replace `Program.cs` with this program. It uploads the DAR, allocates two parties, lets the token's
-user act as both, creates an `Iou`, transfers it, and reads what the new owner holds:
-
-```csharp
-using Canton.Ledger.Abstractions;
-using Canton.Ledger.Grpc.Client;
-using Canton.Ledger.Kernel.Authentication;
-using Daml.Ledger.Abstractions.Extensions;
-using Daml.Runtime.Contracts;
-using Daml.Runtime.Outcomes;
-using Iou;
-using Microsoft.Extensions.DependencyInjection;
-using IouContract = Iou.Iou;
-
-var token = Environment.GetEnvironmentVariable("CANTON_TOKEN")
-    ?? throw new InvalidOperationException("Set CANTON_TOKEN to a participant admin token.");
-
-var services = new ServiceCollection();
-services.AddCantonStaticAuth(token);
-services.AddLedgerClient(options => options.GrpcAddress = "http://localhost:11901");
-services.AddAdminClient(options => options.GrpcAddress = "http://localhost:11901");
-
-await using var provider = services.BuildServiceProvider();
-var ledger = provider.GetRequiredService<ICantonLedgerClient>();
-var admin = provider.GetRequiredService<IAdminClient>();
-
-await admin.UploadDarAsync(await File.ReadAllBytesAsync("iou.dar"));
-
-var run = Guid.NewGuid().ToString("N")[..8];
-var alice = (await admin.AllocatePartyAsync($"alice-{run}")).Party;
-var bob = (await admin.AllocatePartyAsync($"bob-{run}")).Party;
-
-var user = await admin.GetUserAsync("") ?? throw new InvalidOperationException("No authenticated user.");
-await admin.GrantUserRightsAsync(user.UserId, [new UserRight.ActAs(alice), new UserRight.ActAs(bob)]);
-
-var created = await ledger.TryCreateAsync(
-    new IouContract(Issuer: alice, Owner: bob, Currency: "USD", Amount: 100m));
-var iouId = created switch
-{
-    ExerciseOutcome<ContractId<IouContract>>.One ok => ok.Result,
-    _ => throw new InvalidOperationException(created.ToString()),
-};
-
-var transferred = await iouId.TryTransferAsync(
-    ledger, new IouContract.Transfer(NewOwner: alice), bob);
-if (transferred is not ExerciseOutcome<ContractId<IouContract>>.One)
-    throw new InvalidOperationException(transferred.ToString());
-
-foreach (var iou in await ledger.SnapshotAsync<IouContract>(alice))
-    Console.WriteLine($"{iou.Id}: {iou.Data.Currency} {iou.Data.Amount} from {iou.Data.Issuer}");
-```
-
-Run it from the `quickstart/` folder, where `iou.dar` sits, in the shell that holds `CANTON_TOKEN`:
-
-```bash
-dotnet run
-```
-
-It prints one line, the `Iou` that alice now owns. The contract id and the party suffixes differ on
-every run; the amount, currency and issuer name do not:
-
-```text
-00594322a9e8…: USD 100.0000000000 from alice-69971cdf::1220d11c3f6f…
-```
-
-Every generated `Try…Async` returns an `ExerciseOutcome<T>` instead of throwing: `One` on success,
-and `DamlError`, `InfraError`, `None`, `Many` or `CommittedUndecodable` otherwise, so you switch on
-the result rather than catching. `TryCreateAsync(payload)` reads the submitting party off the
-payload's signatory, and `TryTransferAsync` takes one `Party` per choice controller.
-
-The throwing calls (`GetLedgerEndAsync`, `SubmitAndWaitAsync`, the point and typed reads) report
-failure the same way on both transports: they raise `LedgerOperationException`, whose `Category`
-and `CommitState` tell you whether retrying is safe, and a stream ends with a terminal
-`StreamError` entry. Catch that exception, not `RpcException` or `HttpRequestException`.
-
-To use the JSON Ledger API instead, reference `Canton.Ledger.Rest.Client`, use its namespace in
-place of `Canton.Ledger.Grpc.Client`, and replace the two registrations with one; the rest is
-unchanged:
-
-```csharp
-services.AddRestLedgerClient(options => options.HttpAddress = "http://localhost:11975");
-```
+The generated bindings are ready to submit commands. The
+[Canton .NET SDK mini demo](https://github.com/peacefulstudio/canton-dotnet-sdk-mini-demo) is the
+smallest program that takes a Daml contract to generated C# and a live Token Standard V2 two-step
+transfer, over both the gRPC and the JSON Ledger API, against a running Canton LocalNet. It is also
+the SDK's end-to-end integration test, and its README covers the setup.
 
 ## Go deeper
 
@@ -280,9 +168,9 @@ and arm64, against Canton 3.6.x; see [status and roadmap](docs/public/status-and
 
 Contributions are welcome from anyone in the Daml and C# community. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the dev setup, the red-green TDD requirement and the branch
-model, and the [Code of Conduct](CODE_OF_CONDUCT.md). Questions, bug reports and feature requests go
+model, and the [Code of Conduct](https://github.com/peacefulstudio/canton-dotnet-sdk/blob/main/CODE_OF_CONDUCT.md). Questions, bug reports and feature requests go
 to [GitHub issues](https://github.com/peacefulstudio/canton-dotnet-sdk/issues); security-sensitive
-bugs follow [SECURITY.md](SECURITY.md).
+bugs follow [SECURITY.md](https://github.com/peacefulstudio/canton-dotnet-sdk/blob/main/SECURITY.md).
 
 ## Project stewardship
 

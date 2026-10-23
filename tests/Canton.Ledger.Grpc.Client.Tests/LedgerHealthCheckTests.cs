@@ -6,6 +6,8 @@ using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Grpc.Core;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -62,7 +64,7 @@ public class LedgerHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(CreateContext(HealthStatus.Degraded), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Degraded);
-        result.Exception.Should().BeOfType<InvalidOperationException>();
+        result.Exception!.Message.Should().Be("System.InvalidOperationException");
     }
 
     [Fact]
@@ -107,7 +109,7 @@ public class LedgerHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Exception.Should().BeOfType<RpcException>();
+        result.Exception!.Message.Should().Be("Grpc.Core.RpcException");
     }
 
     [Fact]
@@ -116,5 +118,52 @@ public class LedgerHealthCheckTests
         var act = () => new LedgerHealthCheck(null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("ledgerClient");
+    }
+
+    private static async Task<(Exception? Logged, Exception? InResult)> ExceptionsOfAFailureNaming(string userId, bool emitIdentifiers)
+    {
+        var ledgerClient = Substitute.For<ILedgerClient>();
+        ledgerClient.GetLedgerEndAsync(cancellationToken: Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException($"user '{userId}' has no rights"));
+        using var logs = new CapturingLoggerFactory();
+        var options = new LedgerClientOptions { GrpcAddress = "https://localhost:5001", EmitPartyAndContractSpanTags = emitIdentifiers };
+        var healthCheck = new LedgerHealthCheck(ledgerClient, logs.CreateLogger<LedgerHealthCheck>(), Options.Create(options));
+
+        var result = await healthCheck.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
+
+        return (logs.Records.Single(record => record.Level == LogLevel.Warning).Exception, result.Exception);
+    }
+
+    [Fact]
+    public async Task CheckHealth_logs_only_the_exception_type_of_a_failure_by_default()
+    {
+        var (logged, _) = await ExceptionsOfAFailureNaming("alice-user", emitIdentifiers: false);
+
+        logged!.Message.Should().Be("System.InvalidOperationException");
+    }
+
+    [Fact]
+    public async Task CheckHealth_logs_the_exception_of_a_failure_when_party_and_contract_tags_are_opted_in()
+    {
+        var (logged, _) = await ExceptionsOfAFailureNaming("alice-user", emitIdentifiers: true);
+
+        logged.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be("user 'alice-user' has no rights");
+    }
+
+    [Fact]
+    public async Task CheckHealth_reports_only_the_exception_type_in_the_result_of_a_failure_by_default()
+    {
+        var (_, inResult) = await ExceptionsOfAFailureNaming("alice-user", emitIdentifiers: false);
+
+        inResult!.Message.Should().Be("System.InvalidOperationException");
+        inResult.ToString().Should().NotContain("alice-user");
+    }
+
+    [Fact]
+    public async Task CheckHealth_reports_the_exception_in_the_result_of_a_failure_when_party_and_contract_tags_are_opted_in()
+    {
+        var (_, inResult) = await ExceptionsOfAFailureNaming("alice-user", emitIdentifiers: true);
+
+        inResult.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be("user 'alice-user' has no rights");
     }
 }

@@ -21,6 +21,19 @@ public sealed record TransferLegSide(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
 ) : global::Daml.Runtime.Data.IDamlRecord<TransferLegSide>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(TransferLegId, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Side, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationV2.TransferSide>.Default);
+        hash.Add(Otherside, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default);
+        hash.Add(Amount, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        hash.Add(InstrumentId, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("transferLegId", new global::Daml.Runtime.Data.DamlText(TransferLegId)),
@@ -33,12 +46,12 @@ public sealed record TransferLegSide(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TransferLegSide FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferLegSide(
-        TransferLegId: record.GetRequiredField("transferLegId").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Side: global::Splice.Api.Token.AllocationV2.TransferSideExtensions.FromDamlEnum(record.GetRequiredField("side").As<global::Daml.Runtime.Data.DamlEnum>()),
-        Otherside: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("otherside").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-        InstrumentId: record.GetRequiredField("instrumentId").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        TransferLegId: record.GetRequiredField("transferLegId", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Side: global::Splice.Api.Token.AllocationV2.TransferSideExtensions.FromDamlEnum(record.GetRequiredField("side", 1).As<global::Daml.Runtime.Data.DamlEnum>()),
+        Otherside: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("otherside", 2).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Amount: record.GetRequiredField("amount", 3).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        InstrumentId: record.GetRequiredField("instrumentId", 4).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 5).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -55,5 +68,4 @@ public sealed record TransferLegSide(
             global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
-
 }
