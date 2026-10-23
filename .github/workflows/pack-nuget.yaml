@@ -61,7 +61,7 @@ jobs:
             echo "::error::expected exactly one Daml.Codegen.CSharp.MSBuild package in output/nuget, found ${#packages[@]}"
             exit 1
           fi
-          if ! unzip -l "${packages[0]}" | grep -qF " ${stamp}"; then
+          if ! unzip -l "${packages[0]}" "${stamp}" >/dev/null; then
             echo "::error::${packages[0]} lacks ${stamp}; a release must not ship a package without the dpm-codegen-cs digest"
             exit 1
           fi
