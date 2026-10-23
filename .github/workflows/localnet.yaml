@@ -212,6 +212,7 @@ jobs:
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
+            --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
           "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 30 5
 
@@ -232,8 +233,9 @@ jobs:
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
+            --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 4
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 37 4
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -253,6 +255,55 @@ jobs:
             -- --filter-trait "Category=Integration" \
             --output Detailed 2>&1 | tee "${log}"
           "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "Cross-transport parity tests" 209 0
+
+      - name: Capture WSL2 LocalNet state on failure
+        if: failure()
+        continue-on-error: true
+        shell: wsl-bash {0}
+        run: |
+          out="$(wslpath -u '${{ github.workspace }}')/windows-diagnostics/wsl"
+          mkdir -p "${out}"
+          docker ps -a > "${out}/docker-ps.txt" 2>&1 || true
+          docker stats --no-stream > "${out}/docker-stats.txt" 2>&1 || true
+          for container in $(docker ps -a --filter label=com.docker.compose.project=localnet --format '{{.Names}}'); do
+            timeout 60 docker logs --timestamps --tail 3000 "${container}" > "${out}/logs-${container}.txt" 2>&1 || true
+          done
+          ss -tanp > "${out}/ss-tanp.txt" 2>&1 || true
+          ip addr > "${out}/ip-addr.txt" 2>&1 || true
+          free -m > "${out}/free.txt" 2>&1 || true
+          dmesg > "${out}/dmesg.txt" 2>&1 || true
+          cat /tmp/socat-18082.log /tmp/socat-15432.log > "${out}/socat.txt" 2>&1 || true
+          true
+
+      - name: Capture Windows networking state on failure
+        if: failure()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE 'windows-diagnostics\windows'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          wsl --version *> (Join-Path $out 'wsl-version.txt')
+          wsl --status *> (Join-Path $out 'wsl-status.txt')
+          wsl --list --verbose *> (Join-Path $out 'wsl-list.txt')
+          Get-Content "$env:USERPROFILE\.wslconfig" *> (Join-Path $out 'wslconfig.txt')
+          netsh interface portproxy show all *> (Join-Path $out 'portproxy.txt')
+          netstat -ano *> (Join-Path $out 'netstat-all.txt')
+          Select-String -Path (Join-Path $out 'netstat-all.txt') -Pattern ':(11975|11901|18082|15432|8082|5432)\s' | ForEach-Object { $_.Line } | Set-Content (Join-Path $out 'netstat-localnet-ports.txt')
+          Get-NetTCPConnection -LocalPort 11975, 11901 -ErrorAction SilentlyContinue | Format-Table -AutoSize *> (Join-Path $out 'nettcp-participant.txt')
+          Get-NetIPAddress | Format-Table -AutoSize *> (Join-Path $out 'ip-addresses.txt')
+          Get-Process -Name wslrelay, wslhost, wslservice, vmmem* -ErrorAction SilentlyContinue | Format-Table -AutoSize *> (Join-Path $out 'wsl-processes.txt')
+          Get-WinEvent -FilterHashtable @{ LogName = 'System'; StartTime = (Get-Date).AddHours(-3) } -MaxEvents 300 -ErrorAction SilentlyContinue | Format-List TimeCreated, ProviderName, Id, Message *> (Join-Path $out 'system-events.txt')
+          exit 0
+
+      - name: Upload Windows LocalNet diagnostics on failure
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: localnet-windows-diagnostics
+          path: windows-diagnostics
+          if-no-files-found: warn
+          retention-days: 7
 
   linux-x64:
     name: Linux x64 LocalNet
@@ -313,6 +364,7 @@ jobs:
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
+            --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
           "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 30 3
 
@@ -325,8 +377,9 @@ jobs:
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
+            --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 40 2
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 37 2
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}

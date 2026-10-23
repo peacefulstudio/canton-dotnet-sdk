@@ -81,6 +81,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentInterfaceFilterConformanceTests \
+               --filter-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentInterfaceFilterLiveTests \
             --minimum-expected-tests 3 \
             --output Detailed
 
@@ -92,6 +93,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentConformanceTests \
+               --filter-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentLiveTests \
             --minimum-expected-tests 2 \
             --output Detailed
 
@@ -117,6 +119,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
+               --filter-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionLiveTests \
             --minimum-expected-tests 2 \
             --output Detailed 2>&1 | tee "${log}"
           .github/scripts/assert-tests-ran.sh "${log}" "gRPC reassignment rejection tests" 2 0
@@ -130,6 +133,7 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
+               --filter-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --minimum-expected-tests 2 \
             --output Detailed 2>&1 | tee "${log}"
           .github/scripts/assert-tests-ran.sh "${log}" "REST reassignment rejection tests" 2 0

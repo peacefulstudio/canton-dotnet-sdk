@@ -111,13 +111,14 @@ jobs:
       tag: ${{ needs.resolve.outputs.tag }}
 
   nuget-pack:
-    needs: [resolve, draft-bootstrap]
+    needs: [resolve, draft-bootstrap, codegen-cs-digest]
     permissions:
       contents: write
     uses: ./.github/workflows/pack-nuget.yaml
     with:
       version: ${{ needs.resolve.outputs.version }}
       tag: ${{ needs.resolve.outputs.tag }}
+      codegen_cs_digest: ${{ needs.codegen-cs-digest.outputs.digest }}
 
   oci-build:
     needs: [resolve, draft-bootstrap]
