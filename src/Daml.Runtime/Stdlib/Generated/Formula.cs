@@ -59,6 +59,15 @@ public abstract record Formula<TA> where TA : notnull
     public sealed record Proposition(TA Value) : Formula<TA>
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<TA>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "Proposition";
 
         /// <inheritdoc />
@@ -68,6 +77,15 @@ public abstract record Formula<TA> where TA : notnull
     /// <summary>Negation constructor.</summary>
     public sealed record Negation(global::Daml.Runtime.Stdlib.Formula<TA> Value) : Formula<TA>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Formula<TA>>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "Negation";
 
@@ -146,5 +164,4 @@ public abstract record Formula<TA> where TA : notnull
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlVariant.Create("Disjunction", new global::Daml.Runtime.Data.DamlList(Value.Select(x => (global::Daml.Runtime.Data.DamlValue)x.ToVariant(__t0 => (global::Daml.Runtime.Data.DamlValue)(convertTA(__t0)))).ToList()));
     }
-
 }

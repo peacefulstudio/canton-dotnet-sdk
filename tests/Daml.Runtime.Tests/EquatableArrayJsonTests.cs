@@ -54,6 +54,8 @@ public class EquatableArrayJsonTests
         public sealed record Element(int Value);
     }
 
+    private abstract record AbstractElement;
+
     private sealed class NestedInPlain
     {
         public sealed record Element(int Value);
@@ -444,19 +446,13 @@ public class EquatableArrayJsonTests
     }
 
     [Fact]
-    public void CreatedContract_does_not_round_trip_without_DamlValueJsonConverter()
+    public void CreatedContract_round_trips_without_DamlValueJsonConverter_registered()
     {
         var json = JsonSerializer.Serialize(AssetContract, Options);
 
-        var act = () => JsonSerializer.Deserialize<CreatedContract>(json, Options);
+        var restored = JsonSerializer.Deserialize<CreatedContract>(json, Options);
 
-        act.Should().Throw<NotSupportedException>(
-            "DamlValue is abstract and DamlValueJsonConverter is registered only inside "
-            + "DamlJsonSerializer's own options, so the field values write as an empty object and "
-            + "cannot be read back; the gap predates this converter and is tracked separately. It "
-            + "escapes untranslated only because DamlRecord.Fields is an IReadOnlyList rather than "
-            + "an EquatableArray — were it the latter, this converter would report it as a "
-            + "JsonException naming the element");
+        restored.Should().Be(AssetContract);
     }
 
     [Fact]
@@ -475,10 +471,10 @@ public class EquatableArrayJsonTests
     [Fact]
     public void EquatableArray_translates_an_unsupported_element_type_to_JsonException()
     {
-        var act = () => JsonSerializer.Deserialize<EquatableArray<DamlValue>>("[{}]", Options);
+        var act = () => JsonSerializer.Deserialize<EquatableArray<AbstractElement>>("[{}]", Options);
 
         act.Should().Throw<JsonException>()
-            .WithMessage("*element 0 of EquatableArray<DamlValue>*")
+            .WithMessage("*element 0 of EquatableArray<EquatableArrayJsonTests.AbstractElement>*")
             .WithInnerException<NotSupportedException>();
     }
 

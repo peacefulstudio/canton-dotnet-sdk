@@ -163,6 +163,15 @@ public abstract record Optional<T>
     public sealed record Some(T Value) : Optional<T>
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, DamlEqualityComparer<T>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override bool HasValue => true;
 
         /// <inheritdoc />

@@ -11,6 +11,7 @@ using AwesomeAssertions;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime.Outcomes;
 using Grpc.Core;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 using Status = Grpc.Core.Status;
@@ -37,7 +38,7 @@ public class LedgerCallInvokerTests
         var headers = await invoker.GetHeadersAsync(TestContext.Current.CancellationToken);
 
         headers.Should().NotBeNull();
-        headers!.GetValue("authorization").Should().Be("Bearer test-token");
+        headers!.GetValue(CallContextHelper.AuthorizationHeaderName).Should().Be("Bearer test-token");
     }
 
     [Fact]
@@ -76,6 +77,24 @@ public class LedgerCallInvokerTests
         var invoker = new LedgerCallInvoker(Options(timeout: TimeSpan.FromSeconds(30)), _tokenProvider);
 
         invoker.GetDeadline().Should().NotBeNull().And.Subject.As<DateTime?>()!.Value.Should().BeAfter(DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void GetDeadline_is_the_supplied_TimeProvider_now_plus_the_configured_timeout()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero));
+        var invoker = new LedgerCallInvoker(Options(timeout: TimeSpan.FromSeconds(30)), _tokenProvider, time);
+
+        invoker.GetDeadline().Should().Be(new DateTime(2026, 3, 4, 5, 6, 37, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public void GetDeadline_prefers_the_per_call_timeout_over_the_configured_one()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero));
+        var invoker = new LedgerCallInvoker(Options(timeout: TimeSpan.FromSeconds(30)), _tokenProvider, time);
+
+        invoker.GetDeadline(TimeSpan.FromMinutes(2)).Should().Be(new DateTime(2026, 3, 4, 5, 8, 7, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -328,6 +347,50 @@ public class LedgerCallInvokerTests
         var span = stopped.Should().ContainSingle().Which;
         span.Status.Should().Be(ActivityStatusCode.Error);
         span.GetTagItem(ActivityHelper.ErrorType).Should().Be("UndecodableBody");
+    }
+
+    private static async Task<Activity> SpanOfUndecodableResponseNaming(string contractId, bool emitIdentifiers)
+    {
+        var options = Options();
+        options.EmitPartyAndContractSpanTags = emitIdentifiers;
+        var invoker = new LedgerCallInvoker(options, new StaticTokenProvider("test-token"));
+        using var source = new ActivitySource("LedgerCallInvokerTests.UndecodableDescription");
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = candidate => candidate == source,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stopped.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var act = () => invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, long>(
+            LedgerCallKind.Read,
+            source,
+            StateService.Descriptor,
+            "GetLedgerEnd",
+            (_, _, _) => Ok(new GetLedgerEndResponse()),
+            _ => throw new MalformedResponseException($"contract '{contractId}' has no offset"),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<LedgerOperationException>();
+        return stopped.Should().ContainSingle().Which;
+    }
+
+    [Fact]
+    public async Task InvokeTracedAsync_describes_an_undecodable_response_by_its_error_type_by_default()
+    {
+        var span = await SpanOfUndecodableResponseNaming("00contract-that-names-a-party", emitIdentifiers: false);
+
+        span.StatusDescription.Should().Be("UndecodableBody");
+    }
+
+    [Fact]
+    public async Task InvokeTracedAsync_describes_an_undecodable_response_by_its_message_when_party_and_contract_tags_are_opted_in()
+    {
+        var span = await SpanOfUndecodableResponseNaming("00contract-that-names-a-party", emitIdentifiers: true);
+
+        span.StatusDescription.Should().Be("Malformed response from ledger: contract '00contract-that-names-a-party' has no offset");
     }
 
     [Fact]

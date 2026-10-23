@@ -17,6 +17,15 @@ public sealed record ScheduleView(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("reference")] string Reference
 ) : global::Daml.Runtime.Data.IDamlRecord<ScheduleView>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Issuer, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Reference, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("issuer", Issuer.ToDamlValue()),
@@ -25,8 +34,8 @@ public sealed record ScheduleView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static ScheduleView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ScheduleView(
-        Issuer: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("issuer").As<global::Daml.Runtime.Data.DamlParty>()),
-        Reference: record.GetRequiredField("reference").As<global::Daml.Runtime.Data.DamlText>().Value
+        Issuer: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("issuer", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Reference: record.GetRequiredField("reference", 1).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record ScheduleView(
             global::Daml.Runtime.Data.DamlField.Create("reference", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reference"), context.Field("reference")))
         );
     }
-
 }

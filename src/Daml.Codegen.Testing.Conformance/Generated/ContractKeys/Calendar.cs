@@ -46,7 +46,7 @@ public sealed record Calendar(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Id);
+        hash.Add(Id, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Holidays));
         return hash.ToHashCode();
     }
@@ -59,8 +59,8 @@ public sealed record Calendar(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Calendar FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Calendar(
-        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Holidays: (global::System.Collections.Generic.IReadOnlyList<string>)record.GetRequiredField("holidays").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList()
+        Id: record.GetRequiredField("id", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Holidays: (global::System.Collections.Generic.IReadOnlyList<string>)record.GetRequiredField("holidays", 1).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.As<global::Daml.Runtime.Data.DamlText>().Value).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -73,5 +73,4 @@ public sealed record Calendar(
             global::Daml.Runtime.Data.DamlField.Create("holidays", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "holidays"), context.Field("holidays"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
         );
     }
-
 }

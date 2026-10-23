@@ -20,6 +20,15 @@ public sealed partial record AnsRules
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("transferContext")] global::Splice.AmuletRules.AppTransferContext TransferContext
     ) : global::Daml.Runtime.Data.IDamlRecord<AnsRules_RejectEntryInitialPayment>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(PaymentCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment>>.Default);
+            hash.Add(TransferContext, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.AmuletRules.AppTransferContext>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("paymentCid", PaymentCid.ToDamlValue()),
@@ -28,8 +37,8 @@ public sealed partial record AnsRules
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static AnsRules_RejectEntryInitialPayment FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRules_RejectEntryInitialPayment(
-            PaymentCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment>(record.GetRequiredField("paymentCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-            TransferContext: global::Splice.AmuletRules.AppTransferContext.FromRecord(record.GetRequiredField("transferContext").As<global::Daml.Runtime.Data.DamlRecord>())
+            PaymentCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Wallet.Subscriptions.SubscriptionInitialPayment>(record.GetRequiredField("paymentCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+            TransferContext: global::Splice.AmuletRules.AppTransferContext.FromRecord(record.GetRequiredField("transferContext", 1).As<global::Daml.Runtime.Data.DamlRecord>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -42,6 +51,5 @@ public sealed partial record AnsRules
                 global::Daml.Runtime.Data.DamlField.Create("transferContext", global::Splice.AmuletRules.AppTransferContext.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferContext"), context.Field("transferContext")))
             );
         }
-
     }
 }

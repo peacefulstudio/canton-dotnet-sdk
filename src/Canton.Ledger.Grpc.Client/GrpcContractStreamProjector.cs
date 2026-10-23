@@ -96,7 +96,9 @@ internal static class GrpcContractStreamProjector
     public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response)
     {
         var (created, wireSynchronizerId) = GrpcProjectionCore.ActiveEntryOf(response);
-        return DisclosureOf(created, wireSynchronizerId);
+        return string.IsNullOrWhiteSpace(created?.ContractId)
+            ? null
+            : DisclosureOf(created, wireSynchronizerId);
     }
 
     public static RuntimeDisclosedContract? DisclosureOf(GetEventsByContractIdResponse response) =>
@@ -107,7 +109,7 @@ internal static class GrpcContractStreamProjector
     private static RuntimeDisclosedContract? DisclosureOf(ProtoCreatedEvent? created, string? wireSynchronizerId) =>
         created is { CreatedEventBlob.IsEmpty: false, TemplateId: { } templateId }
             ? new RuntimeDisclosedContract(
-                created.ContractId,
+                MalformedResponse.RequireContractId(created.ContractId, "a created event"),
                 LedgerWireConversions.ToRuntimeIdentifier(templateId),
                 created.CreatedEventBlob.Memory)
             {

@@ -575,6 +575,12 @@ public abstract class LedgerClientConformanceTests<TProbe>
 
     private async Task VerifyCancellationThrows(IReadFamily family)
     {
+        await VerifyAPreCancelledTokenThrows(family);
+        await VerifyCancellingAnIdleSubscriptionThrows(family);
+    }
+
+    private async Task VerifyAPreCancelledTokenThrows(IReadFamily family)
+    {
         await using var client = CreateClient();
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -585,6 +591,53 @@ public abstract class LedgerClientConformanceTests<TProbe>
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    private async Task VerifyCancellingAnIdleSubscriptionThrows(IReadFamily family)
+    {
+        await using var client = CreateClient();
+        using var cts = new CancellationTokenSource();
+
+        var act = () => AwaitWithinBudget(
+            CancelOnceIdle(family.AcsDelta(client, Reader, null, null, cts.Token), cts, family.LiveSubscriptionName),
+            $"a {family.LiveSubscriptionName} cancelled while its next read is pending must throw "
+            + "OperationCanceledException, not ignore the token");
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    private async Task CancelOnceIdle<TItem>(
+        IAsyncEnumerable<TItem> stream, CancellationTokenSource cancellation, string subscriptionName)
+    {
+        await using var enumerator = stream.GetAsyncEnumerator(CancellationToken.None);
+
+        while (true)
+        {
+            var read = enumerator.MoveNextAsync().AsTask();
+
+            if (!cancellation.IsCancellationRequested
+                && await Task.WhenAny(read, Task.Delay(LiveSubscriptionIdleWindow)) != read)
+            {
+                await cancellation.CancelAsync();
+            }
+
+            if (await read)
+            {
+                continue;
+            }
+
+            if (cancellation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"a {subscriptionName} must stay open until its token is cancelled; the seeded stream must "
+                + "keep the subscription open after its last seeded row instead of completing on its own");
+        }
+    }
+
+    private TimeSpan LiveSubscriptionIdleWindow =>
+        TimeSpan.FromTicks(Math.Min(TimeSpan.FromMilliseconds(250).Ticks, StreamTimeout.Ticks / 10));
 
     private async Task VerifySnapshotSurfacesUnclassifiedRows(IReadFamily family)
     {
@@ -659,7 +712,25 @@ public abstract class LedgerClientConformanceTests<TProbe>
         resumed.Should().NotContain(
             e => PositionOf(e) == resumeFrom,
             "fromOffset is exclusive: resuming from an offset must not re-deliver the event at it");
+
+        var expectedAfterResume = PositionedAfter(all, resumeFrom);
+        expectedAfterResume.Should().NotBeEmpty(
+            "the conformance scenario must seed at least one event after the first position of the "
+            + "subscription stream, so a resumed read has something to deliver");
+        PositionedAfter(resumed, resumeFrom).Should().Equal(
+            expectedAfterResume,
+            "fromOffset is exclusive, not a filter that empties the stream: resuming from an offset must "
+            + "deliver exactly the events after it, or a client restarted from a stored offset silently "
+            + "loses every update that followed");
     }
+
+    private static List<(RowKind Kind, long Position)> PositionedAfter(
+        IReadOnlyList<ReadRow> rows, LedgerOffset boundary) =>
+        rows
+            .Select(row => (row.Kind, Position: PositionOf(row)))
+            .Where(positioned => positioned.Position is { } position && position.Value > boundary.Value)
+            .Select(positioned => (positioned.Kind, positioned.Position!.Value.Value))
+            .ToList();
 
     private async Task VerifyToOffsetIsInclusiveAndTerminal(IReadFamily family)
     {
@@ -691,6 +762,7 @@ public abstract class LedgerClientConformanceTests<TProbe>
             family.LedgerEffects(client, Reader, LedgerOffset.Begin, end, CancellationToken.None),
             $"A bounded {family.SubscribeLedgerEffectsName} (toOffset {end.Value}) must complete");
 
+        RejectTransportStreamError(events);
         events.Should().NotBeEmpty(
             "the conformance scenario must seed at least one event on the ledger-effects stream");
         events.Should().NotContain(
@@ -710,6 +782,7 @@ public abstract class LedgerClientConformanceTests<TProbe>
 
         var events = await CollectBounded(family, client, LedgerOffset.Begin, end);
 
+        RejectTransportStreamError(events);
         events.Should().NotBeEmpty(
             "the conformance scenario must seed at least one event on the subscription stream");
         events.Should().NotContain(
@@ -734,12 +807,13 @@ public abstract class LedgerClientConformanceTests<TProbe>
             family.AcsDelta(client, Reader, fromOffset, toOffset, CancellationToken.None),
             $"A bounded {family.SubscribeName} (toOffset {toOffset.Value}) must complete");
 
-    private async Task DrainWithinBudget<TItem>(
-        IAsyncEnumerable<TItem> stream, string cancellationContract)
+    private Task DrainWithinBudget<TItem>(
+        IAsyncEnumerable<TItem> stream, string cancellationContract) =>
+        AwaitWithinBudget(DrainToCompletion(stream), cancellationContract);
+
+    private async Task AwaitWithinBudget(Task drain, string cancellationContract)
     {
         using var timer = new CancellationTokenSource();
-
-        var drain = DrainToCompletion(stream);
 
         if (await Task.WhenAny(drain, Task.Delay(StreamTimeout, timer.Token)) != drain)
         {
@@ -837,10 +911,20 @@ public abstract class LedgerClientConformanceTests<TProbe>
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
+    private const string BoundedStreamErrorMessage =
+        "a bounded conformance subscription must not surface a transport StreamError";
+
+    private static void RejectTransportStreamError(IReadOnlyList<ReadRow> rows)
+    {
+        if (rows.Any(row => row.Kind == RowKind.StreamError))
+        {
+            throw new InvalidOperationException(BoundedStreamErrorMessage);
+        }
+    }
+
     private static LedgerOffset? PositionOf(ReadRow row) =>
         row.Kind == RowKind.StreamError
-            ? throw new InvalidOperationException(
-                "a bounded conformance subscription must not surface a transport StreamError")
+            ? throw new InvalidOperationException(BoundedStreamErrorMessage)
             : row.Offset;
 
     private static bool SitsAtOrBefore(ReadRow row, LedgerOffset boundary) =>

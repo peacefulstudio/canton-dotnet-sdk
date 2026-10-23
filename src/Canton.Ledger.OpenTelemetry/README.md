@@ -7,7 +7,7 @@ The source names come from `Canton.Ledger.Kernel`, which is this package's only 
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.OpenTelemetry --version 0.7.0
+dotnet add package Canton.Ledger.OpenTelemetry --version 0.7.1
 ```
 
 ## Key Types
@@ -39,9 +39,9 @@ W3C trace-context propagation needs no extra code: the BCL `SocketsHttpHandler` 
 
 ## Attributes
 
-Client spans carry OpenTelemetry semantic-convention attributes (`rpc.system`, `rpc.service`, `rpc.method`, `http.request.method`, `http.response.status_code`, `url.full`, `server.address`, `server.port`, `error.type`) plus three custom buckets: `daml.*` for Daml-LF source concepts (`daml.template_id`, `daml.choice`, `daml.contract_id`, `daml.package_id`) and `canton.*` for Ledger-API/operational concepts (`canton.offset`, `canton.from_offset`, `canton.submitter.act_as`/`read_as`, `canton.party_id`, `canton.participant_id`, `canton.party_id_hint`, `canton.user_id`, `canton.submission_id`, `canton.update_id`, `canton.traffic_cost_bytes`, `canton.pqs.result_count`), and `retry.*` on the retry pipeline's own spans (`retry.attempt`, `retry.delay_ms`).
+Client spans carry OpenTelemetry semantic-convention attributes (`rpc.system`, `rpc.service`, `rpc.method`, `http.request.method`, `http.response.status_code`, `url.full`, `url.template`, `server.address`, `server.port`, `error.type`) plus three custom buckets: `daml.*` for Daml-LF source concepts (`daml.template_id`, `daml.choice`, `daml.contract_id`, `daml.package_id`) and `canton.*` for Ledger-API/operational concepts (`canton.offset`, `canton.from_offset`, `canton.submitter.act_as`/`read_as`, `canton.party_id`, `canton.participant_id`, `canton.party_id_hint`, `canton.user_id`, `canton.submission_id`, `canton.update_id`, `canton.traffic_cost_bytes`, `canton.pqs.result_count`), and `retry.*` on the retry pipeline's own spans (`retry.attempt`, `retry.delay_ms`).
 
-The party and contract identifiers among them — `canton.submitter.act_as`, `canton.submitter.read_as`, `canton.party_id`, `canton.party_id_hint` and `daml.contract_id` — are **off by default**: anyone with read access to a tracing backend would otherwise see who transacted on which contract. A host whose backend is trusted with that data opts in on the gRPC client's options:
+The party, contract and user identifiers among them — `canton.submitter.act_as`, `canton.submitter.read_as`, `canton.party_id`, `canton.party_id_hint`, `daml.contract_id` and `canton.user_id` — are **off by default**: anyone with read access to a tracing backend would otherwise see who transacted on which contract and whom the participant administers. The same setting keeps the party and user ids out of the admin clients' `Party allocated`, `User created`, `Rights granted` and `Rights revoked` log lines. A host whose backend is trusted with that data opts in on the gRPC client's options:
 
 ```csharp
 services.AddLedgerClient(options =>
@@ -51,7 +51,7 @@ services.AddLedgerClient(options =>
 });
 ```
 
-or `Canton:Ledger:EmitPartyAndContractSpanTags` set to `true` in configuration. The JSON client's `url.full` never carries the request's query string or user info, whatever the setting, since a query such as `?party=` names a party.
+or `Canton:Ledger:EmitPartyAndContractSpanTags` set to `true` in configuration. With the setting off, a failed call's span status, its `Submit failed` warning and the completion and subscribe stream-failure warnings carry the gRPC status code (`Unavailable`) instead of the server's status detail, which can name a party or contract. Whatever the setting, the gRPC client's choice-exercise logs carry the contract id only at `Debug`. The JSON client has the same switch, `RestLedgerClientOptions.EmitPartyAndContractSpanTags`, bound from `EmitPartyAndContractSpanTags` in the section passed to `AddRestLedgerClient`: it controls `canton.user_id` on admin spans and the ids in the admin log lines, and with it off a failed admin call's span status carries the HTTP status code (`404`) instead of the server's message. Whatever the setting, the JSON client's `url.full` never carries the request's query string or user info, since a query such as `?party=` names a party, and for a request to a route such as `/v2/parties/{party}` or `/v2/users/{userId}` it carries the route template in place of the concrete id, with the same template on `url.template`.
 
 Every one of those custom names is a constant on `Canton.Ledger.Kernel.Telemetry.LedgerActivityTagNames`, with `All` over the whole set — name one from there rather than retyping it into a dashboard query, a sampling rule or a redaction filter.
 

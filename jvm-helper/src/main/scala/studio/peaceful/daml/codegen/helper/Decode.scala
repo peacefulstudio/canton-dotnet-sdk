@@ -8,6 +8,7 @@ import studio.peaceful.daml.codegen.intermediate.intermediate_dar.IntermediateDa
 import java.io.{BufferedOutputStream, FileOutputStream, IOException, OutputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths}
+import scala.util.Try
 
 /** Entry point for the JVM codegen helper.
   *
@@ -90,9 +91,16 @@ object Decode {
     */
   def run(args: ParsedArgs): Either[String, Unit] =
     for {
-      proto <- if (args.schemaOnly) decodeSchemaOnly(args) else decodeFull(args)
+      proto <- guardedDecode(args)(if (args.schemaOnly) decodeSchemaOnly(args) else decodeFull(args))
       _     <- writeProto(args.outPath, proto)
     } yield ()
+
+  private def guardedDecode(args: ParsedArgs)(decode: => Either[String, IntermediateDar])
+      : Either[String, IntermediateDar] =
+    Try(decode).toEither
+      .left
+      .map(error => s"Failed to read DAR ${args.darPath.getFileName}: ${error.getClass.getName}: ${error.getMessage}")
+      .flatMap(identity)
 
   private def decodeSchemaOnly(args: ParsedArgs)
       : Either[String, studio.peaceful.daml.codegen.intermediate.intermediate_dar.IntermediateDar] =
@@ -202,6 +210,7 @@ object Decode {
         case "--dar" :: value :: rest => loop(rest, Some(Paths.get(value)), out, schemaOnly)
         case "--out" :: value :: rest => loop(rest, dar, Some(Paths.get(value)), schemaOnly)
         case "--schema-only" :: rest  => loop(rest, dar, out, schemaOnly = true)
+        case ("--dar" | "--out") :: Nil => Left(s"Missing value for ${remaining.head}")
         case other :: _               => Left(s"Unrecognised argument: $other")
       }
       loop(args, None, None, schemaOnly = false)

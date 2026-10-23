@@ -16,6 +16,14 @@ public sealed record GeneralError(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("message")] string Message
 ) : global::Daml.Runtime.Data.IDamlRecord<GeneralError>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Message, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("message", new global::Daml.Runtime.Data.DamlText(Message))
@@ -23,7 +31,7 @@ public sealed record GeneralError(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static GeneralError FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new GeneralError(
-        Message: record.GetRequiredField("message").As<global::Daml.Runtime.Data.DamlText>().Value
+        Message: record.GetRequiredField("message", 0).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record GeneralError(
             global::Daml.Runtime.Data.DamlField.Create("message", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "message"), context.Field("message")))
         );
     }
-
 }

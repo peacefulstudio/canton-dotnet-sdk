@@ -119,7 +119,7 @@ internal static class EventCollections
         IEnumerable<T> values, string parameterName, string containerName)
     {
         ArgumentNullException.ThrowIfNull(values, parameterName);
-        var set = new HashSet<T>();
+        var set = new HashSet<T>(Data.DamlEqualityComparer<T>.Default);
         var index = 0;
         foreach (var item in values)
         {

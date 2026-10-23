@@ -9,7 +9,7 @@ Reach for this package only when you need an endpoint the adapter does not surfa
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Rest --version 0.7.0
+dotnet add package Canton.Ledger.Rest --version 0.7.1
 ```
 
 ## Related Packages
@@ -21,7 +21,7 @@ dotnet add package Canton.Ledger.Rest --version 0.7.0
 
 The committed `spec/openapi.yaml` these interfaces are generated from is derived from pristine
 published protos plus the vendored patch set described below, with every link pinned. The
-fork is advocacy-only and never enters the build.
+fork holds the original annotation experiments and never enters the build.
 
 ```
 (CantonVersion protos × spec/patches/ × buf) → spec/openapi.yaml → (spec/openapi.yaml × Refitter) → .g.cs
@@ -31,7 +31,7 @@ fork is advocacy-only and never enters the build.
 
 | | |
 |---|---|
-| Fork | [`peacefulstudio/canton`](https://github.com/peacefulstudio/canton) (advocacy-only; never fetched by any build) |
+| Fork | [`peacefulstudio/canton`](https://github.com/peacefulstudio/canton) (holds the original annotation experiments; never fetched by any build) |
 | Branch | `experiment/google-api-http-full-coverage` ([PR peacefulstudio/canton#4](https://github.com/peacefulstudio/canton/pull/4)) |
 | Commit | `472b36a787866095617da776b6980f580f9e5ab1` |
 | Rebase base | upstream `digital-asset/canton` `release-line-3.5` @ `1f9a483455307cfb7875ff120ff803500663eeac` |
@@ -95,7 +95,7 @@ A patch that fails to apply after a `$(CantonVersion)` bump is the upstream-drif
 re-export from a rebased fork branch, never hand-edit `spec/openapi.yaml`.
 
 Patches apply to a temporary copy of the extracted protos (`git apply` from the copy
-root); `src/Canton.Ledger.Grpc/Proto/` always stays pristine.
+root); the downloaded protos in `src/Canton.Ledger.Grpc/obj/proto-cache/` always stay pristine.
 
 ### Deprecation prose in these descriptions is unreliable
 
@@ -119,8 +119,7 @@ has the same defect independently: its `3.5.9` copy repeats *"...removed in the 
 still answer `401` rather than `404` on `3.5.9`. Neither `filter` nor `verbose` exists in the
 vendored spec's `GetActiveContractsRequest`, so nothing generated here has ever sent them.
 
-Correcting either text means correcting it upstream; both are recorded as evidence for
-[digital-asset/canton#527](https://github.com/digital-asset/canton/issues/527).
+Correcting either text means correcting it upstream.
 
 ### Generation
 

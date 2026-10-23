@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json.Serialization;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Data;
 
@@ -30,19 +31,32 @@ public sealed record SubmitAndWaitResult(
 /// <param name="CompletionOffset">Offset at which the transaction was committed.</param>
 /// <param name="CreatedContracts">Contracts created by the transaction. Project to
 /// typed <see cref="ContractId{T}"/> values via <see cref="TransactionResultExtensions"/>.</param>
-/// <param name="ArchivedContractIds">Raw contract IDs archived by the transaction.</param>
+/// <param name="ArchivedContractIds">Raw contract IDs archived by the transaction. No element may be
+/// null, empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+/// construction and through a <c>with</c> expression.</param>
 /// <param name="CommandId">The effective command id the participant recorded for the
 /// submission that produced this transaction, used for deduplication; <c>null</c> when
 /// the participant reported none. The Ledger API omits the command id on transactions
 /// this participant did not submit, so callers must treat it as optional rather than
 /// assume every transaction carries one.</param>
 public sealed record TransactionResult(
-    string UpdateId,
-    LedgerOffset CompletionOffset,
-    EquatableArray<CreatedContract> CreatedContracts,
+    [property: JsonPropertyOrder(-2)] string UpdateId,
+    [property: JsonPropertyOrder(-2)] LedgerOffset CompletionOffset,
+    [property: JsonPropertyOrder(-2)] EquatableArray<CreatedContract> CreatedContracts,
     EquatableArray<string> ArchivedContractIds,
     CommandId? CommandId)
 {
+    private readonly EquatableArray<string> _archivedContractIds =
+        ReadSideContractId.RequireAll(ArchivedContractIds, nameof(ArchivedContractIds));
+
+    /// <summary>Raw contract IDs archived by the transaction (no blank element).</summary>
+    [JsonPropertyOrder(-1)]
+    public EquatableArray<string> ArchivedContractIds
+    {
+        get => _archivedContractIds;
+        init => _archivedContractIds = ReadSideContractId.RequireAll(value, nameof(ArchivedContractIds));
+    }
+
     /// <summary>
     /// Choice-exercise events observed in the transaction, in transaction order.
     /// Defaults to empty — populated by ledger-client transport
@@ -57,6 +71,18 @@ public sealed record TransactionResult(
     /// </summary>
     public EquatableArray<ExercisedEvent> ExercisedEvents { get; init; }
 
+    /// <summary>
+    /// The traffic cost, in bytes, of the confirmation request the submitting participant paid
+    /// for this transaction; <c>null</c> when the participant reported none. It is the
+    /// confirmation-request cost only, so the estimate it is comparable to is
+    /// <c>TrafficCostEstimate.ConfirmationRequestCost</c>, never <c>TrafficCostEstimate.TotalCost</c>,
+    /// which also counts the confirmation responses and will always look larger. It is <c>null</c>
+    /// when the transaction was initiated by another participant, initiated offline through the
+    /// repair service, or processed before the participant served traffic cost, and when it was
+    /// read for a party that did not submit it. A reported zero stays <c>0</c>.
+    /// </summary>
+    public long? PaidTrafficCost { get; init; }
+
     internal EquatableArray<Identifier> RequestedInterfaces { get; init; }
 
     internal TransactionResult WithRequestedInterfaces(IEnumerable<DamlTypeDescriptor> requested) =>
@@ -70,7 +96,9 @@ public sealed record TransactionResult(
 /// losslessly.
 /// </summary>
 /// <param name="EventId">The ledger-assigned event identifier.</param>
-/// <param name="ContractId">The on-ledger contract ID.</param>
+/// <param name="ContractId">The on-ledger contract ID. Must not be null,
+/// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+/// construction and through a <c>with</c> expression.</param>
 /// <param name="TemplateId">The template identifier (package + module + entity).</param>
 /// <param name="Payload">The create-arguments record — <see cref="TreeEvent.Created.CreateArguments"/>
 /// under the name the snapshot-side shapes use for the same slot (compare
@@ -106,7 +134,7 @@ public sealed record TransactionResult(
 /// <c>null</c> when the transport does not supply it. Mirrors
 /// <see cref="TreeEvent.Created.CreatedAt"/>.</param>
 public sealed record CreatedContract(
-    string EventId,
+    [property: JsonPropertyOrder(-2)] string EventId,
     string ContractId,
     Identifier TemplateId,
     DamlRecord Payload,
@@ -116,6 +144,16 @@ public sealed record CreatedContract(
     ContractKey? ContractKey = null,
     DateTimeOffset? CreatedAt = null)
 {
+    private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+    /// <summary>The on-ledger contract ID of the created contract (non-null, non-whitespace).</summary>
+    [JsonPropertyOrder(-1)]
+    public string ContractId
+    {
+        get => _contractId;
+        init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+    }
+
     /// <summary>
     /// Interface ids the participant computed for this created event
     /// (Canton gRPC <c>CreatedEvent.interface_views[].interface_id</c>).

@@ -125,20 +125,17 @@ public class ChoiceAsyncExerciserTests
 
         var code = GenerateAndReadTemplate(module, "Counter");
 
-        // The plain <TemplateName>Extensions class is only emitted for create-bearing
-        // choices; primitive returns get the <TemplateName>NonContractExtensions class.
-        code.Should().NotContain("public static class CounterExtensions");
-        // GetCount's emission lives in CounterNonContractExtensions.
-        code.Should().Contain("public static class CounterNonContractExtensions");
+        code.Should().NotContain(
+            "public static class CounterExtensions",
+            because: "the plain extensions class is only emitted for create-bearing choices");
+        code.Should().Contain(
+            "public static class CounterNonContractExtensions",
+            because: "primitive returns get the NonContractExtensions class");
     }
 
     [Fact]
     public void Generate_should_emit_async_extension_with_contract_id_receiver()
     {
-        // Default Controllers = Dynamic on the helper template — the analyzer
-        // couldn't resolve them, so the wrapper falls back to a single
-        // SubmitterInfo parameter (which implicitly converts from string /
-        // Party for single-party callers).
         var module = ModuleWith(
             Template("Agreement", ContractIdOf("Agreement"), choiceName: "Renew"));
 
@@ -147,10 +144,9 @@ public class ChoiceAsyncExerciserTests
         code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>>> TryRenewAsync(");
         code.Should().Contain("this global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement> contractId");
         code.Should().Contain("ILedgerWriter client");
-        // Dynamic-controller fallback shape: the wrapper takes a SubmitterInfo
-        // parameter, never a string. Single-party callers stay one-liners via
-        // SubmitterInfo's implicit conversion from string / Party.
-        code.Should().Contain("SubmitterInfo submitter");
+        code.Should().Contain(
+            "SubmitterInfo submitter",
+            because: "dynamic controllers the analyzer cannot resolve fall back to one SubmitterInfo parameter, which converts implicitly from string and Party");
         code.Should().NotContain("string actAs");
         code.Should().NotContain("(global::Daml.Runtime.Data.Party)actAs");
     }
@@ -158,16 +154,14 @@ public class ChoiceAsyncExerciserTests
     [Fact]
     public void Generate_should_not_emit_default_workflow_id()
     {
-        // B1: workflow IDs are correlation keys. A choice-derived default would bucket
-        // every submission of the same choice under one ID, breaking observability.
-        // The codegen must omit .WithWorkflowId(...) when the caller doesn't supply one,
-        // not synthesise a default.
         var module = ModuleWith(
             Template("Agreement", ContractIdOf("Agreement"), choiceName: "Renew"));
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().NotContain("\"exercise-renew\"");
+        code.Should().NotContain(
+            "\"exercise-renew\"",
+            because: "workflow IDs are correlation keys and a choice-derived default would bucket every submission of the same choice under one ID");
         code.Should().NotContain("workflowId ??");
         code.Should().NotContain(".WithWorkflowId(");
         code.Should().Contain("client." + TrySubmitSingleArgumentOrder);
@@ -253,7 +247,6 @@ public class ChoiceAsyncExerciserTests
     [Fact]
     public void Generate_should_emit_async_extension_for_each_create_bearing_choice()
     {
-        // Agreement template with two create-bearing choices.
         var template = new DamlTemplate
         {
             Name = "Agreement",
@@ -288,24 +281,22 @@ public class ChoiceAsyncExerciserTests
 
         code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Stdlib.Tuple2<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.Agreement>, global::Daml.Runtime.Contracts.ContractId<global::Test.Module.SwapRecord>>>> TryExecuteSwapAsync(");
         code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Test.Module.AgreementRecord>>> TryCancelAsync(");
-        // Non-creating choice (returns Int64, not a ContractId) is routed to the
-        // NonContractExtensions class — not skipped — so it does emit
-        // an async wrapper, just via the ExercisedEvents projector path. The
-        // create-bearing AgreementExtensions class still excludes it.
-        code.Should().Contain("public static class AgreementNonContractExtensions");
+        code.Should().Contain(
+            "public static class AgreementNonContractExtensions",
+            because: "a non-creating choice is routed to the NonContractExtensions class through the ExercisedEvents projector path, not skipped");
         code.Should().Contain("public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<long>> TryGetCountAsync(");
     }
 
     [Fact]
     public void Generate_should_emit_ledger_abstractions_using_for_extensions()
     {
-        // The emitted file must `using Daml.Ledger.Abstractions;` so the
-        // ILedgerWriter parameter type resolves at consumer compile time.
         var module = ModuleWith(
             Template("Agreement", ContractIdOf("Agreement"), choiceName: "Renew"));
 
         var code = GenerateAndReadTemplate(module, "Agreement");
 
-        code.Should().Contain("using Daml.Ledger.Abstractions;");
+        code.Should().Contain(
+            "using Daml.Ledger.Abstractions;",
+            because: "the ILedgerWriter parameter type must resolve at consumer compile time");
     }
 }

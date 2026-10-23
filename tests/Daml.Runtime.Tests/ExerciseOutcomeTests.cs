@@ -33,8 +33,6 @@ public class ExerciseOutcomeTests
     [Fact]
     public void One_can_carry_a_decimal_payload()
     {
-        // The outcome type imposes no constraint on T — choice results that aren't
-        // template-typed (e.g. a Decimal returned from a `nonconsuming` choice) round-trip.
         var outcome = new ExerciseOutcome<decimal>.One(42.5m);
 
         outcome.Result.Should().Be(42.5m);
@@ -43,8 +41,6 @@ public class ExerciseOutcomeTests
     [Fact]
     public void One_can_carry_an_arbitrary_record_payload()
     {
-        // Composite Daml choice results are emitted as plain C# records by codegen;
-        // the outcome wrapper accepts any T.
         var result = new SwapChoiceResult(new ContractId<FooBar>("00agreement"), new ContractId<FooBar>("00record"));
         var outcome = new ExerciseOutcome<SwapChoiceResult>.One(result);
 

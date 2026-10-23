@@ -20,7 +20,8 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Answering(() => EffectiveCommandId(submission.CommandId));
+        var sent = Recorded(submission);
+        return Answering(() => sent.CommandId!.Value);
     }
 
     /// <inheritdoc />
@@ -30,7 +31,8 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
-        return Answering(() => EffectiveCommandId(submission.CommandId));
+        var sent = RecordedReassignment(submission);
+        return Answering(() => sent.CommandId!.Value);
     }
 
     /// <inheritdoc />
@@ -41,11 +43,12 @@ public sealed partial class FakeLedgerClient
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(submission);
+        var sent = RecordedReassignment(submission);
         return Task.FromResult(
             AdvancingLedgerEndOnCommit(
                 Staged<ExerciseOutcome<ContractStreamEvent<T>>>(
                     _canton.ReassignmentResults, typeof(T), "reassignment outcome", $"WithReassignmentResult<{typeof(T).Name}>")
-                    .WithCommandId(SentCommandId(submission.CommandId))));
+                    .WithCommandId(SentCommandId(sent.CommandId))));
     }
 
     /// <inheritdoc />
@@ -56,11 +59,12 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
+        var sent = Recorded(submission.WithSubmitter(submitter));
         var staged = _canton.TransactionTreeOutcome ?? throw StagingMissing(
             "transaction tree outcome",
             nameof(TrySubmitAndWaitForTransactionTreeAsync),
             "WithTransactionTree");
-        return Task.FromResult(AdvancingLedgerEndOnCommit(staged.WithCommandId(SentCommandId(submission.CommandId))));
+        return Task.FromResult(AdvancingLedgerEndOnCommit(staged.WithCommandId(SentCommandId(sent.CommandId))));
     }
 
     /// <inheritdoc />
@@ -140,9 +144,6 @@ public sealed partial class FakeLedgerClient
             : throw StagingMissing(
                 "traffic-cost estimate", nameof(EstimateTrafficCostAsync), "WithTrafficCostEstimate"));
     }
-
-    private static CommandId EffectiveCommandId(CommandId? submitted) =>
-        submitted ?? new CommandId(Guid.NewGuid().ToString());
 
     private IReadOnlyList<CompletionStreamEvent> StagedCompletions() =>
         _canton.CompletionEvents ?? throw StagingMissing(

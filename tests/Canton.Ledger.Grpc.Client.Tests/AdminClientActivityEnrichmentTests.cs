@@ -83,8 +83,8 @@ public sealed class AdminClientActivityEnrichmentTests : IDisposable
         await client.AllocatePartyAsync(partyIdHint, cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("canton.party_id_hint").Should().BeNull();
-        activity.GetTagItem("rpc.method").Should().Be("AllocateParty");
+        activity.GetTagItem(LedgerActivityTagNames.CantonPartyIdHint).Should().BeNull();
+        activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("AllocateParty");
     }
 
     [Fact]
@@ -100,8 +100,8 @@ public sealed class AdminClientActivityEnrichmentTests : IDisposable
         await client.AllocatePartyAsync(partyIdHint, cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("canton.party_id_hint").Should().Be(partyIdHint);
-        activity.GetTagItem("rpc.method").Should().Be("AllocateParty");
+        activity.GetTagItem(LedgerActivityTagNames.CantonPartyIdHint).Should().Be(partyIdHint);
+        activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("AllocateParty");
     }
 
     [Fact]
@@ -169,6 +169,53 @@ public sealed class AdminClientActivityEnrichmentTests : IDisposable
             .Subject;
         activity.GetTagItem(ActivityHelper.RpcService).Should().Be("com.daml.ledger.api.v2.PackageService");
         activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("GetPackage");
+    }
+
+    private async Task<Activity> SpanOfListKnownPartiesRepeatingPageToken(string pageToken)
+    {
+        var page = new ListKnownPartiesResponse { NextPageToken = pageToken };
+        _partyService
+            .ListKnownPartiesAsync(
+                Arg.Any<ListKnownPartiesRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ => new AsyncUnaryCall<ListKnownPartiesResponse>(
+                Task.FromResult(page),
+                Task.FromResult(new Metadata()),
+                () => Status.DefaultSuccess,
+                () => new Metadata(),
+                () => { }));
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcAdminClient);
+
+        var act = () => CreateClient().ListKnownPartiesAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        return capture.Activities.Should()
+            .ContainSingle(a => a.GetTagItem(ActivityHelper.RpcMethod) as string == "ListKnownParties")
+            .Subject;
+    }
+
+    [Fact]
+    public async Task ListKnownPartiesAsync_leaves_the_repeated_page_token_off_the_span_by_default()
+    {
+        var activity = await SpanOfListKnownPartiesRepeatingPageToken("party::alice-page-token");
+
+        activity.Status.Should().Be(ActivityStatusCode.Error);
+        activity.StatusDescription.Should().Be("InvalidOperationException");
+        activity.GetTagItem(ActivityHelper.ErrorType).Should().Be("System.InvalidOperationException");
+    }
+
+    [Fact]
+    public async Task ListKnownPartiesAsync_puts_the_repeated_page_token_on_the_span_when_party_and_contract_tags_are_opted_in()
+    {
+        _options.EmitPartyAndContractSpanTags = true;
+
+        var activity = await SpanOfListKnownPartiesRepeatingPageToken("party::alice-page-token");
+
+        activity.StatusDescription.Should().Be(
+            "ListKnownParties pagination is not progressing: the server returned the page token 'party::alice-page-token' that was already used earlier in this call.");
     }
 
     private void StubAllocatePartySuccess(string partyIdHint)

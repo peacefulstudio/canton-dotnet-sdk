@@ -131,5 +131,5 @@ internal sealed record FooBar(string Owner) : ITemplate, IDamlRecord<FooBar>
 
     public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) => throw new NotSupportedException();
     public static FooBar FromRecord(DamlRecord record) =>
-        new(record.GetRequiredField("owner").As<DamlParty>().Value);
+        new(record.GetRequiredField("owner", 0).As<DamlParty>().Value);
 }

@@ -24,8 +24,8 @@ namespace Canton.Ledger.Rest.Client;
 /// </para>
 /// </summary>
 /// <remarks>
-/// Retired by digital-asset/canton#527, which would have the JSON HTTP API generated from the
-/// annotated protobuf definitions this duration shape comes from.
+/// Bridges the JSON API's wire encoding of a duration, which differs from the proto3 JSON our
+/// proto-derived specification describes.
 /// </remarks>
 internal sealed class WireDurationJsonConverter : JsonConverter<string>
 {

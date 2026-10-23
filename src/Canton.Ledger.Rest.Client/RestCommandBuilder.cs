@@ -32,13 +32,17 @@ namespace Canton.Ledger.Rest.Client;
 /// </summary>
 internal static class RestCommandBuilder
 {
-    public static WireCommands BuildCommands(RuntimeCommands.CommandsSubmission submission, string? userId)
+    public static WireCommands BuildCommands(
+        RuntimeCommands.CommandsSubmission submission,
+        string? userId,
+        Func<string>? mintId = null)
     {
         ArgumentNullException.ThrowIfNull(submission);
+        mintId ??= RuntimeCommands.IdMinting.Mint;
 
         var commands = new WireCommands
         {
-            CommandId = submission.CommandId?.Value ?? Guid.NewGuid().ToString(),
+            CommandId = submission.CommandId?.Value ?? mintId(),
             WorkflowId = submission.WorkflowId?.Value ?? string.Empty,
             ActAs = (submission.ActAs ?? []).Select(p => p.Value).ToList(),
             ReadAs = (submission.ReadAs ?? []).Select(p => p.Value).ToList(),
@@ -87,15 +91,19 @@ internal static class RestCommandBuilder
         return commands;
     }
 
-    public static WireReassignmentCommands BuildReassignmentCommands(ReassignmentSubmission submission, string? userId)
+    public static WireReassignmentCommands BuildReassignmentCommands(
+        ReassignmentSubmission submission,
+        string? userId,
+        Func<string>? mintId = null)
     {
         ArgumentNullException.ThrowIfNull(submission);
+        mintId ??= RuntimeCommands.IdMinting.Mint;
         RequireNonEmpty(submission.Submitter.Value, "submitter");
 
         var commands = new WireReassignmentCommands
         {
-            CommandId = submission.CommandId?.Value ?? Guid.NewGuid().ToString(),
-            SubmissionId = submission.SubmissionId ?? Guid.NewGuid().ToString(),
+            CommandId = submission.CommandId?.Value ?? mintId(),
+            SubmissionId = submission.SubmissionId ?? mintId(),
             WorkflowId = submission.WorkflowId?.Value ?? string.Empty,
             Submitter = submission.Submitter.Value,
             Commands = [ToWireReassignmentCommand(submission.Command)],
@@ -113,14 +121,14 @@ internal static class RestCommandBuilder
         RuntimeCommands.MinLedgerTime bound) =>
         bound.Match<(DateTimeOffset?, string?)>(
             absolute: instant => (instant, null),
-            relative: delay => (null, RestWireConversions.ToWireDuration(delay)));
+            relative: delay => (null, WireDuration.CanonicalOf(delay)));
 
     internal static WireDeduplicationPeriod? ToWireDeduplicationPeriod(RuntimeCommands.DeduplicationPeriod? period) =>
         period switch
         {
             RuntimeCommands.DeduplicationPeriod.Duration duration => new WireDeduplicationPeriod
             {
-                DeduplicationDuration = RestWireConversions.ToWireDuration(duration.Length),
+                DeduplicationDuration = WireDuration.CanonicalOf(duration.Length),
             },
             RuntimeCommands.DeduplicationPeriod.Offset offset => new WireDeduplicationPeriod
             {
@@ -138,7 +146,7 @@ internal static class RestCommandBuilder
                 {
                     UnassignCommand = new WireUnassignCommand
                     {
-                        ContractId = RequireNonEmpty(unassign.ContractId, "unassign contract id"),
+                        ContractId = unassign.ContractId,
                         Source = RequireNonEmpty(unassign.Source.Value, "unassign source synchronizer id"),
                         Target = RequireNonEmpty(unassign.Target.Value, "unassign target synchronizer id"),
                     },

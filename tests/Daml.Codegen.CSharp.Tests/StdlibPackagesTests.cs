@@ -13,6 +13,7 @@ public class StdlibPackagesTests
 {
     private const string StdlibPackageId = "stdlib-pkg";
     private const string UserPackageId = "user-pkg";
+    private const string InternalSegment = "Internal";
 
     private static DamlPackage NamedPackage(string packageId, string name) =>
         new()
@@ -93,5 +94,39 @@ public class StdlibPackagesTests
     {
         var resolver = Resolver(NamedPackage("placeholder-pkg", placeholderName));
         StdlibPackages.IsInStdlibPackage(resolver, Ref("placeholder-pkg", "DA.Types", "Tuple2")).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("daml-prim")]
+    [InlineData("daml-stdlib")]
+    [InlineData("daml-stdlib-3.6.2")]
+    [InlineData("daml-prim-DA-Types")]
+    [InlineData("daml-prim-GHC-Stack-Types")]
+    [InlineData("daml-prim-DA-Exception-ArithmeticError")]
+    [InlineData("daml-stdlib-DA-" + InternalSegment + "-Interface-AnyView-Types")]
+    [InlineData("daml-stdlib-DA-Action-State-Type")]
+    [InlineData("ghc-stdlib-DA-" + InternalSegment + "-Template")]
+    public void IsStdlibPackage_is_true_for_the_names_the_daml_sdk_gives_its_stdlib_packages(string name)
+    {
+        StdlibPackages.IsStdlibPackage(name).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("daml-stdlib-evil")]
+    [InlineData("daml-stdlib-mine")]
+    [InlineData("daml-prim-extras")]
+    [InlineData("daml-primitive-catalog-core")]
+    [InlineData("ghc-stdlib-mine")]
+    [InlineData("daml-stdlib-")]
+    [InlineData("daml-stdlib-DA")]
+    [InlineData("daml-stdlib-DA-")]
+    [InlineData("daml-stdlib-DA-types")]
+    [InlineData("daml-stdlib-3.6.2-evil")]
+    [InlineData("daml-prim-3.6.2")]
+    [InlineData("my-daml-stdlib")]
+    [InlineData("")]
+    public void IsStdlibPackage_is_false_for_a_name_that_only_starts_like_a_stdlib_package(string name)
+    {
+        StdlibPackages.IsStdlibPackage(name).Should().BeFalse();
     }
 }

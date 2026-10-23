@@ -18,6 +18,14 @@ public sealed partial record Marker
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount
     ) : global::Daml.Runtime.Data.IDamlRecord<Mint>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Amount, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("amount", new global::Daml.Runtime.Data.DamlNumeric(Amount))
@@ -25,7 +33,7 @@ public sealed partial record Marker
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Mint FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Mint(
-            Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value
+            Amount: record.GetRequiredField("amount", 0).As<global::Daml.Runtime.Data.DamlNumeric>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Marker
                 global::Daml.Runtime.Data.DamlField.Create("amount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amount"), context.Field("amount")))
             );
         }
-
     }
 }

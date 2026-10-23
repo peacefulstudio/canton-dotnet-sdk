@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Codegen.DarParser.Cli\Daml.Codegen.DarParser.Cli.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.DarParser\Daml.Codegen.DarParser.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Daml.Codegen.CSharp.Tests\UnifiedDiff.cs" Link="UnifiedDiff.cs" />
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\*\intermediate.binpb" Link="Snapshots\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\*\*.dar" Link="Snapshots\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\richtypes\richtypes.dar;..\..\conformance\contractkeys\contractkeys.dar;..\..\conformance\defaulttarget\defaulttarget.dar;..\..\conformance\nonserializable\nonserializable.dar;..\..\conformance\crossmodulecollision\crossmodulecollision.dar" Link="Snapshots\%(Filename)\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Canton.Ledger.Client.Parity.SpliceBindings\Fixtures\splice-wallet-0.1.25.binpb" Link="Fixtures\splice-wallet-0.1.25.binpb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Fixtures\splice-wallet-0.1.25.dar" Link="Fixtures\splice-wallet-0.1.25.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\nonserializable\nonserializable.dar" Link="Fixtures\nonserializable.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\stable-packages\**\*.dalf" Link="Fixtures\stable-packages\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

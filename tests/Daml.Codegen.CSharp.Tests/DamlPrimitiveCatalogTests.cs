@@ -84,42 +84,65 @@ public sealed class DamlPrimitiveCatalogTests
     /// </summary>
     private const int ExpectedSupportedValueRowCount = 13;
 
-    public static TheoryData<BuiltinType, DamlPrimitiveDisposition> ApprovedPolicyRows() => new()
+    private static readonly BuiltinType[] SerializableValueTypesMappedAtMissionBase =
+    [
+        BuiltinType.Unit,
+        BuiltinType.Bool,
+        BuiltinType.Int64,
+        BuiltinType.Text,
+        BuiltinType.Numeric,
+        BuiltinType.Party,
+        BuiltinType.Date,
+        BuiltinType.Timestamp,
+        BuiltinType.List,
+        BuiltinType.Optional,
+        BuiltinType.TextMap,
+        BuiltinType.GenMap,
+        BuiltinType.ContractId,
+    ];
+
+    private static readonly BuiltinType[] StructuralTypeFormersLegalInSignaturePositions =
+    [
+        BuiltinType.Any,
+        BuiltinType.TypeRep,
+        BuiltinType.AnyException,
+        BuiltinType.Update,
+        BuiltinType.Arrow,
+        BuiltinType.FailureCategory,
+    ];
+
+    private static readonly BuiltinType[] ValueLevelTypesWithNoCorrectSerialization =
+    [
+        BuiltinType.RoundingMode,
+        BuiltinType.Bignumeric,
+    ];
+
+    private static readonly BuiltinType[] ValuesThatCannotLegitimatelyAppear =
+    [
+        BuiltinType.Unspecified,
+        BuiltinType.Scenario,
+    ];
+
+    public static TheoryData<BuiltinType, DamlPrimitiveDisposition> ApprovedPolicyRows()
     {
-        // The 13 serializable value types that were mapped at the mission base.
-        { BuiltinType.Unit, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Bool, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Int64, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Text, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Numeric, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Party, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Date, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Timestamp, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.List, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.Optional, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.TextMap, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.GenMap, DamlPrimitiveDisposition.SupportedValue },
-        { BuiltinType.ContractId, DamlPrimitiveDisposition.SupportedValue },
+        var rows = new TheoryData<BuiltinType, DamlPrimitiveDisposition>();
+        AddRows(rows, SerializableValueTypesMappedAtMissionBase, DamlPrimitiveDisposition.SupportedValue);
+        AddRows(rows, StructuralTypeFormersLegalInSignaturePositions, DamlPrimitiveDisposition.SignatureOnly);
+        AddRows(rows, ValueLevelTypesWithNoCorrectSerialization, DamlPrimitiveDisposition.Unsupported);
+        AddRows(rows, ValuesThatCannotLegitimatelyAppear, DamlPrimitiveDisposition.Unsupported);
+        return rows;
+    }
 
-        // The six structural type-formers: legal in signature positions, real identity,
-        // never silently erased to Unit. FAILURE_CATEGORY per its characterization
-        // (FailureCategoryCharacterizationTests).
-        { BuiltinType.Any, DamlPrimitiveDisposition.SignatureOnly },
-        { BuiltinType.TypeRep, DamlPrimitiveDisposition.SignatureOnly },
-        { BuiltinType.AnyException, DamlPrimitiveDisposition.SignatureOnly },
-        { BuiltinType.Update, DamlPrimitiveDisposition.SignatureOnly },
-        { BuiltinType.Arrow, DamlPrimitiveDisposition.SignatureOnly },
-        { BuiltinType.FailureCategory, DamlPrimitiveDisposition.SignatureOnly },
-
-        // Value-level types with no correct serialization: encountering them throws.
-        { BuiltinType.RoundingMode, DamlPrimitiveDisposition.Unsupported },
-        { BuiltinType.Bignumeric, DamlPrimitiveDisposition.Unsupported },
-
-        // Values that cannot legitimately appear: the proto zero-value, and the
-        // reserved-and-removed Daml-LF 2.x Scenario (reserved 1004).
-        { BuiltinType.Unspecified, DamlPrimitiveDisposition.Unsupported },
-        { BuiltinType.Scenario, DamlPrimitiveDisposition.Unsupported },
-    };
+    private static void AddRows(
+        TheoryData<BuiltinType, DamlPrimitiveDisposition> rows,
+        BuiltinType[] builtins,
+        DamlPrimitiveDisposition disposition)
+    {
+        foreach (var builtin in builtins)
+        {
+            rows.Add(builtin, disposition);
+        }
+    }
 
     [Theory]
     [MemberData(nameof(ApprovedPolicyRows))]
@@ -312,10 +335,10 @@ public sealed class DamlPrimitiveCatalogTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        shippedBinpbs.Should().HaveCount(13,
-            "the repo ships exactly one intermediate.binpb per snapshot family (12) plus the Quickstart " +
-            "sample; the conformance corpus intermediates are SHA-pinned transients produced by " +
-            "scripts/regenerate.sh, not shipped files");
+        shippedBinpbs.Should().HaveCount(17,
+            "the repo ships exactly one intermediate.binpb per snapshot family (16) plus the Quickstart " +
+            "sample, the conformance corpora among them; the determinism-gate intermediate is a " +
+            "SHA-pinned transient produced by scripts/regenerate.sh, not a shipped file");
 
         var violations = new List<string>();
         foreach (var path in shippedBinpbs)
@@ -447,11 +470,7 @@ public sealed class DamlPrimitiveCatalogTests
         var bare = new DamlPrimitiveType(primitive);
         return arity switch
         {
-            // Arity-0 rows are probed bare: they are complete value types on their own.
             0 => bare,
-            // Arity-1/2 rows are probed APPLIED: the bare form of a type constructor throws
-            // by design (DamlTypeMapper's bare-primitive switches), so the probe must hand
-            // the mapper the well-formed applied shape the DamlTypeApp arms handle.
             1 => new DamlTypeApp(bare, [SingleProbeArgument(primitive)]),
             2 => new DamlTypeApp(bare,
             [
@@ -463,10 +482,11 @@ public sealed class DamlPrimitiveCatalogTests
         };
     }
 
+    private static readonly DamlType NatPunScaleArgument = new DamlTypeVar("10");
+
     private static DamlType SingleProbeArgument(DamlPrimitive primitive) =>
-        // Numeric's argument is the Nat pun: the scale arrives as a DamlTypeVar carrying it.
         primitive == DamlPrimitive.Numeric
-            ? new DamlTypeVar("10")
+            ? NatPunScaleArgument
             : new DamlPrimitiveType(DamlPrimitive.Text);
 
     private static DamlTypeMapper NewMapper()

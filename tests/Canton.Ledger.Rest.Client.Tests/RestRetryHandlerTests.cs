@@ -11,6 +11,7 @@ using Canton.Ledger.Rest.Client.Raw;
 using Daml.Ledger.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Canton.Ledger.Rest.Client.Tests;
@@ -66,6 +67,24 @@ public class RestRetryHandlerTests
         }
     }
 
+    private sealed class HangsOnFirstAttemptHandler : HttpMessageHandler
+    {
+        private int _attempts;
+
+        public int Attempts => Volatile.Read(ref _attempts);
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (Interlocked.Increment(ref _attempts) == 1)
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"offset":0}""", Encoding.UTF8, "application/json")
+            };
+        }
+    }
+
     private sealed class ReplayableMarker : DelegatingHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -75,10 +94,12 @@ public class RestRetryHandlerTests
         }
     }
 
-    private static HttpClient ClientOver(CountingHandler transport, RetryOptions retry, bool replayable = true)
+    private static HttpClient ClientOver(
+        CountingHandler transport, RetryOptions retry, bool replayable = true, TimeProvider? timeProvider = null)
     {
         var retryHandler = new RestRetryHandler(
-            Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575", Retry = retry }))
+            Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575", Retry = retry }),
+            timeProvider)
         {
             InnerHandler = transport
         };
@@ -86,9 +107,12 @@ public class RestRetryHandlerTests
         return new HttpClient(pipeline) { BaseAddress = new Uri("http://localhost:7575") };
     }
 
-    private static ServiceProvider RawApiProvider(CountingHandler transport, RetryOptions retry)
+    private static ServiceProvider RawApiProvider(
+        CountingHandler transport, RetryOptions retry, TimeProvider? timeProvider = null)
     {
         var services = new ServiceCollection();
+        if (timeProvider is not null)
+            services.AddSingleton(timeProvider);
 #pragma warning disable CANTONREST001
         services.AddRestLedgerRawApis(options =>
         {
@@ -126,6 +150,45 @@ public class RestRetryHandlerTests
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         transport.Attempts.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task SendAsync_waits_for_the_supplied_TimeProvider_to_advance_before_retrying()
+    {
+        var time = new FakeTimeProvider();
+        var transport = new CountingHandler(new HttpRequestException("connection refused"));
+        var retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromHours(1) };
+        using var client = ClientOver(transport, retry, timeProvider: time);
+
+        var request = client.GetAsync("/v2/state/ledger-end", TestContext.Current.CancellationToken);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+
+        transport.Attempts.Should().Be(1);
+        request.IsCompleted.Should().BeFalse();
+
+        time.Advance(TimeSpan.FromHours(24));
+        var response = await request;
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        transport.Attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RawApi_retry_backoff_ignores_a_fake_TimeProvider_registered_in_the_container()
+    {
+        var time = new FakeTimeProvider();
+        var transport = new CountingHandler(new HttpRequestException("connection reset"));
+        var retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromMilliseconds(5) };
+        using var provider = RawApiProvider(transport, retry, time);
+
+        using var replay = RawCallReplay.Allow();
+#pragma warning disable CANTONREST001
+        var request = provider.GetRequiredService<IVersionServiceApi>()
+            .GetLedgerApiVersion(TestContext.Current.CancellationToken);
+#pragma warning restore CANTONREST001
+        _ = await request.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        transport.Attempts.Should().Be(2);
     }
 
     [Fact]
@@ -263,12 +326,20 @@ public class RestRetryHandlerTests
     }
 
     [Fact]
-    public async Task SendAsync_retries_a_client_side_timeout()
+    public async Task SendAsync_retries_an_attempt_that_outlasts_its_timeout()
     {
-        var transport = new CountingHandler(new TaskCanceledException("timed out", new TimeoutException()));
-        using var client = ClientOver(transport, Fast(1));
+        var transport = new HangsOnFirstAttemptHandler();
+        var retryHandler = new RestRetryHandler(
+            Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575", Retry = Fast(1) }))
+        {
+            InnerHandler = new RestAttemptTimeoutHandler { InnerHandler = transport }
+        };
+        using var client = new HttpClient(retryHandler) { BaseAddress = new Uri("http://localhost:7575") };
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/v2/state/ledger-end");
+        RestRetryHandler.MarkReplayable(request);
+        RestAttemptTimeoutHandler.SetAttemptTimeout(request, TimeSpan.FromMilliseconds(100));
 
-        var response = await client.GetAsync("/v2/state/ledger-end", TestContext.Current.CancellationToken);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         transport.Attempts.Should().Be(2);
@@ -326,7 +397,7 @@ public class RestRetryHandlerTests
 
         await client.GetAsync("/v2/state/ledger-end", TestContext.Current.CancellationToken);
 
-        var retryActivity = capture.Activities.Should().ContainSingle(a => a.OperationName == "RestLedgerClient.RetryAttempt").Subject;
+        var retryActivity = capture.Activities.Should().ContainSingle(a => a.OperationName == RestRetryHandler.RetryAttemptActivityName).Subject;
         retryActivity.GetTagItem(LedgerActivityTagNames.RetryAttempt).Should().Be(0);
         retryActivity.Status.Should().Be(ActivityStatusCode.Error);
     }

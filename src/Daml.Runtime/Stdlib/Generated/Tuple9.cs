@@ -36,6 +36,22 @@ public sealed record Tuple9<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9>(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("_9")] TT9 _9
 ) where TT1 : notnull where TT2 : notnull where TT3 : notnull where TT4 : notnull where TT5 : notnull where TT6 : notnull where TT7 : notnull where TT8 : notnull where TT9 : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(_1, global::Daml.Runtime.Data.DamlEqualityComparer<TT1>.Default);
+        hash.Add(_2, global::Daml.Runtime.Data.DamlEqualityComparer<TT2>.Default);
+        hash.Add(_3, global::Daml.Runtime.Data.DamlEqualityComparer<TT3>.Default);
+        hash.Add(_4, global::Daml.Runtime.Data.DamlEqualityComparer<TT4>.Default);
+        hash.Add(_5, global::Daml.Runtime.Data.DamlEqualityComparer<TT5>.Default);
+        hash.Add(_6, global::Daml.Runtime.Data.DamlEqualityComparer<TT6>.Default);
+        hash.Add(_7, global::Daml.Runtime.Data.DamlEqualityComparer<TT7>.Default);
+        hash.Add(_8, global::Daml.Runtime.Data.DamlEqualityComparer<TT8>.Default);
+        hash.Add(_9, global::Daml.Runtime.Data.DamlEqualityComparer<TT9>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TT1, global::Daml.Runtime.Data.DamlValue> convertTT1, global::System.Func<TT2, global::Daml.Runtime.Data.DamlValue> convertTT2, global::System.Func<TT3, global::Daml.Runtime.Data.DamlValue> convertTT3, global::System.Func<TT4, global::Daml.Runtime.Data.DamlValue> convertTT4, global::System.Func<TT5, global::Daml.Runtime.Data.DamlValue> convertTT5, global::System.Func<TT6, global::Daml.Runtime.Data.DamlValue> convertTT6, global::System.Func<TT7, global::Daml.Runtime.Data.DamlValue> convertTT7, global::System.Func<TT8, global::Daml.Runtime.Data.DamlValue> convertTT8, global::System.Func<TT9, global::Daml.Runtime.Data.DamlValue> convertTT9) => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("_1", convertTT1(_1)),
@@ -51,15 +67,15 @@ public sealed record Tuple9<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9>(
 
     /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     public static Tuple9<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT1> convertTT1, global::Daml.Runtime.Data.DamlValue? absentTT1, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT2> convertTT2, global::Daml.Runtime.Data.DamlValue? absentTT2, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT3> convertTT3, global::Daml.Runtime.Data.DamlValue? absentTT3, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT4> convertTT4, global::Daml.Runtime.Data.DamlValue? absentTT4, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT5> convertTT5, global::Daml.Runtime.Data.DamlValue? absentTT5, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT6> convertTT6, global::Daml.Runtime.Data.DamlValue? absentTT6, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT7> convertTT7, global::Daml.Runtime.Data.DamlValue? absentTT7, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT8> convertTT8, global::Daml.Runtime.Data.DamlValue? absentTT8, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT9> convertTT9, global::Daml.Runtime.Data.DamlValue? absentTT9) => new Tuple9<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9>(
-        _1: record.GetTypeParameterField("_1", convertTT1, absentTT1),
-        _2: record.GetTypeParameterField("_2", convertTT2, absentTT2),
-        _3: record.GetTypeParameterField("_3", convertTT3, absentTT3),
-        _4: record.GetTypeParameterField("_4", convertTT4, absentTT4),
-        _5: record.GetTypeParameterField("_5", convertTT5, absentTT5),
-        _6: record.GetTypeParameterField("_6", convertTT6, absentTT6),
-        _7: record.GetTypeParameterField("_7", convertTT7, absentTT7),
-        _8: record.GetTypeParameterField("_8", convertTT8, absentTT8),
-        _9: record.GetTypeParameterField("_9", convertTT9, absentTT9)
+        _1: record.GetTypeParameterField("_1", 0, convertTT1, absentTT1),
+        _2: record.GetTypeParameterField("_2", 1, convertTT2, absentTT2),
+        _3: record.GetTypeParameterField("_3", 2, convertTT3, absentTT3),
+        _4: record.GetTypeParameterField("_4", 3, convertTT4, absentTT4),
+        _5: record.GetTypeParameterField("_5", 4, convertTT5, absentTT5),
+        _6: record.GetTypeParameterField("_6", 5, convertTT6, absentTT6),
+        _7: record.GetTypeParameterField("_7", 6, convertTT7, absentTT7),
+        _8: record.GetTypeParameterField("_8", 7, convertTT8, absentTT8),
+        _9: record.GetTypeParameterField("_9", 8, convertTT9, absentTT9)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
@@ -79,5 +95,4 @@ public sealed record Tuple9<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9>(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddTypeParameterField(fields, json, context, "_9", readTT9, absentTT9);
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

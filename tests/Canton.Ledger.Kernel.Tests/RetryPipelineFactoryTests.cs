@@ -3,6 +3,7 @@
 
 using AwesomeAssertions;
 using Canton.Ledger.Kernel.Resilience;
+using Microsoft.Extensions.Time.Testing;
 using Polly;
 using Xunit;
 
@@ -83,5 +84,32 @@ public class RetryPipelineFactoryTests
 
         observedDelays.Should().HaveCount(25);
         observedDelays.Distinct().Should().HaveCountGreaterThan(1);
+    }
+
+    [Fact]
+    public async Task Create_waits_for_the_supplied_TimeProvider_to_advance_before_retrying()
+    {
+        var time = new FakeTimeProvider();
+        var pipeline = RetryPipelineFactory.Create(
+            new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromHours(1) },
+            timeProvider: time);
+        var attempts = 0;
+
+        var execution = pipeline.ExecuteAsync(
+            _ =>
+            {
+                attempts++;
+                return attempts == 1 ? throw new InvalidOperationException("transient") : ValueTask.CompletedTask;
+            },
+            TestContext.Current.CancellationToken).AsTask();
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+
+        attempts.Should().Be(1);
+        execution.IsCompleted.Should().BeFalse();
+
+        time.Advance(TimeSpan.FromHours(24));
+        await execution;
+
+        attempts.Should().Be(2);
     }
 }

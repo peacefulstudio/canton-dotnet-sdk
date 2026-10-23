@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using Canton.Ledger.Kernel.Telemetry;
+using Refit;
 
 namespace Canton.Ledger.Rest.Client;
 
@@ -12,7 +13,9 @@ namespace Canton.Ledger.Rest.Client;
 /// kernel's <see cref="LedgerActivitySource"/> naming convention. Register the
 /// source as <c>tracing.AddSource(LedgerActivitySourceNames.RestLedgerClient)</c>.
 /// Span names and tags follow the OpenTelemetry HTTP semantic conventions, with <c>url.full</c>
-/// sanitized of its query string and user info, which can carry party ids and credentials.
+/// sanitized of its query string and user info, which can carry party ids and credentials. A request built
+/// by a Refit method or by the admin client carries its route template in <c>url.template</c>, and
+/// <c>url.full</c> keeps that template in place of the path, since a path parameter such as <c>/v2/parties/{party}</c> names a party or user.
 /// </summary>
 internal sealed class RestActivityHandler : DelegatingHandler
 {
@@ -20,6 +23,9 @@ internal sealed class RestActivityHandler : DelegatingHandler
     internal const string ServerAddress = SemanticConventions.ServerAddress;
     internal const string ServerPort = SemanticConventions.ServerPort;
     internal const string UrlFull = "url.full";
+    internal const string UrlTemplate = "url.template";
+
+    internal static readonly HttpRequestOptionsKey<string> PathTemplateOption = new("Canton.Ledger.Rest.Client.PathTemplate");
     internal const string HttpResponseStatusCode = "http.response.status_code";
     internal const string ErrorType = SemanticConventions.ErrorType;
 
@@ -54,11 +60,51 @@ internal sealed class RestActivityHandler : DelegatingHandler
         activity.SetTag(HttpRequestMethod, request.Method.Method);
         activity.SetTag(ServerAddress, uri.Host);
         activity.SetTag(ServerPort, uri.Port);
-        activity.SetTag(UrlFull, WithoutQueryOrUserInfo(uri));
+
+        var realPath = uri.GetComponents(UriComponents.Path, UriFormat.UriEscaped);
+        if (RouteTemplateOf(request) is { } routeTemplate)
+        {
+            var route = RedactedRoute.Of(realPath, routeTemplate);
+            activity.SetTag(UrlFull, SchemeAndServer(uri) + route.Path);
+            activity.SetTag(UrlTemplate, route.Template);
+            return;
+        }
+
+        activity.SetTag(UrlFull, SchemeAndServer(uri) + "/" + realPath);
     }
 
-    private static string WithoutQueryOrUserInfo(Uri uri) =>
-        uri.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
+    private static string? RouteTemplateOf(HttpRequestMessage request)
+    {
+        var refitKey = new HttpRequestOptionsKey<string>(HttpRequestMessageOptions.RelativePathTemplate);
+        var template = request.Options.TryGetValue(PathTemplateOption, out var own) ? own
+            : request.Options.TryGetValue(refitKey, out var refit) ? refit
+            : null;
+        if (template is null) return null;
+
+        var queryStart = template.IndexOf('?', StringComparison.Ordinal);
+        return queryStart < 0 ? template : template[..queryStart];
+    }
+
+    private static string SchemeAndServer(Uri uri) =>
+        uri.GetComponents(UriComponents.SchemeAndServer, UriFormat.UriEscaped);
+
+    private readonly record struct RedactedRoute(string Path, string Template)
+    {
+        internal static RedactedRoute Of(string realPath, string routeTemplate)
+        {
+            var realSegments = realPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var templateSegments = routeTemplate.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var prefixLength = realSegments.Length - templateSegments.Length;
+            if (prefixLength < 0) return new RedactedRoute(routeTemplate, routeTemplate);
+
+            var prefix = realSegments[..prefixLength];
+            var redacted = templateSegments
+                .Select((segment, index) => segment.Contains('{', StringComparison.Ordinal) ? segment : realSegments[prefixLength + index]);
+            return new RedactedRoute(
+                "/" + string.Join('/', prefix.Concat(redacted)),
+                "/" + string.Join('/', prefix.Concat(templateSegments)));
+        }
+    }
 
     private static void RecordResponse(Activity? activity, HttpResponseMessage response)
     {

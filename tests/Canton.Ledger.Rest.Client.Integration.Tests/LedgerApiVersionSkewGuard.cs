@@ -63,10 +63,10 @@ public static partial class LedgerApiVersionSkewGuard
     internal static string MajorMinorOf(string version) => MajorMinorPrefix().Match(version).Value;
 
     internal static string UnsupportedVersionFailureMessage(string? reportedVersion) =>
-        $"REST conformance FAILED (not skipped): the LocalNet participant reports Ledger API version "
+        $"REST live tests FAILED (not skipped): the LocalNet participant reports Ledger API version "
         + $"'{reportedVersion}', whose Canton minor is outside the accepted set "
         + $"({AcceptedMinorList()}). The vendored REST spec targets Canton {VendoredSpecCantonVersion}, and "
-        + "conformance results across Canton minors are not trustworthy, so an unaccepted minor is a hard "
+        + "live results across Canton minors are not trustworthy, so an unaccepted minor is a hard "
         + "failure with no environment override. Re-run against a LocalNet on an accepted minor, or re-vendor "
         + "the spec for the new minor per src/Canton.Ledger.Rest/README.md and widen the accepted set.";
 

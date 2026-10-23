@@ -19,6 +19,14 @@ public sealed partial record TicketDesk
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("retiring")] global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket> Retiring
     ) : global::Daml.Runtime.Data.IDamlRecord<Retire>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Retiring, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("retiring", Retiring.ToDamlValue())
@@ -26,7 +34,7 @@ public sealed partial record TicketDesk
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Retire FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Retire(
-            Retiring: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(record.GetRequiredField("retiring").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
+            Retiring: new global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.SubmitShapes.Ticket>(record.GetRequiredField("retiring", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -38,6 +46,5 @@ public sealed partial record TicketDesk
                 global::Daml.Runtime.Data.DamlField.Create("retiring", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "retiring"), context.Field("retiring")))
             );
         }
-
     }
 }

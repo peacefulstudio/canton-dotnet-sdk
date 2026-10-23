@@ -246,9 +246,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_surfaces_unrelated_template_Created_as_Unclassified()
     {
-        // No-silent-drop: a Created the client cannot classify to the
-        // subscribed template is surfaced as Unclassified between the matching ones,
-        // never dropped.
         var transaction = MakeTransaction(
             MakeCreatedEvent("00foo", FooBarTemplate, offset: 1L),
             MakeCreatedEvent("00other", new ProtoIdentifier
@@ -722,9 +719,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_StreamError_message_falls_back_to_status_string_when_detail_empty()
     {
-        // gRPC surfaces a server status with no message as Status.Detail == "" (empty,
-        // not null), so a plain ?? never falls back — the StreamError diagnostic must
-        // still be non-empty.
         StubGetUpdatesFailure(new RpcException(new Status(StatusCode.Unavailable, string.Empty)));
 
         var client = CreateClient();
@@ -766,9 +760,8 @@ public sealed class LedgerClientSubscribeTests : IDisposable
         var client = CreateClient();
         var events = await CollectAsync(client.SubscribeAsync<FooBar>(ActAs, fromOffset: LedgerOffset.At(50), cancellationToken: TestContext.Current.CancellationToken));
 
-        // Caller recovers the last-seen offset from the event so it can resume later.
-        var lastOffset = events.OfType<ContractStreamEvent<FooBar>.Created>().Last().Offset;
-        lastOffset.Value.Should().Be(100L);
+        var offsetToResumeFrom = events.OfType<ContractStreamEvent<FooBar>.Created>().Last().Offset;
+        offsetToResumeFrom.Value.Should().Be(100L);
     }
 
     [Fact]
@@ -928,9 +921,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_StreamError_message_falls_back_to_status_string_when_detail_empty()
     {
-        // gRPC surfaces a server status with no message as Status.Detail == "" (empty,
-        // not null), so a plain ?? never falls back — the StreamError diagnostic must
-        // still be non-empty.
         StubGetLedgerEnd(offset: 10L);
         StubGetActiveContractsFailure(new RpcException(new Status(StatusCode.Unavailable, string.Empty)));
 
@@ -947,9 +937,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_StreamError_instead_of_terminal_Checkpoint_on_mid_stream_fault()
     {
-        // The faulted snapshot ends with a terminal StreamError in place of the
-        // Checkpoint a successful snapshot ends with (mutually exclusive), so no
-        // snapshot offset is handed over to a resumed live subscription.
         StubGetLedgerEnd(offset: 10L);
         StubGetActiveContractsFailureAfterItems(
             new RpcException(new Status(StatusCode.Unavailable, "snapshot aborted after two contracts")),
@@ -972,9 +959,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Created_for_matching_template_and_Unclassified_for_mismatch()
     {
-        // Regression: a snapshot entry whose template doesn't match the
-        // subscribed marker T is surfaced as Unclassified, never silently dropped,
-        // at parity with the live SubscribeAsync stream.
         StubGetLedgerEnd(offset: 10L);
         var matching = MakeActiveContract("00foo", FooBarTemplate);
         var unrelated = MakeActiveContract("00other", new ProtoIdentifier
@@ -1308,6 +1292,50 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     }
 
     [Fact]
+    public async Task SubscribeActiveAsync_keeps_streaming_to_the_Checkpoint_when_a_disclosure_row_has_a_blank_contract_id()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var blank = MakeActiveContract(string.Empty, FooBarTemplate);
+        blank.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x0A);
+        var good = MakeActiveContract("00good", FooBarTemplate);
+        good.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x0B);
+        StubGetActiveContracts(blank, good);
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync<FooBar>(
+            ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().HaveCount(2, "CollectActiveAsync has already asserted the terminal Checkpoint");
+        events[0].Should().BeOfType<AcsSnapshotEntry<FooBar>.Unclassified>()
+            .Which.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        events[1].Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>()
+            .Which.ContractId.Value.Should().Be("00good");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_for_interface_marker_keeps_streaming_to_the_Checkpoint_when_a_disclosure_row_has_a_blank_contract_id()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var implementing = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Sample.Impl", EntityName = "FooImpl" };
+        var interfaceId = new ProtoIdentifier { PackageId = "iface-pkg", ModuleName = "Sample.Foo", EntityName = "IFoo" };
+        var blank = MakeActiveContractWithInterfaceView(string.Empty, implementing, interfaceId);
+        blank.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x31);
+        var good = MakeActiveContractWithInterfaceView("00good", implementing, interfaceId);
+        good.ActiveContract.CreatedEvent.CreatedEventBlob = Google.Protobuf.ByteString.CopyFrom(0x32);
+        StubGetActiveContracts(blank, good);
+
+        var client = CreateClient();
+        var events = await CollectActiveAsync(client.SubscribeActiveAsync(
+            FooViewDescriptor, ActAs, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().HaveCount(2, "CollectActiveAsync has already asserted the terminal Checkpoint");
+        events[0].Should().BeOfType<InterfaceAcsSnapshotEntry<IFoo, FooView>.Unclassified>()
+            .Which.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        events[1].Should().BeOfType<InterfaceAcsSnapshotEntry<IFoo, FooView>.Created>()
+            .Which.ContractId.Value.Should().Be("00good");
+    }
+
+    [Fact]
     public void SubscribeActiveAsync_throws_eagerly_when_package_name_missing()
     {
         var client = CreateClient();
@@ -1320,9 +1348,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_yields_typed_Checkpoint_when_no_transactions_arrive()
     {
-        // Quiet-period scenario: only OffsetCheckpoint messages arrive. Without
-        // surfacing them, a consumer crashing here would resume from the previous
-        // create/archive offset and re-process every transaction in between.
         var first = new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = 50L } };
         var second = new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = 60L } };
         StubGetUpdates(first, second);
@@ -1554,8 +1579,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Unclassified_when_active_contract_synchronizer_id_missing()
     {
-        // Regression: an ActiveContract entry that cannot be paired with a
-        // synchronizer id is surfaced as Unclassified, never silently dropped.
         StubGetLedgerEnd(offset: 0L);
         var response = new GetActiveContractsResponse
         {
@@ -1586,8 +1609,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Unclassified_when_IncompleteUnassigned_source_missing()
     {
-        // Regression: same invariant for the IncompleteUnassigned shape,
-        // whose synchronizer id is derived from UnassignedEvent.Source.
         StubGetLedgerEnd(offset: 0L);
         var incomplete = new GetActiveContractsResponse
         {
@@ -1625,8 +1646,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Unclassified_when_IncompleteAssigned_target_missing()
     {
-        // Regression: same invariant for the IncompleteAssigned shape,
-        // whose synchronizer id is derived from AssignedEvent.Target.
         StubGetLedgerEnd(offset: 0L);
         var incomplete = new GetActiveContractsResponse
         {
@@ -1659,11 +1678,8 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     }
 
     [Fact]
-    public async Task SubscribeActiveAsync_surfaces_CreatedEvent_kind_when_template_mismatched_and_synchronizer_id_missing()
+    public async Task SubscribeActiveAsync_classifies_template_mismatch_before_missing_synchronizer_id_like_live_SubscribeAsync()
     {
-        // Regression: template mismatch takes precedence over a
-        // missing synchronizer id, mirroring the live SubscribeAsync ordering
-        // (marker check before synchronizer-id check).
         StubGetLedgerEnd(offset: 0L);
         var response = new GetActiveContractsResponse
         {
@@ -1699,9 +1715,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_IncompleteUnassigned_offset_from_reassignment_event_when_created_event_absent()
     {
-        // Regression: when the created event is absent, the
-        // Unclassified offset should come from the entry's own reassignment
-        // event rather than defaulting to 0.
         StubGetLedgerEnd(offset: 0L);
         var incomplete = new GetActiveContractsResponse
         {
@@ -1864,10 +1877,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_for_interface_marker_surfaces_Archived_with_empty_implemented_interfaces_as_Unclassified()
     {
-        // Regression: the participant delivers an ArchivedEvent for a
-        // contract implementing the subscribed interface, but leaves
-        // implemented_interfaces empty despite include_interface_view. The client
-        // cannot classify it, so it must be surfaced, never silently dropped.
         var archived = new ProtoArchivedEvent
         {
             ContractId = "00impl",
@@ -1890,7 +1899,6 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_for_interface_marker_surfaces_Exercised_with_empty_implemented_interfaces_as_Unclassified()
     {
-        // Regression: same participant gap on an ExercisedEvent.
         var exercised = new ProtoExercisedEvent
         {
             ContractId = "00impl",

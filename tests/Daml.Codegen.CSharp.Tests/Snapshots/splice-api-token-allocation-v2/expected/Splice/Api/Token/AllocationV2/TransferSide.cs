@@ -54,5 +54,4 @@ public static class TransferSideExtensions
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 
     private static readonly string[] ExpectedConstructors = ["SenderSide", "ReceiverSide"];
-
 }

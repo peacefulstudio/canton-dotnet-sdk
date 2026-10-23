@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Peaceful.Canton.Localnet.Testing;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Xunit;
+using Daml.Runtime.Stdlib;
 
 namespace Canton.Ledger.Grpc.Client.Integration.Tests;
 
@@ -74,8 +75,11 @@ public class RichTypesRoundTripTests
             AsOf: asOf,
             ObservedAt: observedAt,
             Note: "hello",
+            NestedNote: new Optional<Optional<string>>.None(),
             Tags: ExpectedTags,
             Attributes: new Dictionary<string, string> { ["k1"] = "v1", ["k2"] = "v2" },
+            GenMap: new Dictionary<Party, long>(),
+            UnitField: DamlUnit.Instance,
             Marker: markerCid,
             HoldingCid: holdingCid,
             HoldingCids: holdingCids,
@@ -158,8 +162,11 @@ public class RichTypesRoundTripTests
             AsOf: new DateOnly(2026, 5, 29),
             ObservedAt: DateTimeOffset.UnixEpoch,
             Note: null,
+            NestedNote: new Optional<Optional<string>>.None(),
             Tags: Array.Empty<string>(),
             Attributes: new Dictionary<string, string>(),
+            GenMap: new Dictionary<Party, long>(),
+            UnitField: DamlUnit.Instance,
             Marker: markerCid,
             HoldingCid: holdingCid,
             HoldingCids: new[] { holdingCid },
@@ -228,8 +235,11 @@ public class RichTypesRoundTripTests
             AsOf: new DateOnly(2026, 5, 29),
             ObservedAt: DateTimeOffset.UnixEpoch,
             Note: null,
+            NestedNote: new Optional<Optional<string>>.None(),
             Tags: Array.Empty<string>(),
             Attributes: new Dictionary<string, string>(),
+            GenMap: new Dictionary<Party, long>(),
+            UnitField: DamlUnit.Instance,
             Marker: markerCid,
             HoldingCid: holdingCid,
             HoldingCids: new[] { holdingCid },

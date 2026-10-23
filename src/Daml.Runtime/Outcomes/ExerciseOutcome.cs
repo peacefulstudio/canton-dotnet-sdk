@@ -97,7 +97,8 @@ public abstract record ExerciseOutcome<T>
     /// the ids and compares them by content, so two <see cref="Many"/> over the same ids are
     /// equal and a producer that keeps its own list cannot change one after handover.</param>
     /// <exception cref="ArgumentException"><paramref name="ContractIds"/> holds fewer than two
-    /// ids, at construction or through a <c>with</c> expression.</exception>
+    /// ids, or an id that is null, empty or whitespace, at construction or through a <c>with</c>
+    /// expression.</exception>
     public sealed record Many(EquatableArray<string> ContractIds) : ExerciseOutcome<T>
     {
         private readonly EquatableArray<string> _contractIds =
@@ -124,7 +125,7 @@ public abstract record ExerciseOutcome<T>
             EquatableArray<string> contractIds,
             string parameterName) =>
             contractIds.Count >= 2
-                ? contractIds
+                ? ReadSideContractId.RequireAll(contractIds, parameterName)
                 : throw new ArgumentException(
                     $"Many needs at least two contract ids and got {contractIds.Count}: it means more "
                     + "than one candidate filled a slot that expected exactly one. None is the arm "

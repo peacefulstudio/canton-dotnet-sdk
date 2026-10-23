@@ -124,19 +124,24 @@ The `crossmodulecollision` package is a codegen-drift regression
 fixture rather than a type-shape corpus: two modules (`CollisionA`,
 `CollisionB`) each declare a same-named `Retag` choice-argument record with a
 different field list, guarding against a cross-module simple-name collision in
-the emitter. Its generated output is pinned by the `cross-module-collision`
+the emitter. Its generated output is pinned by the `crossmodulecollision`
 drift snapshot under `tests/Daml.Codegen.CSharp.Tests/Snapshots`; rebuild its
 DAR the same way:
 
     cd conformance/crossmodulecollision && dpm build && \
       cp .daml/dist/crossmodulecollision-*.dar ./crossmodulecollision.dar
 
-That snapshot regenerates from its own vendored copy of this DAR, not from the
-one here, so run `scripts/regenerate.sh write` after a rebuild: it copies the
-result over
-`tests/Daml.Codegen.CSharp.Tests/Snapshots/cross-module-collision/cross-module-collision.dar`
-and refreshes the snapshot. `scripts/regenerate.sh check` fails when the two
-copies disagree.
+That snapshot decodes this DAR directly, so run `scripts/regenerate.sh write`
+after a rebuild to refresh it.
+
+The `nonserializable` package declares a data type whose only field is a
+function arrow, `data Fn = Fn with f : Int -> Int`, beside a template that uses
+it in a choice body. Daml-LF marks `Fn` non-serializable, so the decoder drops it
+and the emitter never sees an `Arrow` field it cannot spell. It builds with
+`--target=2.2`, the one fixture that keeps Daml-LF 2.2 covered while the compiler
+default is 2.3. Its generated output is pinned by the `nonserializable` drift
+snapshot under `tests/Daml.Codegen.CSharp.Tests/Snapshots`; rebuild its DAR as
+described in `conformance/nonserializable/README.md`.
 
 The `defaulttarget` package is a single boring template whose only job is
 to be compiled with **no `build-options:` block at all**. `damlc` picks a
@@ -150,12 +155,130 @@ version it actually carries, so a moved default surfaces as a failing
 assertion rather than as silence. It is a shipped package too: the emitter runs
 over it and `Daml.Codegen.Testing.Conformance` compiles and ships the result, so
 the default target is covered on the emit path and not only on the read one.
-Rebuild its DAR the same way:
+Rebuild its DAR the same way as the other shipped packages, which gives it a
+content-addressed package name (`defaulttarget-h<hash12>`) and refreshes the
+generated tree in one step:
 
-    cd conformance/defaulttarget && dpm build && \
-      cp .daml/dist/defaulttarget-*.dar ./defaulttarget.dar
+    scripts/regenerate.sh rebuild-dar --package defaulttarget --base defaulttarget
 
-Like `contractkeys`, rebuilding this DAR also requires refreshing the generated
-tree (`scripts/regenerate.sh write --only conformance`). The determinism gate
-reads only `richtypes`, so the determinism pins do not need refreshing for a
-default-target-only change.
+The determinism gate reads only `richtypes`, so the determinism pins do not need
+refreshing for a default-target-only change.
+
+## Wire captures
+
+Raw responses from a live Canton participant, kept next to the corpus whose shapes they
+pin, so that decoder work is built against observed encodings rather than against a
+specification or a remembered table. Each file under `conformance/<corpus>/wire/` is a
+verbatim server response plus the Daml type it came from and the request that produced
+it. The `richtypes` captures sit in `conformance/richtypes/wire/` and the one key-bearing
+capture in `conformance/contractkeys/wire/`; both directories ship with their corpus.
+
+`tests/Daml.Codegen.Testing.Conformance.Tests` decodes every capture into the generated
+`RichTypes` / `ContractKeys` types (`WireCaptureDecodeTests`) and holds the serializer
+against each one (`SerializedWireShapeMatchesCaptureTests`, and the REST submission path in
+`Canton.Ledger.Rest.Client.Tests`). A capture no test consumes fails the build, so a new
+file needs a row in `WireCaptures.SupportedWireSamplePayloads` (or the fact-consumed list in
+`WireCaptureDecodeTests`).
+
+Captured 2026-07-31 against canton-localnet (Splice 0.6.14, Canton **3.5.10**),
+`a-validator-1` slot, from a DAR built on Daml SDK **3.5.2** targeting **Daml-LF 2.3**.
+That throwaway capture model (`WireTypes`) was folded into `RichTypes.daml`: `RichRecord`
+grew `nestedNote`, `genMap` and `unitField` plus the `DescribeOutcome` and `Ping` choices
+so the captured payloads decode into it unedited. The `damlType` strings inside the capture
+files still name `WireTypes:...`, and `exercise_describe.json` records the choice as
+`Describe` where the corpus calls it `DescribeOutcome` (the `Holding` interface already owns
+`Describe`); the decoders read the payload only, so neither matters to them. The key-bearing capture's `contractKey`
+is a `(Party, Text)` tuple, identical in shape to `Membership`'s key, so it is decoded with
+`Membership.Key`.
+
+### Why LF 2.3
+
+The capture model targeted LF 2.3 rather than the 2.1 the corpus builds with, because
+contract keys require LF >= 2.3 - on 2.1 the compiler rejects them with `Contract Keys not
+supported on current lf version (2.1), feature supported in from 2.3`. Capturing at 2.3
+covered the key-bearing shapes as well; it does not change the `--target=2.1` pin that
+`conformance/` and `samples/` build with.
+
+The table below is nonetheless authoritative for the LF 2.1 code this repo ships. The whole
+model was rebuilt at `--target=2.1` (minus the keyed template, which 2.1 cannot express),
+recaptured against the same participant, and diffed field by field against the 2.3 set:
+**every encoding is identical**. The only difference across the two capture sets was the
+keyed contract's presence in the 2.3 ACS. `contractKey` and `contractKeyHash` appear only on
+the key-bearing contract, not on unkeyed ones, in either version. Scope: this covers the
+shapes the capture model expressed; it is not a proof that no 2.3-only encoding exists for a
+type the model omitted.
+
+### Observed encodings
+
+| Daml type | Wire form | Sample |
+|---|---|---|
+| `Int64` | JSON **string** | `"42"`, `"-1"` |
+| `Numeric n` | string at the **declared** scale | `Numeric 10` -> `"42.5000000000"`; `Numeric 2` -> `"1.25"` |
+| `Text` | string | `"hello"`, `""` |
+| `Bool` | JSON boolean | `true` |
+| `Date` | string | `"2026-07-31"` |
+| `Time` | string, **6 fractional digits or none** | `"2026-07-31T12:34:56.123456Z"`, `"2026-07-31T12:34:56Z"` |
+| `Party`, `ContractId a` | string | `"wire87…::1220…"` |
+| `Optional a` (`a` not optional) | `Some` is the **bare value**, `None` is `null` | `"present"` / `null` |
+| `Optional (Optional a)` | one array level **per** `Optional` | `None` -> `[]`, `Some None` -> `[[]]`, `Some (Some "deep")` -> `[["deep"]]` |
+| `[a]` | array | `["x","y"]`, `[]` |
+| `TextMap a` | object | `{"a":"1"}`, `{}` |
+| `Map k v` (GenMap) | array of `[key, value]` pairs | `[["party::1220…","7"]]`, `[]` |
+| `()` | empty object | `{}` |
+| record | object keyed by field name | `{"nickname":"nick","level":"3"}` |
+| variant, tagged arm | `{"tag":…,"value":…}` | `{"tag":"Win","value":{"prize":"1.25","tier":"gold"}}` |
+| variant, nullary arm | `value` is an **empty object** | `{"tag":"Pending","value":{}}` |
+| enum | **bare string** | `"Hearts"` |
+
+Interface views arrive as `CreatedEvent.interfaceViews[]`, each entry carrying
+`interfaceId`, `viewStatus`, `implementationPackageId`, and the record itself
+under `viewValue` (`richtypes/wire/acs_interface_view_holding.json`).
+
+Contract keys arrive as `CreatedEvent.contractKey` alongside a base64
+`contractKeyHash`. A tuple key encodes as a **record**, not an array:
+`{"_1":"party::1220…","_2":"alpha"}` (`contractkeys/wire/create_keyed_contract_key.json`).
+
+On the exercise path, `ExercisedEvent.choiceArgument` is the argument record
+with no wrapper, and `exerciseResult` follows the ordinary encoding for its
+type — a `ContractId` result is a string, a variant result is `{"tag":…}`, and a
+`Unit` result is `{}`. A no-argument choice sends `{}`, an **empty record**
+rather than a unit value.
+
+One finding that removes work rather than adds it, and one the codegen now
+depends on:
+
+- **`verbose` does not change the payload.** Requesting the same ACS with
+  `verbose: true` and `verbose: false` returns byte-identical events; only the
+  opaque `streamContinuationToken` differs. There is no verbose-form variant for
+  a reader to handle. (`richtypes/wire/acs_wildcard_verbose_{true,false}.json`)
+- **Nested `Optional` reaches this repo's codegen, and the array encoding is
+  what makes it representable.** A Daml `Optional (Optional a)` generates an
+  `Optional<Optional<a>>`, and every level *of that chain* is written and read
+  in the array form the table records. The rule is scoped to the chain, not to
+  the runtime at large: a single-level `Optional a` keeps the flat
+  `null`-or-bare-value form, and so does an `Optional` separated from another by
+  an intervening type, such as `Optional (Box (Optional Text))`. The two travel
+  as different wire nodes for that reason.
+  `richtypes/wire/probe_nested_optional_matrix.json` is the pin: one create per candidate
+  encoding, showing the participant accept `[]`, `[[]]` and `[["deep"]]` and
+  reject `null`, `[null]` and `["deep"]` with HTTP 500. `[null]` is the one to
+  watch — it is the mixed form, array at the outer level and flat at the inner,
+  which is what an encoder taught the chain encoding at only one level emits for
+  `Some None`. It looks plausible, and the participant refuses it.
+
+### Recapture
+
+The scripted rig that produced these files is no longer in the tree. A recapture allocates
+a fresh party, so contract ids, party ids and offsets differ from the ones recorded here -
+the encodings are what these files pin, not the identifiers. Captures are refreshed from the
+corpus DAR itself (`richtypes` or `contractkeys`), not from a separate model.
+
+To redo the LF 2.1 comparison, build a copy of the corpus with `--target=2.1` in `daml.yaml`
+and a distinct `name:`, then capture the same requests against the 2.1 artifacts into a
+scratch output directory. Compare the two sets by walking both JSON trees and asserting leaf
+values under `createArgument`, `choiceArgument`, `exerciseResult`, `contractKey` and
+`viewValue` - party ids and contract ids aside - while comparing only shape elsewhere, since
+offsets, update ids, record times and package hashes differ by construction. Group
+active-contract entries by qualified template name first; ACS ordering is not guaranteed.
+Validate any such comparison against a deliberately mutated copy before trusting a clean
+run, or a silently vacuous walk will report agreement it never checked.

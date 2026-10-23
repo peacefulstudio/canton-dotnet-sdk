@@ -8,6 +8,7 @@ using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Xunit;
+using Daml.Runtime.Stdlib;
 
 namespace Canton.Ledger.Testing.Tests;
 
@@ -409,8 +410,11 @@ public class FakePqsClientTests
                 AsOf: new DateOnly(2026, 5, 29),
                 ObservedAt: new DateTimeOffset(2026, 5, 29, 13, 30, 0, TimeSpan.Zero),
                 Note: "hello",
+                NestedNote: new Optional<Optional<string>>.None(),
                 Tags: tags,
                 Attributes: new Dictionary<string, string> { ["k1"] = "v1" },
+                GenMap: new Dictionary<Party, long>(),
+                UnitField: DamlUnit.Instance,
                 Marker: new ContractId<Marker>("marker-1"),
                 HoldingCid: new ContractId<IHolding>("holding-1"),
                 HoldingCids: [new ContractId<IHolding>("holding-1")],

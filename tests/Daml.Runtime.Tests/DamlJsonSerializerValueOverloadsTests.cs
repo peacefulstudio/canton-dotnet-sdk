@@ -44,7 +44,7 @@ public class DamlJsonSerializerValueOverloadsTests
     [Fact]
     public void Serialize_value_overload_should_handle_DamlNumeric()
     {
-        var numeric = new DamlNumeric(123.456789m, 10);
+        var numeric = new DamlNumeric(123.456789m);
 
         var valueJson = DamlJsonSerializer.Serialize(numeric);
         var recordJson = DamlJsonSerializer.Serialize(

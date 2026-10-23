@@ -16,6 +16,14 @@ public sealed record Describe(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("prefix")] string Prefix
 ) : global::Daml.Runtime.Data.IDamlRecord<Describe>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Prefix, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("prefix", new global::Daml.Runtime.Data.DamlText(Prefix))
@@ -23,7 +31,7 @@ public sealed record Describe(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Describe FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Describe(
-        Prefix: record.GetRequiredField("prefix").As<global::Daml.Runtime.Data.DamlText>().Value
+        Prefix: record.GetRequiredField("prefix", 0).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record Describe(
             global::Daml.Runtime.Data.DamlField.Create("prefix", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "prefix"), context.Field("prefix")))
         );
     }
-
 }

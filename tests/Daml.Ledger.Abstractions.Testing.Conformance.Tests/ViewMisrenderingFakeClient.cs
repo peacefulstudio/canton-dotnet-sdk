@@ -21,14 +21,14 @@ internal enum ViewMisrendering
 }
 
 /// <summary>
-/// Derives from <see cref="ConformingFakeClient"/> and misrenders the <c>Created</c> rows of one
+/// Derives from <see cref="DelegatingLedgerClient"/> over the shipped fake and misrenders the <c>Created</c> rows of one
 /// interface read: a view amount of 42.6, a contract id the template family never serves, a synchronizer id the template family never
 /// serves (snapshot only), or no view at all, which the read surfaces as <c>Unclassified</c>. The other two interface reads and
 /// the whole template family keep conforming, so the only check it can fail is the view check of
 /// the read it breaks.
 /// </summary>
 internal sealed class ViewMisrenderingFakeClient(InterfaceRead brokenRead, ViewMisrendering misrendering)
-    : ConformingFakeClient
+    : DelegatingLedgerClient(SeededShippedFake.Create())
 {
     public override async IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
         ViewDescriptor<TInterface, TView> view,

@@ -4,7 +4,6 @@
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
 
 namespace Canton.Ledger.Grpc.Client;

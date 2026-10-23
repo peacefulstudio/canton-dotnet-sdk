@@ -862,6 +862,29 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddLedgerClient_reports_the_exact_auth_tls_mismatch_message()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        services.AddLedgerClient(options =>
+        {
+            options.GrpcAddress = "https://localhost:5001";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<LedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>()
+            .Which.Failures.Should().Contain("LedgerClientOptions.Tls is configured while client-credentials authentication uses an unconfigured ClientCredentialsOptions.Tls. Configure TLS separately for the token endpoint.");
+    }
+
+    [Fact]
     public void AddLedgerClient_fails_at_startup_when_ledger_tls_is_configured_and_auth_tls_is_not_reversed_order()
     {
         var services = new ServiceCollection();

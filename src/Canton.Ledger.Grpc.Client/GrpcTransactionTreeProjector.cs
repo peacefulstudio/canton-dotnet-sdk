@@ -30,7 +30,10 @@ internal static class GrpcTransactionTreeProjector
         return new TransactionTree(
             transaction.UpdateId,
             LedgerWireConversions.ToLedgerOffset(transaction.Offset),
-            roots);
+            roots)
+        {
+            PaidTrafficCost = transaction.HasPaidTrafficCost ? transaction.PaidTrafficCost : null,
+        };
     }
 
     private static TreeNode ToTreeNode(Event evt)
@@ -55,7 +58,7 @@ internal static class GrpcTransactionTreeProjector
 
         return new TreeEvent.Exercised(
             TreeShape.EventIdOf(nodeId),
-            exercised.ContractId,
+            MalformedResponse.RequireContractId(exercised.ContractId, "an exercised event"),
             LedgerWireConversions.ToRuntimeIdentifier(templateId),
             exercised.InterfaceId is null ? null : LedgerWireConversions.ToRuntimeIdentifier(exercised.InterfaceId),
             GrpcTransactionResultProjector.RequireChoiceName(exercised),
@@ -90,7 +93,7 @@ internal static class GrpcTransactionTreeProjector
 
         return new TreeEvent.Created(
             TreeShape.EventIdOf(nodeId),
-            created.ContractId,
+            MalformedResponse.RequireContractId(created.ContractId, "a created event"),
             runtimeTemplateId,
             GrpcValueDecoder.ToDamlRecord(createArguments),
             LedgerWireConversions.ToPartyList(created.WitnessParties),

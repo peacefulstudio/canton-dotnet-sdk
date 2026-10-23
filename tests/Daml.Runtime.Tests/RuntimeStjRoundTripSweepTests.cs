@@ -26,6 +26,7 @@ public class RuntimeStjRoundTripSweepTests
         typeof(Choice<,,>),
         typeof(DamlLfJsonDecodeContext),
         typeof(EquatableArray<>.Enumerator),
+        typeof(Data.DamlEqualityComparer<>),
     };
 
     private static readonly IReadOnlySet<Type> NotInScope =
@@ -146,9 +147,9 @@ public class RuntimeStjRoundTripSweepTests
     }
 
     [Fact]
-    public void RuntimeStjRoundTripSweep_discovers_exactly_209_public_types()
+    public void RuntimeStjRoundTripSweep_discovers_exactly_211_public_types()
     {
-        Exported.Should().HaveCount(209);
+        Exported.Should().HaveCount(211);
     }
 
     [Fact]

@@ -42,7 +42,7 @@ internal static class GrpcTransactionResultProjector
                     createdContracts.Add(ToCreatedContract(evt.Created));
                     break;
                 case Event.EventOneofCase.Archived:
-                    archivedContractIds.Add(evt.Archived.ContractId);
+                    archivedContractIds.Add(MalformedResponse.RequireContractId(evt.Archived.ContractId, "an archived event"));
                     break;
                 case Event.EventOneofCase.Exercised:
                     exercisedEvents.Add(ToRuntimeExercisedEvent(evt.Exercised));
@@ -58,6 +58,7 @@ internal static class GrpcTransactionResultProjector
             LedgerWireConversions.ToCommandId(transaction.CommandId))
         {
             ExercisedEvents = EquatableArray.Create(exercisedEvents),
+            PaidTrafficCost = transaction.HasPaidTrafficCost ? transaction.PaidTrafficCost : null,
         };
     }
 
@@ -86,7 +87,7 @@ internal static class GrpcTransactionResultProjector
         var runtimeTemplateId = LedgerWireConversions.ToRuntimeIdentifier(templateId);
         return new CreatedContract(
             TreeShape.EventIdOf(created.NodeId),
-            created.ContractId,
+            MalformedResponse.RequireContractId(created.ContractId, "a created event"),
             runtimeTemplateId,
             GrpcValueDecoder.ToDamlRecord(createArguments),
             LedgerWireConversions.ToPartyList(created.WitnessParties),
@@ -159,7 +160,7 @@ internal static class GrpcTransactionResultProjector
             ? null
             : LedgerWireConversions.ToRuntimeIdentifier(exercised.InterfaceId);
         return new RuntimeExercisedEvent(
-            exercised.ContractId,
+            MalformedResponse.RequireContractId(exercised.ContractId, "an exercised event"),
             LedgerWireConversions.ToRuntimeIdentifier(templateId),
             interfaceId,
             choiceName,

@@ -20,7 +20,7 @@ namespace Canton.Ledger.Rest.Client;
 /// </summary>
 internal sealed class RestRetryHandler : DelegatingHandler
 {
-    private const string RetryAttemptActivityName = "RestLedgerClient.RetryAttempt";
+    internal const string RetryAttemptActivityName = "RestLedgerClient.RetryAttempt";
 
     private static readonly HttpRequestOptionsKey<bool> Replayable = new("Canton.Ledger.Rest.Replayable");
 
@@ -31,13 +31,13 @@ internal sealed class RestRetryHandler : DelegatingHandler
     private readonly ResiliencePipeline _retryPipeline;
     private readonly bool _enabled;
 
-    public RestRetryHandler(IOptions<RestLedgerClientOptions> options)
+    public RestRetryHandler(IOptions<RestLedgerClientOptions> options, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         var retry = options.Value.Retry;
         _enabled = retry.Enabled;
-        _retryPipeline = RetryPipelineFactory.Create(retry, IsTransientHttpFailure, RecordRetryAttempt);
+        _retryPipeline = RetryPipelineFactory.Create(retry, IsTransientHttpFailure, RecordRetryAttempt, timeProvider);
     }
 
     /// <inheritdoc />
@@ -125,9 +125,4 @@ internal sealed class RestRetryHandler : DelegatingHandler
             activity.SetTag(SemanticConventions.ErrorType, exception.GetType().FullName);
         }
     }
-}
-
-internal sealed class RetryAbandonedException(Exception sentAttemptFailure) : Exception
-{
-    internal Exception SentAttemptFailure { get; } = sentAttemptFailure;
 }

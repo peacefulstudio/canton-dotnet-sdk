@@ -21,6 +21,17 @@ public sealed partial record AnsRules
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("user")] global::Daml.Runtime.Data.Party User
     ) : global::Daml.Runtime.Data.IDamlRecord<AnsRules_RequestEntry>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Name, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            hash.Add(Url, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            hash.Add(Description, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            hash.Add(User, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("name", new global::Daml.Runtime.Data.DamlText(Name)),
@@ -31,10 +42,10 @@ public sealed partial record AnsRules
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static AnsRules_RequestEntry FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRules_RequestEntry(
-            Name: record.GetRequiredField("name").As<global::Daml.Runtime.Data.DamlText>().Value,
-            Url: record.GetRequiredField("url").As<global::Daml.Runtime.Data.DamlText>().Value,
-            Description: record.GetRequiredField("description").As<global::Daml.Runtime.Data.DamlText>().Value,
-            User: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("user").As<global::Daml.Runtime.Data.DamlParty>())
+            Name: record.GetRequiredField("name", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+            Url: record.GetRequiredField("url", 1).As<global::Daml.Runtime.Data.DamlText>().Value,
+            Description: record.GetRequiredField("description", 2).As<global::Daml.Runtime.Data.DamlText>().Value,
+            User: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("user", 3).As<global::Daml.Runtime.Data.DamlParty>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -49,6 +60,5 @@ public sealed partial record AnsRules
                 global::Daml.Runtime.Data.DamlField.Create("user", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "user"), context.Field("user")))
             );
         }
-
     }
 }

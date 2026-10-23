@@ -18,6 +18,14 @@ public sealed partial record Membership
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("newTier")] long NewTier
     ) : global::Daml.Runtime.Data.IDamlRecord<Renew>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(NewTier, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("newTier", new global::Daml.Runtime.Data.DamlInt64(NewTier))
@@ -25,7 +33,7 @@ public sealed partial record Membership
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Renew FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Renew(
-            NewTier: record.GetRequiredField("newTier").As<global::Daml.Runtime.Data.DamlInt64>().Value
+            NewTier: record.GetRequiredField("newTier", 0).As<global::Daml.Runtime.Data.DamlInt64>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Membership
                 global::Daml.Runtime.Data.DamlField.Create("newTier", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newTier"), context.Field("newTier")))
             );
         }
-
     }
 }

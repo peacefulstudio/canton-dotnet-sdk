@@ -27,5 +27,4 @@ public sealed record AnyContractView : global::Splice.Api.Token.MetadataV1.IAnyC
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return global::Daml.Runtime.Data.DamlRecord.Create();
     }
-
 }

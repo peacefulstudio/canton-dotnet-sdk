@@ -1,6 +1,6 @@
 # JVM codegen helper
 
-Scala/JVM binary that wraps [`daml-lf-archive`](https://search.maven.org/artifact/com.daml/daml-lf-archive-reader_2.13)
+Scala/JVM binary that wraps [`daml-lf-archive`](https://search.maven.org/artifact/com.daml/daml-lf-archive_2.13)
 to decode a `.dar` archive and emit an [`IntermediateDar`](../proto/intermediate_dar.proto)
 protobuf message to disk.
 

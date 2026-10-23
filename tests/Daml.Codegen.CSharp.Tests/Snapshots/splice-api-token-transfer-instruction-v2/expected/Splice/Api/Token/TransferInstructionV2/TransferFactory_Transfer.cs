@@ -52,9 +52,9 @@ public sealed record TransferFactory_Transfer(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Transfer);
+        hash.Add(Transfer, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.TransferInstructionV2.Transfer>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Actors));
-        hash.Add(ExtraArgs);
+        hash.Add(ExtraArgs, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default);
         return hash.ToHashCode();
     }
 
@@ -67,9 +67,9 @@ public sealed record TransferFactory_Transfer(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TransferFactory_Transfer FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferFactory_Transfer(
-        Transfer: global::Splice.Api.Token.TransferInstructionV2.Transfer.FromRecord(record.GetRequiredField("transfer").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
-        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<global::Daml.Runtime.Data.DamlRecord>())
+        Transfer: global::Splice.Api.Token.TransferInstructionV2.Transfer.FromRecord(record.GetRequiredField("transfer", 0).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors", 1).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs", 2).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -83,5 +83,4 @@ public sealed record TransferFactory_Transfer(
             global::Daml.Runtime.Data.DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
         );
     }
-
 }

@@ -54,8 +54,8 @@ public class ChoiceEmitterDescriptorTests
     {
         var emitter = Emitter(Resolution(package, dependencies));
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        emitter.WriteChoiceDescriptors(indent, template);
+        var indent = new IndentWriter(sb);
+        emitter.WriteChoiceDescriptors(indent, template, template.Name);
         return sb.ToString();
     }
 

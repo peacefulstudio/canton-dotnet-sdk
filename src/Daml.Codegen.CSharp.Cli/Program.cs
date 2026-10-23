@@ -4,6 +4,7 @@
 using System.CommandLine;
 using Daml.Codegen.CSharp;
 using Daml.Codegen.CSharp.CodeGen;
+using Daml.Codegen.CSharp.Cli.Versioning;
 using Daml.Codegen.CSharp.Versioning;
 using Daml.Codegen.Intermediate;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ internal static partial class Program
     /// surface — the part that grows as flags are added — is its own unit, separate from
     /// argument parsing and invocation.
     /// </summary>
-    private static RootCommand BuildRootCommand()
+    internal static RootCommand BuildRootCommand()
     {
         var rootCommand = new RootCommand("Generate C# code from an IntermediateDar proto");
 
@@ -92,27 +93,13 @@ internal static partial class Program
             Description = "Target framework for the generated project (e.g., net10.0)",
             DefaultValueFactory = _ => "net10.0"
         };
-        targetFrameworkOption.Validators.Add(result =>
-        {
-            var value = result.GetValue(targetFrameworkOption);
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                result.AddError("--target-framework must be a non-empty target framework moniker (e.g. net10.0, net9.0).");
-            }
-        });
+        RequireNonEmptyWhenSpecified(targetFrameworkOption, "target framework moniker", "net10.0, net9.0");
 
         var runtimeVersionOption = new Option<string?>("--runtime-version")
         {
             Description = "Version of Daml.Runtime package to reference"
         };
-        runtimeVersionOption.Validators.Add(result =>
-        {
-            var value = result.GetValue(runtimeVersionOption);
-            if (value is not null && string.IsNullOrWhiteSpace(value))
-            {
-                result.AddError("--runtime-version must be a non-empty version string when specified (e.g. 1.2.3).");
-            }
-        });
+        RequireNonEmptyWhenSpecified(runtimeVersionOption, "version string", "1.2.3");
 
         var emitterCounterOption = new Option<int>("--emitter-counter")
         {
@@ -136,16 +123,11 @@ internal static partial class Program
         {
             Description = "Codegen-tool version that keys the release-counter generation ordinal (the 4th NuGet version segment). Every package produced by one codegen version shares the ordinal, which increments when the version changes. Defaults to this emitter build's informational version (AssemblyInformationalVersionAttribute) with any '+' build metadata stripped."
         };
+        RequireNonEmptyWhenSpecified(codegenVersionOption, "version string", "0.2.0-preview.3");
         codegenVersionOption.Validators.Add(result =>
         {
-            var value = result.GetValue(codegenVersionOption);
-            if (value is null)
+            if (string.IsNullOrWhiteSpace(result.GetValue(codegenVersionOption)))
             {
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                result.AddError("--codegen-version must be a non-empty version string when specified (e.g. 0.2.0-preview.3).");
                 return;
             }
             if (result.GetValue(releaseCountersOption) is null)
@@ -172,27 +154,13 @@ internal static partial class Program
             Description = "SPDX license expression emitted in the generated .csproj's <PackageLicenseExpression>. Defaults to Apache-2.0.",
             DefaultValueFactory = _ => "Apache-2.0"
         };
-        packageLicenseOption.Validators.Add(result =>
-        {
-            var value = result.GetValue(packageLicenseOption);
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                result.AddError("--package-license must be a non-empty SPDX license expression (e.g. Apache-2.0, MIT, BSD-3-Clause).");
-            }
-        });
+        RequireNonEmptyWhenSpecified(packageLicenseOption, "SPDX license expression", "Apache-2.0, MIT, BSD-3-Clause");
 
         var repositoryUrlOption = new Option<string?>("--repository-url")
         {
             Description = "Repository URL emitted in the generated .csproj's <PackageProjectUrl>/<RepositoryUrl>/<RepositoryType>. When omitted, those elements are not emitted."
         };
-        repositoryUrlOption.Validators.Add(result =>
-        {
-            var value = result.GetValue(repositoryUrlOption);
-            if (value is not null && string.IsNullOrWhiteSpace(value))
-            {
-                result.AddError("--repository-url must be a non-empty URL when specified (e.g. https://github.com/acme/widgets).");
-            }
-        });
+        RequireNonEmptyWhenSpecified(repositoryUrlOption, "URL", "https://github.com/acme/widgets");
 
         rootCommand.Options.Add(intermediateOption);
         rootCommand.Options.Add(outputOption);
@@ -235,6 +203,16 @@ internal static partial class Program
 
         return rootCommand;
     }
+
+    private static void RequireNonEmptyWhenSpecified(Option option, string valueKind, string examples) =>
+        option.Validators.Add(result =>
+        {
+            var value = result.GetValueOrDefault<string?>();
+            if (value is not null && string.IsNullOrWhiteSpace(value))
+            {
+                result.AddError($"{option.Name} must be a non-empty {valueKind} when specified (e.g. {examples}).");
+            }
+        });
 
     internal static async Task<int> RunCodegen(CodegenArgs args, CancellationToken cancellationToken)
     {
@@ -282,12 +260,7 @@ internal static partial class Program
     private static async Task GenerateFromIntermediate(FileInfo file, CodegenArgs args, ILogger<CSharpCodeGenerator> logger, CancellationToken cancellationToken)
     {
         LogReadingIntermediate(logger, file.Name);
-        IntermediateDar proto;
-        var stream = file.OpenRead();
-        await using (stream.ConfigureAwait(false))
-        {
-            proto = IntermediateDar.Parser.ParseFrom(stream);
-        }
+        var proto = await IntermediateDarFile.ReadAsync(file, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
         var dar = IntermediateDarReader.Read(proto);
@@ -301,7 +274,7 @@ internal static partial class Program
 
         var generator = new CSharpCodeGenerator(BuildOptions(args, effectiveCounter), logger);
         var generatedFiles = generator.Generate(dar);
-        await WriteGeneratedFiles(generatedFiles, args, logger, cancellationToken).ConfigureAwait(false);
+        await GeneratedOutputWriter.WriteAsync(generatedFiles, args.OutputDirectory, logger, cancellationToken).ConfigureAwait(false);
     }
 
     private static string ResolveCodegenVersion(CodegenArgs args) =>
@@ -342,29 +315,6 @@ internal static partial class Program
             PublishesReferencedPackages = args.ReleaseCountersFile is not null,
             RepositoryUrl = args.RepositoryUrl,
         };
-
-    private static async Task WriteGeneratedFiles(IReadOnlyList<GeneratedFile> generatedFiles, CodegenArgs args, ILogger logger, CancellationToken cancellationToken)
-    {
-        foreach (var file in generatedFiles)
-        {
-            var filePath = Path.Combine(args.OutputDirectory.FullName, file.RelativePath);
-            var fileDir = Path.GetDirectoryName(filePath);
-            if (fileDir is not null && !Directory.Exists(fileDir))
-            {
-                Directory.CreateDirectory(fileDir);
-            }
-
-            if (file.IsBinary)
-            {
-                await File.WriteAllBytesAsync(filePath, file.BinaryContent!, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                await File.WriteAllTextAsync(filePath, file.Content, cancellationToken).ConfigureAwait(false);
-            }
-            LogGeneratedFile(logger, file.RelativePath);
-        }
-    }
 
     [LoggerMessage(EventId = 2000, Level = LogLevel.Information, Message = "Daml C# Codegen v{AssemblyVersion}")]
     private static partial void LogBanner(ILogger logger, Version? assemblyVersion);
@@ -407,9 +357,6 @@ internal static partial class Program
         Level = LogLevel.Information,
         Message = "  Release counter: codegen_version={CodegenVersion}; {PackageName} {PackageVersion} version={ResolvedVersion}")]
     private static partial void LogReleaseCounter(ILogger logger, string codegenVersion, string packageName, string packageVersion, string resolvedVersion);
-
-    [LoggerMessage(EventId = 2012, Level = LogLevel.Debug, Message = "  Generated: {RelativePath}")]
-    private static partial void LogGeneratedFile(ILogger logger, string relativePath);
 }
 
 internal sealed record CodegenArgs(

@@ -114,7 +114,8 @@ public sealed class HangingSubscriptionConformanceTests
         protected override TimeSpan StreamTimeout => TimeSpan.FromMilliseconds(300);
     }
 
-    private sealed class InterfaceTokenDroppingFakeClient : ConformingFakeClient
+    private sealed class InterfaceTokenDroppingFakeClient()
+        : DelegatingLedgerClient(SeededShippedFake.Create())
     {
         public override IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
             ViewDescriptor<TInterface, TView> view,
@@ -137,7 +138,8 @@ public sealed class HangingSubscriptionConformanceTests
         }
     }
 
-    private sealed class InterfaceTokenIgnoringFakeClient : ConformingFakeClient
+    private sealed class InterfaceTokenIgnoringFakeClient()
+        : DelegatingLedgerClient(SeededShippedFake.Create())
     {
         public override async IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
             ViewDescriptor<TInterface, TView> view,

@@ -13,7 +13,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 
 public sealed class WireSiteCompletenessTests
 {
-    private const string RawNamespace = "Canton.Ledger.Rest.Client.Raw";
+    private static readonly string RawNamespace = typeof(GetLedgerEndResponse).Namespace!;
 
     private const string Proto3DurationPattern = @"^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$";
 

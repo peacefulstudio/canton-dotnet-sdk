@@ -83,7 +83,7 @@ internal static class ActivityHelper
         }
     }
 
-    internal static void SetPartyOrContractTag(
+    internal static void SetIdentifierTag(
         this Activity? activity,
         LedgerClientOptions options,
         string name,
@@ -92,11 +92,25 @@ internal static class ActivityHelper
         if (options.EmitPartyAndContractSpanTags) activity?.SetTag(name, value);
     }
 
-    public static void RecordGrpcError(this Activity? activity, RpcException exception)
+    internal static string StatusDescriptionOf(this LedgerClientOptions options, RpcException exception) =>
+        options.EmitPartyAndContractSpanTags ? exception.Status.Detail : exception.StatusCode.ToString();
+
+    internal static string StatusDescriptionOf(this LedgerClientOptions options, Exception exception) =>
+        options.EmitPartyAndContractSpanTags ? exception.Message : exception.GetType().Name;
+
+    internal static string StatusDescriptionOf(this LedgerClientOptions options, TransportStatus status, string message) =>
+        options.EmitPartyAndContractSpanTags || status is TransportStatus.NoResponse
+            ? message
+            : ErrorTypeOf(status);
+
+    internal static string StatusDescriptionOfCommittedUndecodable(this LedgerClientOptions options, string message) =>
+        options.EmitPartyAndContractSpanTags ? message : CommittedUndecodableErrorType;
+
+    public static void RecordGrpcError(this Activity? activity, RpcException exception, LedgerClientOptions options)
     {
         if (activity is null) return;
 
-        activity.SetStatus(ActivityStatusCode.Error, exception.Status.Detail);
+        activity.SetStatus(ActivityStatusCode.Error, options.StatusDescriptionOf(exception));
         activity.SetTag(RpcGrpcStatusCode, (int)exception.StatusCode);
         activity.SetTag(ErrorType, exception.StatusCode.ToString());
     }

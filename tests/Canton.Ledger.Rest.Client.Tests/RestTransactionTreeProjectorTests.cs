@@ -312,6 +312,29 @@ public class RestTransactionTreeProjectorTests
         act.Should().Throw<InvalidOperationException>().WithMessage("*has no templateId*");
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_a_created_node_with_a_blank_contract_id(string contractId)
+    {
+        var act = () => RestTransactionTreeProjector.Project(Transaction(Created(nodeId: 0, contractId)));
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: a created event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_an_exercised_node_with_a_blank_contract_id(string contractId)
+    {
+        var act = () => RestTransactionTreeProjector.Project(Transaction(
+            Exercised(nodeId: 0, lastDescendantNodeId: 0, contractId, "Archive")));
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: an exercised event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
     [Fact]
     public void Project_populates_the_facets_the_flattened_shape_drops_from_a_created_event()
     {

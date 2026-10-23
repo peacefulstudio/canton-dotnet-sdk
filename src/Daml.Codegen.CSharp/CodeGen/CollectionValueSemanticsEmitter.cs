@@ -79,7 +79,11 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
     /// <summary>
     /// Writes the copying properties, <c>Equals</c> and <c>GetHashCode</c> for
     /// <paramref name="members"/> into <paramref name="indent"/>, positioned inside the body of
-    /// <paramref name="selfType"/>. Writes nothing when no member is a collection.
+    /// <paramref name="selfType"/>. When no member is a collection, writes only the
+    /// <c>GetHashCode</c>, which hashes every member through
+    /// <see cref="Daml.Runtime.Data.DamlEqualityComparer{T}"/> rather than the record-synthesized
+    /// hash that folds a <c>long</c>, <c>decimal</c> or <c>DateTimeOffset</c> member into 32 bits
+    /// by a fixed rule.
     /// </summary>
     /// <param name="indent">Writer positioned at the top of the record body.</param>
     /// <param name="selfType">The record's own type, including type parameters.</param>
@@ -96,6 +100,10 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
     {
         if (!NeedsValueSemantics(members))
         {
+            if (members.Count > 0)
+            {
+                WriteGetHashCode(indent, members, derivesFromRecord);
+            }
             return;
         }
 
@@ -212,7 +220,7 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
         }
         foreach (var member in members)
         {
-            indent.AppendLine($"hash.Add({MemberHashOperand(member)});");
+            indent.AppendLine($"hash.Add({MemberHashArguments(member)});");
         }
         indent.AppendLine("return hash.ToHashCode();");
         indent.Dedent();
@@ -227,9 +235,9 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
         _ => $"{Collections}.Equal({member.Name}, other.{member.Name})",
     };
 
-    private static string MemberHashOperand(ValueMember member) => member.Shape switch
+    private static string MemberHashArguments(ValueMember member) => member.Shape switch
     {
-        CollectionShape.None => member.Name,
+        CollectionShape.None => $"{member.Name}, {DamlTypeMapper.EqualityComparerFor(member.CSharpType)}",
         _ => $"{Collections}.Hash({member.Name})",
     };
 
@@ -239,7 +247,6 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
 
     private static string BackingFieldName(string memberName)
     {
-        // Daml field names are non-empty identifiers, so unescaped is never empty here.
         var unescaped = memberName.StartsWith('@') ? memberName[1..] : memberName;
         return $"_{char.ToLowerInvariant(unescaped[0])}{unescaped[1..]}";
     }

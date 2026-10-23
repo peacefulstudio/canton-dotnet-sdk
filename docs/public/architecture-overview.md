@@ -9,7 +9,7 @@ The SDK lives in one repository, `canton-dotnet-sdk`, and every NuGet package in
 | Area | Packages |
 |---|---|
 | Codegen | `dpm codegen-cs` (the pipeline, distributed as an OCI bundle), `Daml.Codegen.CSharp` (emitter library), `Daml.Codegen.Intermediate` (the Intermediate DAR model), `Daml.Codegen.Testing.Conformance` (conformance corpus) |
-| Runtime | `Daml.Runtime` (value, command and contract vocabulary), `Daml.Ledger.Abstractions` (`ILedgerClient` and its parts), `Daml.Runtime.Grpc` (value bridge to the Ledger API protos) |
+| Runtime | `Daml.Runtime` (value, command and contract vocabulary), `Daml.Ledger.Abstractions` (`ILedgerClient` and its parts) |
 | Ledger client | `Canton.Ledger.Abstractions` (neutral contract layer), `Canton.Ledger.Kernel` (authentication, telemetry, retry, TLS), `Canton.Ledger.Grpc` and `Canton.Ledger.Grpc.Client` (gRPC), `Canton.Ledger.Rest` and `Canton.Ledger.Rest.Client` (JSON Ledger API), `Canton.Ledger.Pqs.Client` (PQS) |
 | Observability and testing | `Canton.Ledger.OpenTelemetry`, `Canton.Ledger.Testing` (in-memory fakes), `Daml.Ledger.Abstractions.Testing.Conformance` (behavioural test kit for `ILedgerClient` implementations) |
 
@@ -114,12 +114,10 @@ flowchart TD
     ABS -. "implemented by" .-> RESTC["Canton.Ledger.Rest.Client"]
     ABS -. "implemented by" .-> PQSC["Canton.Ledger.Pqs.Client"]
     ABS -. "implemented by" .-> FAKES["Canton.Ledger.Testing"]
-    CLIENT --> BRIDGE["Daml.Runtime.Grpc\nDamlValueConverter"]
     CLIENT --> KERNEL["Canton.Ledger.Kernel\ntoken providers · telemetry · retry · TLS"]
     RESTC --> KERNEL
     PQSC --> KERNEL
     CLIENT --> STUBS["Canton.Ledger.Grpc\ngenerated gRPC stubs"]
-    BRIDGE --> STUBS
     RESTC --> RAW["Canton.Ledger.Rest\nraw Refit surface"]
     OTEL["Canton.Ledger.OpenTelemetry"] --> KERNEL
     STUBS -- "HTTP/2" --> NODE["Canton participant node"]
@@ -133,11 +131,9 @@ Application code injects the interfaces declared in `Canton.Ledger.Abstractions`
 
 The lowest layer: C# gRPC stubs compiled from the official Canton Ledger API v2 protos. Proto files are **not** checked in; `DownloadProtos.targets` fetches them at build time from Maven Central (the `com.daml:ledger-api-proto` and `com.daml:ledger-api-value-proto` artifacts for the Canton version pinned as `CantonVersion` in `Directory.Build.props`, plus Google common protos) and `Grpc.Tools` compiles them. The result is one client stub per Ledger API service: `CommandService`, `UpdateService`, `StateService`, `PartyManagementService`, `UserManagementService`, `PackageManagementService`, and `PackageService`.
 
-### `Daml.Runtime.Grpc` — the value bridge
-
-A thin, bidirectional converter between the proto `Value` types from `Canton.Ledger.Grpc` and the `Daml.Runtime.Data` value hierarchy: `DamlValueConverter.ToProtoValue` / `FromProtoValue` (and the record/identifier variants). It covers the full Daml value surface — unit, bool, int64, text, party, numeric (canonical unpadded encoding), date, timestamp, contract ID, record, variant, enum, list, optional, text map, gen map. This package only bridges representations; value unwrapping and typed decoding stay in `Daml.Runtime`.
-
 ### `Canton.Ledger.Grpc.Client` — the gRPC client
+
+The package also converts between the proto `Value` types from `Canton.Ledger.Grpc` and the `Daml.Runtime.Data` value hierarchy, covering the full Daml value surface (unit, bool, int64, text, party, numeric in its canonical unpadded encoding, date, timestamp, contract ID, record, variant, enum, list, optional, text map, gen map). That conversion is internal: value unwrapping and typed decoding stay in `Daml.Runtime`.
 
 Two entry points, both registered by `AddCantonLedger(configuration)` and resolved through their interfaces (the concrete `LedgerClient` and `AdminClient` types are `internal`):
 

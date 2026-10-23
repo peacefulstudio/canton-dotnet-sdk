@@ -22,6 +22,8 @@ internal sealed class LoopbackH2cServer : IAsyncDisposable
     private readonly WebApplication _app;
     private readonly TaskCompletionSource<string?> _captured =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<string?> _capturedTimeout =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private LoopbackH2cServer(WebApplication app, string grpcAddress)
     {
@@ -30,6 +32,8 @@ internal sealed class LoopbackH2cServer : IAsyncDisposable
     }
 
     internal string GrpcAddress { get; }
+
+    internal Task<string?> CapturedGrpcTimeout => _capturedTimeout.Task;
 
     internal Task<string?> CapturedTraceparent => _captured.Task;
 
@@ -46,6 +50,7 @@ internal sealed class LoopbackH2cServer : IAsyncDisposable
         app.Run(context =>
         {
             server._captured.TrySetResult(context.Request.Headers["traceparent"]);
+            server._capturedTimeout.TrySetResult(context.Request.Headers["grpc-timeout"]);
             context.Response.StatusCode = StatusCodes.Status200OK;
             return Task.CompletedTask;
         });

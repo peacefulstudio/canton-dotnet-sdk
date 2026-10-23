@@ -56,7 +56,7 @@ internal sealed partial class LedgerClient
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
-            LogCompletionStreamError(_logger, openingFault.Status, openingFault.Message);
+            LogCompletionStreamError(_logger, openingFault.Status, _options.StatusDescriptionOf(openingFault.Status, openingFault.Message));
             yield return new CompletionStreamEvent.StreamError(
                 openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
             yield break;
@@ -82,9 +82,9 @@ internal sealed partial class LedgerClient
         while (true)
         {
             var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (step.RecordFault(activity) is { } fault)
+            if (step.RecordFault(activity, _options) is { } fault)
             {
-                LogCompletionStreamError(_logger, fault.Status, fault.Message);
+                LogCompletionStreamError(_logger, fault.Status, _options.StatusDescriptionOf(fault.Status, fault.Message));
                 yield return new CompletionStreamEvent.StreamError(
                     fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
                 yield break;
@@ -249,7 +249,7 @@ internal sealed partial class LedgerClient
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
-            LogSubscribeStreamError(_logger, typeof(T).Name, openingFault.Status, openingFault.Message);
+            LogSubscribeStreamError(_logger, typeof(T).Name, openingFault.Status, _options.StatusDescriptionOf(openingFault.Status, openingFault.Message));
             yield return new ContractStreamEvent<T>.StreamError(
                 openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
             yield break;
@@ -266,9 +266,9 @@ internal sealed partial class LedgerClient
         while (true)
         {
             var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (step.RecordFault(activity) is { } fault)
+            if (step.RecordFault(activity, _options) is { } fault)
             {
-                LogSubscribeStreamError(_logger, typeof(T).Name, fault.Status, fault.Message);
+                LogSubscribeStreamError(_logger, typeof(T).Name, fault.Status, _options.StatusDescriptionOf(fault.Status, fault.Message));
                 yield return new ContractStreamEvent<T>.StreamError(
                     fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
                 yield break;
@@ -329,7 +329,7 @@ internal sealed partial class LedgerClient
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
-            LogSubscribeStreamError(_logger, typeof(T).Name, openingFault.Status, openingFault.Message);
+            LogSubscribeStreamError(_logger, typeof(T).Name, openingFault.Status, _options.StatusDescriptionOf(openingFault.Status, openingFault.Message));
             yield return new AcsSnapshotEntry<T>.StreamError(
                 openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
             yield break;
@@ -355,9 +355,9 @@ internal sealed partial class LedgerClient
         while (true)
         {
             var step = await StreamMoveResult.NextAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (step.RecordFault(activity) is { } fault)
+            if (step.RecordFault(activity, _options) is { } fault)
             {
-                LogSubscribeStreamError(_logger, typeof(T).Name, fault.Status, fault.Message);
+                LogSubscribeStreamError(_logger, typeof(T).Name, fault.Status, _options.StatusDescriptionOf(fault.Status, fault.Message));
                 yield return new AcsSnapshotEntry<T>.StreamError(
                     fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
                 yield break;

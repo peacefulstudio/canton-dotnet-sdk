@@ -52,7 +52,7 @@ public sealed record TransferInstructionResult_Output_TransferInstructionResult_
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TransferInstructionResult_Output_TransferInstructionResult_Completed FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferInstructionResult_Output_TransferInstructionResult_Completed(
-        ReceiverHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("receiverHoldingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList()
+        ReceiverHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("receiverHoldingCids", 0).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -64,5 +64,4 @@ public sealed record TransferInstructionResult_Output_TransferInstructionResult_
             global::Daml.Runtime.Data.DamlField.Create("receiverHoldingCids", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "receiverHoldingCids"), context.Field("receiverHoldingCids"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)))
         );
     }
-
 }

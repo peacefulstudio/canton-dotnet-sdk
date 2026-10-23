@@ -6,6 +6,7 @@ using AwesomeAssertions;
 using Daml.Ledger.Abstractions;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
@@ -42,6 +43,25 @@ public sealed class GrpcTraceparentPropagationTests
 
         traceparent.Should().NotBeNull();
         traceparent!.Should().StartWith($"00-{ParentTraceId}-");
+    }
+
+    [Fact]
+    public async Task GetLedgerEndAsync_still_sends_a_grpc_timeout_when_a_fake_TimeProvider_is_registered()
+    {
+        await using var server = await LoopbackH2cServer.StartAsync();
+
+        var services = new ServiceCollection();
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+        services.AddLedgerClient(options => options.GrpcAddress = server.GrpcAddress);
+        await using var provider = services.BuildServiceProvider();
+        var reader = provider.GetRequiredService<ILedgerReader>();
+
+        await CallIgnoringUnframedResponseAsync(reader);
+
+        var grpcTimeout = await server.CapturedGrpcTimeout
+            .WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        grpcTimeout.Should().NotBeNull();
     }
 
     private static async Task CallIgnoringUnframedResponseAsync(ILedgerReader reader)

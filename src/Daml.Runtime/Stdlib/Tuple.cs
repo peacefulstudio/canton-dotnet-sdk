@@ -39,6 +39,11 @@ public sealed record Tuple2<T1, T2>(T1 _1, T2 _2)
     where T1 : notnull
     where T2 : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(
+        DamlEqualityComparer<T1>.Default.GetHashCode(_1),
+        DamlEqualityComparer<T2>.Default.GetHashCode(_2));
+
     /// <summary>
     /// Converts this tuple to its Ledger API record representation. The supplied
     /// delegates encode each component to a <see cref="DamlValue"/>.
@@ -76,8 +81,8 @@ public sealed record Tuple2<T1, T2>(T1 _1, T2 _2)
         ArgumentNullException.ThrowIfNull(convert1);
         ArgumentNullException.ThrowIfNull(convert2);
         return new Tuple2<T1, T2>(
-            record.GetTypeParameterField("_1", convert1, absentReadsAs1),
-            record.GetTypeParameterField("_2", convert2, absentReadsAs2));
+            record.GetTypeParameterField("_1", 0, convert1, absentReadsAs1),
+            record.GetTypeParameterField("_2", 1, convert2, absentReadsAs2));
     }
 }
 
@@ -105,6 +110,12 @@ public sealed record Tuple3<T1, T2, T3>(T1 _1, T2 _2, T3 _3)
     where T2 : notnull
     where T3 : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(
+        DamlEqualityComparer<T1>.Default.GetHashCode(_1),
+        DamlEqualityComparer<T2>.Default.GetHashCode(_2),
+        DamlEqualityComparer<T3>.Default.GetHashCode(_3));
+
     /// <summary>
     /// Converts this tuple to its Ledger API record representation.
     /// </summary>
@@ -150,8 +161,8 @@ public sealed record Tuple3<T1, T2, T3>(T1 _1, T2 _2, T3 _3)
         ArgumentNullException.ThrowIfNull(convert2);
         ArgumentNullException.ThrowIfNull(convert3);
         return new Tuple3<T1, T2, T3>(
-            record.GetTypeParameterField("_1", convert1, absentReadsAs1),
-            record.GetTypeParameterField("_2", convert2, absentReadsAs2),
-            record.GetTypeParameterField("_3", convert3, absentReadsAs3));
+            record.GetTypeParameterField("_1", 0, convert1, absentReadsAs1),
+            record.GetTypeParameterField("_2", 1, convert2, absentReadsAs2),
+            record.GetTypeParameterField("_3", 2, convert3, absentReadsAs3));
     }
 }

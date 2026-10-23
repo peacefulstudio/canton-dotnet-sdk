@@ -17,6 +17,15 @@ public sealed record SettlementFactoryView(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
 ) : global::Splice.Api.Token.AllocationV2.ISettlementFactory, global::Daml.Runtime.Data.IDamlRecord<SettlementFactoryView>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Admin, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("admin", Admin.ToDamlValue()),
@@ -25,8 +34,8 @@ public sealed record SettlementFactoryView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static SettlementFactoryView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SettlementFactoryView(
-        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin").As<global::Daml.Runtime.Data.DamlParty>()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 1).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record SettlementFactoryView(
             global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
-
 }

@@ -296,15 +296,12 @@ public partial class ContractTypesTests
     }
 
     [Fact]
-    public void ExerciseCommand_ForInterface_uses_InterfaceId_in_template_id_slot()
+    public void ExerciseCommand_For_uses_the_interface_id_in_the_template_id_slot()
     {
         var cid = new ContractId<ITestInterfaceMarker>("interface-cid-exec");
         var arg = new TestTemplate(new Party("alice"), 42L);
 
-#pragma warning disable CS0618
-        var cmd = ExerciseCommand.ForInterface<ITestInterfaceMarker>(
-            cid, new ChoiceName("Transfer"), arg.ToRecord());
-#pragma warning restore CS0618
+        var cmd = ExerciseCommand.For(cid, new ChoiceName("Transfer"), arg.ToRecord());
 
         cmd.TemplateId.Should().Be(new Identifier(TestPackageId, TestModuleName, "ITestInterfaceMarker"));
         cmd.ContractId.Value.Should().Be("interface-cid-exec");
@@ -320,6 +317,28 @@ public partial class ContractTypesTests
 
         contractId.Value.Should().Be("contract-id");
         contractId.TemplateId.Should().Be(templateId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    public void DamlContractId_should_reject_null_empty_and_whitespace_value(string? value)
+    {
+        var construct = () => new DamlContractId(value!);
+
+        construct.Should().Throw<ArgumentException>().WithParameterName("Value");
+    }
+
+    [Fact]
+    public void DamlContractId_should_reject_blank_value_through_with_expression()
+    {
+        var contractId = new DamlContractId("contract-id");
+
+        var rewrite = () => contractId with { Value = " " };
+
+        rewrite.Should().Throw<ArgumentException>().WithParameterName("Value");
     }
 
     [Fact]

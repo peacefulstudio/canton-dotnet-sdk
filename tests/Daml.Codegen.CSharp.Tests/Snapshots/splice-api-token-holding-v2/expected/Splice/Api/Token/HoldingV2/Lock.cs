@@ -60,9 +60,9 @@ public sealed record Lock(
     {
         var hash = new global::System.HashCode();
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Holders));
-        hash.Add(ExpiresAt);
-        hash.Add(ExpiresAfter);
-        hash.Add(Context);
+        hash.Add(ExpiresAt, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset?>.Default);
+        hash.Add(ExpiresAfter, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.RelTime?>.Default);
+        hash.Add(Context, global::Daml.Runtime.Data.DamlEqualityComparer<string?>.Default);
         return hash.ToHashCode();
     }
 
@@ -76,10 +76,10 @@ public sealed record Lock(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Lock FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Lock(
-        Holders: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("holders").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
-        ExpiresAt: record.GetOptionalField("expiresAt").AsOptional().HasValue ? record.GetOptionalField("expiresAt").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
-        ExpiresAfter: record.GetOptionalField("expiresAfter").AsOptional().HasValue ? global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetOptionalField("expiresAfter").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>()) : null,
-        Context: record.GetOptionalField("context").AsOptional().HasValue ? record.GetOptionalField("context").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null
+        Holders: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("holders", 0).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExpiresAt: record.GetOptionalField("expiresAt", 1).AsOptional().HasValue ? record.GetOptionalField("expiresAt", 1).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlTimestamp>().Value : null,
+        ExpiresAfter: record.GetOptionalField("expiresAfter", 2).AsOptional().HasValue ? global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetOptionalField("expiresAfter", 2).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>()) : null,
+        Context: record.GetOptionalField("context", 3).AsOptional().HasValue ? record.GetOptionalField("context", 3).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -94,5 +94,4 @@ public sealed record Lock(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "context", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("context"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

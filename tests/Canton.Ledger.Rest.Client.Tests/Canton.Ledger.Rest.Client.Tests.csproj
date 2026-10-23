@@ -30,11 +30,12 @@
              Link="Shared\YamlBlock.cs" />
     <None Include="..\..\src\Canton.Ledger.Rest\spec\openapi.yaml"
           Link="spec\openapi.yaml" CopyToOutputDirectory="PreserveNewest" />
-    <Compile Include="..\Daml.Runtime.Tests\DamlLfJsonReaderWireSamplesTests.Corpus.cs"
-             Link="Shared\DamlLfJsonReaderWireSamplesTests.Corpus.cs" />
-    <Compile Include="..\Daml.Runtime.Tests\CapturedPayloadDisagreements.cs"
+    <Compile Include="..\Daml.Codegen.Testing.Conformance.Tests\WireCaptures.cs"
+             Link="Shared\WireCaptures.cs" />
+    <Compile Include="..\Daml.Codegen.Testing.Conformance.Tests\CapturedPayloadDisagreements.cs"
              Link="Shared\CapturedPayloadDisagreements.cs" />
-    <None Include="..\wire-samples\data\*.json" LinkBase="wire-samples\data" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\conformance\richtypes\wire\*.json" LinkBase="wire" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\conformance\contractkeys\wire\*.json" LinkBase="wire" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

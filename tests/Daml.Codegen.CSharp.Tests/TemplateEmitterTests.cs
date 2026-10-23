@@ -519,8 +519,8 @@ public class TemplateEmitterTests
         ]));
 
         output.Should().Contain("public static Status FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
-        output.Should().Contain("IsActive: record.GetRequiredField(\"isActive\").As<global::Daml.Runtime.Data.DamlBool>().Value");
-        output.Should().Contain("Amount: record.GetRequiredField(\"amount\").As<global::Daml.Runtime.Data.DamlNumeric>().Value");
+        output.Should().Contain("IsActive: record.GetRequiredField(\"isActive\", 0).As<global::Daml.Runtime.Data.DamlBool>().Value");
+        output.Should().Contain("Amount: record.GetRequiredField(\"amount\", 1).As<global::Daml.Runtime.Data.DamlNumeric>().Value");
     }
 
     [Fact]
@@ -699,6 +699,51 @@ public class TemplateEmitterTests
         output.Should().Contain("public sealed record Transfer(");
         output.Should().Contain("public global::Daml.Runtime.Data.DamlRecord ToRecord()");
         output.Should().Contain("public static Transfer FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
+    }
+
+    [Fact]
+    public void TemplateEmitter_closes_the_nested_choice_argument_record_and_its_template_without_blank_lines()
+    {
+        var module = new DamlModule
+        {
+            Name = ModuleName,
+            Templates = [],
+            DataTypes = [],
+            Interfaces = [],
+        };
+        var options = Options();
+        var package = Package(module);
+        var resolution = RealResolution.Of(package, options);
+        var context = resolution.Context;
+        var resolver = resolution.Resolver;
+        var mapper = new DamlTypeMapper(context, resolver);
+        var party = new PartyAnalysis();
+        var recordSerialization = new RecordSerializationEmitter(context, resolver, options, mapper);
+        var choiceEmitter = new ChoiceEmitter(context, resolver, options, mapper, party);
+        var submissionExtensions = new SubmissionExtensionsEmitter(options, party);
+        var emitter = new TemplateEmitter(context, resolver, recordSerialization, choiceEmitter, submissionExtensions, options);
+        var template = Template("Account", [Field("owner", DamlPrimitive.Party)]).Template;
+        var choice = new DamlChoice
+        {
+            Name = "Transfer",
+            Consuming = true,
+            ArgumentType = new DamlTypeRef("", ModuleName, "TransferArgs"),
+            ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
+        };
+        var sb = new StringBuilder();
+
+        emitter.WriteNestedChoiceArgumentType(new IndentWriter(sb), template, choice, new DamlRecordDefinition([]));
+
+        sb.ToString().Should().EndWith("        }\n    }\n}\n");
+        sb.ToString().Should().NotContain("\n\n    }").And.NotContain("\n\n}");
+    }
+
+    [Fact]
+    public void TemplateEmitter_closes_the_template_record_without_a_blank_line_before_its_closing_brace()
+    {
+        var output = EmitTemplate(Template("Account", [Field("owner", DamlPrimitive.Party)]));
+
+        output.Should().NotContain("\n\n}");
     }
 
     [Fact]

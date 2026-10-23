@@ -273,7 +273,6 @@ public class TransactionResultTests
         withEvents.CreatedContracts.Should().HaveCount(1);
         withEvents.ArchivedContractIds.Should().ContainSingle().Which.Should().Be("00b");
         withEvents.ExercisedEvents.Should().ContainSingle();
-        // Original is unmodified.
         original.ExercisedEvents.Should().BeEmpty();
     }
 

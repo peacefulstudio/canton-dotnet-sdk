@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using AwesomeAssertions;
+using Daml.Codegen.Intermediate.Model;
 using Xunit;
 using PbBuiltinType = Daml.Codegen.Intermediate.BuiltinType;
 using PbChoice = Daml.Codegen.Intermediate.Choice;
@@ -192,6 +193,10 @@ public partial class IntermediateDarReaderTests
             "semi;colon",
             "new\nline",
             "pkg\n",
+            "---",
+            "-",
+            ".",
+            "._-",
         ];
 
     [Theory]
@@ -229,6 +234,127 @@ public partial class IntermediateDarReaderTests
 
         act.Should().Throw<InvalidDataException>().WithMessage("*upgraded package id*");
     }
+
+    [Fact]
+    public void Read_rejects_a_package_id_one_character_short_of_a_package_id()
+    {
+        var proto = MakePackageWith(_ => { });
+        proto.Main.PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde";
+
+        var act = () => IntermediateDarReader.Read(proto);
+
+        act.Should().Throw<InvalidDataException>()
+            .WithMessage("*package id*'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde'*64 lowercase hexadecimal characters*");
+    }
+
+    public static TheoryData<string> ValuesThatAreNotPackageIds() =>
+        [
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde",
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
+            "0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef",
+            "g123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n",
+            "pkg-id-1",
+        ];
+
+    [Theory]
+    [MemberData(nameof(ValuesThatAreNotPackageIds))]
+    public void Read_rejects_main_package_ids_that_are_not_64_lowercase_hex(string notAPackageId)
+    {
+        var proto = MakePackageWith(_ => { });
+        proto.Main.PackageId = notAPackageId;
+
+        var act = () => IntermediateDarReader.Read(proto);
+
+        act.Should().Throw<InvalidDataException>().WithMessage("*package id*64 lowercase hexadecimal characters*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ValuesThatAreNotPackageIds))]
+    public void Read_rejects_upgraded_package_ids_that_are_not_64_lowercase_hex(string notAPackageId)
+    {
+        var proto = MakePackageWith(_ => { });
+        proto.Main.UpgradedPackageId = notAPackageId;
+
+        var act = () => IntermediateDarReader.Read(proto);
+
+        act.Should().Throw<InvalidDataException>().WithMessage("*upgraded package id*64 lowercase hexadecimal characters*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ValuesThatAreNotPackageIds))]
+    public void Read_rejects_type_constructor_package_ids_that_are_not_64_lowercase_hex(string notAPackageId)
+    {
+        var proto = MakePackageWith(module => module.DataTypes.Add(RecordWithFieldOfTypeCon(notAPackageId)));
+
+        var act = () => IntermediateDarReader.Read(proto);
+
+        act.Should().Throw<InvalidDataException>().WithMessage("*type-constructor package id*64 lowercase hexadecimal characters*");
+    }
+
+    [Fact]
+    public void Read_accepts_a_64_lowercase_hex_package_id_everywhere_a_package_id_is_read()
+    {
+        var proto = MakePackageWith(module => module.DataTypes.Add(RecordWithFieldOfTypeCon(OtherValidPackageId)));
+        proto.Main.UpgradedPackageId = OtherValidPackageId;
+
+        var model = IntermediateDarReader.Read(proto);
+
+        model.MainPackage.PackageId.Should().Be("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        model.MainPackage.UpgradedPackageId.Should().Be("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210");
+        var field = ((DamlRecordDefinition)model.MainPackage.Modules[0].DataTypes.Single().Definition).Fields.Single();
+        field.Type.Should().BeOfType<DamlTypeRef>().Which.PackageId
+            .Should().Be("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210");
+    }
+
+    [Fact]
+    public void Read_accepts_an_empty_type_constructor_package_id_as_the_same_package_marker()
+    {
+        var proto = MakePackageWith(module => module.DataTypes.Add(RecordWithFieldOfTypeCon(string.Empty)));
+
+        var model = IntermediateDarReader.Read(proto);
+
+        var field = ((DamlRecordDefinition)model.MainPackage.Modules[0].DataTypes.Single().Definition).Fields.Single();
+        field.Type.Should().BeOfType<DamlTypeRef>().Which.PackageId.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Read_keeps_the_loose_package_coordinate_check_for_package_names()
+    {
+        var proto = MakePackageWith(_ => { });
+        proto.Main.PackageName = "my-package_1.0";
+
+        var model = IntermediateDarReader.Read(proto);
+
+        model.MainPackage.Name.Should().Be("my-package_1.0");
+    }
+
+    private const string OtherValidPackageId = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+
+    private static PbDataType RecordWithFieldOfTypeCon(string typeConPackageId) => new()
+    {
+        Name = "Holder",
+        IsSerializable = true,
+        Record = new PbRecord
+        {
+            Fields =
+            {
+                new PbField
+                {
+                    Name = "held",
+                    Type = new PbType
+                    {
+                        TypeCon = new Daml.Codegen.Intermediate.TypeConName
+                        {
+                            PackageId = typeConPackageId,
+                            ModuleNameSegments = { "Foo" },
+                            NameSegments = { "Held" },
+                        },
+                    },
+                },
+            },
+        },
+    };
 
     [Fact]
     public void Read_rejects_package_names_outside_the_package_name_grammar()

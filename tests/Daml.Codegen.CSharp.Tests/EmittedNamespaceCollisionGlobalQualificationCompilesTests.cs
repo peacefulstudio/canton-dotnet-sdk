@@ -407,13 +407,6 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
     [Fact]
     public void Emitted_interface_choice_codec_receiver_is_global_qualified_when_stamped_view_field_shadows_it()
     {
-        // When an interface's view record has a field named 'party' (party : Party), the
-        // emitted marker IAsset gains a property 'Party Party { get; }' via view-field
-        // mirroring. Inside the marker body a choice descriptor lambda emits:
-        //   ArgumentDecoder = val => Party.FromDamlValue(...)
-        // Without qualification, 'Party' resolves to the property (CS0120 — non-static
-        // reference on a type).  ShadowingTypeNames must add view-field member names to
-        // the shadow set so the qualifier root-qualifies the codec receiver.
         var module = new DamlModule
         {
             Name = "Acme.Assets",
@@ -468,20 +461,13 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
         var diagnostics = CompileEmittedFiles(files);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(
-            "emitted code for an interface with a stamped view field shadowing a runtime type must compile, but got: {0}",
+            "emitted code for an interface with a stamped view field shadowing a runtime type must compile (an unqualified Party codec receiver would bind to the mirrored Party property, CS0120), but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 
     [Fact]
     public void Emitted_choices_witness_i_choice_element_is_global_qualified_when_dependency_interface_marker_shadows_it()
     {
-        // A dependency package's module "Acme" declares a Daml interface "Choice", emitting
-        // marker "IChoice" in namespace "Acme".  The main package's module "Acme.Assets"
-        // sits in namespace "Acme.Assets", whose enclosing namespace "Acme" contains the
-        // dependency's "IChoice".  A bare IChoice reference in Acme.Assets then binds to
-        // Acme.IChoice instead of Daml.Runtime.Commands.IChoice, making the Choices
-        // witness type invalid.  ForPackage must include cross-package marker names from
-        // sibling packages in the shadow set so the qualifier root-qualifies IChoice.
         var depModule = new DamlModule
         {
             Name = "Acme",
@@ -566,11 +552,6 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
     [Fact]
     public void Emitted_choices_witness_i_choice_element_is_global_qualified_when_an_interface_marker_shadows_it()
     {
-        // A Daml interface named "Choice" generates a C# marker "IChoice" in the module's
-        // namespace. A bare IChoice reference in the same namespace then binds to that
-        // marker instead of Daml.Runtime.Commands.IChoice, making IReadOnlyList<IChoice>
-        // invalid. The qualifier's shadow set must include interface marker names so it
-        // root-qualifies IChoice in the Choices witness.
         var module = new DamlModule
         {
             Name = "Acme.Tokens",
@@ -634,17 +615,6 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
     [Fact]
     public void Emitted_dependency_choices_witness_is_global_qualified_when_prefixed_main_package_marker_shadows_it()
     {
-        // When the main package has a NamespacePrefix, its modules get a qualified namespace.
-        // E.g. prefix "Corp", module "Finance" → namespace "Corp.Finance".
-        // A dependency module "Corp.Finance.Tokens" has namespace "Corp.Finance.Tokens",
-        // which starts with "Corp.Finance" — so an interface marker "IChoice" in the main
-        // package's "Corp.Finance" namespace shadows Daml.Runtime.Commands.IChoice in the
-        // dependency.
-        //
-        // CrossPackageInterfaceMarkers must use isMainPackage:true for the main-package
-        // sibling so it resolves "Corp.Finance" (not just "Finance"); without that fix,
-        // StartsWithSegments("Corp.Finance.Tokens", "Finance") == false and the shadow
-        // is missed, leaving a bare IChoice that resolves to Corp.Finance.IChoice.
         var mainModule = new DamlModule
         {
             Name = "Finance",
@@ -723,19 +693,13 @@ public class EmittedNamespaceCollisionGlobalQualificationCompilesTests
         var diagnostics = CompileEmittedFiles(files);
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(
-            "emitted code for a dependency module nested under a prefixed main-package namespace that declares a Daml interface 'Choice' must compile, but got: {0}",
+            "emitted code for a dependency module nested under a prefixed main-package namespace that declares a Daml interface 'Choice' must compile (the main-package marker resolves under its NamespacePrefix as Corp.Finance, not just Finance), but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 
     [Fact]
     public void Emitted_choices_witness_i_choice_element_is_global_qualified_when_non_marker_sibling_type_shadows_it()
     {
-        // A dependency module "Acme" declares an ordinary record named "IChoice" (not a Daml
-        // interface — no marker is generated). The main module "Acme.Assets" has namespace
-        // "Acme.Assets", which starts with "Acme", so "Acme.IChoice" (the dep record) is
-        // visible there without qualification. CrossPackageShadowTypes must include every
-        // top-level type name from sibling packages, not just interface markers, so the
-        // qualifier detects the shadowing and root-qualifies Daml.Runtime.Commands.IChoice.
         var depModule = new DamlModule
         {
             Name = "Acme",

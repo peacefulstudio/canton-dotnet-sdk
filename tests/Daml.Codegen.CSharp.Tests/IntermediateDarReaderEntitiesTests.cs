@@ -75,7 +75,7 @@ public partial class IntermediateDarReaderTests
                 {
                     TypeCon = new PbTypeConName
                     {
-                        PackageId = "self",
+                        PackageId = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
                         ModuleNameSegments = { "Foo" },
                         NameSegments = { "HoldingView" },
                     },
@@ -155,13 +155,8 @@ public partial class IntermediateDarReaderTests
     }
 
     [Fact]
-    public void IntermediateDarReader_interface_round_trips_methods_in_wire_order()
+    public void IntermediateDarReader_interface_round_trips_methods_in_wire_order_not_sorted_order()
     {
-        // Deliberately NOT ordinal-sorted: the reader must reproduce the wire
-        // order verbatim, not sort or reorder. The return types cover the three
-        // shapes interface methods carry on the wire: a bare builtin, an applied
-        // builtin over a same-package type constructor, and a cross-package
-        // type constructor.
         var proto = MakePackageWith(module =>
         {
             module.Interfaces.Add(new PbInterface
@@ -183,7 +178,7 @@ public partial class IntermediateDarReaderTests
                                     {
                                         TypeCon = new PbTypeConName
                                         {
-                                            PackageId = "pkg-id-1",
+                                            PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                                             ModuleNameSegments = { "Foo" },
                                             NameSegments = { "Lock" },
                                         },
@@ -204,7 +199,7 @@ public partial class IntermediateDarReaderTests
                         {
                             TypeCon = new PbTypeConName
                             {
-                                PackageId = "meta-pkg",
+                                PackageId = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
                                 ModuleNameSegments = { "Splice", "Api", "Token", "MetadataV1" },
                                 NameSegments = { "TokenMetadata" },
                             },
@@ -222,11 +217,11 @@ public partial class IntermediateDarReaderTests
             "the reader preserves the proto's wire order — entries come back exactly as laid out, not re-sorted");
 
         methods[0].ReturnType.Should().BeOfType<DamlOptionalType>()
-            .Which.Value.Should().Be(new DamlTypeRef("pkg-id-1", "Foo", "Lock"),
+            .Which.Value.Should().Be(new DamlTypeRef("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "Foo", "Lock"),
                 "an Optional-typed method return folds into its typed node like any other " +
                 "application of a folding builtin");
         methods[1].ReturnType.Should().Be(new DamlPrimitiveType(DamlPrimitive.Party));
-        methods[2].ReturnType.Should().Be(new DamlTypeRef("meta-pkg", "Splice.Api.Token.MetadataV1", "TokenMetadata"));
+        methods[2].ReturnType.Should().Be(new DamlTypeRef("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "Splice.Api.Token.MetadataV1", "TokenMetadata"));
     }
 
     [Fact]
@@ -267,12 +262,6 @@ public partial class IntermediateDarReaderTests
     [Fact]
     public void IntermediateDarReader_interface_methods_with_update_and_arrow_returns_read_real_identities()
     {
-        // The common Daml shape is `method foo : Update X`; lock-style helper
-        // methods mention ARROW. These are signature-only builtins (catalog
-        // disposition SignatureOnly — the M2 catalog), and the reader must give
-        // them their real DamlPrimitive identity rather than erasing to Unit or
-        // throwing. No synthetic-free corpus covers this at a controllable
-        // size, so the proto is constructed here directly.
         var proto = MakePackageWith(module =>
         {
             module.Interfaces.Add(new PbInterface
@@ -325,7 +314,7 @@ public partial class IntermediateDarReaderTests
         methods[0].ReturnType.Should().BeOfType<DamlTypeApp>().Which.Should().Be(
             new DamlTypeApp(
                 new DamlPrimitiveType(DamlPrimitive.Update),
-                [new DamlTypeRef("pkg-id-1", "Foo", "Lock")]),
+                [new DamlTypeRef("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "Foo", "Lock")]),
             "Update as an interface-method return type keeps its real identity — never Unit, never a throw");
         methods[1].ReturnType.Should().BeOfType<DamlTypeApp>().Which.Should().Be(
             new DamlTypeApp(
@@ -340,7 +329,7 @@ public partial class IntermediateDarReaderTests
 
     private static PbTypeConName SelfLockTypeCon() => new()
     {
-        PackageId = "pkg-id-1",
+        PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         ModuleNameSegments = { "Foo" },
         NameSegments = { "Lock" },
     };
@@ -472,7 +461,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p",
+                PackageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
@@ -524,7 +513,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p",
+                PackageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",

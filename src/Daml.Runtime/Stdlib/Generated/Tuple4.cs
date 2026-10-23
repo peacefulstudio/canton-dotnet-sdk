@@ -26,6 +26,17 @@ public sealed record Tuple4<TT1, TT2, TT3, TT4>(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("_4")] TT4 _4
 ) where TT1 : notnull where TT2 : notnull where TT3 : notnull where TT4 : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(_1, global::Daml.Runtime.Data.DamlEqualityComparer<TT1>.Default);
+        hash.Add(_2, global::Daml.Runtime.Data.DamlEqualityComparer<TT2>.Default);
+        hash.Add(_3, global::Daml.Runtime.Data.DamlEqualityComparer<TT3>.Default);
+        hash.Add(_4, global::Daml.Runtime.Data.DamlEqualityComparer<TT4>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TT1, global::Daml.Runtime.Data.DamlValue> convertTT1, global::System.Func<TT2, global::Daml.Runtime.Data.DamlValue> convertTT2, global::System.Func<TT3, global::Daml.Runtime.Data.DamlValue> convertTT3, global::System.Func<TT4, global::Daml.Runtime.Data.DamlValue> convertTT4) => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("_1", convertTT1(_1)),
@@ -36,10 +47,10 @@ public sealed record Tuple4<TT1, TT2, TT3, TT4>(
 
     /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     public static Tuple4<TT1, TT2, TT3, TT4> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT1> convertTT1, global::Daml.Runtime.Data.DamlValue? absentTT1, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT2> convertTT2, global::Daml.Runtime.Data.DamlValue? absentTT2, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT3> convertTT3, global::Daml.Runtime.Data.DamlValue? absentTT3, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT4> convertTT4, global::Daml.Runtime.Data.DamlValue? absentTT4) => new Tuple4<TT1, TT2, TT3, TT4>(
-        _1: record.GetTypeParameterField("_1", convertTT1, absentTT1),
-        _2: record.GetTypeParameterField("_2", convertTT2, absentTT2),
-        _3: record.GetTypeParameterField("_3", convertTT3, absentTT3),
-        _4: record.GetTypeParameterField("_4", convertTT4, absentTT4)
+        _1: record.GetTypeParameterField("_1", 0, convertTT1, absentTT1),
+        _2: record.GetTypeParameterField("_2", 1, convertTT2, absentTT2),
+        _3: record.GetTypeParameterField("_3", 2, convertTT3, absentTT3),
+        _4: record.GetTypeParameterField("_4", 3, convertTT4, absentTT4)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
@@ -54,5 +65,4 @@ public sealed record Tuple4<TT1, TT2, TT3, TT4>(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddTypeParameterField(fields, json, context, "_4", readTT4, absentTT4);
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

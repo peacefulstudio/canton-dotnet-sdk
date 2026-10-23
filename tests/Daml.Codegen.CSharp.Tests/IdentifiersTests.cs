@@ -102,6 +102,23 @@ public class IdentifiersTests
         Identifiers.SanitizeBare(mangled).Should().Be(expected);
     }
 
+    [Theory]
+    [InlineData("Smile$U0001f642", "Smile_ud83d_ude42")]
+    [InlineData("Smile$$U0001f642", "Smile_u0024U0001f642")]
+    [InlineData("$u003a$U0001f642$u003a", "_u003a_ud83d_ude42_u003a")]
+    [InlineData("Bad$U0000d800", "Bad_u0024U0000d800")]
+    [InlineData("Bad$U00110000", "Bad_u0024U00110000")]
+    public void SanitizeBare_decodes_the_eight_digit_escape_damlc_emits_for_astral_code_points(string mangled, string expected)
+    {
+        Identifiers.SanitizeBare(mangled).Should().Be(expected);
+    }
+
+    [Fact]
+    public void SanitizeBare_keeps_the_astral_escape_and_the_escaped_dollar_spelling_apart()
+    {
+        Identifiers.SanitizeBare("Smile$U0001f642").Should().NotBe(Identifiers.SanitizeBare("Smile$$U0001f642"));
+    }
+
     [Fact]
     public void SanitizeBare_uppercase_dollar_u_escape_is_not_decoded_damlc_always_emits_lowercase_hex()
     {

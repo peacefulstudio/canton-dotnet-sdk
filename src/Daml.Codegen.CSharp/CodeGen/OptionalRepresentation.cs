@@ -280,11 +280,6 @@ internal static class OptionalRepresentation
         HashSet<string> visited) =>
         declaredType.Accept(new ParameterWrapVisitor(resolver, declaringPackage, parameter, visited));
 
-    /// <summary>
-    /// The declaration-walk arms of <see cref="WrapsParameterInOptional"/>: an Optional
-    /// answers for the parameter it may carry directly, a generic application answers
-    /// through its slots, and the remaining constructors answer through their children.
-    /// </summary>
     private sealed class ParameterWrapVisitor(
         DarCrossPackageResolver resolver,
         DamlPackage declaringPackage,
@@ -298,7 +293,7 @@ internal static class OptionalRepresentation
         public bool VisitTypeVar(DamlTypeVar type) => false;
 
         public bool VisitOptional(DamlOptionalType type) =>
-            IsParameterBeneathOptionals(type.Value, parameter)
+            IsParameterOrOptionalChainOverParameter(type.Value, parameter)
             || WrapsParameterInOptional(resolver, declaringPackage, type.Value, parameter, visited);
 
         public bool VisitList(DamlListType type) =>
@@ -319,7 +314,7 @@ internal static class OptionalRepresentation
             if (type.Base is DamlPrimitiveType { Primitive: DamlPrimitive.Optional }
                 && type.Arguments is [var argument])
             {
-                return IsParameterBeneathOptionals(argument, parameter)
+                return IsParameterOrOptionalChainOverParameter(argument, parameter)
                     || WrapsParameterInOptional(resolver, declaringPackage, argument, parameter, visited);
             }
             if (type.Base is DamlTypeRef nested)
@@ -328,7 +323,7 @@ internal static class OptionalRepresentation
                     .Select((argument, index) => (Argument: argument, Index: index))
                     .Any(slot =>
                         WrapsParameterInOptional(resolver, declaringPackage, slot.Argument, parameter, visited)
-                        || (IsParameterBeneathOptionals(slot.Argument, parameter)
+                        || (IsParameterOrOptionalChainOverParameter(slot.Argument, parameter)
                             && OptionalWrappedParameter(resolver, declaringPackage, nested, slot.Index, visited) is not null));
             }
             return type.Arguments.Any(argument =>
@@ -336,13 +331,7 @@ internal static class OptionalRepresentation
         }
     }
 
-    /// <summary>
-    /// Whether <paramref name="declaredType"/> is the type parameter <paramref name="parameter"/>
-    /// itself, or sits beneath Optional-only nesting — any other constructor between the
-    /// Optional and the parameter disqualifies, and so does every node kind that is not an
-    /// Optional.
-    /// </summary>
-    private static bool IsParameterBeneathOptionals(DamlType declaredType, string parameter) =>
+    private static bool IsParameterOrOptionalChainOverParameter(DamlType declaredType, string parameter) =>
         declaredType.Accept(new ParameterBeneathOptionalsVisitor(parameter));
 
     private sealed class ParameterBeneathOptionalsVisitor(string parameter) : IDamlTypeVisitor<bool>

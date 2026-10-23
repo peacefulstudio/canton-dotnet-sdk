@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Kernel.Streams;
+using Canton.Ledger.Kernel.Wire;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -45,18 +46,23 @@ internal static partial class RestContractStreamProjector
         RestProjectionCore.ProjectActiveContractEntry<ContractArms<T>, ContractStreamEvent<T>, T, T>(
             response, logger, snapshotOffset);
 
-    public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response, ILogger? logger = null)
+    public static RuntimeDisclosedContract? DisclosureOf(
+        GetActiveContractsResponse response, ILogger? logger = null, bool logContractId = false)
     {
         var entry = RestProjectionCore.ActiveEntryOf(response);
-        return DisclosureOf(entry.Created, entry.WireSynchronizerId, logger);
+        return string.IsNullOrWhiteSpace(entry.Created?.ContractId)
+            ? null
+            : DisclosureOf(entry.Created, entry.WireSynchronizerId, logger, logContractId);
     }
 
-    public static RuntimeDisclosedContract? DisclosureOf(GetEventsByContractIdResponse response, ILogger? logger = null) =>
+    public static RuntimeDisclosedContract? DisclosureOf(
+        GetEventsByContractIdResponse response, ILogger? logger = null, bool logContractId = false) =>
         response.Archived is not null
             ? null
-            : DisclosureOf(response.Created?.CreatedEvent, wireSynchronizerId: null, logger);
+            : DisclosureOf(response.Created?.CreatedEvent, wireSynchronizerId: null, logger, logContractId);
 
-    private static RuntimeDisclosedContract? DisclosureOf(WireCreatedEvent? createdEvent, string? wireSynchronizerId, ILogger? logger)
+    private static RuntimeDisclosedContract? DisclosureOf(
+        WireCreatedEvent? createdEvent, string? wireSynchronizerId, ILogger? logger, bool logContractId)
     {
         if (createdEvent is not { CreatedEventBlob: { Length: > 0 } base64Blob, TemplateId: { } templateId } created)
         {
@@ -66,18 +72,29 @@ internal static partial class RestContractStreamProjector
         var blob = new byte[base64Blob.Length];
         if (!Convert.TryFromBase64String(base64Blob, blob, out var blobLength))
         {
-            LogCreatedEventBlobNotBase64(logger ?? NullLogger.Instance, created.ContractId);
+            if (logContractId)
+            {
+                LogCreatedEventBlobNotBase64(logger ?? NullLogger.Instance, created.ContractId);
+            }
+            else
+            {
+                LogCreatedEventBlobNotBase64(logger ?? NullLogger.Instance);
+            }
+
             return null;
         }
 
         return new RuntimeDisclosedContract(
-            created.ContractId,
+            MalformedResponse.RequireContractId(created.ContractId, "a created event"),
             RestWireConversions.ToRuntimeIdentifier(templateId),
             blob.AsMemory(0, blobLength))
         {
             SynchronizerId = StreamEventClassifier.Synchronizer(wireSynchronizerId),
         };
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The created_event_blob of a contract in the active-contract snapshot is not base64 — its row carries no Disclosure")]
+    private static partial void LogCreatedEventBlobNotBase64(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The created_event_blob of contract {ContractId} in the active-contract snapshot is not base64 — its row carries no Disclosure")]
     private static partial void LogCreatedEventBlobNotBase64(ILogger logger, string contractId);

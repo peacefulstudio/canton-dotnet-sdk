@@ -689,15 +689,6 @@ public class LedgerClientExtensionsTests
         events.Should().BeEmpty();
     }
 
-    /// <summary>
-    /// Minimal <see cref="ILedgerClient"/> stub that returns a pre-configured
-    /// <see cref="ExerciseOutcome{T}"/> from both the <c>TryExerciseAsync&lt;TResult&gt;</c>
-    /// and <c>TrySubmitAndWaitForTransactionAsync</c> primitives. The outcome is stored
-    /// as <c>object</c> and cast on retrieval so a single non-generic stub can satisfy
-    /// the generic contract for any <c>TResult</c>. The throwing extension wrappers and
-    /// the <c>Party</c>-<c>actAs</c> overloads both route here. Each primitive records the
-    /// <c>timeout</c> it was handed, so a wrapper that accepts one and drops it is visible.
-    /// </summary>
     private sealed class StubLedgerClient : NotSupportedLedgerClient
     {
         private readonly object _outcome;

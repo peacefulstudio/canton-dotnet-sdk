@@ -23,13 +23,13 @@ using RuntimeCommands = Daml.Runtime.Commands;
 namespace Canton.Ledger.Grpc.Client.Integration.Tests;
 
 /// <summary>
-/// Arrange harness for reassignment conformance tests on the multi-synchronizer LocalNet lane:
+/// Arrange harness for reassignment live tests on the multi-synchronizer LocalNet lane:
 /// hosts one party on both synchronizers, creates an <see cref="Asset"/> on the source
 /// synchronizer, unassigns it source→target through the typed
 /// <see cref="ICantonLedgerClient.SubmitReassignmentAsync"/> write surface, and
 /// observes the resulting <see cref="Com.Daml.Ledger.Api.V2.UnassignedEvent"/> on a caller-supplied reassignment
 /// <see cref="Com.Daml.Ledger.Api.V2.EventFormat"/>. Observation reads the raw <c>UnassignedEvent</c> off
-/// the wire because the conformance question is which caller-supplied <c>EventFormat</c> the participant
+/// the wire because the question is which caller-supplied <c>EventFormat</c> the participant
 /// honours server-side, and the typed subscription surface derives its filter from the marker rather than
 /// accepting one.
 /// </summary>
@@ -41,7 +41,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
         + "set the EnableMultiSynchronizer participant topology feature flag on its synchronizer trust "
         + "certificates, so cross-synchronizer reassignment is disabled at submission. Enabling that flag "
         + "on both synchronizers (LocalNet app-synchronizer.sc bootstrap) is required to run "
-        + "this conformance spike.";
+        + "this live spike.";
 
     private readonly ActAsRightsLease _actAsRights;
     private readonly ITokenProvider _tokenProvider;
@@ -389,7 +389,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
     private async Task<Metadata> HeadersAsync(CancellationToken cancellationToken)
     {
         var token = await _tokenProvider.GetTokenAsync(cancellationToken);
-        return new Metadata { { "authorization", $"Bearer {token}" } };
+        return new Metadata { { CallContextHelper.AuthorizationHeaderName, $"Bearer {token}" } };
     }
 
     private static string DarPath() => RichTypesDar.Path;

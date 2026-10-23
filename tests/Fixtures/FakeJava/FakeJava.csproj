@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>java</AssemblyName>
+    <RootNamespace>Daml.Codegen.MSBuild.Fixtures.FakeJava</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -17,6 +17,15 @@ public sealed record ExtraArgs(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
 ) : global::Daml.Runtime.Data.IDamlRecord<ExtraArgs>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Context, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.ChoiceContext>.Default);
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("context", Context.ToRecord()),
@@ -25,8 +34,8 @@ public sealed record ExtraArgs(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static ExtraArgs FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ExtraArgs(
-        Context: global::Splice.Api.Token.MetadataV1.ChoiceContext.FromRecord(record.GetRequiredField("context").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        Context: global::Splice.Api.Token.MetadataV1.ChoiceContext.FromRecord(record.GetRequiredField("context", 0).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 1).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record ExtraArgs(
             global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
-
 }

@@ -80,6 +80,8 @@ public static class DamlValueExtensions
     /// can represent "no value".
     /// </para>
     /// </remarks>
+    [RequiresUnreferencedCode("FromDamlValue reflects over the target type and closes generic methods over it, which is not trimming-safe.")]
+    [RequiresDynamicCode("FromDamlValue closes generic methods over the target type at run time, which requires dynamic code generation.")]
     [return: MaybeNull]
     public static TResult FromDamlValue<TResult>(this DamlValue value)
     {

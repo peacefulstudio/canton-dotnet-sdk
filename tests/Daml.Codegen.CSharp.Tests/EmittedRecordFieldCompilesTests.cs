@@ -55,7 +55,7 @@ public class EmittedRecordFieldCompilesTests
 
         periodSource.Should().Contain("Period_",
             "the colliding member must be disambiguated to Period_");
-        periodSource.Should().Contain("record.GetRequiredField(\"period\")",
+        periodSource.Should().Contain("record.GetRequiredField(\"period\", 0)",
             "deserialization must read the original Daml wire field name \"period\", unchanged by the C# member rename");
         periodSource.Should().Contain("Create(\"period\", ",
             "serialization must emit the original Daml wire field name \"period\", unchanged by the C# member rename");
@@ -64,6 +64,54 @@ public class EmittedRecordFieldCompilesTests
         var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         errors.Should().BeEmpty(
             "a record whose field PascalCases to its own type name must still compile, but got: {0}",
+            string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
+    }
+
+    [Fact]
+    public void Emitted_generic_record_with_field_that_pascalcases_to_the_type_name_compiles()
+    {
+        var module = new DamlModule
+        {
+            Name = "Test.Module",
+            Templates = [],
+            DataTypes =
+            [
+                new DamlDataType
+                {
+                    Name = "Foo",
+                    TypeParams = ["a"],
+                    Definition = new DamlRecordDefinition(
+                    [
+                        new DamlFieldDefinition("foo", new DamlTypeVar("a")),
+                    ]),
+                },
+            ],
+            Interfaces = [],
+        };
+
+        var package = new DamlPackage
+        {
+            PackageId = "test-package-id",
+            Name = "test-package",
+            Version = new Version(1, 0, 0),
+            LfVersion = "2.1",
+            Modules = [module],
+            DependencyReferences = [],
+        };
+
+        var dar = new DarModel { MainPackage = package, Dependencies = [] };
+        var files = CreateGenerator().Generate(dar).ToList();
+
+        var fooSource = files.Single(f => f.RelativePath.EndsWith("Foo.cs", StringComparison.Ordinal)).Content;
+        fooSource.Should().Contain("Foo_",
+            "the member colliding with the bare enclosing type name Foo must be disambiguated to Foo_");
+        fooSource.Should().Contain("record.GetTypeParameterField(\"foo\", 0",
+            "deserialization must read the original Daml wire field name \"foo\", unchanged by the C# member rename");
+
+        var diagnostics = CompileEmittedFiles(files);
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        errors.Should().BeEmpty(
+            "a generic record whose field PascalCases to its own bare type name must still compile, but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
 
@@ -514,22 +562,8 @@ public class EmittedRecordFieldCompilesTests
     }
 
     [Fact]
-    public void Emitted_record_with_unmappable_object_field_compiles()
+    public void Generate_should_throw_for_a_record_field_applying_a_type_variable()
     {
-        // Regression: ToValue's `_` arm unconditionally emitted
-        // `<value>.ToRecord()` for any field the type mapper falls back to
-        // `object` for. `object` has no ToRecord(), so the emitted body was CS1061.
-        // The fallback-producing shape is a higher-kinded application (`f a` where
-        // the base is a type var), which no other MapType arm names. (Arrow types
-        // like DA.Monoid.Types.Endo's `appEndo : a -> a` no longer reach here
-        // either: since the builtin catalog, both producer paths carry ARROW with
-        // its real `DamlPrimitive.Arrow` identity, and DamlTypeMapper fails loudly
-        // with NotSupportedException when a bare or applied signature-only builtin
-        // reaches a data position — no cataloged builtin shape maps to `object`
-        // anymore.) `f a` is the parser-independent reproduction of the remaining,
-        // deliberate fallback: an application whose base is a type variable, which
-        // no catalog row describes, still maps to `object` and emits the throwing
-        // GenericStub.NotImplemented stubs pinned below.
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -562,18 +596,8 @@ public class EmittedRecordFieldCompilesTests
         };
 
         var dar = new DarModel { MainPackage = package, Dependencies = [] };
-        var files = CreateGenerator().Generate(dar).ToList();
-
-        var endoSource = files.Single(f => f.RelativePath.EndsWith("Endo.cs", StringComparison.Ordinal)).Content;
-        endoSource.Should().NotContain("AppEndo.ToRecord()",
-            "an object-typed (unmappable) field must not emit `.ToRecord()` — object has no such method");
-        endoSource.Should().Contain("global::Daml.Runtime.Stdlib.GenericStub.NotImplemented<global::Daml.Runtime.Data.DamlValue>(\"AppEndo\")",
-            "an object-typed (unmappable) field must serialize via the GenericStub.NotImplemented stub");
-
-        var diagnostics = CompileEmittedFiles(files);
-        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
-        errors.Should().BeEmpty(
-            "a record with an unmappable object-typed field must compile (no .ToRecord() on object), but got: {0}",
-            string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
+        CreateGenerator().Invoking(g => g.Generate(dar))
+            .Should().Throw<CodegenException>()
+            .WithMessage("*type variable applied to 1*'f'*");
     }
 }

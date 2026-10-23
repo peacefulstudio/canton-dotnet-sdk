@@ -1,0 +1,82 @@
+# Copyright 2026 Peaceful Studio OÜ
+# SPDX-License-Identifier: Apache-2.0
+
+name: Intermediate DAR oracle check
+description: >-
+  Runs your Intermediate DAR producer over the conformance corpus (and optionally the Splice DARs)
+  and fails when its canonical JSON differs from the JVM oracle's.
+
+inputs:
+  version:
+    description: >-
+      SDK release whose intermediate-fixtures tarball and oracle jar are the expected answers,
+      without the leading v (for example 0.8.0). Use this Action at the matching tag. Not needed
+      when oracle-jar is set.
+    required: false
+  tier:
+    description: "full or shape. full compares the complete decode; shape compares the schema-only decode."
+    required: true
+  producer:
+    description: >-
+      Shell command that writes the producer's Intermediate DAR (.binpb) to $OUT for the DAR at $DAR.
+      Run once per DAR with DAR, OUT and TIER set in its environment.
+    required: true
+  oracle-jar:
+    description: >-
+      Path to a local oracle jar. When set, expected answers come from this jar instead of the
+      release tarball.
+    required: false
+    default: ''
+  splice:
+    description: >-
+      Adds the Splice DARs to the run. Empty is off; otherwise latest, a Splice version such as
+      0.9.1, or a 40-hex commit of canton-network/splice. Expected answers come from the oracle jar.
+    required: false
+    default: ''
+
+outputs:
+  mismatches:
+    description: Number of DARs whose canonical JSON differs from the oracle's.
+    value: ${{ steps.check.outputs.mismatches }}
+  splice-commit:
+    description: The Splice commit the run resolved to, empty when splice is off.
+    value: ${{ steps.check.outputs.splice-commit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install buf and jq
+      shell: bash
+      env:
+        BUF_VERSION: '1.73.0'
+        BUF_SHA256: '8f2986298ad08f0cc1bf999b9797b7c383adf32d7edf0f73d6f1e1a701baeac1'
+        JQ_VERSION: '1.7.1'
+        JQ_SHA256: '5942c9b0934e510ee61eb3e30273f1b3fe2590df93933a93d7c58b81d19c8ff5'
+      run: |
+        set -euo pipefail
+        BIN="${RUNNER_TEMP}/intermediate-dar-oracle-check/bin"
+        mkdir -p "${BIN}"
+        curl -fsSL --retry 3 "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64" -o "${BIN}/buf"
+        echo "${BUF_SHA256}  ${BIN}/buf" | sha256sum -c -
+        curl -fsSL --retry 3 "https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-amd64" -o "${BIN}/jq"
+        echo "${JQ_SHA256}  ${BIN}/jq" | sha256sum -c -
+        chmod +x "${BIN}/buf" "${BIN}/jq"
+        echo "${BIN}" >> "${GITHUB_PATH}"
+
+    - name: Setup JDK 17 for the oracle jar
+      if: inputs.oracle-jar != '' || inputs.splice != ''
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Compare canonical JSON with the oracle
+      id: check
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_TIER: ${{ inputs.tier }}
+        INPUT_PRODUCER: ${{ inputs.producer }}
+        INPUT_ORACLE_JAR: ${{ inputs.oracle-jar }}
+        INPUT_SPLICE: ${{ inputs.splice }}
+      run: ${{ github.action_path }}/check.sh

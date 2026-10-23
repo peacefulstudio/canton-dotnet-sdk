@@ -6,6 +6,7 @@ using Daml.Runtime.Serialization;
 using System.Text.Json;
 using System.Net;
 using AwesomeAssertions;
+using Canton.Ledger.Testing.Helpers;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
@@ -13,6 +14,8 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
@@ -78,6 +81,16 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
     private RestLedgerClient ClientWith(RecordingHttpHandler transport) =>
         new(TrackedFactory(transport));
 
+    private RestLedgerClient ClientLogging(RecordingHttpHandler transport, CapturingLoggerFactory logs, bool emitPartyAndContractSpanTags) =>
+        new(
+            TrackedFactory(transport),
+            Options.Create(new RestLedgerClientOptions
+            {
+                HttpAddress = "http://localhost:7575",
+                EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+            }),
+            logs.CreateLogger<RestLedgerClient>());
+
     [Fact]
     public void SupportsUnboundedStreaming_is_true()
     {
@@ -140,6 +153,34 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
     }
 
     [Fact]
+    public async Task SubscribeActiveAsync_keeps_streaming_to_the_Checkpoint_when_a_disclosure_row_has_a_blank_contract_id()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """
+            {"activeContracts": [
+              {"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "createdEventBlob": "CgsM", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}},
+              {"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00good", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "createdEventBlob": "CgsM", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}
+            ]}
+            """);
+        var client = ClientWith(transport);
+
+        var entries = new List<AcsSnapshotEntry<TestTemplate>>();
+        await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        entries.Should().HaveCount(3);
+        entries[0].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.Unclassified>()
+            .Which.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        entries[1].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.Created>()
+            .Which.ContractId.Value.Should().Be("00good");
+        entries[2].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.Checkpoint>();
+    }
+
+    [Fact]
     public async Task SubscribeActiveAsync_Created_carries_a_Disclosure_built_from_the_created_event_blob()
     {
         var transport = new RecordingHttpHandler().WithResponse(
@@ -161,6 +202,37 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
                 "00holding",
                 new RuntimeIdentifier("pkg", "Module", "StreamingTemplate"),
                 new byte[] { 0x0A, 0x0B, 0x0C }) { SynchronizerId = new SynchronizerId("sync-1") });
+    }
+
+    private async Task<List<string>> WarningsOfASnapshotWhoseBlobIsNotBase64(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """
+            {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "10", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}, "createArgument": {}, "createdEventBlob": "not base64!", "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}]}
+            """);
+        using var logs = new CapturingLoggerFactory();
+
+        await foreach (var _ in ClientLogging(transport, logs, emitPartyAndContractSpanTags).SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        return logs.Records.Where(r => r.Level == LogLevel.Warning).Select(r => r.Message).ToList();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_warns_about_a_blob_that_is_not_base64_without_the_contract_id_by_default()
+    {
+        (await WarningsOfASnapshotWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: false)).Should().Equal(
+            "The created_event_blob of a contract in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_warns_about_a_blob_that_is_not_base64_with_the_contract_id_when_opted_in()
+    {
+        (await WarningsOfASnapshotWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: true)).Should().Equal(
+            "The created_event_blob of contract 00holding in the active-contract snapshot is not base64 — its row carries no Disclosure");
     }
 
     [Fact]

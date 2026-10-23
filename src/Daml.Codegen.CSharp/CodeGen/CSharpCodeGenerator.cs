@@ -39,7 +39,7 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
         var files = new List<GeneratedFile>();
 
         var nameTables = new PackageNameTableCache(options, dar.MainPackage.PackageId, _log);
-        var resolver = new DarCrossPackageResolver(dar, nameTables, _log);
+        var resolver = new DarCrossPackageResolver(dar, nameTables);
 
         var mainModules = PackageEmitContext.ForPackage(dar.MainPackage, nameTables);
         var emittedDependencies = options.IncludeDependencies
@@ -53,20 +53,22 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
             mainModules.Concat(dependencyModules.SelectMany(modules => modules)).Select(EmittedModuleOf).ToList());
 
         var emittedModules = new List<EmittedModule>();
-        files.AddRange(GeneratePackage(resolver, mainModules, emittedModules));
+        var filePathClashes = new EmittedFilePathClashes();
+        files.AddRange(GeneratePackage(resolver, mainModules, emittedModules, filePathClashes));
 
         foreach (var (dep, modules) in emittedDependencies.Zip(dependencyModules))
         {
             LogGeneratingDependency(_log, dep.Name);
-            files.AddRange(GeneratePackage(resolver, modules, emittedModules));
+            files.AddRange(GeneratePackage(resolver, modules, emittedModules, filePathClashes));
         }
 
         ModuleNamespaceGuards.Check(emittedModules);
 
         if (options.GenerateProjectFile)
         {
+            var inlinedPackageIds = emittedDependencies.Select(dep => dep.PackageId).Append(dar.MainPackage.PackageId).ToHashSet(StringComparer.Ordinal);
             var externalRefs = new List<DamlPackage>();
-            foreach (var id in resolver.DiscoveredExternalPackageIds)
+            foreach (var id in resolver.DiscoveredExternalPackageIds.Where(id => !inlinedPackageIds.Contains(id)))
             {
                 var pkg = dar.GetPackageById(id);
                 if (pkg is null)
@@ -115,16 +117,18 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
     /// Generates C# code for a single package, one module at a time: every file of a module
     /// is written into that module's namespace and directory.
     /// </summary>
-    private IEnumerable<GeneratedFile> GeneratePackage(DarCrossPackageResolver resolver, IReadOnlyList<PackageEmitContext> moduleContexts, List<EmittedModule> emittedModules)
+    private IEnumerable<GeneratedFile> GeneratePackage(DarCrossPackageResolver resolver, IReadOnlyList<PackageEmitContext> moduleContexts, List<EmittedModule> emittedModules, EmittedFilePathClashes filePathClashes)
     {
         foreach (var context in moduleContexts)
         {
+            EmittedMemberNameClashes.RequireForModule(context, IsIncludedByRootFilter);
             var moduleFiles = GenerateModule(resolver, context).ToList();
             EmittedTypeNameClashes.Require(
                 context.Package.Name,
                 context.Module.Name,
                 context.Namespace,
                 moduleFiles);
+            filePathClashes.Require(context.Package.Name, context.Module.Name, moduleFiles);
             emittedModules.Add(EmittedModuleOf(context, EmittedTypeNameClashes.TopLevelTypeNamesOf(moduleFiles)));
             foreach (var emitted in moduleFiles)
             {
@@ -252,9 +256,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
         _ => "enum",
     };
 
-    /// <summary>
-    /// Generates C# code for a template.
-    /// </summary>
     private string GenerateTemplate(
         PackageEmitContext context,
         TemplateEmitter templateEmitter,
@@ -268,9 +269,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
             templateEmitter.WriteTemplateType(indent, package, module, template, fields);
         });
 
-    /// <summary>
-    /// Generates C# code for a data type.
-    /// </summary>
     private string GenerateDataType(
         PackageEmitContext context,
         RecordEmitter recordEmitter,
@@ -296,9 +294,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
             }
         });
 
-    /// <summary>
-    /// Generates C# code for a Daml interface.
-    /// </summary>
     private string GenerateInterface(
         PackageEmitContext context,
         InterfaceEmitter interfaceEmitter,
@@ -314,9 +309,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
     private static string RelativeFilePath(string dottedNamespace, string fileName) =>
         $"{dottedNamespace.Replace('.', '/')}/{fileName}";
 
-    /// <summary>
-    /// Generates a partial file with the choice argument type nested inside the template.
-    /// </summary>
     private string GenerateNestedChoiceArgumentType(
         PackageEmitContext context,
         TemplateEmitter templateEmitter,

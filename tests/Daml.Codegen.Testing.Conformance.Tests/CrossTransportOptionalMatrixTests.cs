@@ -3,11 +3,11 @@
 
 using System.Text.Json;
 using AwesomeAssertions;
+using Canton.Ledger.Grpc.Client;
 using Daml.Codegen.Testing.Conformance.ContractKeys;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Daml.Runtime.Serialization;
 using Daml.Runtime.Stdlib;
 using Xunit;

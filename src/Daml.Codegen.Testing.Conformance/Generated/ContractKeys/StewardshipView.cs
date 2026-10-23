@@ -16,6 +16,14 @@ public sealed record StewardshipView(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("charterSummary")] string CharterSummary
 ) : global::Daml.Codegen.Testing.Conformance.ContractKeys.IStewardship, global::Daml.Runtime.Data.IDamlRecord<StewardshipView>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(CharterSummary, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("charterSummary", new global::Daml.Runtime.Data.DamlText(CharterSummary))
@@ -23,7 +31,7 @@ public sealed record StewardshipView(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static StewardshipView FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new StewardshipView(
-        CharterSummary: record.GetRequiredField("charterSummary").As<global::Daml.Runtime.Data.DamlText>().Value
+        CharterSummary: record.GetRequiredField("charterSummary", 0).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record StewardshipView(
             global::Daml.Runtime.Data.DamlField.Create("charterSummary", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "charterSummary"), context.Field("charterSummary")))
         );
     }
-
 }

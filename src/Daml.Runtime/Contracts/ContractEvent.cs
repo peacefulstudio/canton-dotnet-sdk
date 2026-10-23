@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.Json.Serialization;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Data;
 
@@ -10,7 +11,9 @@ namespace Daml.Runtime.Contracts;
 /// Represents a contract creation event from the ledger.
 /// </summary>
 /// <param name="EventId">The event's identifier within its transaction.</param>
-/// <param name="ContractId">The on-ledger contract ID of the created contract.</param>
+/// <param name="ContractId">The on-ledger contract ID of the created contract. Must not be null,
+/// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+/// construction and through a <c>with</c> expression.</param>
 /// <param name="TemplateId">The template the contract instantiates.</param>
 /// <param name="CreateArguments">The create-arguments record.</param>
 /// <param name="WitnessParties">Parties notified of this event.</param>
@@ -23,7 +26,7 @@ namespace Daml.Runtime.Contracts;
 /// <param name="CreatedAt">The ledger-effective time of the create, when the event
 /// reported one.</param>
 public sealed record CreatedEvent(
-    string EventId,
+    [property: JsonPropertyOrder(-2)] string EventId,
     string ContractId,
     Identifier TemplateId,
     DamlRecord CreateArguments,
@@ -31,7 +34,18 @@ public sealed record CreatedEvent(
     EquatableArray<Party> Signatories,
     EquatableArray<Party> Observers,
     ContractKey? ContractKey,
-    DateTimeOffset? CreatedAt = null);
+    DateTimeOffset? CreatedAt = null)
+{
+    private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+    /// <summary>The on-ledger contract ID of the created contract (non-null, non-whitespace).</summary>
+    [JsonPropertyOrder(-1)]
+    public string ContractId
+    {
+        get => _contractId;
+        init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+    }
+}
 
 /// <summary>
 /// Represents a contract key.
@@ -84,14 +98,27 @@ public sealed record ContractKey(DamlValue Value, Identifier? TemplateId = null)
 /// Represents an archived (consumed) contract event.
 /// </summary>
 /// <param name="EventId">The ledger-assigned event identifier.</param>
-/// <param name="ContractId">The on-ledger contract ID of the archived contract.</param>
+/// <param name="ContractId">The on-ledger contract ID of the archived contract. Must not be null,
+/// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+/// construction and through a <c>with</c> expression.</param>
 /// <param name="TemplateId">The template identifier (package + module + entity).</param>
 /// <param name="WitnessParties">Parties notified of this event.</param>
 public sealed record ArchivedEvent(
-    string EventId,
+    [property: JsonPropertyOrder(-2)] string EventId,
     string ContractId,
     Identifier TemplateId,
-    EquatableArray<Party> WitnessParties);
+    EquatableArray<Party> WitnessParties)
+{
+    private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+    /// <summary>The on-ledger contract ID of the archived contract (non-null, non-whitespace).</summary>
+    [JsonPropertyOrder(-1)]
+    public string ContractId
+    {
+        get => _contractId;
+        init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+    }
+}
 
 /// <summary>
 /// Represents a choice-exercise event observed in a transaction. Carries the
@@ -99,7 +126,9 @@ public sealed record ArchivedEvent(
 /// can deserialize the choice's typed return value (e.g. project a
 /// <c>choice GetTrailingTwap : Decimal</c> result to <c>ExerciseOutcome&lt;decimal&gt;</c>).
 /// </summary>
-/// <param name="ContractId">The on-ledger contract ID the choice was exercised on.</param>
+/// <param name="ContractId">The on-ledger contract ID the choice was exercised on. Must not be null,
+/// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+/// construction and through a <c>with</c> expression.</param>
 /// <param name="TemplateId">The template that defines the executed choice. The package
 /// id may differ from the target contract's package id when the contract has been
 /// upgraded or downgraded.</param>
@@ -124,6 +153,16 @@ public sealed record ExercisedEvent(
     EquatableArray<Party> ActingParties,
     EquatableArray<Party> WitnessParties)
 {
+    private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+    /// <summary>The on-ledger contract ID the choice was exercised on (non-null, non-whitespace).</summary>
+    [JsonPropertyOrder(-1)]
+    public string ContractId
+    {
+        get => _contractId;
+        init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+    }
+
     /// <summary>
     /// The name of the package that defines <see cref="TemplateId"/> (Canton <c>ExercisedEvent.package_name</c>),
     /// compared in place of the package id when an exercise is matched to the template that owns its choice.

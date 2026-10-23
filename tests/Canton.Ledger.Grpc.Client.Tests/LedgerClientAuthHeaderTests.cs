@@ -18,7 +18,7 @@ namespace Canton.Ledger.Grpc.Client.Tests;
 
 public sealed class LedgerClientAuthHeaderTests : IDisposable
 {
-    private const string AuthorizationKey = "authorization";
+    private const string AuthorizationKey = CallContextHelper.AuthorizationHeaderName;
     private static readonly Party ActAs = new("party::alice");
 
     private readonly LedgerClientOptions _options;

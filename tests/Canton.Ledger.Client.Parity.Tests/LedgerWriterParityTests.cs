@@ -26,13 +26,6 @@ namespace Canton.Ledger.Client.Parity.Tests;
 public abstract class LedgerWriterParityTests
 {
     /// <summary>
-    /// Why this lane cannot read back the result of an exercise, or <see langword="null"/> when it
-    /// can. Only the row that decodes a choice result skips with this reason: the create row reads
-    /// back a contract id and the fire-and-forget row reads nothing back, so neither is held by it.
-    /// </summary>
-    protected virtual string? ExerciseResultDecodeQuarantine => null;
-
-    /// <summary>
     /// Opens a lane over this provider's <see cref="ILedgerWriter"/> and its wider
     /// <see cref="ICantonLedgerClient"/> for one test.
     /// </summary>
@@ -55,11 +48,6 @@ public abstract class LedgerWriterParityTests
     [Fact]
     public async Task TryExerciseAsync_exercises_the_Archive_choice_on_a_created_Marker_contract()
     {
-        if (ExerciseResultDecodeQuarantine is { } quarantine)
-        {
-            Assert.Skip(quarantine);
-        }
-
         await using var lane = await OpenWriterAsync(TestContext.Current.CancellationToken);
         var (writer, _, owner) = lane.Capability;
         var createOutcome = await writer.TryCreateAsync(

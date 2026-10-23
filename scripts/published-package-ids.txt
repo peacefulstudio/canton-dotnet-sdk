@@ -8,9 +8,9 @@ Canton.Ledger.Rest
 Canton.Ledger.Rest.Client
 Canton.Ledger.Testing
 Daml.Codegen.CSharp
+Daml.Codegen.CSharp.MSBuild
 Daml.Codegen.Intermediate
 Daml.Codegen.Testing.Conformance
 Daml.Ledger.Abstractions
 Daml.Ledger.Abstractions.Testing.Conformance
 Daml.Runtime
-Daml.Runtime.Grpc

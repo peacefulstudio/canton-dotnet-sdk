@@ -87,6 +87,15 @@ public class VariantEmitterTests
     }
 
     [Fact]
+    public void VariantEmitter_closes_the_variant_right_after_its_last_constructor()
+    {
+        var output = EmitVariant(Variant("Maybe", Ctor("Nothing"), Ctor("Just", Text)));
+
+        output.Should().EndWith("    }\n}\n");
+        output.Should().NotContain("\n\n}");
+    }
+
+    [Fact]
     public void VariantEmitter_leaves_a_non_generic_variant_unconstrained()
     {
         var output = EmitVariant(Variant("PaymentMethod", Ctor("Cash"), Ctor("Card", Text)));

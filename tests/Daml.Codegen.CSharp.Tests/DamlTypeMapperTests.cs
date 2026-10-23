@@ -254,6 +254,17 @@ public class DamlTypeMapperTests
     }
 
     [Fact]
+    public void FromValue_keys_a_genmap_by_the_collision_resistant_comparer()
+    {
+        Mapper().FromValue(App(DamlPrimitive.GenMap, Prim(DamlPrimitive.Int64), Prim(DamlPrimitive.Text)), "value")
+            .Should().Be(
+                "(global::System.Collections.Generic.IReadOnlyDictionary<long, string>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary("
+                + "kv => kv.Key.As<global::Daml.Runtime.Data.DamlInt64>().Value, "
+                + "kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value, "
+                + "global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default)");
+    }
+
+    [Fact]
     public void MapType_emits_the_wrapper_for_an_optional_genmap_key()
     {
         Mapper().MapType(App(
@@ -275,7 +286,8 @@ public class DamlTypeMapperTests
             .Should().Be(
                 "(global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Stdlib.Optional<string>, long>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary("
                 + "kv => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(kv.Key, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value), "
-                + "kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value)");
+                + "kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value, "
+                + "global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Optional<string>>.Default)");
     }
 
     [Fact]
@@ -318,7 +330,8 @@ public class DamlTypeMapperTests
                 "(global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>, long>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary("
                 + "kv => global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(kv.Key, __optional1 => "
                 + "global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional1, __optional2 => __optional2.As<global::Daml.Runtime.Data.DamlText>().Value)), "
-                + "kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value)");
+                + "kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value, "
+                + "global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>.Default)");
     }
 
     [Fact]
@@ -333,7 +346,8 @@ public class DamlTypeMapperTests
             .Should().Be(
                 "(global::System.Collections.Generic.IReadOnlyDictionary<string, long?>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary("
                 + "kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, "
-                + "kv => kv.Value.AsOptional().HasValue ? kv.Value.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlInt64>().Value : null)");
+                + "kv => kv.Value.AsOptional().HasValue ? kv.Value.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlInt64>().Value : null, "
+                + "global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default)");
     }
 
     [Fact]
@@ -416,7 +430,7 @@ public class DamlTypeMapperTests
     public void FromValue_casts_a_nested_genmap_of_genmap_to_the_declared_ireadonlydictionary()
     {
         Mapper().FromValue(App(DamlPrimitive.GenMap, Prim(DamlPrimitive.Party), App(DamlPrimitive.GenMap, Prim(DamlPrimitive.Text), Prim(DamlPrimitive.Int64))), "value")
-            .Should().Be("(global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, global::System.Collections.Generic.IReadOnlyDictionary<string, long>>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Daml.Runtime.Data.Party.FromDamlValue(kv.Key.As<global::Daml.Runtime.Data.DamlParty>()), kv => (global::System.Collections.Generic.IReadOnlyDictionary<string, long>)kv.Value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value))");
+            .Should().Be("(global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, global::System.Collections.Generic.IReadOnlyDictionary<string, long>>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Daml.Runtime.Data.Party.FromDamlValue(kv.Key.As<global::Daml.Runtime.Data.DamlParty>()), kv => (global::System.Collections.Generic.IReadOnlyDictionary<string, long>)kv.Value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default), global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default)");
     }
 
     [Fact]
@@ -878,12 +892,43 @@ public class DamlTypeMapperTests
     }
 
     [Fact]
-    public void FromValue_emits_the_throwing_stub_for_a_higher_kinded_object_mapped_type()
+    public void FromValue_throws_codegen_exception_for_a_higher_kinded_type_variable_application()
     {
         var higherKinded = new DamlTypeApp(new DamlTypeVar("f"), [new DamlTypeVar("a")]);
 
-        Mapper().FromValue(higherKinded, "value")
-            .Should().Be("global::Daml.Runtime.Stdlib.GenericStub.NotImplemented<object>(\"value\")");
+        Mapper().Invoking(m => m.FromValue(higherKinded, "value"))
+            .Should().Throw<CodegenException>()
+            .WithMessage("*type variable applied to 1*'f'*");
+    }
+
+    [Fact]
+    public void MapType_throws_codegen_exception_for_a_higher_kinded_type_variable_application()
+    {
+        var higherKinded = new DamlTypeApp(new DamlTypeVar("f"), [new DamlTypeVar("a")]);
+
+        Mapper().Invoking(m => m.MapType(higherKinded))
+            .Should().Throw<CodegenException>()
+            .WithMessage("*type variable applied to 1*'f'*");
+    }
+
+    [Fact]
+    public void FromJson_throws_codegen_exception_for_a_higher_kinded_type_variable_application()
+    {
+        var higherKinded = new DamlTypeApp(new DamlTypeVar("f"), [new DamlTypeVar("a")]);
+
+        Mapper().Invoking(m => m.FromJson(higherKinded, "json", "context"))
+            .Should().Throw<CodegenException>()
+            .WithMessage("*type variable applied to 1*'f'*");
+    }
+
+    [Fact]
+    public void ToValue_throws_codegen_exception_for_a_higher_kinded_type_variable_application()
+    {
+        var higherKinded = new DamlTypeApp(new DamlTypeVar("f"), [new DamlTypeVar("a")]);
+
+        Mapper().Invoking(m => m.ToValue(higherKinded, "AppEndo"))
+            .Should().Throw<CodegenException>()
+            .WithMessage("*type variable applied to 1*'f'*");
     }
 
     [Fact]

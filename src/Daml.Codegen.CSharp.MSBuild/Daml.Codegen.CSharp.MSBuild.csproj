@@ -1,0 +1,96 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Daml.Codegen.CSharp.MSBuild</PackageId>
+    <_DamlVersionsYaml>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../versions.yaml'))</_DamlVersionsYaml>
+    <_DamlDpmFloor>$([System.Text.RegularExpressions.Regex]::Match('$(_DamlVersionsYaml)', '(?m)(?&lt;=^dpm:[ \t]*)\d+\.\d+\.\d+').Value)</_DamlDpmFloor>
+    <Description>MSBuild integration for the Daml C# code generator. A &lt;DamlArchive&gt; item (or a &lt;DamlProject&gt; built with dpm) generates C# bindings at build time. DamlCodegenMode=Standalone (the default) runs the bundled .NET DAR decoder and emitter, with no JDK; DamlCodegenMode=Dpm runs `dpm codegen-cs` (requires dpm &gt;= $(_DamlDpmFloor) and a JDK on PATH). See https://github.com/peacefulstudio/canton-dotnet-sdk.</Description>
+    <PackageTags>daml;canton;blockchain;smart-contracts;codegen;msbuild;dpm</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+
+    <ToolPublishDir>$(MSBuildThisFileDirectory)tools/</ToolPublishDir>
+    <_DamlBundleVersionFile>build/Daml.Codegen.CSharp.MSBuild.BundleVersion.g.txt</_DamlBundleVersionFile>
+    <_DamlDpmFloorFile>build/Daml.Codegen.CSharp.MSBuild.DpmFloor.g.txt</_DamlDpmFloorFile>
+    <_DamlBundleDigestFileName>Daml.Codegen.CSharp.MSBuild.BundleDigest.g.txt</_DamlBundleDigestFileName>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackBundledCodegenTools;PackStampFiles</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="build/**/*" Exclude="$(_DamlBundleVersionFile);$(_DamlDpmFloorFile)" Pack="true" PackagePath="build" />
+    <None Include="buildMultiTargeting/**/*" Pack="true" PackagePath="buildMultiTargeting" Condition="Exists('buildMultiTargeting')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daml.Codegen.DarParser.Cli\Daml.Codegen.DarParser.Cli.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\Daml.Codegen.CSharp.Cli\Daml.Codegen.CSharp.Cli.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
+  <Target Name="DamlWriteStampFiles" BeforeTargets="Build">
+    <Error Text="versions.yaml has no dpm key, so the dpm floor the Dpm mode checks cannot be stamped into the package."
+           Condition="'$(_DamlDpmFloor)' == ''" />
+    <WriteLinesToFile File="$(MSBuildThisFileDirectory)$(_DamlBundleVersionFile)" Lines="$(PackageVersion)" Overwrite="true" />
+    <WriteLinesToFile File="$(MSBuildThisFileDirectory)$(_DamlDpmFloorFile)" Lines="$(_DamlDpmFloor)" Overwrite="true" />
+  </Target>
+
+  <Target Name="DamlWriteBundleDigestStamp">
+    <Error Text="A release pack (ContinuousIntegrationBuild=true) of Daml.Codegen.CSharp.MSBuild needs the index digest of the dpm-codegen-cs bundle its Dpm mode pins, ghcr.io/peacefulstudio/dpm-codegen-cs:$(PackageVersion). Pass -p:DamlCodegenBundleDigest=sha256:&lt;hex&gt;, the digest `oras resolve ghcr.io/peacefulstudio/dpm-codegen-cs:$(PackageVersion)` prints once the bundle is published."
+           Condition="'$(DamlCodegenBundleDigest)' == '' and '$(ContinuousIntegrationBuild)' == 'true'" />
+    <Error Text="DamlCodegenBundleDigest '$(DamlCodegenBundleDigest)' is not an OCI digest. It must be sha256: followed by 64 lowercase hex digits."
+           Condition="'$(DamlCodegenBundleDigest)' != '' and !$([System.Text.RegularExpressions.Regex]::IsMatch('$(DamlCodegenBundleDigest)', '^sha256:[0-9a-f]{64}$'))" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)$(_DamlBundleDigestFileName)"
+                      Lines="$(DamlCodegenBundleDigest)"
+                      Overwrite="true"
+                      Condition="'$(DamlCodegenBundleDigest)' != ''" />
+    <ItemGroup Condition="'$(DamlCodegenBundleDigest)' != ''">
+      <TfmSpecificPackageFile Include="$(IntermediateOutputPath)$(_DamlBundleDigestFileName)" PackagePath="build" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PackStampFiles" DependsOnTargets="DamlWriteStampFiles;DamlWriteBundleDigestStamp">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(MSBuildThisFileDirectory)$(_DamlBundleVersionFile)" PackagePath="build" />
+      <TfmSpecificPackageFile Include="$(MSBuildThisFileDirectory)$(_DamlDpmFloorFile)" PackagePath="build" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PublishCodegenTools" BeforeTargets="GenerateNuspec;Build">
+    <Message Text="Publishing Daml.Codegen.DarParser.Cli and Daml.Codegen.CSharp.Cli for bundling..." Importance="high" />
+    <RemoveDir Directories="$(ToolPublishDir)net10.0" />
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="Publish"
+             Properties="NoBuild=true;PublishDir=$(ToolPublishDir)net10.0/;SelfContained=false"
+             RemoveProperties="TargetFramework;RuntimeIdentifier" />
+  </Target>
+
+  <Target Name="CleanToolsDir" AfterTargets="Clean">
+    <RemoveDir Directories="$(ToolPublishDir)" Condition="Exists('$(ToolPublishDir)')" />
+  </Target>
+
+  <!--
+    Workaround for MSBuild evaluating static items at project load: a `<None Include="tools/**/*" />`
+    glob is expanded before PublishCodegenTools runs, so a cold `dotnet pack` packed an empty tools/.
+    TargetsForTfmSpecificContentInPackage defers the glob until pack time.
+    Workaround for MSBuild caching target results per project instance: NuGet pack calls this target
+    in a TargetFramework-specific instance, whose own PublishCodegenTools would empty tools/ and get
+    the cached, skipped publish back. Running PublishCodegenTools in the outer instance keeps it to
+    one run per build.
+  -->
+  <Target Name="PackBundledCodegenTools">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="PublishCodegenTools" RemoveProperties="TargetFramework" />
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(ToolPublishDir)**/*" PackagePath="tools" />
+    </ItemGroup>
+  </Target>
+
+</Project>

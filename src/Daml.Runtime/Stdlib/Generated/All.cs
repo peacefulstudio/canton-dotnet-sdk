@@ -16,6 +16,14 @@ public sealed record All(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("getAll")] bool GetAll
 ) : global::Daml.Runtime.Data.IDamlRecord<All>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(GetAll, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("getAll", new global::Daml.Runtime.Data.DamlBool(GetAll))
@@ -23,7 +31,7 @@ public sealed record All(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static All FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new All(
-        GetAll: record.GetRequiredField("getAll").As<global::Daml.Runtime.Data.DamlBool>().Value
+        GetAll: record.GetRequiredField("getAll", 0).As<global::Daml.Runtime.Data.DamlBool>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record All(
             global::Daml.Runtime.Data.DamlField.Create("getAll", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "getAll"), context.Field("getAll")))
         );
     }
-
 }

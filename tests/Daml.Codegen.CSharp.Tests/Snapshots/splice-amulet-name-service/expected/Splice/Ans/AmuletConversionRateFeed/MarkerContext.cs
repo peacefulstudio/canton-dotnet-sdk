@@ -47,7 +47,7 @@ public sealed record MarkerContext(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(FeaturedAppRightCid);
+        hash.Add(FeaturedAppRightCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Beneficiaries));
         return hash.ToHashCode();
     }
@@ -60,8 +60,8 @@ public sealed record MarkerContext(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static MarkerContext FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new MarkerContext(
-        FeaturedAppRightCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>(record.GetRequiredField("featuredAppRightCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-        Beneficiaries: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary>)record.GetRequiredField("beneficiaries").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList()
+        FeaturedAppRightCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.FeaturedAppRightV1.IFeaturedAppRight>(record.GetRequiredField("featuredAppRightCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+        Beneficiaries: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary>)record.GetRequiredField("beneficiaries", 1).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList()
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -74,5 +74,4 @@ public sealed record MarkerContext(
             global::Daml.Runtime.Data.DamlField.Create("beneficiaries", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadList(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "beneficiaries"), context.Field("beneficiaries"), (__json0, __ctx0) => global::Splice.Api.FeaturedAppRightV1.AppRewardBeneficiary.__ReadDamlLfJson(__json0, __ctx0)))
         );
     }
-
 }

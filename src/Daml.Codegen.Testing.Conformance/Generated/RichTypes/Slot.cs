@@ -53,6 +53,15 @@ public abstract record Slot<TA> where TA : notnull
     public sealed record Filled(TA Value) : Slot<TA>
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<TA>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "Filled";
 
         /// <inheritdoc />
@@ -68,5 +77,4 @@ public abstract record Slot<TA> where TA : notnull
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlVariant.Create("Vacant", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
-
 }

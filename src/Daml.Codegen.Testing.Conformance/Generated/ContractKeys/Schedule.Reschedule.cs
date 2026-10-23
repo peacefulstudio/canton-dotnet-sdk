@@ -18,6 +18,14 @@ public sealed partial record Schedule
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("rescheduled")] string Rescheduled
     ) : global::Daml.Runtime.Data.IDamlRecord<Reschedule>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Rescheduled, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("rescheduled", new global::Daml.Runtime.Data.DamlText(Rescheduled))
@@ -25,7 +33,7 @@ public sealed partial record Schedule
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Reschedule FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Reschedule(
-            Rescheduled: record.GetRequiredField("rescheduled").As<global::Daml.Runtime.Data.DamlText>().Value
+            Rescheduled: record.GetRequiredField("rescheduled", 0).As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Schedule
                 global::Daml.Runtime.Data.DamlField.Create("rescheduled", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "rescheduled"), context.Field("rescheduled")))
             );
         }
-
     }
 }

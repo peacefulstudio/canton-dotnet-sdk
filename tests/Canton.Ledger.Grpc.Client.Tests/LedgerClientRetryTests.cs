@@ -28,7 +28,6 @@ namespace Canton.Ledger.Grpc.Client.Tests;
 [Collection("LedgerClient global ActivitySource")]
 public sealed class LedgerClientRetryTests : IDisposable
 {
-    private const string RetryAttemptActivityName = "LedgerClient.RetryAttempt";
     private const int InitialAttempt = 1;
     private const int RetriesWhenTransient = 1;
     private static readonly Party ActAs = new("party::alice");
@@ -634,6 +633,7 @@ public sealed class LedgerClientRetryTests : IDisposable
     public async Task Retry_attempts_emit_spans_on_the_shared_activity_source()
     {
         EnableRetry(maxAttempts: 2);
+        _options.EmitPartyAndContractSpanTags = true;
         var uniqueDetail = $"transient-{Guid.NewGuid()}";
         StubSubmitAndWaitForTransaction(
             Faulted<SubmitAndWaitForTransactionResponse>(new RpcException(new Status(StatusCode.Unavailable, uniqueDetail))),
@@ -646,7 +646,7 @@ public sealed class LedgerClientRetryTests : IDisposable
         await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
 
         var retrySpans = capture.Activities
-            .Where(a => a.OperationName == RetryAttemptActivityName && a.StatusDescription == uniqueDetail)
+            .Where(a => a.OperationName == LedgerCallInvoker.RetryAttemptActivityName && a.StatusDescription == uniqueDetail)
             .ToList();
         retrySpans.Should().HaveCount(2, "two retries precede the third, successful attempt");
         retrySpans.Select(a => a.GetTagItem(ActivityHelper.RpcGrpcStatusCode))

@@ -52,6 +52,15 @@ public abstract record AllocationInstructionResult_Output : global::Daml.Runtime
     public sealed record AllocationInstructionResult_Pending(global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output_AllocationInstructionResult_Pending Value) : AllocationInstructionResult_Output
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output_AllocationInstructionResult_Pending>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AllocationInstructionResult_Pending";
 
         /// <inheritdoc />
@@ -61,6 +70,15 @@ public abstract record AllocationInstructionResult_Output : global::Daml.Runtime
     /// <summary>AllocationInstructionResult_Completed constructor.</summary>
     public sealed record AllocationInstructionResult_Completed(global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output_AllocationInstructionResult_Completed Value) : AllocationInstructionResult_Output
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output_AllocationInstructionResult_Completed>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "AllocationInstructionResult_Completed";
 
@@ -77,5 +95,4 @@ public abstract record AllocationInstructionResult_Output : global::Daml.Runtime
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AllocationInstructionResult_Failed", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
-
 }

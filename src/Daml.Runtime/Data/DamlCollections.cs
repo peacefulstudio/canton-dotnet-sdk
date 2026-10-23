@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Data;
 
@@ -163,6 +165,12 @@ public sealed record DamlTextMap : DamlValue
 /// <summary>
 /// Represents a Daml GenMap value (map with arbitrary key types).
 /// </summary>
+/// <remarks>
+/// Declared as itself, serializes through <see cref="System.Text.Json"/> as
+/// <c>{"Entries":[{"Key":…,"Value":…}]}</c>, each key and value a <see cref="DamlValue"/> with its
+/// <c>"$case"</c>, and reads back as the same entries in the same order.
+/// </remarks>
+[JsonConverter(typeof(DamlGenMapJsonConverter))]
 public sealed record DamlGenMap : DamlValue
 {
     /// <summary>Creates a GenMap from the supplied entries, materializing them defensively.</summary>

@@ -25,6 +25,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
 {
     private static readonly Party Alice = new("party::alice");
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan HangingDeadline = TimeSpan.FromMilliseconds(50);
     private static readonly TimeSpan ReadDeadline = TimeSpan.FromMilliseconds(50);
 
     private readonly List<StubHttpClientFactory> _factories = [];
@@ -121,10 +122,12 @@ public sealed class RestCallEnvelopeTests : IDisposable
     [MemberData(nameof(EnvelopedOperations))]
     public async Task Enveloped_operation_reports_a_deadline_overrun_as_no_response(string operation)
     {
-        var failure = await InvokeAsync(ClientWith(TimedOutTransport()), operation);
+        var transport = new RecordingHttpHandler().WithNoAnswerUntilCancelled();
+
+        var failure = await InvokeAsync(ClientWith(transport), operation, HangingDeadline);
 
         failure.Status.Should().Be(new TransportStatus.NoResponse());
-        failure.Message.Should().Be($"Request exceeded the {Deadline} deadline.");
+        failure.Message.Should().Be($"Request exceeded the {HangingDeadline} deadline.");
     }
 
     [Theory]
@@ -228,7 +231,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
     [Fact]
     public async Task Enveloped_write_reports_a_deadline_that_overran_while_reading_the_body_as_committed_and_unreadable()
     {
-        var client = ClientWith(new DeadlineElapsesBeforeTheBodyIsReadHandler());
+        var client = ClientWith(new SuccessWithABodyThatNeverArrivesHandler());
 
         var act = () => client.SubmitAndWaitAsync(
             Submission(), ReadDeadline, TestContext.Current.CancellationToken);
@@ -243,7 +246,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
     [Fact]
     public async Task Enveloped_write_reports_the_try_variant_of_a_deadline_that_overran_while_reading_the_body_as_CommittedUndecodable()
     {
-        var client = ClientWith(new DeadlineElapsesBeforeTheBodyIsReadHandler());
+        var client = ClientWith(new SuccessWithABodyThatNeverArrivesHandler());
 
         var outcome = await client.TrySubmitAndWaitForTransactionAsync(
             Submission(), ReadDeadline, TestContext.Current.CancellationToken);
@@ -279,7 +282,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
     [Fact]
     public async Task Enveloped_read_reports_a_deadline_that_overran_while_reading_the_body_as_no_response()
     {
-        var factory = new StubHttpClientFactory(new DeadlineElapsesBeforeTheBodyIsReadHandler());
+        var factory = new StubHttpClientFactory(new SuccessWithABodyThatNeverArrivesHandler());
         _factories.Add(factory);
         var envelope = new RestCallEnvelope(factory, NullLogger.Instance);
 
@@ -516,10 +519,6 @@ public sealed class RestCallEnvelopeTests : IDisposable
         undecodable.SourceException.Should().BeSameAs(raised);
     }
 
-    private static RecordingHttpHandler TimedOutTransport() =>
-        new RecordingHttpHandler().WithTransportException(
-            new TaskCanceledException("timed out", new TimeoutException()));
-
     private static void AssertClassifiedAsUndecodable(string operation, CallFailure failure, string what)
     {
         if (ReportedAsCommittedUndecodable.Contains(operation))
@@ -539,20 +538,22 @@ public sealed class RestCallEnvelopeTests : IDisposable
         }
     }
 
-    private static async Task<CallFailure> InvokeAsync(RestLedgerClient client, string operation)
+    private static async Task<CallFailure> InvokeAsync(
+        RestLedgerClient client, string operation, TimeSpan? deadline = null)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
+        var timeout = deadline ?? Deadline;
         return operation switch
         {
             nameof(RestLedgerClient.SubmitAndWaitAsync) => await ThrownAsync(
-                () => client.SubmitAndWaitAsync(Submission(), Deadline, cancellationToken)),
+                () => client.SubmitAndWaitAsync(Submission(), timeout, cancellationToken)),
             nameof(RestLedgerClient.TrySubmitAndWaitForTransactionAsync) => Reported(
-                await client.TrySubmitAndWaitForTransactionAsync(Submission(), Deadline, cancellationToken)),
+                await client.TrySubmitAndWaitForTransactionAsync(Submission(), timeout, cancellationToken)),
             nameof(RestLedgerClient.TrySubmitAndWaitForReassignmentAsync) => Reported(
-                await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
-                    Reassignment(), Deadline, cancellationToken)),
+                await client.TrySubmitAndWaitForReassignmentAsync<OwnedTemplate>(
+                    Reassignment(), timeout, cancellationToken)),
             nameof(RestLedgerClient.EstimateTrafficCostAsync) => await ThrownAsync(
-                () => client.EstimateTrafficCostAsync(Submission(), Deadline, cancellationToken)),
+                () => client.EstimateTrafficCostAsync(Submission(), timeout, cancellationToken)),
             _ => throw new InvalidOperationException($"The theory names an operation it cannot invoke: {operation}"),
         };
     }
@@ -579,7 +580,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
 
     private static RuntimeCommands.CommandsSubmission Submission() =>
         RuntimeCommands.CommandsSubmission
-            .Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+            .Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate()))
             .WithActAs(Alice);
 
     private static ReassignmentSubmission Reassignment() =>
@@ -622,41 +623,5 @@ public sealed class RestCallEnvelopeTests : IDisposable
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new FailingBodyContent(failure) });
-    }
-
-    private sealed class DeadlineElapsesBeforeTheBodyIsReadHandler : HttpMessageHandler
-    {
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var body = new StringContent("{}", Encoding.UTF8, "application/json");
-            await body.LoadIntoBufferAsync(CancellationToken.None).ConfigureAwait(false);
-
-            var deadlineElapsed = new TaskCompletionSource();
-            await using var _ = cancellationToken
-                .Register(() => deadlineElapsed.TrySetResult())
-                .ConfigureAwait(false);
-            await deadlineElapsed.Task.ConfigureAwait(false);
-
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = body };
-        }
-    }
-
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
-    {
-        public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "EnvelopeTemplate");
-        public static string PackageId => "pkg";
-        public static string PackageName => "pkg-name";
-        public static Version PackageVersion { get; } = new(0, 1, 0);
-        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
-        public DamlRecord ToRecord() => new(TemplateId, [new DamlField("owner", Alice.ToDamlValue())]);
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
-            TestRecordReader.Read(
-                json,
-                context,
-                ("owner", DamlLfJsonDecoders.ReadParty));
-        public static TestTemplate FromRecord(DamlRecord record) =>
-            new();
     }
 }

@@ -44,6 +44,10 @@ run reports zero, `dotnet build` and then execute the test binary directly —
 dotnet pack -c Release
 ```
 
+A local pack of `Daml.Codegen.CSharp.MSBuild` carries no `dpm-codegen-cs` bundle digest, so its Dpm
+mode fails with `DAML0006` until the consuming project sets `DamlCodegenBundleDigest`. A release pack
+(`-p:ContinuousIntegrationBuild=true`) refuses to run without `-p:DamlCodegenBundleDigest=sha256:<digest>`.
+
 ## Repository layout
 
 ```
@@ -64,13 +68,16 @@ canton-dotnet-sdk/
 │   ├── Daml.Codegen.Intermediate/        # Intermediate DAR contract (NuGet package)
 │   │   └── Model/                        # shared Daml model; generated intermediate_dar.proto types compile in from proto/
 │   ├── Daml.Codegen.CSharp.Cli/          # proto-path emitter CLI (run by the dpm codegen-cs OCI bundle; source-only)
+│   ├── Daml.Codegen.CSharp.MSBuild/      # build-time codegen from <DamlArchive>/<DamlProject>, Dpm and Standalone modes (NuGet package)
+│   ├── Daml.Codegen.DarParser/           # C# DAR/DALF decoder (source-only; bundled in Daml.Codegen.CSharp.MSBuild)
+│   ├── Daml.Codegen.DarParser.Cli/       # dar2intermediate CLI over the C# decoder (source-only; bundled in Daml.Codegen.CSharp.MSBuild)
 │   ├── Daml.Codegen.Testing.Conformance/ # conformance corpus + harness (NuGet package)
+│   ├── Daml.Codegen.Tooling/             # generator of the Daml.Runtime stdlib bindings (source-only)
 │   ├── Daml.Runtime/                     # Runtime library (NuGet package)
 │   │   ├── Commands/                     # Ledger command types
 │   │   ├── Contracts/                    # Contract and template base types
 │   │   ├── Data/                         # Daml primitive types
 │   │   └── Serialization/                # JSON serialization
-│   ├── Daml.Runtime.Grpc/                # proto Value/Record ↔ DamlValue/DamlRecord bridge (NuGet package)
 │   ├── Daml.Ledger.Abstractions/         # Transport-agnostic ILedgerClient (NuGet package)
 │   └── Daml.Ledger.Abstractions.Testing.Conformance/  # ILedgerClient conformance test kit (NuGet package)
 ├── tests/                                # one test project per package, plus client parity and integration suites

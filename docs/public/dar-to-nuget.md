@@ -60,8 +60,8 @@ The `--generate-project` flag creates a `.csproj` file with:
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
-    <PackageReference Include="Daml.Runtime" Version="0.7.0" />
-    <PackageReference Include="Daml.Ledger.Abstractions" Version="0.7.0" />
+    <PackageReference Include="Daml.Runtime" Version="0.7.1" />
+    <PackageReference Include="Daml.Ledger.Abstractions" Version="0.7.1" />
   </ItemGroup>
 
 </Project>
@@ -119,12 +119,45 @@ dependency as a package, named after its Daml package name:
 <ItemGroup>
   <None Include="README.md" Pack="true" PackagePath="\" />
   <None Include="icon.png" Pack="true" PackagePath="\" />
-  <PackageReference Include="Daml.Runtime" Version="0.7.0" />
-  <PackageReference Include="Daml.Ledger.Abstractions" Version="0.7.0" />
+  <PackageReference Include="Daml.Runtime" Version="0.7.1" />
+  <PackageReference Include="Daml.Ledger.Abstractions" Version="0.7.1" />
   <PackageReference Include="Daml.Finance" Version="2.0.0.*-*" />
   <PackageReference Include="Some.Library" Version="1.5.0.*-*" />
 </ItemGroup>
 ```
+
+## Restoring a Generated Project
+
+The dependency `<PackageReference>` ids above are derived from the DAR package names and
+carry no owner prefix, and their versions float. The code generator cannot know which
+feed owns them, so on the machine that restores the project, map each of those ids to
+your own feed with NuGet [package source mapping](https://learn.microsoft.com/en-us/nuget/consume-packages/package-source-mapping).
+Without a mapping, restore asks every configured source, and anyone who registers one
+of those ids on nuget.org can have their package restored in place of yours.
+Pinning an exact version does not close that gap.
+
+```xml
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="mycompany" value="https://nuget.mycompany.com/v3/index.json" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+    <packageSource key="mycompany">
+      <package pattern="Daml.Finance" />
+      <package pattern="Some.Library" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+```
+
+Save it as `nuget.config` next to the generated project or its solution. NuGet picks the
+most specific matching pattern, so the two dependency ids restore only from `mycompany`
+while everything else, including `Daml.Runtime`, still comes from nuget.org.
 
 ## Complete Workflow Example
 
@@ -164,6 +197,7 @@ Once published, consume the packages in your C# application:
 dotnet add package My.Project --version 1.0.0
 ```
 
+<!-- snippet: not-compiled: names a namespace and template generated from the reader's own DAR -->
 ```csharp
 using MyCompany.Daml.Main;
 using Daml.Runtime.Commands;

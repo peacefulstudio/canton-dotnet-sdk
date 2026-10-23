@@ -52,11 +52,11 @@ public sealed class RestActivityHandlerTests : IDisposable
         var activity = _activities.Should().ContainSingle().Subject;
         activity.Kind.Should().Be(ActivityKind.Client);
         activity.DisplayName.Should().Be("GET");
-        activity.GetTagItem("http.request.method").Should().Be("GET");
-        activity.GetTagItem("server.address").Should().Be(_ownHost);
-        activity.GetTagItem("server.port").Should().Be(7575);
-        activity.GetTagItem("url.full").Should().Be($"http://{_ownHost}:7575/v2/version");
-        activity.GetTagItem("http.response.status_code").Should().Be(200);
+        activity.GetTagItem(RestActivityHandler.HttpRequestMethod).Should().Be("GET");
+        activity.GetTagItem(RestActivityHandler.ServerAddress).Should().Be(_ownHost);
+        activity.GetTagItem(RestActivityHandler.ServerPort).Should().Be(7575);
+        activity.GetTagItem(RestActivityHandler.UrlFull).Should().Be($"http://{_ownHost}:7575/v2/version");
+        activity.GetTagItem(RestActivityHandler.HttpResponseStatusCode).Should().Be(200);
         activity.Status.Should().Be(ActivityStatusCode.Unset);
     }
 
@@ -68,11 +68,11 @@ public sealed class RestActivityHandlerTests : IDisposable
             TestContext.Current.CancellationToken);
 
         var activity = _activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("url.full").Should().Be($"http://{_ownHost}:7575/v2/state/connected-synchronizers");
-        activity.GetTagItem("http.request.method").Should().Be("GET");
-        activity.GetTagItem("server.address").Should().Be(_ownHost);
-        activity.GetTagItem("server.port").Should().Be(7575);
-        activity.GetTagItem("http.response.status_code").Should().Be(200);
+        activity.GetTagItem(RestActivityHandler.UrlFull).Should().Be($"http://{_ownHost}:7575/v2/state/connected-synchronizers");
+        activity.GetTagItem(RestActivityHandler.HttpRequestMethod).Should().Be("GET");
+        activity.GetTagItem(RestActivityHandler.ServerAddress).Should().Be(_ownHost);
+        activity.GetTagItem(RestActivityHandler.ServerPort).Should().Be(7575);
+        activity.GetTagItem(RestActivityHandler.HttpResponseStatusCode).Should().Be(200);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class RestActivityHandlerTests : IDisposable
             TestContext.Current.CancellationToken);
 
         var activity = _activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("url.full").Should().Be($"http://{_ownHost}:7575/v2/version");
+        activity.GetTagItem(RestActivityHandler.UrlFull).Should().Be($"http://{_ownHost}:7575/v2/version");
     }
 
     [Fact]
@@ -95,8 +95,8 @@ public sealed class RestActivityHandlerTests : IDisposable
 
         var activity = _activities.Should().ContainSingle().Subject;
         activity.Status.Should().Be(ActivityStatusCode.Error);
-        activity.GetTagItem("http.response.status_code").Should().Be(503);
-        activity.GetTagItem("error.type").Should().Be("503");
+        activity.GetTagItem(RestActivityHandler.HttpResponseStatusCode).Should().Be(503);
+        activity.GetTagItem(RestActivityHandler.ErrorType).Should().Be("503");
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class RestActivityHandlerTests : IDisposable
 
         var activity = _activities.Should().ContainSingle().Subject;
         activity.Status.Should().Be(ActivityStatusCode.Error);
-        activity.GetTagItem("error.type").Should().Be(typeof(HttpRequestException).FullName);
-        activity.GetTagItem("http.response.status_code").Should().BeNull();
+        activity.GetTagItem(RestActivityHandler.ErrorType).Should().Be(typeof(HttpRequestException).FullName);
+        activity.GetTagItem(RestActivityHandler.HttpResponseStatusCode).Should().BeNull();
     }
 }

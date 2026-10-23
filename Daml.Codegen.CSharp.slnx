@@ -18,12 +18,15 @@
     <Project Path="src/Canton.Ledger.Rest/Canton.Ledger.Rest.csproj" />
     <Project Path="src/Canton.Ledger.Testing/Canton.Ledger.Testing.csproj" />
     <Project Path="src/Daml.Codegen.CSharp.Cli/Daml.Codegen.CSharp.Cli.csproj" />
+    <Project Path="src/Daml.Codegen.CSharp.MSBuild/Daml.Codegen.CSharp.MSBuild.csproj" />
     <Project Path="src/Daml.Codegen.CSharp/Daml.Codegen.CSharp.csproj" />
+    <Project Path="src/Daml.Codegen.DarParser.Cli/Daml.Codegen.DarParser.Cli.csproj" />
+    <Project Path="src/Daml.Codegen.DarParser/Daml.Codegen.DarParser.csproj" />
     <Project Path="src/Daml.Codegen.Intermediate/Daml.Codegen.Intermediate.csproj" />
     <Project Path="src/Daml.Codegen.Testing.Conformance/Daml.Codegen.Testing.Conformance.csproj" />
+    <Project Path="src/Daml.Codegen.Tooling/Daml.Codegen.Tooling.csproj" />
     <Project Path="src/Daml.Ledger.Abstractions.Testing.Conformance/Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
     <Project Path="src/Daml.Ledger.Abstractions/Daml.Ledger.Abstractions.csproj" />
-    <Project Path="src/Daml.Runtime.Grpc/Daml.Runtime.Grpc.csproj" />
     <Project Path="src/Daml.Runtime/Daml.Runtime.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -42,11 +45,17 @@
     <Project Path="tests/Canton.Ledger.Testing.Localnet/Canton.Ledger.Testing.Localnet.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Tests/Canton.Ledger.Testing.Tests.csproj" />
     <Project Path="tests/Daml.Codegen.CSharp.Cli.Tests/Daml.Codegen.CSharp.Cli.Tests.csproj" />
+    <Project Path="tests/Daml.Codegen.CSharp.MSBuild.Tests/Daml.Codegen.CSharp.MSBuild.Tests.csproj" />
     <Project Path="tests/Daml.Codegen.CSharp.Tests/Daml.Codegen.CSharp.Tests.csproj" />
+    <Project Path="tests/Daml.Codegen.DarParser.Cli.Tests/Daml.Codegen.DarParser.Cli.Tests.csproj" />
+    <Project Path="tests/Daml.Codegen.DarParser.Tests/Daml.Codegen.DarParser.Tests.csproj" />
     <Project Path="tests/Daml.Codegen.Testing.Conformance.Tests/Daml.Codegen.Testing.Conformance.Tests.csproj" />
     <Project Path="tests/Daml.Ledger.Abstractions.Testing.Conformance.Tests/Daml.Ledger.Abstractions.Testing.Conformance.Tests.csproj" />
     <Project Path="tests/Daml.Ledger.Abstractions.Tests/Daml.Ledger.Abstractions.Tests.csproj" />
-    <Project Path="tests/Daml.Runtime.Grpc.Tests/Daml.Runtime.Grpc.Tests.csproj" />
     <Project Path="tests/Daml.Runtime.Tests/Daml.Runtime.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Fixtures/">
+    <Project Path="tests/Fixtures/FakeDpm/FakeDpm.csproj" />
+    <Project Path="tests/Fixtures/FakeJava/FakeJava.csproj" />
   </Folder>
 </Solution>

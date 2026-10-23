@@ -22,6 +22,20 @@ public sealed record SrcLoc(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("srcLocEndCol")] long SrcLocEndCol
 ) : global::Daml.Runtime.Data.IDamlRecord<SrcLoc>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(SrcLocPackage, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(SrcLocModule, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(SrcLocFile, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(SrcLocStartLine, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        hash.Add(SrcLocStartCol, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        hash.Add(SrcLocEndLine, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        hash.Add(SrcLocEndCol, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("srcLocPackage", new global::Daml.Runtime.Data.DamlText(SrcLocPackage)),
@@ -35,13 +49,13 @@ public sealed record SrcLoc(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static SrcLoc FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SrcLoc(
-        SrcLocPackage: record.GetRequiredField("srcLocPackage").As<global::Daml.Runtime.Data.DamlText>().Value,
-        SrcLocModule: record.GetRequiredField("srcLocModule").As<global::Daml.Runtime.Data.DamlText>().Value,
-        SrcLocFile: record.GetRequiredField("srcLocFile").As<global::Daml.Runtime.Data.DamlText>().Value,
-        SrcLocStartLine: record.GetRequiredField("srcLocStartLine").As<global::Daml.Runtime.Data.DamlInt64>().Value,
-        SrcLocStartCol: record.GetRequiredField("srcLocStartCol").As<global::Daml.Runtime.Data.DamlInt64>().Value,
-        SrcLocEndLine: record.GetRequiredField("srcLocEndLine").As<global::Daml.Runtime.Data.DamlInt64>().Value,
-        SrcLocEndCol: record.GetRequiredField("srcLocEndCol").As<global::Daml.Runtime.Data.DamlInt64>().Value
+        SrcLocPackage: record.GetRequiredField("srcLocPackage", 0).As<global::Daml.Runtime.Data.DamlText>().Value,
+        SrcLocModule: record.GetRequiredField("srcLocModule", 1).As<global::Daml.Runtime.Data.DamlText>().Value,
+        SrcLocFile: record.GetRequiredField("srcLocFile", 2).As<global::Daml.Runtime.Data.DamlText>().Value,
+        SrcLocStartLine: record.GetRequiredField("srcLocStartLine", 3).As<global::Daml.Runtime.Data.DamlInt64>().Value,
+        SrcLocStartCol: record.GetRequiredField("srcLocStartCol", 4).As<global::Daml.Runtime.Data.DamlInt64>().Value,
+        SrcLocEndLine: record.GetRequiredField("srcLocEndLine", 5).As<global::Daml.Runtime.Data.DamlInt64>().Value,
+        SrcLocEndCol: record.GetRequiredField("srcLocEndCol", 6).As<global::Daml.Runtime.Data.DamlInt64>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -59,5 +73,4 @@ public sealed record SrcLoc(
             global::Daml.Runtime.Data.DamlField.Create("srcLocEndCol", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "srcLocEndCol"), context.Field("srcLocEndCol")))
         );
     }
-
 }

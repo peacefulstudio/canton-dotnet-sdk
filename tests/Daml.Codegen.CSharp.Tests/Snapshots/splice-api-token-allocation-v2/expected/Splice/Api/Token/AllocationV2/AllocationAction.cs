@@ -84,10 +84,18 @@ public abstract record AllocationAction : global::Daml.Runtime.Data.IDamlVariant
     public sealed record AA_Custom(global::Splice.Api.Token.AllocationV2.AllocationAction_AA_Custom Value) : AllocationAction
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationV2.AllocationAction_AA_Custom>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AA_Custom";
 
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AA_Custom", Value.ToRecord());
     }
-
 }

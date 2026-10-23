@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Daml.Runtime.Serialization;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Canton.Ledger.Kernel.Authentication;
 using Com.Daml.Ledger.Api.V2;
@@ -25,7 +26,7 @@ using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
 namespace Canton.Ledger.Grpc.Client.Tests;
 
-public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcConformanceProbe>
+public sealed class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcConformanceProbe>, IDisposable
 {
     private const string Synchronizer = "sync-1";
     private const long CreatedOffset = 1L;
@@ -47,7 +48,17 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         EntityName = "Other",
     };
 
+    private readonly ConcurrentBag<GrpcChannel> _channels = [];
+
     protected override SubmitterInfo Reader { get; } = new Party("party::alice");
+
+    public void Dispose()
+    {
+        foreach (var channel in _channels)
+        {
+            channel.Dispose();
+        }
+    }
 
     protected override ILedgerClient CreateClient() => BuildClient(snapshotFaultsMidStream: false);
 
@@ -56,7 +67,17 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
     protected override CommandIdConformanceFixture? CreateCommandIdFixture()
     {
         string? recorded = null;
-        var client = BuildSubmittingClient(commandId => recorded = commandId);
+        var client = BuildSubmittingClient(commandService => commandService
+            .SubmitAndWaitForTransactionAsync(
+                Arg.Any<SubmitAndWaitForTransactionRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                recorded = call.Arg<SubmitAndWaitForTransactionRequest>()!.Commands.CommandId;
+                return UnaryCall(new SubmitAndWaitForTransactionResponse { Transaction = SubmittedTransaction() });
+            }));
 
         return new CommandIdConformanceFixture(
             client,
@@ -65,7 +86,49 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
             () => ValueTask.FromResult(recorded));
     }
 
-    private static LedgerClient BuildSubmittingClient(Action<string> onCommandId)
+    protected override WriteConformanceFixture? CreateWriteFixture()
+    {
+        var authorized = new Party("party::alice");
+        var client = BuildSubmittingClient(commandService =>
+        {
+            commandService
+                .SubmitAndWaitForTransactionAsync(
+                    Arg.Any<SubmitAndWaitForTransactionRequest>(),
+                    Arg.Any<Metadata>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(call => ActAsMustBeExactly(
+                    authorized,
+                    call.Arg<SubmitAndWaitForTransactionRequest>()!.Commands,
+                    new SubmitAndWaitForTransactionResponse { Transaction = SubmittedTransaction() }));
+            commandService
+                .SubmitAndWaitAsync(
+                    Arg.Any<SubmitAndWaitRequest>(),
+                    Arg.Any<Metadata>(),
+                    Arg.Any<DateTime?>(),
+                    Arg.Any<CancellationToken>())
+                .Returns(call => ActAsMustBeExactly(
+                    authorized,
+                    call.Arg<SubmitAndWaitRequest>()!.Commands,
+                    new SubmitAndWaitResponse { UpdateId = "u-submitted", CompletionOffset = LedgerEndOffset }));
+        });
+
+        return new WriteConformanceFixture(
+            client,
+            CommandsSubmission.Single(ArchiveProbe),
+            authorized,
+            new Party("party::mallory"));
+    }
+
+    private static AsyncUnaryCall<TResponse> ActAsMustBeExactly<TResponse>(
+        Party authorized, Commands commands, TResponse accepted) =>
+        commands.ActAs.SequenceEqual([authorized.Value])
+            ? UnaryCall(accepted)
+            : throw new RpcException(new Status(
+                StatusCode.PermissionDenied,
+                $"submission acting as [{string.Join(",", commands.ActAs)}] is not authorized by {authorized.Value}"));
+
+    private LedgerClient BuildSubmittingClient(Action<CommandService.CommandServiceClient> stageCommandService)
     {
         var options = new LedgerClientOptions
         {
@@ -77,19 +140,9 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         var updateService = Substitute.ForPartsOf<UpdateService.UpdateServiceClient>(callInvoker);
         var stateService = Substitute.ForPartsOf<StateService.StateServiceClient>(callInvoker);
 
-        commandService
-            .SubmitAndWaitForTransactionAsync(
-                Arg.Any<SubmitAndWaitForTransactionRequest>(),
-                Arg.Any<Metadata>(),
-                Arg.Any<DateTime?>(),
-                Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                onCommandId(call.Arg<SubmitAndWaitForTransactionRequest>()!.Commands.CommandId);
-                return UnaryCall(new SubmitAndWaitForTransactionResponse { Transaction = SubmittedTransaction() });
-            });
+        stageCommandService(commandService);
 
-        var channel = GrpcChannel.ForAddress(options.GrpcAddress);
+        var channel = OpenChannel(options);
         return new LedgerClient(
             options,
             channel,
@@ -97,6 +150,13 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
             updateService,
             stateService,
             new StaticTokenProvider("conformance-token"));
+    }
+
+    private GrpcChannel OpenChannel(LedgerClientOptions options)
+    {
+        var channel = GrpcChannel.ForAddress(options.GrpcAddress);
+        _channels.Add(channel);
+        return channel;
     }
 
     private static Transaction SubmittedTransaction()
@@ -131,7 +191,7 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         new ChoiceName("Archive"),
         DamlUnit.Instance);
 
-    private static LedgerClient BuildClient(bool snapshotFaultsMidStream)
+    private LedgerClient BuildClient(bool snapshotFaultsMidStream)
     {
         var options = new LedgerClientOptions
         {
@@ -160,9 +220,12 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
         updateService
             .GetUpdates(
                 Arg.Any<GetUpdatesRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
-            .Returns(call => ServerStream(UpdatesFor(call.Arg<GetUpdatesRequest>()!), afterItemsException: null));
+            .Returns(call => ServerStream(
+                UpdatesFor(call.Arg<GetUpdatesRequest>()!),
+                afterItemsException: null,
+                holdsOpenAfterItems: !call.Arg<GetUpdatesRequest>()!.HasEndInclusive));
 
-        var channel = GrpcChannel.ForAddress(options.GrpcAddress);
+        var channel = OpenChannel(options);
         return new LedgerClient(
             options,
             channel,
@@ -308,9 +371,10 @@ public class LedgerClientConformanceTests : LedgerClientConformanceTests<GrpcCon
 
     private static AsyncServerStreamingCall<TResponse> ServerStream<TResponse>(
         IReadOnlyList<TResponse> responses,
-        Exception? afterItemsException) =>
+        Exception? afterItemsException,
+        bool holdsOpenAfterItems = false) =>
         new(
-            new FakeStreamReader<TResponse>(responses, afterItemsException),
+            new FakeStreamReader<TResponse>(responses, afterItemsException, holdsOpenAfterItems),
             Task.FromResult(new Metadata()),
             () => Status.DefaultSuccess,
             () => new Metadata(),

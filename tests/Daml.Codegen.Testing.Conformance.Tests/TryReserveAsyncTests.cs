@@ -32,7 +32,7 @@ public class TryReserveAsyncTests
             ActingParties: [Patron],
             WitnessParties: [Patron])
         {
-            PackageName = "richtypes-ha8d30776aa45",
+            PackageName = "richtypes-h25b56c547fd1",
         };
 
     private static CreatedContract TicketCreated(string contractId) =>
@@ -45,7 +45,7 @@ public class TryReserveAsyncTests
             Signatories: [new Party("issuer")],
             Observers: [Patron])
         {
-            PackageName = "richtypes-ha8d30776aa45",
+            PackageName = "richtypes-h25b56c547fd1",
         };
 
     private static FakeLedgerClient ClientCommitting(

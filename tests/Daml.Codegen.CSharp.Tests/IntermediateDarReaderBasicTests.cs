@@ -31,16 +31,16 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p2",
+                PackageId = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
-                UpgradedPackageId = "p1-upgraded-id",
+                UpgradedPackageId = "4444444444444444444444444444444444444444444444444444444444444444",
             },
         };
 
         var model = IntermediateDarReader.Read(proto);
-        model.MainPackage.UpgradedPackageId.Should().Be("p1-upgraded-id");
+        model.MainPackage.UpgradedPackageId.Should().Be("4444444444444444444444444444444444444444444444444444444444444444");
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p1",
+                PackageId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
@@ -68,7 +68,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "pkg-id-1",
+                PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                 PackageName = "test-pkg",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
@@ -77,12 +77,51 @@ public partial class IntermediateDarReaderTests
 
         var model = IntermediateDarReader.Read(proto);
 
-        model.MainPackage.PackageId.Should().Be("pkg-id-1");
+        model.MainPackage.PackageId.Should().Be("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
         model.MainPackage.Name.Should().Be("test-pkg");
         model.MainPackage.Version.Should().Be(new Version(1, 0, 0));
         model.MainPackage.LfVersion.Should().Be("2.1");
         model.MainPackage.Modules.Should().BeEmpty();
         model.Dependencies.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void IntermediateDarReader_keeps_the_full_snapshot_version_string_beside_the_three_part_version()
+    {
+        var proto = new IntermediateDar
+        {
+            Main = new PbPackage
+            {
+                PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                PackageName = "daml-stdlib",
+                PackageVersion = "3.3.0.20250502.13767.0",
+                LanguageVersion = "2.1",
+            },
+        };
+
+        var model = IntermediateDarReader.Read(proto);
+
+        model.MainPackage.RawVersion.Should().Be("3.3.0.20250502.13767.0");
+        model.MainPackage.Version.Should().Be(new Version(3, 3, 0));
+    }
+
+    [Fact]
+    public void IntermediateDarReader_pads_a_two_part_package_version_to_three_parts()
+    {
+        var proto = new IntermediateDar
+        {
+            Main = new PbPackage
+            {
+                PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                PackageName = "my-package",
+                PackageVersion = "1.0",
+                LanguageVersion = "2.1",
+            },
+        };
+
+        var model = IntermediateDarReader.Read(proto);
+
+        model.MainPackage.Version.Should().Be(new Version(1, 0, 0));
     }
 
     [Fact]
@@ -102,13 +141,34 @@ public partial class IntermediateDarReaderTests
     }
 
     [Fact]
+    public void IntermediateDarReader_module_without_name_segments_throws_invalid_data_exception()
+    {
+        var proto = new IntermediateDar
+        {
+            Main = new PbPackage
+            {
+                PackageId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                PackageName = "test",
+                PackageVersion = "1.0.0",
+                LanguageVersion = "2.1",
+                Modules = { new PbModule() },
+            },
+        };
+
+        var act = () => IntermediateDarReader.Read(proto);
+
+        act.Should().Throw<InvalidDataException>()
+           .WithMessage("*module name segment*at least one*");
+    }
+
+    [Fact]
     public void IntermediateDarReader_dependencies_round_trip_in_order()
     {
         var proto = new IntermediateDar
         {
             Main = new PbPackage
             {
-                PackageId = "main-pkg",
+                PackageId = "1111111111111111111111111111111111111111111111111111111111111111",
                 PackageName = "main",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",
@@ -117,12 +177,12 @@ public partial class IntermediateDarReaderTests
             {
                 new PbPackage
                 {
-                    PackageId = "dep-a", PackageName = "depA",
+                    PackageId = "2222222222222222222222222222222222222222222222222222222222222222", PackageName = "depA",
                     PackageVersion = "0.1.0", LanguageVersion = "2.1",
                 },
                 new PbPackage
                 {
-                    PackageId = "dep-b", PackageName = "depB",
+                    PackageId = "3333333333333333333333333333333333333333333333333333333333333333", PackageName = "depB",
                     PackageVersion = "0.2.0", LanguageVersion = "2.1",
                 },
             },
@@ -130,8 +190,8 @@ public partial class IntermediateDarReaderTests
 
         var model = IntermediateDarReader.Read(proto);
         model.Dependencies.Should().HaveCount(2);
-        model.Dependencies[0].PackageId.Should().Be("dep-a");
-        model.Dependencies[1].PackageId.Should().Be("dep-b");
+        model.Dependencies[0].PackageId.Should().Be("2222222222222222222222222222222222222222222222222222222222222222");
+        model.Dependencies[1].PackageId.Should().Be("3333333333333333333333333333333333333333333333333333333333333333");
     }
 
     [Fact]
@@ -156,7 +216,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p",
+                PackageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 PackageName = "test",
                 PackageVersion = "abc",
                 LanguageVersion = "2.1",
@@ -229,7 +289,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "pkg-id-1",
+                PackageId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",

@@ -10,6 +10,7 @@ internal static class RuntimeTypeNames
     public const string DamlField = nameof(Daml.Runtime.Data.DamlField);
     public const string DamlFieldAttribute = nameof(Daml.Runtime.Data.DamlFieldAttribute);
     public const string DamlFieldCollections = nameof(Daml.Runtime.Data.DamlFieldCollections);
+    public const string DamlEqualityComparer = nameof(Daml.Runtime.Data.DamlEqualityComparer<>);
     public const string DamlValue = nameof(Daml.Runtime.Data.DamlValue);
     public const string IDamlValue = nameof(Daml.Runtime.Data.IDamlValue);
     public const string IDamlRecord = nameof(Daml.Runtime.Data.IDamlRecord);

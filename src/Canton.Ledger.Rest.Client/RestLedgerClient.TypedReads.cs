@@ -75,7 +75,7 @@ internal sealed partial class RestLedgerClient
         {
             return await _calls.SendAsync<Raw.GetEventsByContractIdResponse, RuntimeCommands.DisclosedContract?>(
                 Post(EventsByContractIdPath, request, "contract events"),
-                response => RestContractStreamProjector.DisclosureOf(response, _logger),
+                response => RestContractStreamProjector.DisclosureOf(response, _logger, _emitPartyAndContractSpanTags),
                 timeout,
                 cancellationToken).ConfigureAwait(false);
         }
@@ -124,7 +124,7 @@ internal sealed partial class RestLedgerClient
         var entries = new List<AcsSnapshotEntry<T>>();
         foreach (var wireEntry in response.ActiveContracts ?? [])
         {
-            var disclosure = RestContractStreamProjector.DisclosureOf(wireEntry, _logger);
+            var disclosure = RestContractStreamProjector.DisclosureOf(wireEntry, _logger, _emitPartyAndContractSpanTags);
             entries.AddRange(RestContractStreamProjector
                 .ProjectActiveContractEntry<T>(wireEntry, _logger, activeAt)
                 .Select(projected => ContractSnapshotEntryArms<T>.From(projected, disclosure)));

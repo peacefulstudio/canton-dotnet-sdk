@@ -16,6 +16,14 @@ public sealed record Reissue(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("newAmount")] decimal NewAmount
 ) : global::Daml.Runtime.Data.IDamlRecord<Reissue>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(NewAmount, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("newAmount", new global::Daml.Runtime.Data.DamlNumeric(NewAmount))
@@ -23,7 +31,7 @@ public sealed record Reissue(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Reissue FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Reissue(
-        NewAmount: record.GetRequiredField("newAmount").As<global::Daml.Runtime.Data.DamlNumeric>().Value
+        NewAmount: record.GetRequiredField("newAmount", 0).As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record Reissue(
             global::Daml.Runtime.Data.DamlField.Create("newAmount", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadNumeric(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newAmount"), context.Field("newAmount")))
         );
     }
-
 }

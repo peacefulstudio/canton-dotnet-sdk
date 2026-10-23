@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Daml.Codegen.DarParser</PackageId>
+    <Description>C# DAR/DALF parser that decodes a Daml archive into the IntermediateDar model. Ships as source and inside the Daml.Codegen.CSharp.MSBuild package; not published on its own.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Daml.Codegen.DarParser.Tests" />
+    <InternalsVisibleTo Include="Daml.Codegen.CSharp.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daml.Codegen.Intermediate\Daml.Codegen.Intermediate.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Proto\com\digitalasset\daml\lf\archive\daml_lf.proto" ProtoRoot="Proto" GrpcServices="None" />
+    <Protobuf Include="Proto\com\digitalasset\daml\lf\archive\daml_lf1.proto" ProtoRoot="Proto" GrpcServices="None" />
+    <Protobuf Include="Proto\com\digitalasset\daml\lf\archive\daml_lf2.proto" ProtoRoot="Proto" GrpcServices="None" />
+  </ItemGroup>
+
+</Project>

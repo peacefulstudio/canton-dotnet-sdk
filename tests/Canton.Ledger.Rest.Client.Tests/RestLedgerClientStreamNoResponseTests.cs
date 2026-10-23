@@ -486,7 +486,7 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
 
         var drain = DrainAsync(client.SubscribeAsync<TestTemplate>(
             Alice, LedgerOffset.At(5), toOffset: null, cancellation.Token));
-        await transport.Hanging;
+        await Task.WhenAny(transport.Hanging, drain);
         await cancellation.CancelAsync();
 
         await FluentActions.Awaiting(() => drain).Should().ThrowAsync<OperationCanceledException>();
@@ -500,7 +500,7 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
         using var cancellation = new CancellationTokenSource();
 
         var drain = DrainAsync(client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.At(5), cancellation.Token));
-        await transport.Hanging;
+        await Task.WhenAny(transport.Hanging, drain);
         await cancellation.CancelAsync();
 
         await FluentActions.Awaiting(() => drain).Should().ThrowAsync<OperationCanceledException>();
@@ -515,7 +515,7 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
 
         var drain = DrainAsync(client.SubscribeActiveAsync<TestTemplate>(
             Alice, LedgerOffset.At(9), cancellationToken: cancellation.Token));
-        await transport.Hanging;
+        await Task.WhenAny(transport.Hanging, drain);
         await cancellation.CancelAsync();
 
         await FluentActions.Awaiting(() => drain).Should().ThrowAsync<OperationCanceledException>();

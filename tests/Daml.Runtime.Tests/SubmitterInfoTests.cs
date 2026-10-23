@@ -108,9 +108,6 @@ public class SubmitterInfoTests
     [Fact]
     public void CommandsSubmission_WithSubmitter_with_no_readAs_should_clear_existing_readAs()
     {
-        // Regression: the wire shape must reflect exactly the parties carried by
-        // the submitter. If the submission already has a ReadAs and the submitter
-        // brings none, ReadAs must be cleared so it doesn't leak through.
         var submission = CommandsSubmission.Single(
                 new CreateCommand(
                     new Identifier("pkg", "Module", "Template"),
@@ -128,12 +125,22 @@ public class SubmitterInfoTests
     }
 
     [Fact]
+    public void CommandsSubmission_WithSubmitter_should_replace_pre_set_actAs_not_merge_with_it()
+    {
+        var submission = CommandsSubmission.Single(
+                new CreateCommand(
+                    new Identifier("pkg", "Module", "Template"),
+                    new DamlRecord(null, [])))
+            .WithActAs(new Party("alice"));
+
+        var result = submission.WithSubmitter(new Party("bob"));
+
+        result.ActAs.Should().ContainSingle().Which.Should().Be(new Party("bob"));
+    }
+
+    [Fact]
     public void SubmitterInfo_single_party_constructor_should_reject_default_Party()
     {
-        // Regression: a default(Party) singleActAs would pass the non-empty
-        // invariant on the set but throw later, when ToDamlValue/serialization
-        // touched the uninitialized Id. The constructor now touches .Id eagerly
-        // so the failure is at construction time.
         var act = () => new SubmitterInfo(default(Party));
 
         act.Should().Throw<InvalidOperationException>();
@@ -151,10 +158,6 @@ public class SubmitterInfoTests
     [Fact]
     public void SubmitterInfo_should_be_immutable_against_caller_set_mutation()
     {
-        // Regression: the prior implementation snapshotted into HashSet typed
-        // as IReadOnlySet, which a caller could cast back and mutate after
-        // SubmitterInfo construction. Storing as FrozenSet means even a cast
-        // back to the concrete type can't mutate.
         var input = new HashSet<Party> { new("alice"), new("bob") };
         var info = new SubmitterInfo(actAs: input);
 
@@ -168,10 +171,6 @@ public class SubmitterInfoTests
     [Fact]
     public void SubmitterInfo_should_compare_by_set_contents_not_by_reference()
     {
-        // Regression: record-struct synthesized equality compares the backing
-        // IReadOnlySet fields by reference, which would make two SubmitterInfo
-        // instances with identical parties typically not equal. The explicit
-        // override in SubmitterInfo.Equals walks the sets.
         var a = new SubmitterInfo(
             actAs: new HashSet<Party> { new("alice"), new("bob") },
             readAs: new HashSet<Party> { new("observer") });

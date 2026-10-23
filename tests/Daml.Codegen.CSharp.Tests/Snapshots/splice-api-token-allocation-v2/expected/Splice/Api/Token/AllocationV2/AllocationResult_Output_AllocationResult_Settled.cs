@@ -17,6 +17,14 @@ public sealed record AllocationResult_Output_AllocationResult_Settled(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("nextIterationAllocationCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>? NextIterationAllocationCid
 ) : global::Daml.Runtime.Data.IDamlRecord<AllocationResult_Output_AllocationResult_Settled>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(NextIterationAllocationCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>?>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("nextIterationAllocationCid", NextIterationAllocationCid is { } __NextIterationAllocationCid ? new global::Daml.Runtime.Data.DamlOptional(__NextIterationAllocationCid.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None)
@@ -24,7 +32,7 @@ public sealed record AllocationResult_Output_AllocationResult_Settled(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationResult_Output_AllocationResult_Settled FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationResult_Output_AllocationResult_Settled(
-        NextIterationAllocationCid: record.GetOptionalField("nextIterationAllocationCid").AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetOptionalField("nextIterationAllocationCid").AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null
+        NextIterationAllocationCid: record.GetOptionalField("nextIterationAllocationCid", 0).AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationV2.IAllocation>(record.GetOptionalField("nextIterationAllocationCid", 0).AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,5 +44,4 @@ public sealed record AllocationResult_Output_AllocationResult_Settled(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "nextIterationAllocationCid", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("nextIterationAllocationCid"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0)));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

@@ -20,6 +20,14 @@ public sealed record Crate<TA>(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("item")] global::Daml.Runtime.Stdlib.Optional<TA> Item
 ) where TA : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Item, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Optional<TA>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("item", Item.ToValue(__optional0 => convertTA(__optional0)))
@@ -27,7 +35,7 @@ public sealed record Crate<TA>(
 
     /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     public static Crate<TA> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TA> convertTA, global::Daml.Runtime.Data.DamlValue? absentTA) => new Crate<TA>(
-        Item: global::Daml.Runtime.Stdlib.Optional<TA>.FromValue(record.GetOptionalField("item"), __optional0 => convertTA(__optional0))
+        Item: global::Daml.Runtime.Stdlib.Optional<TA>.FromValue(record.GetOptionalField("item", 0), __optional0 => convertTA(__optional0))
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
@@ -39,5 +47,4 @@ public sealed record Crate<TA>(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "item", present => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadOptional(present, context.Field("item"), (__json0, __ctx0) => readTA(__json0, __ctx0)));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

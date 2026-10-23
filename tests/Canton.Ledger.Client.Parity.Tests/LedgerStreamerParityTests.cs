@@ -41,11 +41,7 @@ public abstract class LedgerStreamerParityTests
     /// </summary>
     protected virtual bool SupportsAdvancingLedgerEnd => true;
 
-    /// <summary>
-    /// How far past the ledger end a read has to reach for the participant to reject it outright,
-    /// rather than merely reaching an offset the ledger has since caught up to.
-    /// </summary>
-    private const long OffsetsPastTheLedgerEnd = 1_000_000L;
+    private const long OffsetsTooFarPastTheLedgerEndToCatchUpTo = 1_000_000L;
 
     /// <summary>
     /// Whether this provider has a participant that can reject a read at all. A lane serving
@@ -367,7 +363,7 @@ public abstract class LedgerStreamerParityTests
         var (reader, _, client, owner) = lane.Capability;
 
         var ledgerEnd = await reader.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var pastTheLedgerEnd = LedgerOffset.At(ledgerEnd.Value + OffsetsPastTheLedgerEnd);
+        var pastTheLedgerEnd = LedgerOffset.At(ledgerEnd.Value + OffsetsTooFarPastTheLedgerEndToCatchUpTo);
 
         var events = new List<ContractStreamEvent<Marker>>();
         using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);

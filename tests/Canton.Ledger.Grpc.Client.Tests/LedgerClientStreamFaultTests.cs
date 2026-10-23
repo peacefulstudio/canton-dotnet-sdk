@@ -65,6 +65,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
     [Fact]
     public async Task CompletionStreamAsync_logs_the_fault_status_by_name()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"completion stream down {Guid.NewGuid()}";
         StubCompletionStreamFailure(new RpcException(new Status(StatusCode.Unavailable, detail)));
         using var logs = new CapturingLoggerFactory();
@@ -78,6 +79,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_logs_the_fault_status_by_name()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"update stream down {Guid.NewGuid()}";
         StubGetUpdatesFailure(new RpcException(new Status(StatusCode.Unavailable, detail)));
         using var logs = new CapturingLoggerFactory();
@@ -92,6 +94,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
     [Fact]
     public async Task CompletionStreamAsync_falls_back_to_the_exception_message_when_the_status_carries_no_detail()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var fault = new RpcException(new Status(StatusCode.Unavailable, string.Empty));
         StubCompletionStreamFailure(fault);
         using var logs = new CapturingLoggerFactory();
@@ -112,6 +115,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
     [Fact]
     public async Task CompletionStreamAsync_records_a_mid_stream_fault_on_the_span()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"completion stream down {Guid.NewGuid()}";
         StubCompletionStreamFailure(new RpcException(new Status(StatusCode.Unavailable, detail)));
         using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
@@ -126,6 +130,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
     [Fact]
     public async Task SubscribeAsync_records_a_mid_stream_fault_on_the_span()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"update stream down {Guid.NewGuid()}";
         StubGetUpdatesFailure(new RpcException(new Status(StatusCode.Unavailable, detail)));
         using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
@@ -140,6 +145,7 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_records_a_mid_snapshot_fault_on_the_span()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"snapshot stream down {Guid.NewGuid()}";
         StubGetActiveContractsFailure(new RpcException(new Status(StatusCode.Unavailable, detail)));
         using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);

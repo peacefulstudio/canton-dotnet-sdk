@@ -35,6 +35,24 @@
     <Content Include="Snapshots\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\src\Daml.Codegen.Testing.Conformance\Generated\RichTypes\*.cs" Link="Snapshots\richtypes\expected\RichTypes\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Daml.Codegen.Testing.Conformance\Generated\SubmitShapes\*.cs" Link="Snapshots\richtypes\expected\SubmitShapes\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Daml.Codegen.Testing.Conformance\Generated\ContractKeys\*.cs" Link="Snapshots\contractkeys\expected\ContractKeys\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Daml.Codegen.Testing.Conformance\Generated\Disclosure\*.cs" Link="Snapshots\contractkeys\expected\Disclosure\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Daml.Codegen.Testing.Conformance\Generated\KeyBuilders\*.cs" Link="Snapshots\contractkeys\expected\KeyBuilders\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Daml.Codegen.Testing.Conformance\Generated\DefaultTarget\*.cs" Link="Snapshots\defaulttarget\expected\DefaultTarget\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <!--
       The Quickstart sample's vendored intermediate.binpb (refreshed by
       the quickstart entry of scripts/regenerate.sh) is copied alongside the test assembly so the

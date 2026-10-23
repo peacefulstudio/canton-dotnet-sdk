@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.Shared.targets" />
+
+  <PropertyGroup Condition="'$(DamlCodegenMode)' == 'Dpm'">
+    <DamlCodegenTool Condition="'$(DamlCodegenTool)' == ''">dpm codegen-cs</DamlCodegenTool>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(DamlCodegenMode)' == 'Dpm' and '$(DamlCodegenBundleDigest)' == '' and '$(DamlCodegenBundleVersion)' == '$(_DamlCodegenPackageVersion)'">
+    <DamlCodegenBundleDigest>$(_DamlCodegenPackageBundleDigest)</DamlCodegenBundleDigest>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(DamlCodegenMode)' == 'Standalone'">
+    <_DamlCodegenToolDir>$(MSBuildThisFileDirectory)../tools/net10.0/</_DamlCodegenToolDir>
+    <DamlCodegenTool Condition="'$(DamlCodegenTool)' == ''">dotnet "$(_DamlCodegenToolDir)Daml.Codegen.DarParser.Cli.dll"</DamlCodegenTool>
+    <DamlCodegenEmitterTool Condition="'$(DamlCodegenEmitterTool)' == ''">dotnet "$(_DamlCodegenToolDir)Daml.Codegen.CSharp.Cli.dll"</DamlCodegenEmitterTool>
+  </PropertyGroup>
+
+  <Target Name="DamlCheckAdapterSelected"
+          BeforeTargets="DamlGenerateBindings"
+          Condition="('@(DamlArchive)' != '' or '@(DamlProject)' != '') and '$(DamlCodegenMode)' != 'Dpm' and '$(DamlCodegenMode)' != 'Standalone'">
+    <Error Code="DAML0005"
+           Text="DamlCodegenMode '$(DamlCodegenMode)' is not supported. Set &lt;DamlCodegenMode&gt; to Dpm (runs dpm codegen-cs) or Standalone (runs the decoder and emitter this package bundles, with no dpm or JDK)." />
+  </Target>
+
+  <!--
+    Workaround for the .NET SDK setting $(IntermediateOutputPath) only after every NuGet package's
+    props and targets are imported: a file-scope default built from it would snapshot it empty, so
+    it resolves at execution time instead.
+  -->
+  <Target Name="DamlResolveDpmWorkingDirectory" Condition="'$(DamlCodegenMode)' == 'Dpm'">
+    <PropertyGroup Condition="'$(DamlCodegenToolWorkingDirectory)' == ''">
+      <DamlCodegenToolWorkingDirectory>$(IntermediateOutputPath)daml-codegen-cs-pin/</DamlCodegenToolWorkingDirectory>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="DamlCheckDpmAvailable"
+          BeforeTargets="DamlGenerateBindings"
+          Condition="'$(DamlCodegenMode)' == 'Dpm' and '@(DamlArchive)' != ''">
+
+    <Exec Command="dpm --version"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_DamlDpmVersionExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_DamlDpmVersionOutputLines" />
+    </Exec>
+
+    <Error Text="dpm was not found on PATH (or `dpm --version` failed). DamlCodegenMode=Dpm requires dpm &gt;= $(_DamlDpmMinimumVersion) — install it from https://github.com/digital-asset/dpm/releases and ensure it is on PATH, or set &lt;DamlCodegenMode&gt;Standalone&lt;/DamlCodegenMode&gt; to generate with the decoder and emitter this package bundles, with no dpm or JDK."
+           Condition="'$(_DamlDpmVersionExitCode)' != '0'" />
+
+    <ItemGroup Condition="'$(_DamlDpmVersionExitCode)' == '0'">
+      <_DamlDpmVersionLine Include="@(_DamlDpmVersionOutputLines)"
+                           Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '(?i)^(dpm[ \t]+)?version:?[ \t]*\d+\.\d+\.\d+'))" />
+    </ItemGroup>
+
+    <!--
+      Workaround for MSBuild not expanding an item reference nested inside a property function's
+      string argument: @(_DamlDpmVersionLine) is flattened into a property before the regex runs.
+    -->
+    <PropertyGroup Condition="'$(_DamlDpmVersionExitCode)' == '0'">
+      <_DamlDpmVersionOutput>@(_DamlDpmVersionOutputLines)</_DamlDpmVersionOutput>
+      <_DamlDpmVersionLineText>@(_DamlDpmVersionLine)</_DamlDpmVersionLineText>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(_DamlDpmVersionExitCode)' == '0'">
+      <_DamlDpmVersion>$([System.Text.RegularExpressions.Regex]::Match('$(_DamlDpmVersionLineText)', '\d+\.\d+\.\d+').Value)</_DamlDpmVersion>
+    </PropertyGroup>
+
+    <Error Text="Could not parse a version number from `dpm --version` output (&quot;$(_DamlDpmVersionOutput)&quot;). DamlCodegenMode=Dpm requires dpm &gt;= $(_DamlDpmMinimumVersion)."
+           Condition="'$(_DamlDpmVersionExitCode)' == '0' and '$(_DamlDpmVersion)' == ''" />
+
+    <Error Text="dpm $(_DamlDpmVersion) is too old. DamlCodegenMode=Dpm requires dpm &gt;= $(_DamlDpmMinimumVersion) — upgrade from https://github.com/digital-asset/dpm/releases."
+           Condition="'$(_DamlDpmVersion)' != '' and !$([MSBuild]::VersionGreaterThanOrEquals('$(_DamlDpmVersion)', '$(_DamlDpmMinimumVersion)'))" />
+
+    <Exec Command="java -version"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_DamlJdkCheckExitCode" />
+    </Exec>
+
+    <Error Text="No JDK was found on PATH (`java -version` failed). DamlCodegenMode=Dpm's OCI bundle runs a JVM helper and needs a JDK — install one and ensure `java` is on PATH, or set &lt;DamlCodegenMode&gt;Standalone&lt;/DamlCodegenMode&gt; to generate with the decoder and emitter this package bundles, with no JDK."
+           Condition="'$(_DamlJdkCheckExitCode)' != '0'" />
+  </Target>
+
+  <Target Name="DamlWriteDpmPin"
+          BeforeTargets="DamlGenerateBindings"
+          AfterTargets="DamlCheckDpmAvailable"
+          DependsOnTargets="DamlResolveDpmWorkingDirectory"
+          Condition="'$(DamlCodegenMode)' == 'Dpm' and '@(DamlArchive)' != ''">
+
+    <Error Text="DamlCodegenBundleVersion could not be determined (no generated version stamp found and no explicit override set). Set it explicitly, e.g. &lt;DamlCodegenBundleVersion&gt;1.0.0&lt;/DamlCodegenBundleVersion&gt; in your project file."
+           Condition="'$(DamlCodegenBundleVersion)' == ''" />
+
+    <Error Code="DAML0006"
+           Text="DamlCodegenMode=Dpm pins the dpm-codegen-cs bundle by its index digest, and no digest is known for version $(DamlCodegenBundleVersion). This package carries the digest of its own bundle version only. Set &lt;DamlCodegenBundleDigest&gt;sha256:...&lt;/DamlCodegenBundleDigest&gt; to the digest `oras resolve $(DamlCodegenOciRepository):$(DamlCodegenBundleVersion)` prints, or set &lt;DamlCodegenMode&gt;Standalone&lt;/DamlCodegenMode&gt;."
+           Condition="'$(DamlCodegenBundleDigest)' == ''" />
+    <Error Code="DAML0007"
+           Text="DamlCodegenBundleDigest '$(DamlCodegenBundleDigest)' is not an OCI digest. It must be sha256: followed by 64 lowercase hex digits."
+           Condition="'$(DamlCodegenBundleDigest)' != '' and !$([System.Text.RegularExpressions.Regex]::IsMatch('$(DamlCodegenBundleDigest)', '^sha256:[0-9a-f]{64}$'))" />
+
+    <MakeDir Directories="$(DamlCodegenToolWorkingDirectory)" Condition="!Exists('$(DamlCodegenToolWorkingDirectory)')" />
+
+    <ItemGroup>
+      <_DamlDpmPinLines Include="components:" />
+      <_DamlDpmPinLines Include="- &quot;oci://$(DamlCodegenOciRepository):$(DamlCodegenBundleVersion)@$(DamlCodegenBundleDigest)&quot;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(DamlCodegenToolWorkingDirectory)daml.yaml" Lines="@(_DamlDpmPinLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <PropertyGroup>
+      <_DamlDpmHomeRoot>$(DPM_HOME)</_DamlDpmHomeRoot>
+      <_DamlDpmHomeRoot Condition="'$(_DamlDpmHomeRoot)' == ''">$([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.UserProfile)), '.dpm'))</_DamlDpmHomeRoot>
+      <_DamlCodegenToolEnvironment>DPM_AUTO_INSTALL=true;DPM_HOME=$([System.IO.Path]::Combine('$(_DamlDpmHomeRoot)', 'dpm-codegen-cs', '$(DamlCodegenBundleVersion)'))</_DamlCodegenToolEnvironment>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="DamlDpmClean"
+          AfterTargets="DamlClean"
+          DependsOnTargets="DamlResolveDpmWorkingDirectory"
+          Condition="'$(DamlCodegenMode)' == 'Dpm' and ('@(DamlArchive)' != '' or '@(DamlProject)' != '')">
+    <RemoveDir Directories="$(DamlCodegenToolWorkingDirectory)" Condition="Exists('$(DamlCodegenToolWorkingDirectory)')" />
+  </Target>
+
+  <Target Name="DamlBuildDpmArgs"
+          BeforeTargets="DamlGenerateBindings"
+          AfterTargets="DamlCheckDpmAvailable"
+          DependsOnTargets="DamlResolveGeneratedDir"
+          Condition="'$(DamlCodegenMode)' == 'Dpm' and '@(DamlArchive)' != ''">
+
+    <Error Text="DamlCodegenMode=Dpm supports exactly one &lt;DamlArchive&gt; item per project (`dpm codegen-cs` accepts a single --dar). Found @(DamlArchive->Count()). Split into separate projects."
+           Condition="'@(DamlArchive->Count())' != '1'" />
+
+    <PropertyGroup>
+      <_DamlNamespaceArg Condition="'$(DamlNamespace)' != ''">-n "$(DamlNamespace)"</_DamlNamespaceArg>
+      <_DamlDepsArg Condition="'$(DamlIncludeDependencies)' == 'true'">--include-dependencies true</_DamlDepsArg>
+      <_DamlNullableArg Condition="'$(DamlNullable)' == 'false'">--nullable false</_DamlNullableArg>
+      <_DamlOutputDirArg>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '$(DamlGeneratedDir)'))).TrimEnd('\/'))</_DamlOutputDirArg>
+      <_DamlCodegenArgs>--dar "@(DamlArchive->'%(FullPath)')" --out "$(_DamlOutputDirArg)" -- -v $(DamlVerbosity) $(_DamlNamespaceArg) $(_DamlDepsArg) $(_DamlNullableArg)</_DamlCodegenArgs>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+    Workaround for Windows command-line quoting: a trailing backslash inside a quoted Exec argument
+    escapes the closing quote and swallows the arguments that follow, so the output directory is
+    trimmed. String TrimEnd, because .NET Framework msbuild.exe lacks Path.TrimEndingDirectorySeparator.
+  -->
+  <Target Name="DamlBuildStandaloneArgs"
+          BeforeTargets="DamlGenerateBindings"
+          DependsOnTargets="DamlResolveGeneratedDir"
+          Condition="'$(DamlCodegenMode)' == 'Standalone' and '@(DamlArchive)' != ''">
+
+    <Error Text="DamlCodegenMode=Standalone supports exactly one &lt;DamlArchive&gt; item per project (dar2intermediate and the emitter each take a single input). Found @(DamlArchive->Count()). Split into separate projects."
+           Condition="'@(DamlArchive->Count())' != '1'" />
+
+    <PropertyGroup>
+      <_DamlNamespaceArg Condition="'$(DamlNamespace)' != ''">-n "$(DamlNamespace)"</_DamlNamespaceArg>
+      <_DamlDepsArg Condition="'$(DamlIncludeDependencies)' == 'true'">--include-dependencies true</_DamlDepsArg>
+      <_DamlNullableArg Condition="'$(DamlNullable)' == 'false'">--nullable false</_DamlNullableArg>
+      <_DamlOutputDirArg>$(DamlGeneratedDir.TrimEnd('\/'))</_DamlOutputDirArg>
+      <_DamlIntermediatePath>$(IntermediateOutputPath)DamlIntermediate/@(DamlArchive->'%(Filename)').binpb</_DamlIntermediatePath>
+      <_DamlCodegenArgs>dar2intermediate "@(DamlArchive->'%(FullPath)')" -o "$(_DamlIntermediatePath)" --verbosity $(DamlVerbosity) &amp;&amp; $(DamlCodegenEmitterTool) --intermediate "$(_DamlIntermediatePath)" -o "$(_DamlOutputDirArg)" --verbosity $(DamlVerbosity) $(_DamlNamespaceArg) $(_DamlDepsArg) $(_DamlNullableArg)</_DamlCodegenArgs>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="DamlCleanIntermediate" AfterTargets="DamlClean" Condition="'$(DamlCodegenMode)' == 'Standalone'">
+    <RemoveDir Directories="$(IntermediateOutputPath)DamlIntermediate"
+               Condition="Exists('$(IntermediateOutputPath)DamlIntermediate')" />
+  </Target>
+</Project>

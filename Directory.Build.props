@@ -18,8 +18,8 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <EnablePackageValidation Condition="$(MSBuildProjectName.StartsWith('Canton.Ledger.')) Or $([System.Text.RegularExpressions.Regex]::IsMatch('$(MSBuildProjectName)', '^Daml\.(Runtime|Runtime\.Grpc|Ledger\.Abstractions|Ledger\.Abstractions\.Testing\.Conformance|Codegen\.CSharp|Codegen\.Intermediate|Codegen\.Testing\.Conformance)$'))">true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.7.0-preview.1</PackageValidationBaselineVersion>
+    <EnablePackageValidation Condition="$(MSBuildProjectName.StartsWith('Canton.Ledger.')) Or $([System.Text.RegularExpressions.Regex]::IsMatch('$(MSBuildProjectName)', '^Daml\.(Runtime|Ledger\.Abstractions|Ledger\.Abstractions\.Testing\.Conformance|Codegen\.CSharp|Codegen\.Intermediate|Codegen\.Testing\.Conformance)$'))">true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>0.7.0</PackageValidationBaselineVersion>
 
     <!-- Package metadata -->
     <Authors>Peaceful Studio OÜ</Authors>
@@ -33,7 +33,7 @@
 
     <CantonVersion>3.6.1</CantonVersion>
 
-    <Version>0.7.0</Version>
+    <Version>0.7.1</Version>
     <VersionReleasePrefix>$(Version)</VersionReleasePrefix>
     <VersionReleasePrefix Condition="$(VersionReleasePrefix.Contains('-'))">$(VersionReleasePrefix.Substring(0, $(VersionReleasePrefix.IndexOf('-'))))</VersionReleasePrefix>
     <VersionReleasePrefix Condition="$(VersionReleasePrefix.Contains('+'))">$(VersionReleasePrefix.Substring(0, $(VersionReleasePrefix.IndexOf('+'))))</VersionReleasePrefix>
