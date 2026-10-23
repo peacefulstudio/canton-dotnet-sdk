@@ -11,6 +11,10 @@ on:
         description: 'Release tag to build from and attach the packages to (e.g. v0.4.0-preview.4).'
         required: true
         type: string
+      codegen_cs_digest:
+        description: 'Index digest (sha256:<hex>) of the dpm-codegen-cs bundle that Daml.Codegen.CSharp.MSBuild''s Dpm mode pins.'
+        required: true
+        type: string
 
 jobs:
   pack:
@@ -38,12 +42,29 @@ jobs:
       - name: Pack
         env:
           PACKAGE_VERSION: ${{ inputs.version }}
+          CODEGEN_CS_DIGEST: ${{ inputs.codegen_cs_digest }}
         run: |
           set -euo pipefail
           dotnet pack --configuration Release --no-build \
             -p:PackageVersion="$PACKAGE_VERSION" \
+            -p:DamlCodegenBundleDigest="$CODEGEN_CS_DIGEST" \
+            -p:ContinuousIntegrationBuild=true \
             -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg \
             -o "$GITHUB_WORKSPACE/output/nuget"
+      - name: Require the bundle digest stamp in the MSBuild package
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          stamp="build/Daml.Codegen.CSharp.MSBuild.BundleDigest.g.txt"
+          packages=(output/nuget/Daml.Codegen.CSharp.MSBuild.*.nupkg)
+          if [ "${#packages[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one Daml.Codegen.CSharp.MSBuild package in output/nuget, found ${#packages[@]}"
+            exit 1
+          fi
+          if ! unzip -l "${packages[0]}" "${stamp}" >/dev/null; then
+            echo "::error::${packages[0]} lacks ${stamp}; a release must not ship a package without the dpm-codegen-cs digest"
+            exit 1
+          fi
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
