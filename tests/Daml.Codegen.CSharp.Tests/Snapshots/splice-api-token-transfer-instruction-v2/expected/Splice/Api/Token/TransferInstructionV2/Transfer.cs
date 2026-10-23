@@ -83,14 +83,14 @@ public sealed record Transfer(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Sender);
-        hash.Add(Receiver);
-        hash.Add(Amount);
-        hash.Add(InstrumentId);
-        hash.Add(RequestedAt);
-        hash.Add(ExecuteBefore);
+        hash.Add(Sender, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default);
+        hash.Add(Receiver, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.HoldingV2.Account>.Default);
+        hash.Add(Amount, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        hash.Add(InstrumentId, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.HoldingV2.InstrumentId>.Default);
+        hash.Add(RequestedAt, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset>.Default);
+        hash.Add(ExecuteBefore, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(InputHoldingCids));
-        hash.Add(Meta);
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
         return hash.ToHashCode();
     }
 
@@ -108,14 +108,14 @@ public sealed record Transfer(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Transfer FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Transfer(
-        Sender: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("sender").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Receiver: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("receiver").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Amount: record.GetRequiredField("amount").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-        InstrumentId: global::Splice.Api.Token.HoldingV2.InstrumentId.FromRecord(record.GetRequiredField("instrumentId").As<global::Daml.Runtime.Data.DamlRecord>()),
-        RequestedAt: record.GetRequiredField("requestedAt").As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
-        ExecuteBefore: record.GetRequiredField("executeBefore").As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
-        InputHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("inputHoldingCids").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        Sender: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("sender", 0).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Receiver: global::Splice.Api.Token.HoldingV2.Account.FromRecord(record.GetRequiredField("receiver", 1).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Amount: record.GetRequiredField("amount", 2).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        InstrumentId: global::Splice.Api.Token.HoldingV2.InstrumentId.FromRecord(record.GetRequiredField("instrumentId", 3).As<global::Daml.Runtime.Data.DamlRecord>()),
+        RequestedAt: record.GetRequiredField("requestedAt", 4).As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
+        ExecuteBefore: record.GetRequiredField("executeBefore", 5).As<global::Daml.Runtime.Data.DamlTimestamp>().Value,
+        InputHoldingCids: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)record.GetRequiredField("inputHoldingCids", 6).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList(),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 7).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -134,5 +134,4 @@ public sealed record Transfer(
             global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
-
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
@@ -36,21 +37,22 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
     private readonly Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient _interactiveSubmissionService;
     private readonly GrpcCommandBuilder _commandBuilder;
     private readonly LedgerClientOptions _options;
-    private readonly ILogger<LedgerClient> _logger;
+    private readonly ILogger _logger;
     private bool _disposed;
 
     internal LedgerClient(
         IOptions<LedgerClientOptions> options,
         LedgerChannelProvider channels,
         ITokenProvider tokenProvider,
-        ILogger<LedgerClient>? logger = null)
+        ILogger<LedgerClient>? logger = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(channels);
         ArgumentNullException.ThrowIfNull(tokenProvider);
 
         _options = options.Value;
-        _logger = logger ?? NullLogger<LedgerClient>.Instance;
+        _logger = (logger ?? NullLogger<LedgerClient>.Instance).RedactingExceptionsUnless(_options.EmitPartyAndContractSpanTags);
         _channel = channels.Channel;
 
         var commandService = new CommandService.CommandServiceClient(_channel);
@@ -65,7 +67,7 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
             new Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient(_channel);
 
         _commandBuilder = new GrpcCommandBuilder(_options);
-        _invoker = new LedgerCallInvoker(_options, tokenProvider);
+        _invoker = new LedgerCallInvoker(_options, tokenProvider, timeProvider);
         _submissionClient = new SubmissionClient(
             _invoker, commandService, commandSubmissionService, _commandBuilder, _options, _logger,
             (offset, submitter, interfaceViews, token) =>
@@ -138,7 +140,7 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         _eventQueryService = eventQueryService ?? new EventQueryService.EventQueryServiceClient(channel);
         _interactiveSubmissionService = interactiveSubmissionService
             ?? new Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient(channel);
-        _logger = logger ?? NullLogger<LedgerClient>.Instance;
+        _logger = (logger ?? NullLogger<LedgerClient>.Instance).RedactingExceptionsUnless(_options.EmitPartyAndContractSpanTags);
 
         _commandBuilder = new GrpcCommandBuilder(_options);
         _invoker = new LedgerCallInvoker(_options, tokenProvider);

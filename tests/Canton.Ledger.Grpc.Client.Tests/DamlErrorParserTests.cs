@@ -161,6 +161,45 @@ public class DamlErrorParserTests
         unstructured.Message.Should().Be("service down");
     }
 
+    [Theory]
+    [InlineData(StatusCode.Unauthenticated, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
+    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.AuthorizationChecksFailed)]
+    public void Parse_classifies_a_security_failure_from_the_transport_status_code_when_trailers_are_missing(
+        StatusCode statusCode, DamlErrorCategory expected)
+    {
+        var ex = new RpcException(new GrpcCallStatus(statusCode, "proxy rejected the call"));
+
+        var unstructured = ParseUnstructured(ex);
+
+        unstructured.Category.Should().Be(expected);
+        unstructured.Message.Should().Be("proxy rejected the call");
+        unstructured.Status.Should().Be(new TransportStatus.Grpc((GrpcStatusCode)statusCode));
+    }
+
+    [Theory]
+    [InlineData(StatusCode.Unknown)]
+    [InlineData(StatusCode.NotFound)]
+    [InlineData(StatusCode.Unavailable)]
+    [InlineData(StatusCode.Internal)]
+    public void Parse_leaves_every_other_status_code_unclassified_when_trailers_are_missing(StatusCode statusCode)
+    {
+        var ex = new RpcException(new GrpcCallStatus(statusCode, "no trailer"));
+
+        ParseUnstructured(ex).Category.Should().BeNull();
+    }
+
+    [Fact]
+    public void Parse_classifies_an_Unauthenticated_failure_whose_trailer_payload_is_unparseable()
+    {
+        var trailers = new Metadata
+        {
+            { "grpc-status-details-bin", new byte[] { 0xff, 0xfe, 0xfd, 0xfc } },
+        };
+        var ex = new RpcException(new GrpcCallStatus(StatusCode.Unauthenticated, "garbled"), trailers);
+
+        ParseUnstructured(ex).Category.Should().Be(DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials);
+    }
+
     [Fact]
     public void Parse_yields_an_unclassified_Unstructured_failure_when_the_trailer_payload_is_unparseable()
     {

@@ -73,7 +73,7 @@ public class ChoiceEmitterArchiveChoiceTests
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = [], Interfaces = [] });
         var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
+        var indent = new IndentWriter(sb);
         Emitter(resolution).TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }
@@ -83,7 +83,7 @@ public class ChoiceEmitterArchiveChoiceTests
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = [], Interfaces = [] });
         var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
+        var indent = new IndentWriter(sb);
         Emitter(resolution).WriteChoiceAsyncExercisersClass(indent, template, template.Name, []);
         return sb.ToString();
     }
@@ -93,8 +93,8 @@ public class ChoiceEmitterArchiveChoiceTests
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = [], Interfaces = [] });
         var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
-        Emitter(resolution).WriteChoiceDescriptors(indent, template);
+        var indent = new IndentWriter(sb);
+        Emitter(resolution).WriteChoiceDescriptors(indent, template, template.Name);
         return sb.ToString();
     }
 

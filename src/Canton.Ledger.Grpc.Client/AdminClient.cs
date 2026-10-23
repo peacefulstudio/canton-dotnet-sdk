@@ -142,7 +142,14 @@ internal sealed partial class AdminClient : IAdminClient
         SynchronizerId? synchronizerId,
         CancellationToken cancellationToken)
     {
-        LogAllocatingParty(_logger, partyIdHint);
+        if (_options.EmitPartyAndContractSpanTags)
+        {
+            LogAllocatingParty(_logger, partyIdHint);
+        }
+        else
+        {
+            LogAllocatingParty(_logger);
+        }
 
         var request = new AllocatePartyRequest { PartyIdHint = partyIdHint };
         if (synchronizerId is { } synchronizer)
@@ -156,18 +163,27 @@ internal sealed partial class AdminClient : IAdminClient
             (headers, deadline, token) => _partyService.AllocatePartyAsync(request, headers, deadline, token),
             response => FromProtoPartyDetails(response.PartyDetails),
             cancellationToken,
-            configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, partyIdHint),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonPartyIdHint, partyIdHint),
             replayable: false).ConfigureAwait(false);
 
-        LogPartyAllocated(_logger, details.Party.Value);
+        if (_options.EmitPartyAndContractSpanTags)
+            LogPartyAllocated(_logger, details.Party.Value);
+        else
+            LogPartyAllocatedWithoutId(_logger);
         return details;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Allocating party")]
+    private static partial void LogAllocatingParty(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Allocating party with hint: {PartyIdHint}")]
     private static partial void LogAllocatingParty(ILogger logger, string partyIdHint);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Party allocated: {PartyId}")]
     private static partial void LogPartyAllocated(ILogger logger, string partyId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Party allocated")]
+    private static partial void LogPartyAllocatedWithoutId(ILogger logger);
 
     /// <inheritdoc />
     public Task<IReadOnlyList<PartyDetails>> GetPartiesAsync(
@@ -233,7 +249,14 @@ internal sealed partial class AdminClient : IAdminClient
         IEnumerable<UserRight>? rights,
         CancellationToken cancellationToken)
     {
-        LogCreatingUser(_logger, userId);
+        if (_options.EmitPartyAndContractSpanTags)
+        {
+            LogCreatingUser(_logger, userId);
+        }
+        else
+        {
+            LogCreatingUser(_logger);
+        }
 
         var user = new User { Id = userId, PrimaryParty = primaryParty?.Value ?? string.Empty };
         var request = new CreateUserRequest { User = user };
@@ -248,18 +271,27 @@ internal sealed partial class AdminClient : IAdminClient
             (headers, deadline, token) => _userService.CreateUserAsync(request, headers, deadline, token),
             response => FromProtoUser(response.User),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
             replayable: false).ConfigureAwait(false);
 
-        LogUserCreated(_logger, userId);
+        if (_options.EmitPartyAndContractSpanTags)
+            LogUserCreated(_logger, userId);
+        else
+            LogUserCreatedWithoutId(_logger);
         return details;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Creating user")]
+    private static partial void LogCreatingUser(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Creating user: {UserId}")]
     private static partial void LogCreatingUser(ILogger logger, string userId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "User created: {UserId}")]
     private static partial void LogUserCreated(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "User created")]
+    private static partial void LogUserCreatedWithoutId(ILogger logger);
 
     /// <inheritdoc />
     public Task<UserDetails?> GetUserAsync(
@@ -318,14 +350,20 @@ internal sealed partial class AdminClient : IAdminClient
             "GrantUserRights",
             (headers, deadline, token) => _userService.GrantUserRightsAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
             replayable: false).ConfigureAwait(false);
 
-        LogRightsGranted(_logger, userId);
+        if (_options.EmitPartyAndContractSpanTags)
+            LogRightsGranted(_logger, userId);
+        else
+            LogRightsGrantedWithoutId(_logger);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Rights granted to user {UserId}")]
     private static partial void LogRightsGranted(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rights granted")]
+    private static partial void LogRightsGrantedWithoutId(ILogger logger);
 
     /// <inheritdoc />
     public Task RevokeUserRightsAsync(
@@ -354,14 +392,20 @@ internal sealed partial class AdminClient : IAdminClient
             "RevokeUserRights",
             (headers, deadline, token) => _userService.RevokeUserRightsAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
             replayable: false).ConfigureAwait(false);
 
-        LogRightsRevoked(_logger, userId);
+        if (_options.EmitPartyAndContractSpanTags)
+            LogRightsRevoked(_logger, userId);
+        else
+            LogRightsRevokedWithoutId(_logger);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Rights revoked from user {UserId}")]
     private static partial void LogRightsRevoked(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rights revoked")]
+    private static partial void LogRightsRevokedWithoutId(ILogger logger);
 
     /// <inheritdoc />
     public Task<IReadOnlyList<UserRight>?> ListUserRightsAsync(
@@ -387,7 +431,7 @@ internal sealed partial class AdminClient : IAdminClient
                 (headers, deadline, token) => _userService.ListUserRightsAsync(new ListUserRightsRequest { UserId = userId }, headers, deadline, token),
                 response => response.Rights.Select(FromProtoRight).ToList(),
                 cancellationToken,
-                configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+                configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
                 isExpectedFailure: IsNotFound).ConfigureAwait(false);
         }
         catch (RpcException ex) when (IsNotFound(ex))
@@ -454,7 +498,7 @@ internal sealed partial class AdminClient : IAdminClient
             (headers, deadline, token) => _userService.UpdateUserAsync(request, headers, deadline, token),
             response => FromProtoUser(response.User),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
             replayable: false);
     }
 
@@ -474,7 +518,7 @@ internal sealed partial class AdminClient : IAdminClient
             "DeleteUser",
             (headers, deadline, token) => _userService.DeleteUserAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
             replayable: false);
     }
 
@@ -500,7 +544,7 @@ internal sealed partial class AdminClient : IAdminClient
             "UpdateUserIdentityProviderId",
             (headers, deadline, token) => _userService.UpdateUserIdentityProviderIdAsync(request, headers, deadline, token),
             cancellationToken,
-            configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonUserId, userId),
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonUserId, userId),
             replayable: false);
     }
 
@@ -1000,7 +1044,7 @@ internal sealed partial class AdminClient : IAdminClient
             cancellationToken);
     }
 
-    private static async Task<IReadOnlyList<TItem>> FetchAllPagesAsync<TResponse, TItem>(
+    private async Task<IReadOnlyList<TItem>> FetchAllPagesAsync<TResponse, TItem>(
         Activity? activity,
         string grpcMethodName,
         Func<string, Task<TResponse>> fetchPage,
@@ -1022,7 +1066,7 @@ internal sealed partial class AdminClient : IAdminClient
             {
                 var error = new InvalidOperationException(
                     $"{grpcMethodName} pagination is not progressing: the server returned the page token '{nextPageToken}' that was already used earlier in this call.");
-                activity.RecordException(error);
+                activity.RecordException(error, _options.StatusDescriptionOf(error));
                 throw error;
             }
 
@@ -1033,7 +1077,7 @@ internal sealed partial class AdminClient : IAdminClient
             {
                 var error = new InvalidOperationException(
                     $"{grpcMethodName} pagination did not complete after {MaxPagesPerPaginatedCall} pages; aborting instead of following an unbounded page-token stream.");
-                activity.RecordException(error);
+                activity.RecordException(error, _options.StatusDescriptionOf(error));
                 throw error;
             }
         } while (pageToken.Length > 0);

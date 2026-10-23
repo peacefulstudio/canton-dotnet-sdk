@@ -17,6 +17,15 @@ public sealed record Outcome_Win(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("tier")] string Tier
 ) : global::Daml.Runtime.Data.IDamlRecord<Outcome_Win>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Prize, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        hash.Add(Tier, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("prize", new global::Daml.Runtime.Data.DamlNumeric(Prize)),
@@ -25,8 +34,8 @@ public sealed record Outcome_Win(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Outcome_Win FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Outcome_Win(
-        Prize: record.GetRequiredField("prize").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-        Tier: record.GetRequiredField("tier").As<global::Daml.Runtime.Data.DamlText>().Value
+        Prize: record.GetRequiredField("prize", 0).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        Tier: record.GetRequiredField("tier", 1).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record Outcome_Win(
             global::Daml.Runtime.Data.DamlField.Create("tier", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "tier"), context.Field("tier")))
         );
     }
-
 }

@@ -52,6 +52,30 @@ public sealed record Tuple17<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9, TT10, 
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("_17")] TT17 _17
 ) where TT1 : notnull where TT2 : notnull where TT3 : notnull where TT4 : notnull where TT5 : notnull where TT6 : notnull where TT7 : notnull where TT8 : notnull where TT9 : notnull where TT10 : notnull where TT11 : notnull where TT12 : notnull where TT13 : notnull where TT14 : notnull where TT15 : notnull where TT16 : notnull where TT17 : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(_1, global::Daml.Runtime.Data.DamlEqualityComparer<TT1>.Default);
+        hash.Add(_2, global::Daml.Runtime.Data.DamlEqualityComparer<TT2>.Default);
+        hash.Add(_3, global::Daml.Runtime.Data.DamlEqualityComparer<TT3>.Default);
+        hash.Add(_4, global::Daml.Runtime.Data.DamlEqualityComparer<TT4>.Default);
+        hash.Add(_5, global::Daml.Runtime.Data.DamlEqualityComparer<TT5>.Default);
+        hash.Add(_6, global::Daml.Runtime.Data.DamlEqualityComparer<TT6>.Default);
+        hash.Add(_7, global::Daml.Runtime.Data.DamlEqualityComparer<TT7>.Default);
+        hash.Add(_8, global::Daml.Runtime.Data.DamlEqualityComparer<TT8>.Default);
+        hash.Add(_9, global::Daml.Runtime.Data.DamlEqualityComparer<TT9>.Default);
+        hash.Add(_10, global::Daml.Runtime.Data.DamlEqualityComparer<TT10>.Default);
+        hash.Add(_11, global::Daml.Runtime.Data.DamlEqualityComparer<TT11>.Default);
+        hash.Add(_12, global::Daml.Runtime.Data.DamlEqualityComparer<TT12>.Default);
+        hash.Add(_13, global::Daml.Runtime.Data.DamlEqualityComparer<TT13>.Default);
+        hash.Add(_14, global::Daml.Runtime.Data.DamlEqualityComparer<TT14>.Default);
+        hash.Add(_15, global::Daml.Runtime.Data.DamlEqualityComparer<TT15>.Default);
+        hash.Add(_16, global::Daml.Runtime.Data.DamlEqualityComparer<TT16>.Default);
+        hash.Add(_17, global::Daml.Runtime.Data.DamlEqualityComparer<TT17>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TT1, global::Daml.Runtime.Data.DamlValue> convertTT1, global::System.Func<TT2, global::Daml.Runtime.Data.DamlValue> convertTT2, global::System.Func<TT3, global::Daml.Runtime.Data.DamlValue> convertTT3, global::System.Func<TT4, global::Daml.Runtime.Data.DamlValue> convertTT4, global::System.Func<TT5, global::Daml.Runtime.Data.DamlValue> convertTT5, global::System.Func<TT6, global::Daml.Runtime.Data.DamlValue> convertTT6, global::System.Func<TT7, global::Daml.Runtime.Data.DamlValue> convertTT7, global::System.Func<TT8, global::Daml.Runtime.Data.DamlValue> convertTT8, global::System.Func<TT9, global::Daml.Runtime.Data.DamlValue> convertTT9, global::System.Func<TT10, global::Daml.Runtime.Data.DamlValue> convertTT10, global::System.Func<TT11, global::Daml.Runtime.Data.DamlValue> convertTT11, global::System.Func<TT12, global::Daml.Runtime.Data.DamlValue> convertTT12, global::System.Func<TT13, global::Daml.Runtime.Data.DamlValue> convertTT13, global::System.Func<TT14, global::Daml.Runtime.Data.DamlValue> convertTT14, global::System.Func<TT15, global::Daml.Runtime.Data.DamlValue> convertTT15, global::System.Func<TT16, global::Daml.Runtime.Data.DamlValue> convertTT16, global::System.Func<TT17, global::Daml.Runtime.Data.DamlValue> convertTT17) => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("_1", convertTT1(_1)),
@@ -75,23 +99,23 @@ public sealed record Tuple17<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9, TT10, 
 
     /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     public static Tuple17<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9, TT10, TT11, TT12, TT13, TT14, TT15, TT16, TT17> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT1> convertTT1, global::Daml.Runtime.Data.DamlValue? absentTT1, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT2> convertTT2, global::Daml.Runtime.Data.DamlValue? absentTT2, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT3> convertTT3, global::Daml.Runtime.Data.DamlValue? absentTT3, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT4> convertTT4, global::Daml.Runtime.Data.DamlValue? absentTT4, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT5> convertTT5, global::Daml.Runtime.Data.DamlValue? absentTT5, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT6> convertTT6, global::Daml.Runtime.Data.DamlValue? absentTT6, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT7> convertTT7, global::Daml.Runtime.Data.DamlValue? absentTT7, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT8> convertTT8, global::Daml.Runtime.Data.DamlValue? absentTT8, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT9> convertTT9, global::Daml.Runtime.Data.DamlValue? absentTT9, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT10> convertTT10, global::Daml.Runtime.Data.DamlValue? absentTT10, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT11> convertTT11, global::Daml.Runtime.Data.DamlValue? absentTT11, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT12> convertTT12, global::Daml.Runtime.Data.DamlValue? absentTT12, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT13> convertTT13, global::Daml.Runtime.Data.DamlValue? absentTT13, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT14> convertTT14, global::Daml.Runtime.Data.DamlValue? absentTT14, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT15> convertTT15, global::Daml.Runtime.Data.DamlValue? absentTT15, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT16> convertTT16, global::Daml.Runtime.Data.DamlValue? absentTT16, global::System.Func<global::Daml.Runtime.Data.DamlValue, TT17> convertTT17, global::Daml.Runtime.Data.DamlValue? absentTT17) => new Tuple17<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9, TT10, TT11, TT12, TT13, TT14, TT15, TT16, TT17>(
-        _1: record.GetTypeParameterField("_1", convertTT1, absentTT1),
-        _2: record.GetTypeParameterField("_2", convertTT2, absentTT2),
-        _3: record.GetTypeParameterField("_3", convertTT3, absentTT3),
-        _4: record.GetTypeParameterField("_4", convertTT4, absentTT4),
-        _5: record.GetTypeParameterField("_5", convertTT5, absentTT5),
-        _6: record.GetTypeParameterField("_6", convertTT6, absentTT6),
-        _7: record.GetTypeParameterField("_7", convertTT7, absentTT7),
-        _8: record.GetTypeParameterField("_8", convertTT8, absentTT8),
-        _9: record.GetTypeParameterField("_9", convertTT9, absentTT9),
-        _10: record.GetTypeParameterField("_10", convertTT10, absentTT10),
-        _11: record.GetTypeParameterField("_11", convertTT11, absentTT11),
-        _12: record.GetTypeParameterField("_12", convertTT12, absentTT12),
-        _13: record.GetTypeParameterField("_13", convertTT13, absentTT13),
-        _14: record.GetTypeParameterField("_14", convertTT14, absentTT14),
-        _15: record.GetTypeParameterField("_15", convertTT15, absentTT15),
-        _16: record.GetTypeParameterField("_16", convertTT16, absentTT16),
-        _17: record.GetTypeParameterField("_17", convertTT17, absentTT17)
+        _1: record.GetTypeParameterField("_1", 0, convertTT1, absentTT1),
+        _2: record.GetTypeParameterField("_2", 1, convertTT2, absentTT2),
+        _3: record.GetTypeParameterField("_3", 2, convertTT3, absentTT3),
+        _4: record.GetTypeParameterField("_4", 3, convertTT4, absentTT4),
+        _5: record.GetTypeParameterField("_5", 4, convertTT5, absentTT5),
+        _6: record.GetTypeParameterField("_6", 5, convertTT6, absentTT6),
+        _7: record.GetTypeParameterField("_7", 6, convertTT7, absentTT7),
+        _8: record.GetTypeParameterField("_8", 7, convertTT8, absentTT8),
+        _9: record.GetTypeParameterField("_9", 8, convertTT9, absentTT9),
+        _10: record.GetTypeParameterField("_10", 9, convertTT10, absentTT10),
+        _11: record.GetTypeParameterField("_11", 10, convertTT11, absentTT11),
+        _12: record.GetTypeParameterField("_12", 11, convertTT12, absentTT12),
+        _13: record.GetTypeParameterField("_13", 12, convertTT13, absentTT13),
+        _14: record.GetTypeParameterField("_14", 13, convertTT14, absentTT14),
+        _15: record.GetTypeParameterField("_15", 14, convertTT15, absentTT15),
+        _16: record.GetTypeParameterField("_16", 15, convertTT16, absentTT16),
+        _17: record.GetTypeParameterField("_17", 16, convertTT17, absentTT17)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
@@ -119,5 +143,4 @@ public sealed record Tuple17<TT1, TT2, TT3, TT4, TT5, TT6, TT7, TT8, TT9, TT10, 
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddTypeParameterField(fields, json, context, "_17", readTT17, absentTT17);
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

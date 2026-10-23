@@ -16,6 +16,14 @@ public sealed record Split(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("pieces")] long Pieces
 ) : global::Daml.Runtime.Data.IDamlRecord<Split>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Pieces, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("pieces", new global::Daml.Runtime.Data.DamlInt64(Pieces))
@@ -23,7 +31,7 @@ public sealed record Split(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Split FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Split(
-        Pieces: record.GetRequiredField("pieces").As<global::Daml.Runtime.Data.DamlInt64>().Value
+        Pieces: record.GetRequiredField("pieces", 0).As<global::Daml.Runtime.Data.DamlInt64>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record Split(
             global::Daml.Runtime.Data.DamlField.Create("pieces", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "pieces"), context.Field("pieces")))
         );
     }
-
 }

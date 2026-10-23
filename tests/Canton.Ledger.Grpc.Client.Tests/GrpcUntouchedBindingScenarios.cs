@@ -9,7 +9,6 @@ using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Serialization;
 using Grpc.Core;
@@ -27,7 +26,7 @@ namespace Canton.Ledger.Grpc.Client.Tests;
 /// </summary>
 internal static class GrpcUntouchedBindingScenarios
 {
-    private const string RichTypesPackageId = "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
+    private const string RichTypesPackageId = "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
 
     private sealed record GenericResultsMarker : IDamlType
     {

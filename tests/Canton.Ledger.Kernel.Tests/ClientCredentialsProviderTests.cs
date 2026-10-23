@@ -646,6 +646,54 @@ public class ClientCredentialsProviderTests
     }
 
     [Fact]
+    public async Task GetTokenAsync_reader_paused_mid_cache_check_never_returns_stale_token_once_refresh_publishes()
+    {
+        var handler = new FakeHttpHandler().WithResponseSequence(
+            """{"access_token":"token-v1","expires_in":3600,"token_type":"Bearer"}""",
+            """{"access_token":"token-v2","expires_in":3600,"token_type":"Bearer"}""");
+        var timeProvider = new PausableTimeProvider(DateTimeOffset.UtcNow);
+        using var provider = CreateProvider(CreateOptions(), handler, timeProvider);
+        await provider.GetTokenAsync(TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromHours(2));
+
+        timeProvider.PauseNextRead();
+        var pausedReader = Task.Run(
+            () => provider.GetTokenAsync(TestContext.Current.CancellationToken),
+            TestContext.Current.CancellationToken);
+        await timeProvider.ReadPaused;
+        var refreshed = await provider.GetTokenAsync(TestContext.Current.CancellationToken);
+        timeProvider.ResumePausedRead();
+        var resumed = await pausedReader;
+
+        refreshed.Should().Be("token-v2");
+        resumed.Should().Be("token-v2", "a reader that began before the refresh published must not pair the old token with the new expiry");
+    }
+
+    private sealed class PausableTimeProvider(DateTimeOffset start) : FakeTimeProvider(start)
+    {
+        private readonly TaskCompletionSource _readPaused = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _resume = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _pauseArmed;
+
+        public Task ReadPaused => _readPaused.Task;
+
+        public void PauseNextRead() => Volatile.Write(ref _pauseArmed, 1);
+
+        public void ResumePausedRead() => _resume.SetResult();
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            if (Interlocked.Exchange(ref _pauseArmed, 0) == 1)
+            {
+                _readPaused.SetResult();
+                _resume.Task.Wait(TestContext.Current.CancellationToken);
+            }
+
+            return base.GetUtcNow();
+        }
+    }
+
+    [Fact]
     public async Task GetTokenAsync_throws_on_zero_expires_in()
     {
         var handler = new FakeHttpHandler().WithResponse(

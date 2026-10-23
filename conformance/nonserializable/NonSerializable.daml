@@ -1,0 +1,26 @@
+-- Copyright 2026 Peaceful Studio OÜ
+-- SPDX-License-Identifier: Apache-2.0
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+module NonSerializable where
+
+type ShowEq a = (Show a, Eq a)
+
+data VSyn = VSyn (forall a. ShowEq a => a -> Text) | VSynNone
+
+data Fn = Fn with
+    f : Int -> Int
+
+applyFn : Fn -> Int -> Int
+applyFn fn = fn.f
+
+template Ledger
+  with
+    owner : Party
+    balance : Int
+  where
+    signatory owner
+
+    choice Increment : ContractId Ledger
+      controller owner
+      do create this with balance = applyFn (Fn (+ 1)) balance

@@ -8,7 +8,6 @@ using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 using Daml.Runtime.Outcomes;
 using Grpc.Core;
 using Grpc.Net.Client;

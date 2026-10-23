@@ -52,6 +52,15 @@ public abstract record TransferInstructionResult_Output : global::Daml.Runtime.D
     public sealed record TransferInstructionResult_Pending(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Pending Value) : TransferInstructionResult_Output
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Pending>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "TransferInstructionResult_Pending";
 
         /// <inheritdoc />
@@ -61,6 +70,15 @@ public abstract record TransferInstructionResult_Output : global::Daml.Runtime.D
     /// <summary>TransferInstructionResult_Completed constructor.</summary>
     public sealed record TransferInstructionResult_Completed(global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Completed Value) : TransferInstructionResult_Output
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionResult_Output_TransferInstructionResult_Completed>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "TransferInstructionResult_Completed";
 
@@ -77,5 +95,4 @@ public abstract record TransferInstructionResult_Output : global::Daml.Runtime.D
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("TransferInstructionResult_Failed", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
-
 }

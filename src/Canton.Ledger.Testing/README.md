@@ -15,7 +15,7 @@ transport, no `Canton.Ledger.Kernel`, no PostgreSQL driver.
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Testing --version 0.7.0
+dotnet add package Canton.Ledger.Testing --version 0.7.1
 ```
 
 Every fake replays canned data staged ahead of time — none of them is a semantic ledger/PQS
@@ -31,14 +31,26 @@ version, point-read transactions, transaction trees, the traffic-cost estimate, 
 interface. `SubmitAsync`/`SubmitReassignmentAsync` echo the submission's command id (minting one
 when omitted).
 
+`FakeLedgerClient.Submissions` lists every write the client was handed, one `RecordedSubmission` per
+call, in call order. A `RecordedSubmission.Commands` holds the command submission as the client puts
+it on the wire (the submitter's `ActAs`/`ReadAs` applied, the effective command id, the workflow id
+and the command; `TryCreateAsync` and `TryExerciseAsync` appear as the single-command submission they
+stand for), a `RecordedSubmission.Reassignment` holds a reassignment submission, and a `RecordedSubmission.Execution` holds the signed submission handed to `ExecuteSubmissionAsync`, `ExecuteSubmissionAndWaitAsync` or `ExecuteSubmissionAndWaitForTransactionAsync`. Select a kind
+with `Submissions.OfType<RecordedSubmission.Commands>()` and assert on your code's parties, payload,
+choice arguments and sequence of writes. `EstimateTrafficCostAsync` submits nothing and is not
+recorded.
+
 ## Key types
 
 | Type | Purpose |
 |------|---------|
 | `FakeLedgerClient` | Configurable in-memory `ICantonLedgerClient` (and thus `ILedgerClient`). Build it with the fluent builder from `FakeLedgerClient.Create()`. Any member, Daml type, or Canton read you did not stage throws a descriptive `NotSupportedException`. |
-| `FakeLedgerClientBuilder` | `WithLedgerEnd` (the ledger end *before* any write — stage an event for a bounded window opened around the `n`th write at that offset plus `n`), `WithActiveContracts<T>` (the staged snapshot must end on a single terminal `Checkpoint` or `StreamError`, as a participant's does — `WithMalformedActiveContracts<T>` stages one that deliberately does not), `WithContractEvents<T>`, `WithLedgerEffects<T>`, `WithExerciseResult<TResult>`, `WithCreateResult<TTemplate>`, `WithSubmissionOutcome`, `WithTransactionTree`, `WithReassignmentResult<T>`, `WithCompletionEvents`, `WithConnectedSynchronizers`, `WithLedgerApiVersion`, `WithTrafficCostEstimate` (staging `null` replays a participant that served no estimation), `WithPreparedSubmission`, `WithExecutedSubmission`, `WithExecutedTransaction`, `WithPreferredPackages`, `WithUpdateByOffset`, `WithUpdateById`, `WithUpdateTreeByOffset`, `WithContract<T>`, `WithContractLifecycle<T>`, `WithDisclosure<T>` (the answer `GetDisclosureAsync<T>` returns for a contract id typed as a template or an interface; an id with no staged disclosure reads as `null`), `WithActiveContractsPages<T>`, `WithUpdatesPages`, `WithPrunedOffsets`, the interface counterparts `WithActiveInterfaceContracts<TInterface, TView>`, `WithInterfaceEvents<TInterface, TView>` and `WithInterfaceLedgerEffects<TInterface, TView>`, `WithThrowingCallFailure` (stage a `LedgerOperationException` that every *throwing* member raises from its task, as that same instance; `Try*` members and streams keep returning what you staged for them. The fake raises the instance as staged and does not derive its `CommitState` from the member called, so build it with the `LedgerOperationException(message, status, commitState, category, errorId, metadata, innerException)` constructor to carry a `Status` and the `CommitState` suited to the members under test: a failed read is `NotCommitted`), then `Build()`. |
+| `FakeLedgerClientBuilder` | `WithLedgerEnd` (the ledger end *before* any write — stage an event for a bounded window opened around the `n`th write at that offset plus `n`), `WithActiveContracts<T>` (the staged snapshot must end on a single terminal `Checkpoint` or `StreamError`, as a participant's does — `WithMalformedActiveContracts<T>` stages one that deliberately does not), `WithContractEvents<T>`, `WithLedgerEffects<T>`, `WithExerciseResult<TResult>`, `WithCreateResult<TTemplate>`, `WithSubmissionOutcome`, `WithSubmitAndWaitResult` (the result plain `SubmitAndWaitAsync` returns, carrying the submission's command id), `WithTransactionTree`, `WithReassignmentResult<T>`, `WithCompletionEvents`, `WithConnectedSynchronizers`, `WithLedgerApiVersion`, `WithTrafficCostEstimate` (staging `null` replays a participant that served no estimation), `WithPreparedSubmission`, `WithExecutedSubmission`, `WithExecutedTransaction`, `WithPreferredPackages`, `WithUpdateByOffset`, `WithUpdateById`, `WithUpdateTreeByOffset`, `WithContract<T>`, `WithContractLifecycle<T>`, `WithDisclosure<T>` (the answer `GetDisclosureAsync<T>` returns for a contract id typed as a template or an interface; an id with no staged disclosure reads as `null`), `WithActiveContractsPages<T>`, `WithUpdatesPages`, `WithPrunedOffsets`, the interface counterparts `WithActiveInterfaceContracts<TInterface, TView>`, `WithInterfaceEvents<TInterface, TView>` and `WithInterfaceLedgerEffects<TInterface, TView>`, `WithThrowingCallFailure` (stage a `LedgerOperationException` that every *throwing* member raises from its task, as that same instance; `Try*` members and streams keep returning what you staged for them. The fake raises the instance as staged and does not derive its `CommitState` from the member called, so build it with the `LedgerOperationException(message, status, commitState, category, errorId, metadata, innerException)` constructor to carry a `Status` and the `CommitState` suited to the members under test: a failed read is `NotCommitted`), then `Build()`. |
 | `LedgerEvents` | Factories for `AcsSnapshotEntry<T>` variants, all constrained `where T : ITemplate, IDamlRecord<T>`: `Created` (typed `T` payload plus a `ContractKey? key`), `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message), `Unclassified` (a nullable `LedgerOffset?` and an `UnclassifiedKind`). |
 | `ContractEvents` | Factories for `ContractStreamEvent<T>` variants, all constrained `where T : ITemplate, IDamlRecord<T>`: `Created` and `Assigned` (typed `T` payload plus a `ContractKey? key`), `Archived`, `Unassigned`, `Exercised`, `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message), `Unclassified` (an `UnclassifiedKind`). |
+| `CompletionEvents` | Factories for `CompletionStreamEvent` variants: `CommandAccepted` (a `Completion` and the update id), `CommandRejected` (a `Completion` and a `CompletionStatus`), `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message). |
+| `InterfaceEvents` | Factories for `InterfaceStreamEvent<TInterface, TView>` variants, for both `WithInterfaceEvents` and `WithInterfaceLedgerEffects`; name both type arguments, `TInterface : IDamlInterface, IHasView<TView>` and `TView : IDamlRecord<TView>`: `Created` and `Assigned` (the `TView` payload plus a `ContractKey? key`), `Archived`, `Unassigned`, `Exercised`, `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message), `Unclassified` (a nullable `LedgerOffset?` and an `UnclassifiedKind`). |
+| `InterfaceLedgerEvents` | Factories for `InterfaceAcsSnapshotEntry<TInterface, TView>` variants, for `WithActiveInterfaceContracts`, under the same constraints as `InterfaceEvents`: `Created` (the `TView` payload plus a `ContractKey? key`), `Checkpoint`, `StreamError` (an optional `DamlErrorCategory?`, `string? errorId` and source `Exception?` after the `TransportStatus` and message), `Unclassified` (a nullable `LedgerOffset?` and an `UnclassifiedKind`). |
 | `LedgerOutcomes` | Factories for `ExerciseOutcome<T>` variants: `One`, `None`, `Many`, `DamlError`, `InfraError` (an optional `DamlErrorCategory?` before the source `Exception?`), `CommittedUndecodable` (the command committed but its response could not be decoded; carries the update id when one was read). |
 | `LedgerResults` | Factories for `TransactionResult`, `SubmitAndWaitResult`, `Contract<T>`. |
 | `FakeAdminClient` | Configurable in-memory `IAdminClient`. Build it with `FakeAdminClient.Create()`. Query-style members you did not stage throw `NotSupportedException`; the void command members (`GrantUserRightsAsync`, `RevokeUserRightsAsync`, `UploadDarAsync`, `ValidateDarAsync`) always succeed. |
@@ -107,8 +119,8 @@ var completion = new Completion(
 
 ICantonLedgerClient client = FakeLedgerClient.Create()
     .WithCompletionEvents(
-        new CompletionStreamEvent.Checkpoint(LedgerOffset.Begin),
-        new CompletionStreamEvent.CommandAccepted(completion, "update-1"))
+        CompletionEvents.Checkpoint(LedgerOffset.Begin),
+        CompletionEvents.CommandAccepted(completion, "update-1"))
     .Build();
 
 await foreach (var completionEvent in client.CompletionStreamAsync(owner))
@@ -231,3 +243,27 @@ None of the fakes in this package pull in Moq / NSubstitute, so it composes with
 mocking framework in your own test project. Every fake — `FakeLedgerClient`, `FakeAdminClient`,
 `FakeTokenProvider` and `FakePqsClient` — depends only on `Canton.Ledger.Abstractions`,
 `Daml.Ledger.Abstractions`, and `Daml.Runtime`.
+
+## Excluding the package from your own code coverage
+
+This package is test support, not code under test. When its PDB resolves next to the DLL, for
+example in a build packed on your own machine, a coverage tool counts its lines in your report. Exclude
+the module by path. With `Microsoft.Testing.Extensions.CodeCoverage`, put the exclusion in your
+coverage settings file:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Exclude>
+        <ModulePath>.*Canton\.Ledger\.Testing\.dll$</ModulePath>
+      </Exclude>
+    </ModulePaths>
+  </CodeCoverage>
+</Configuration>
+```
+
+Save it as `coverage.settings.xml` and pass it with `--coverage-settings coverage.settings.xml`. If you
+already have a settings file, add the `ModulePath` line to its existing `ModulePaths` `Exclude` list.
+With coverlet, use its own filter instead: `Exclude` set to `[Canton.Ledger.Testing]*`.

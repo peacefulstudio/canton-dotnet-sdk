@@ -51,7 +51,7 @@ public sealed record Metadata(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Metadata FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Metadata(
-        Values: (global::System.Collections.Generic.IReadOnlyDictionary<string, string>)record.GetRequiredField("values").As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value)
+        Values: (global::System.Collections.Generic.IReadOnlyDictionary<string, string>)record.GetRequiredField("values", 0).As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -63,5 +63,4 @@ public sealed record Metadata(
             global::Daml.Runtime.Data.DamlField.Create("values", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTextMap(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "values"), context.Field("values"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0)))
         );
     }
-
 }

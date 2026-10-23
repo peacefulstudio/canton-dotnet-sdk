@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using AwesomeAssertions;
+using Canton.Ledger.Testing.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using NSubstitute;
@@ -49,6 +51,53 @@ public class PqsHealthCheckTests
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
         result.Description.Should().Be("PQS database is unreachable.");
+    }
+
+    private static async Task<(Exception? Logged, Exception? InResult)> ExceptionsOfAnUnreachableDatabase(bool emitIdentifiers)
+    {
+        using var logs = new CapturingLoggerFactory();
+        var options = Options.Create(new PqsClientOptions
+        {
+            ConnectionString = "Host=127.0.0.1;Port=1;Database=pqs;Timeout=1",
+            EmitPartyAndContractSpanTags = emitIdentifiers,
+        });
+        var healthCheck = new PqsHealthCheck(options, logger: logs.CreateLogger<PqsHealthCheck>());
+
+        var result = await healthCheck.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
+
+        return (logs.Records.Single(record => record.Level == LogLevel.Warning).Exception, result.Exception);
+    }
+
+    [Fact]
+    public async Task CheckHealth_logs_a_redacted_exception_when_identifiers_are_off()
+    {
+        var (logged, _) = await ExceptionsOfAnUnreachableDatabase(emitIdentifiers: false);
+
+        logged!.Message.Should().Be("Npgsql.NpgsqlException");
+    }
+
+    [Fact]
+    public async Task CheckHealth_logs_the_original_exception_when_identifiers_are_on()
+    {
+        var (logged, _) = await ExceptionsOfAnUnreachableDatabase(emitIdentifiers: true);
+
+        logged.Should().BeOfType<NpgsqlException>();
+    }
+
+    [Fact]
+    public async Task CheckHealth_result_carries_a_redacted_exception_when_identifiers_are_off()
+    {
+        var (_, inResult) = await ExceptionsOfAnUnreachableDatabase(emitIdentifiers: false);
+
+        inResult!.Message.Should().Be("Npgsql.NpgsqlException");
+    }
+
+    [Fact]
+    public async Task CheckHealth_result_carries_the_original_exception_when_identifiers_are_on()
+    {
+        var (_, inResult) = await ExceptionsOfAnUnreachableDatabase(emitIdentifiers: true);
+
+        inResult.Should().BeOfType<NpgsqlException>();
     }
 
     [Fact]

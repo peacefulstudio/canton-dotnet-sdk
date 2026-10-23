@@ -30,6 +30,9 @@ public class FakeLedgerClientConformanceTests : LedgerClientConformanceTests<Con
     protected override SubmitterInfo Reader { get; } = Alice;
 
     protected override ILedgerClient CreateClient() =>
+        new OpenEndedStreamsLedgerClient(SeededFake());
+
+    private static FakeLedgerClient SeededFake() =>
         FakeLedgerClient.Create()
             .WithLedgerEnd(LedgerEnd)
             .WithActiveContracts(
@@ -97,6 +100,21 @@ public class FakeLedgerClientConformanceTests : LedgerClientConformanceTests<Con
             (writer, commandId) => writer.TryExerciseAsync<DamlUnit>(ArchiveProbe, Alice, commandId: commandId),
             (writer, commandId) => writer.TryCreateAsync(new ConformanceProbe(Alice), Alice, commandId: commandId),
             () => ValueTask.FromResult(client.LastSubmittedCommandId?.Value));
+    }
+
+    protected override WriteConformanceFixture? CreateWriteFixture()
+    {
+        var fake = FakeLedgerClient.Create()
+            .WithSubmissionOutcome(LedgerOutcomes.One(
+                LedgerResults.Transaction("update-1", LedgerOffset.At(1), [], [], new CommandId("cmd-1"))))
+            .WithSubmitAndWaitResult(LedgerResults.SubmitAndWait(new CommandId("cmd-1"), "update-1", LedgerOffset.At(1)))
+            .Build();
+
+        return new WriteConformanceFixture(
+            new ActAsAuthorizingLedgerClient(fake, Alice),
+            CommandsSubmission.Single(ArchiveProbe),
+            Alice,
+            new Party("mallory"));
     }
 
     private static readonly ExerciseCommand ArchiveProbe = new(

@@ -13,7 +13,7 @@ namespace Daml.Codegen.CSharp.Tests;
 public class DarCrossPackageResolverTests
 {
     private static DarCrossPackageResolver ResolverOver(IDarSource dar, CodeGenOptions? options = null, ILogger? logger = null) =>
-        new(dar, new PackageNameTableCache(options ?? new CodeGenOptions(), dar.MainPackage.PackageId, logger), logger);
+        new(dar, new PackageNameTableCache(options ?? new CodeGenOptions(), dar.MainPackage.PackageId, logger));
 
     private static DamlPackage Package(string id, string name, params DamlModule[] modules) =>
         new()
@@ -482,16 +482,29 @@ public class DarCrossPackageResolverTests
     }
 
     [Fact]
-    public void Resolve_returns_the_bare_name_and_records_nothing_for_an_unmapped_stdlib_type()
+    public void Resolve_throws_a_codegen_exception_naming_the_type_for_an_unmapped_stdlib_type()
     {
         var main = Package("main-id", "my-pkg", Module("M", Record("Widget")));
         var stdlib = Package("stdlib-id", "daml-stdlib", Module("DA.Mystery.Types", Record("Mystery")));
         var resolver = ResolverOver(new InMemoryDarSource(main, stdlib));
 
-        var result = resolver.Resolve(new DamlTypeRef("stdlib-id", "DA.Mystery.Types", "Mystery"), ContextFor(main));
+        var resolve = () => resolver.Resolve(new DamlTypeRef("stdlib-id", "DA.Mystery.Types", "Mystery"), ContextFor(main));
 
-        result.Should().Be("Mystery");
-        resolver.DiscoveredExternalPackageIds.Should().NotContain("stdlib-id");
+        resolve.Should().Throw<CodegenException>()
+            .WithMessage("*daml-stdlib:DA.Mystery.Types:Mystery*");
         resolver.DiscoveredExternalPackageIds.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Resolve_treats_a_package_named_like_a_stdlib_package_as_a_foreign_package()
+    {
+        var main = Package("main-id", "my-pkg", Module("M", Record("Widget")));
+        var lookalike = Package("lookalike-id", "daml-stdlib-evil", Module("Evil.Types", Record("Thing")));
+        var resolver = ResolverOver(new InMemoryDarSource(main, lookalike));
+
+        var result = resolver.Resolve(new DamlTypeRef("lookalike-id", "Evil.Types", "Thing"), ContextFor(main));
+
+        result.Should().Be("global::Evil.Types.Thing");
+        resolver.DiscoveredExternalPackageIds.Should().BeEquivalentTo(["lookalike-id"]);
     }
 }

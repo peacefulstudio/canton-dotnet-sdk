@@ -18,6 +18,14 @@ public sealed partial record Steward
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("revised")] string Revised
     ) : global::Daml.Runtime.Data.IDamlRecord<Revise>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Revised, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("revised", new global::Daml.Runtime.Data.DamlText(Revised))
@@ -25,7 +33,7 @@ public sealed partial record Steward
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Revise FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Revise(
-            Revised: record.GetRequiredField("revised").As<global::Daml.Runtime.Data.DamlText>().Value
+            Revised: record.GetRequiredField("revised", 0).As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Steward
                 global::Daml.Runtime.Data.DamlField.Create("revised", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "revised"), context.Field("revised")))
             );
         }
-
     }
 }

@@ -145,7 +145,7 @@ public class EmittedRecordReferenceCompilesTests
             .Content;
         nestedSource.Should().Contain("Quantity_",
             "the choice-arg-record field colliding with the nested choice type name must be disambiguated to Quantity_");
-        nestedSource.Should().Contain("record.GetRequiredField(\"quantity\")",
+        nestedSource.Should().Contain("record.GetRequiredField(\"quantity\", 0)",
             "the Daml wire field name \"quantity\" must be unchanged by the C# member rename");
 
         var diagnostics = CompileEmittedFiles(files);

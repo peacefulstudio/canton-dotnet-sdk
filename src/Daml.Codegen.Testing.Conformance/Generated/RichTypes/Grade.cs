@@ -27,5 +27,4 @@ public sealed record Grade : global::Daml.Runtime.Data.IDamlRecord<Grade>
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return global::Daml.Runtime.Data.DamlRecord.Create();
     }
-
 }

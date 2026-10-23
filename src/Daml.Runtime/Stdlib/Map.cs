@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Stdlib;
 
@@ -104,7 +105,7 @@ public sealed record Map<TKey, TValue>(IReadOnlyList<KeyValuePair<TKey, TValue>>
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(convertKey);
         ArgumentNullException.ThrowIfNull(convertValue);
-        var map = record.GetRequiredField("map").As<DamlGenMap>();
+        var map = record.GetRequiredField("map", 0).As<DamlGenMap>();
         var entries = map.Entries
             .Select(entry => new KeyValuePair<TKey, TValue>(
                 convertKey(entry.Key),
@@ -186,7 +187,7 @@ internal sealed class MapJsonConverter<TKey, TValue> : JsonConverter<Map<TKey, T
     where TValue : notnull
 {
     private static readonly string TypeName =
-        $"{nameof(Map<object, object>)}<{Describe(typeof(TKey))}, {Describe(typeof(TValue))}>";
+        $"{nameof(Map<object, object>)}<{DiscriminatedUnionJson.Describe(typeof(TKey))}, {DiscriminatedUnionJson.Describe(typeof(TValue))}>";
 
     /// <remarks>
     /// The posture <see cref="SetJsonConverter{T}"/> already holds: a null token is read as the
@@ -287,17 +288,4 @@ internal sealed class MapJsonConverter<TKey, TValue> : JsonConverter<Map<TKey, T
     private static bool IsIgnoredDefault<TProperty>(TProperty value, JsonSerializerOptions options) =>
         options.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingDefault
         && EqualityComparer<TProperty>.Default.Equals(value, default!);
-
-    private static string Describe(Type type)
-    {
-        var arity = type.Name.IndexOf('`', StringComparison.Ordinal);
-        var name = arity < 0 ? type.Name : type.Name[..arity];
-        return type switch
-        {
-            { IsGenericType: true } =>
-                $"{name}<{string.Join(", ", type.GetGenericArguments().Select(Describe))}>",
-            { DeclaringType: not null } => $"{type.DeclaringType.Name}.{name}",
-            _ => name,
-        };
-    }
 }

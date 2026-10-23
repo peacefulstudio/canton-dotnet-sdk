@@ -32,10 +32,15 @@ internal static class RetryPipelineFactory
     /// Optional observer invoked before each retry delay, e.g. to emit a telemetry span. Receives a
     /// transport-neutral <see cref="RetryAttempt"/>.
     /// </param>
+    /// <param name="timeProvider">
+    /// Clock the backoff delays are scheduled on; defaults to <see cref="TimeProvider.System"/>. A test
+    /// supplies a fake one to fast-forward a delay instead of waiting it out.
+    /// </param>
     public static ResiliencePipeline Create(
         RetryOptions options,
         Func<Exception, bool>? shouldRetry = null,
-        Action<RetryAttempt>? onRetry = null)
+        Action<RetryAttempt>? onRetry = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -65,7 +70,7 @@ internal static class RetryPipelineFactory
             };
         }
 
-        return new ResiliencePipelineBuilder()
+        return new ResiliencePipelineBuilder { TimeProvider = timeProvider ?? TimeProvider.System }
             .AddRetry(retryStrategy)
             .Build();
     }

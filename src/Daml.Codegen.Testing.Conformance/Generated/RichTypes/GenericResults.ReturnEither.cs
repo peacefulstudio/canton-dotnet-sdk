@@ -18,6 +18,14 @@ public sealed partial record GenericResults
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("wantRight")] bool WantRight
     ) : global::Daml.Runtime.Data.IDamlRecord<ReturnEither>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(WantRight, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("wantRight", new global::Daml.Runtime.Data.DamlBool(WantRight))
@@ -25,7 +33,7 @@ public sealed partial record GenericResults
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static ReturnEither FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new ReturnEither(
-            WantRight: record.GetRequiredField("wantRight").As<global::Daml.Runtime.Data.DamlBool>().Value
+            WantRight: record.GetRequiredField("wantRight", 0).As<global::Daml.Runtime.Data.DamlBool>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record GenericResults
                 global::Daml.Runtime.Data.DamlField.Create("wantRight", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "wantRight"), context.Field("wantRight")))
             );
         }
-
     }
 }

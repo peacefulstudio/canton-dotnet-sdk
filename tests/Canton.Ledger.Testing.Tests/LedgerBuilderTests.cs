@@ -136,6 +136,23 @@ public class LedgerBuilderTests
     }
 
     [Fact]
+    public void LedgerOutcomes_Many_throws_for_a_blank_contract_id()
+    {
+        var act = () => LedgerOutcomes.Many<string>(["cid1", " "]);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("ContractIds");
+    }
+
+    [Fact]
+    public void LedgerResults_Transaction_throws_for_a_blank_archived_contract_id()
+    {
+        var act = () => LedgerResults.Transaction(
+            "update1", LedgerOffset.At(5), [], ["archived1", ""], (CommandId)"cmd1");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("ArchivedContractIds");
+    }
+
+    [Fact]
     public void LedgerResults_Transaction_wraps_a_TransactionResult()
     {
         var result = LedgerResults.Transaction(

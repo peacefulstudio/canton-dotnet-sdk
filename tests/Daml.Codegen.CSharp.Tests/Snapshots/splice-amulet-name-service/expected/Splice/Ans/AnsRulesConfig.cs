@@ -20,6 +20,17 @@ public sealed record AnsRulesConfig(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("descriptionPrefix")] string DescriptionPrefix
 ) : global::Daml.Runtime.Data.IDamlRecord<AnsRulesConfig>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(RenewalDuration, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.RelTime>.Default);
+        hash.Add(EntryLifetime, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.RelTime>.Default);
+        hash.Add(EntryFee, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        hash.Add(DescriptionPrefix, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("renewalDuration", RenewalDuration.ToRecord()),
@@ -30,10 +41,10 @@ public sealed record AnsRulesConfig(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AnsRulesConfig FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRulesConfig(
-        RenewalDuration: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("renewalDuration").As<global::Daml.Runtime.Data.DamlRecord>()),
-        EntryLifetime: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("entryLifetime").As<global::Daml.Runtime.Data.DamlRecord>()),
-        EntryFee: record.GetRequiredField("entryFee").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-        DescriptionPrefix: record.GetRequiredField("descriptionPrefix").As<global::Daml.Runtime.Data.DamlText>().Value
+        RenewalDuration: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("renewalDuration", 0).As<global::Daml.Runtime.Data.DamlRecord>()),
+        EntryLifetime: global::Daml.Runtime.Stdlib.RelTime.FromRecord(record.GetRequiredField("entryLifetime", 1).As<global::Daml.Runtime.Data.DamlRecord>()),
+        EntryFee: record.GetRequiredField("entryFee", 2).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        DescriptionPrefix: record.GetRequiredField("descriptionPrefix", 3).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -48,5 +59,4 @@ public sealed record AnsRulesConfig(
             global::Daml.Runtime.Data.DamlField.Create("descriptionPrefix", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "descriptionPrefix"), context.Field("descriptionPrefix")))
         );
     }
-
 }

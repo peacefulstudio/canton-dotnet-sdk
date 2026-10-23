@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Daml.Codegen.Tooling</PackageId>
+    <Description>Build tooling that generates the Daml.Runtime stdlib bindings. Not published as a package.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daml.Codegen.CSharp\Daml.Codegen.CSharp.csproj" />
+    <ProjectReference Include="..\Daml.Codegen.Intermediate\Daml.Codegen.Intermediate.csproj" />
+    <ProjectReference Include="..\Daml.Runtime\Daml.Runtime.csproj" />
+  </ItemGroup>
+
+</Project>

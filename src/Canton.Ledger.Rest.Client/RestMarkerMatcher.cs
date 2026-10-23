@@ -25,9 +25,9 @@ internal static class RestMarkerMatcher<TMarker>
 
     private const int GoogleRpcCodeOk = 0;
 
-    public static bool IsInterface { get; } = TMarker.DamlTypeId.Kind == DamlTypeKind.Interface;
+    private static readonly DamlTypeDescriptor Marker = MarkerDescriptors.Of<TMarker>();
 
-    private static readonly DamlTypeDescriptor Marker = TMarker.DamlTypeId;
+    public static bool IsInterface { get; } = Marker.Kind == DamlTypeKind.Interface;
 
     private static readonly RuntimeIdentifier MarkerIdentity = Marker.Identifier;
 
@@ -36,12 +36,7 @@ internal static class RestMarkerMatcher<TMarker>
     /// <c>InterfaceFilter</c> to this marker, using the package-name reference format
     /// (<c>#&lt;package-name&gt;</c>) the JSON Ledger API accepts in place of a package id.
     /// </summary>
-    public static WireIdentifier FilterIdentifier { get; } = new()
-    {
-        PackageId = $"#{TMarker.DamlTypeId.PackageName}",
-        ModuleName = MarkerIdentity.ModuleName,
-        EntityName = MarkerIdentity.EntityName,
-    };
+    public static WireIdentifier FilterIdentifier => RestWireConversions.ToPackageNameReference(Marker);
 
     public static bool MatchesCreated(WireCreatedEvent created) =>
         IsInterface

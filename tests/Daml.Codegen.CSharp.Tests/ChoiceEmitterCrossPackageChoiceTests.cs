@@ -43,7 +43,7 @@ public class ChoiceEmitterCrossPackageChoiceTests
         var package = Package(new DamlModule { Name = "Main", Templates = [template], DataTypes = dataTypes, Interfaces = [] });
         var resolution = RealResolution.Of(package, Options, dependencies);
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
+        var indent = new IndentWriter(sb);
         Emitter(resolution).TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }

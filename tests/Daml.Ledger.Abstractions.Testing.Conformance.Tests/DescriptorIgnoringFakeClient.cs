@@ -21,14 +21,14 @@ internal enum InterfaceRead
 }
 
 /// <summary>
-/// Derives from <see cref="ConformingFakeClient"/> and breaks the missing-descriptor contract of
+/// Derives from <see cref="DelegatingLedgerClient"/> over the shipped fake and breaks the missing-descriptor contract of
 /// one interface read: the read either accepts a <c>null</c> descriptor without complaint, or
 /// rejects it only once the stream is enumerated. The other two interface reads and the whole
 /// template family keep conforming, so the only check it can fail is the descriptor check of the
 /// read it breaks.
 /// </summary>
 internal sealed class DescriptorIgnoringFakeClient(InterfaceRead brokenRead, bool rejectsOnlyWhenEnumerated)
-    : ConformingFakeClient
+    : DelegatingLedgerClient(SeededShippedFake.Create())
 {
     public override IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
         ViewDescriptor<TInterface, TView> view,

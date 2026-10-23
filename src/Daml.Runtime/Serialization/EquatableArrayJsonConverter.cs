@@ -86,7 +86,7 @@ public sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
 
 internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableArray<T>>
 {
-    private static readonly string TypeName = $"{nameof(EquatableArray)}<{Describe(typeof(T))}>";
+    private static readonly string TypeName = $"{nameof(EquatableArray)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
 
     /// <remarks>
     /// The struct has no <c>null</c> state to represent one with, so reading the null token is
@@ -169,18 +169,5 @@ internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableAr
         {
             throw new JsonException($"Cannot write element {index} of {TypeName}: {ex.Message}", ex);
         }
-    }
-
-    private static string Describe(Type type)
-    {
-        var arity = type.Name.IndexOf('`');
-        var name = arity < 0 ? type.Name : type.Name[..arity];
-        return type switch
-        {
-            { IsGenericType: true } =>
-                $"{name}<{string.Join(", ", type.GetGenericArguments().Select(Describe))}>",
-            { DeclaringType: not null } => $"{type.DeclaringType.Name}.{name}",
-            _ => name,
-        };
     }
 }

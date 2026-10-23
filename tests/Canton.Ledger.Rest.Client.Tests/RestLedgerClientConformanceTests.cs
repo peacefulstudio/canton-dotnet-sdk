@@ -37,6 +37,18 @@ public class RestLedgerClientConformanceTests : LedgerClientConformanceTests<Res
             () => ValueTask.FromResult(participant.RecordedCommandId));
     }
 
+    protected override WriteConformanceFixture? CreateWriteFixture()
+    {
+        var authorized = new Party("party::alice");
+        var client = new RestLedgerClient(new ParticipantHttpClientFactory(new ActAsAuthorizingSubmissionHandler(authorized)));
+
+        return new WriteConformanceFixture(
+            client,
+            CommandsSubmission.Single(ArchiveProbe),
+            authorized,
+            new Party("party::mallory"));
+    }
+
     private static readonly ExerciseCommand ArchiveProbe = new(
         RestConformanceProbe.TemplateId,
         new ContractId<RestConformanceProbe>("00probe"),
@@ -61,7 +73,7 @@ internal sealed class RecordingSubmissionHandler : HttpMessageHandler
     private const string ProbeTemplateIdJson =
         """{"packageId": "conformance-pkg", "moduleName": "Conformance.Probe", "entityName": "Probe"}""";
 
-    private static readonly string SubmittedTransaction =
+    internal static readonly string SubmittedTransaction =
         $$$"""
         {
           "transaction": {
@@ -125,6 +137,55 @@ internal sealed class RecordingSubmissionHandler : HttpMessageHandler
     }
 }
 
+/// <summary>
+/// The participant half of the submitter-authority conformance scenario: it accepts a submission
+/// only when its <c>actAs</c> is exactly the authorized party and answers anything else with
+/// <c>403 Forbidden</c>, so a client that merges or ignores the submitter parameter is rejected.
+/// </summary>
+internal sealed class ActAsAuthorizingSubmissionHandler(Party authorized) : HttpMessageHandler
+{
+    private const string SubmitAndWaitResponse = """{"updateId": "upd-submitted", "completionOffset": "1"}""";
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+        using var document = JsonDocument.Parse(body);
+        var returnsTransaction = request.RequestUri!.AbsolutePath.EndsWith(
+            "submit-and-wait-for-transaction", StringComparison.Ordinal);
+        var commands = returnsTransaction ? document.RootElement.GetProperty("commands") : document.RootElement;
+        var actAs = commands.GetProperty("actAs")
+            .EnumerateArray().Select(party => party.GetString()).ToList();
+
+        if (!actAs.SequenceEqual([authorized.Value]))
+        {
+            return Respond(request, HttpStatusCode.Forbidden, JsonSerializer.Serialize(new
+            {
+                code = "PERMISSION_DENIED",
+                cause = $"submission acting as [{string.Join(",", actAs)}] is not authorized by {authorized.Value}",
+                grpcCodeValue = 7,
+                errorCategory = 1,
+                context = new { },
+            }));
+        }
+
+        return Respond(
+            request,
+            HttpStatusCode.OK,
+            returnsTransaction
+                ? RecordingSubmissionHandler.SubmittedTransaction
+                : SubmitAndWaitResponse);
+    }
+
+    private static HttpResponseMessage Respond(HttpRequestMessage request, HttpStatusCode status, string json) =>
+        new(status)
+        {
+            RequestMessage = request,
+            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+        };
+}
+
 /// <summary>The Daml marker the conformance scenario's snapshot and streams are filtered to.</summary>
 /// <param name="Owner">The party the probe contract is issued to.</param>
 public sealed record RestConformanceProbe([property: DamlFieldAttribute("owner")] Party Owner)
@@ -184,7 +245,8 @@ public sealed record RestConformanceProbe([property: DamlFieldAttribute("owner")
 /// The participant half of the JSON Ledger API conformance scenario: it serves the seeded ledger
 /// end, filters the active-contract snapshot by the requested <c>activeAtOffset</c>, and filters
 /// the update stream by the requested <c>(beginExclusive, endInclusive]</c> window and transaction
-/// shape — so the conformance checks exercise what <see cref="RestLedgerClient"/> asks for as well
+/// shape, and holds an open-ended read that has delivered everything seeded until the caller cancels
+/// it, so the conformance checks exercise what <see cref="RestLedgerClient"/> asks for as well
 /// as how it projects the answer.
 /// </summary>
 internal sealed class ConformanceParticipantHandler : HttpMessageHandler
@@ -222,7 +284,7 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
         {
             LedgerEndPath => new { offset = LedgerEndOffset },
             ActiveContractsPagePath => new { activeContracts = ActiveContractsAt(OffsetField(body, "activeAtOffset")) },
-            UpdatesPath => UpdatesFor(body),
+            UpdatesPath => await UpdatesFor(body, cancellationToken),
             var unexpected => throw new InvalidOperationException(
                 $"The conformance scenario seeds no response for '{unexpected}'."),
         };
@@ -245,18 +307,25 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
             .Select(seeded => seeded.Row),
         ];
 
-    private static object[] UpdatesFor(string body)
+    private static async Task<object[]> UpdatesFor(string body, CancellationToken cancellationToken)
     {
         var beginExclusive = OffsetField(body, "beginExclusive");
-        var endInclusive = OffsetField(body, "endInclusive");
+        var endInclusive = OptionalOffsetField(body, "endInclusive");
         var consumption = RequestsLedgerEffects(body) ? ConsumingExercise() : Archival();
 
-        return
+        object[] window =
         [
             .. new[] { (Offset: CreatedOffset, Event: Creation()), (Offset: ConsumedOffset, Event: consumption) }
-                .Where(seeded => seeded.Offset > beginExclusive && seeded.Offset <= endInclusive)
+                .Where(seeded => seeded.Offset > beginExclusive && seeded.Offset <= (endInclusive ?? long.MaxValue))
                 .Select(seeded => Transaction(seeded.Offset, seeded.Event)),
         ];
+
+        if (endInclusive is null && window.Length == 0)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+
+        return window;
     }
 
     private static bool RequestsLedgerEffects(string body)
@@ -275,13 +344,17 @@ internal sealed class ConformanceParticipantHandler : HttpMessageHandler
             $"The update request names neither '{AcsDeltaShape}' nor '{LedgerEffectsShape}': {body}");
     }
 
-    private static long OffsetField(string body, string name)
+    private static long OffsetField(string body, string name) =>
+        OptionalOffsetField(body, name)
+            ?? throw new InvalidOperationException(
+                $"The request omits the offset field '{name}', so the scenario cannot bound it: {body}");
+
+    private static long? OptionalOffsetField(string body, string name)
     {
         using var document = JsonDocument.Parse(body);
         return document.RootElement.TryGetProperty(name, out var offset)
             ? long.Parse(offset.GetString()!, CultureInfo.InvariantCulture)
-            : throw new InvalidOperationException(
-                $"The request omits the offset field '{name}', so the scenario cannot bound it: {body}");
+            : null;
     }
 
     private static object ActiveContract(string contractId, object templateId, long offset, object[] interfaceViews) => new

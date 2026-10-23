@@ -112,22 +112,6 @@ public sealed record ExerciseCommand(
             PackageName = owner.Kind == DamlTypeKind.Template ? owner.PackageName : null,
         };
     }
-
-    /// <summary>
-    /// Creates an ExerciseCommand for an interface choice. The interface id is
-    /// what travels on the wire — the ledger API's <c>template_id</c> field
-    /// also accepts interface ids for interface choices.
-    /// </summary>
-    /// <typeparam name="TInterface">The Daml interface marker type.</typeparam>
-    [Obsolete($"Use {nameof(For)}<TOwner> instead — it resolves the same identifier for both templates and interface markers.")]
-    public static ExerciseCommand ForInterface<TInterface>(
-        ContractId<TInterface> contractId,
-        ChoiceName choice,
-        DamlValue argument) where TInterface : IDamlInterface
-    {
-        ArgumentNullException.ThrowIfNull(contractId);
-        return new(TInterface.InterfaceId, contractId, choice, argument);
-    }
 }
 
 /// <summary>

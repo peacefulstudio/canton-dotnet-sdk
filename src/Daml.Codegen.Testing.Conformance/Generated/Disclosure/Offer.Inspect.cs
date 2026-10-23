@@ -18,6 +18,14 @@ public sealed partial record Offer
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("reader")] global::Daml.Runtime.Data.Party Reader
     ) : global::Daml.Runtime.Data.IDamlRecord<Inspect>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Reader, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("reader", Reader.ToDamlValue())
@@ -25,7 +33,7 @@ public sealed partial record Offer
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Inspect FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Inspect(
-            Reader: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("reader").As<global::Daml.Runtime.Data.DamlParty>())
+            Reader: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("reader", 0).As<global::Daml.Runtime.Data.DamlParty>())
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Offer
                 global::Daml.Runtime.Data.DamlField.Create("reader", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadParty(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reader"), context.Field("reader")))
             );
         }
-
     }
 }

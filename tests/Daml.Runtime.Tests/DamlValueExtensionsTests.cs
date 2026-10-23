@@ -114,8 +114,6 @@ public class DamlValueExtensionsTests
         action.Should().Throw<NotSupportedException>();
     }
 
-    // ── Unit → default(T) ───────────────────────────────────────────
-
     [Fact]
     public void FromDamlValue_should_throw_when_unwrapping_Unit_to_non_nullable_value_type()
     {
@@ -137,14 +135,10 @@ public class DamlValueExtensionsTests
     }
 
     [Fact]
-    public void FromDamlValue_should_return_unit_instance_when_target_is_object()
+    public void FromDamlValue_should_return_unit_instance_not_null_when_target_is_object_because_object_is_assignable_from_DamlUnit()
     {
-        // Assignable check takes precedence over the DamlUnit → default path:
-        // object is assignable from DamlUnit, so we return the singleton rather than null.
         DamlUnit.Instance.FromDamlValue<object>().Should().BeSameAs(DamlUnit.Instance);
     }
-
-    // ── Nullable<T> primitive branches (regression for asymmetry bug) ──
 
     [Fact]
     public void FromDamlValue_should_convert_DamlInt64_to_nullable_long()

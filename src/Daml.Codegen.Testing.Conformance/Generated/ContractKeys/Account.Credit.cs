@@ -18,6 +18,14 @@ public sealed partial record Account
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("delta")] long Delta
     ) : global::Daml.Runtime.Data.IDamlRecord<Credit>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Delta, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("delta", new global::Daml.Runtime.Data.DamlInt64(Delta))
@@ -25,7 +33,7 @@ public sealed partial record Account
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Credit FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Credit(
-            Delta: record.GetRequiredField("delta").As<global::Daml.Runtime.Data.DamlInt64>().Value
+            Delta: record.GetRequiredField("delta", 0).As<global::Daml.Runtime.Data.DamlInt64>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Account
                 global::Daml.Runtime.Data.DamlField.Create("delta", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadInt64(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "delta"), context.Field("delta")))
             );
         }
-
     }
 }

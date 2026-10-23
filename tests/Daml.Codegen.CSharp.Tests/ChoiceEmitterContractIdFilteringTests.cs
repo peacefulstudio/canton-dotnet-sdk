@@ -62,11 +62,11 @@ public class ChoiceEmitterContractIdFilteringTests
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
 
         var nonContractSb = new StringBuilder();
-        var nonContractIndent = new IndentWriter(nonContractSb) { CurrentTypeName = template.Name };
+        var nonContractIndent = new IndentWriter(nonContractSb);
         emitter.TryWriteNonContractChoiceExtensions(nonContractIndent, template);
 
         var exercisersSb = new StringBuilder();
-        var exercisersIndent = new IndentWriter(exercisersSb) { CurrentTypeName = template.Name };
+        var exercisersIndent = new IndentWriter(exercisersSb);
         emitter.WriteChoiceAsyncExercisersClass(exercisersIndent, template, template.Name, []);
 
         return (nonContractSb.ToString(), exercisersSb.ToString());

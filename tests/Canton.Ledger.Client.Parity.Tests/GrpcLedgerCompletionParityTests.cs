@@ -17,9 +17,6 @@ namespace Canton.Ledger.Client.Parity.Tests;
 [Trait("Category", "Integration")]
 public sealed class GrpcLedgerCompletionParityTests : LedgerCompletionParityTests
 {
-    private const string GrpcUrlEnv = "CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL";
-    private const string DefaultGrpcUrl = "http://localhost:11901";
-
     private const string SkipMessage =
         "Skipping: set CANTON_LOCALNET_A_VALIDATOR_1_GRPC_URL, _CLIENT_ID, _CLIENT_SECRET "
         + "(or the legacy un-namespaced CANTON_LOCALNET_* globals) and bring up the localnet "
@@ -49,7 +46,7 @@ public sealed class GrpcLedgerCompletionParityTests : LedgerCompletionParityTest
             var userId = fixture.ValidatorUserId;
             await actAsRights.GrantAsync(party.PartyId, cancellationToken);
 
-            var grpcAddress = Environment.GetEnvironmentVariable(GrpcUrlEnv) ?? DefaultGrpcUrl;
+            var grpcAddress = LocalnetLedgerServices.GrpcAddress;
             services = new ServiceCollection()
                 .AddSingleton<ITokenProvider>(new LocalnetTokenProvider(fixture.TokenProvider.GetAccessTokenAsync))
                 .AddLedgerClient(options =>

@@ -20,8 +20,6 @@ public class PartyJsonTests
     [Fact]
     public void Party_should_deserialize_from_json_string()
     {
-        // PQS payloads encode parties as raw JSON strings, e.g.
-        //   {"operator": "Platform::1220abcd..."}
         var json = "\"Alice::122012ab\"";
 
         var party = JsonSerializer.Deserialize<Party>(json);
@@ -104,9 +102,6 @@ public class PartyJsonTests
     [Fact]
     public void Party_should_throw_JsonException_when_non_nullable_field_receives_null()
     {
-        // The actual PQS failure mode we're defending against: a payload where a
-        // required Party field comes back as JSON null. Must fail loudly, not
-        // silently produce default(Party).
         var json = "{\"operator\":null,\"marketId\":\"BTC-USD\"}";
 
         var act = () => JsonSerializer.Deserialize<TemplatePayload>(json, CaseInsensitiveOptions);
@@ -154,9 +149,6 @@ public class PartyJsonTests
     [Fact]
     public void Party_should_serialize_null_inside_nullable_wrapper()
     {
-        // Locks in STJ's Nullable<T> short-circuit: when the field value is null,
-        // STJ writes `null` directly without invoking PartyJsonConverter.Write,
-        // so a default(Party) inside Party? never leaks through as a JsonException.
         var payload = new OptionalPartyPayload(Delegate: null, Note: "none");
 
         var json = JsonSerializer.Serialize(payload);

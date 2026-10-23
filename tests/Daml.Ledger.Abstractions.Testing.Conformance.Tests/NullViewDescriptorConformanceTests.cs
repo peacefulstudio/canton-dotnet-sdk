@@ -108,7 +108,7 @@ public sealed class NullViewDescriptorConformanceTests
         : LedgerClientConformanceTests<ConformanceProbe>
     {
         protected override ILedgerClient CreateClient() => breaksNothing
-            ? new ConformingFakeClient()
+            ? SeededShippedFake.Create()
             : new DescriptorIgnoringFakeClient(brokenRead, rejectsOnlyWhenEnumerated);
 
         protected override SubmitterInfo Reader { get; } = new Party("alice");

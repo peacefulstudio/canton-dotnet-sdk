@@ -3,7 +3,6 @@
 
 using Canton.Ledger.Abstractions;
 using Com.Daml.Ledger.Api.V2;
-using Daml.Runtime.Grpc;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using static Canton.Ledger.Kernel.Commands.ReassignmentCommandPolicy;
@@ -16,15 +15,20 @@ namespace Canton.Ledger.Grpc.Client;
 internal sealed class GrpcCommandBuilder
 {
     private readonly LedgerClientOptions _options;
+    private readonly Func<string> _mintId;
 
-    internal GrpcCommandBuilder(LedgerClientOptions options) => _options = options;
+    internal GrpcCommandBuilder(LedgerClientOptions options, Func<string>? mintId = null)
+    {
+        _options = options;
+        _mintId = mintId ?? RuntimeCommands.IdMinting.Mint;
+    }
 
     internal Commands BuildCommands(RuntimeCommands.CommandsSubmission submission)
     {
         ArgumentNullException.ThrowIfNull(submission);
         var commands = new Commands
         {
-            CommandId = submission.CommandId?.Value ?? Guid.NewGuid().ToString(),
+            CommandId = submission.CommandId?.Value ?? _mintId(),
             WorkflowId = submission.WorkflowId?.Value ?? string.Empty,
         };
 
@@ -133,8 +137,8 @@ internal sealed class GrpcCommandBuilder
 
         var reassignmentCommands = new ReassignmentCommands
         {
-            CommandId = submission.CommandId?.Value ?? Guid.NewGuid().ToString(),
-            SubmissionId = submission.SubmissionId ?? Guid.NewGuid().ToString(),
+            CommandId = submission.CommandId?.Value ?? _mintId(),
+            SubmissionId = submission.SubmissionId ?? _mintId(),
             WorkflowId = submission.WorkflowId?.Value ?? string.Empty,
             Submitter = submission.Submitter.Value,
         };
@@ -170,7 +174,7 @@ internal sealed class GrpcCommandBuilder
             {
                 UnassignCommand = new ProtoUnassignCommand
                 {
-                    ContractId = RequireNonEmpty(unassign.ContractId, "unassign contract id"),
+                    ContractId = unassign.ContractId,
                     Source = RequireNonEmpty(unassign.Source.Value, "unassign source synchronizer id"),
                     Target = RequireNonEmpty(unassign.Target.Value, "unassign target synchronizer id"),
                 },

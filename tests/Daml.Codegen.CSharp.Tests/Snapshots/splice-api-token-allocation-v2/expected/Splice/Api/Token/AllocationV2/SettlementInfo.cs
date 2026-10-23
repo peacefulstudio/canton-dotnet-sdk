@@ -60,9 +60,9 @@ public sealed record SettlementInfo(
     {
         var hash = new global::System.HashCode();
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Executors));
-        hash.Add(Id);
-        hash.Add(Cid);
-        hash.Add(Meta);
+        hash.Add(Id, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        hash.Add(Cid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>?>.Default);
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
         return hash.ToHashCode();
     }
 
@@ -76,10 +76,10 @@ public sealed record SettlementInfo(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static SettlementInfo FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SettlementInfo(
-        Executors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("executors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
-        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value,
-        Cid: record.GetOptionalField("cid").AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(record.GetOptionalField("cid").AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null,
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        Executors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("executors", 0).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        Id: record.GetRequiredField("id", 1).As<global::Daml.Runtime.Data.DamlText>().Value,
+        Cid: record.GetOptionalField("cid", 2).AsOptional().HasValue ? new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>(record.GetOptionalField("cid", 2).AsOptional().Value!.As<global::Daml.Runtime.Contracts.DamlContractId>().Value) : null,
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 3).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -94,5 +94,4 @@ public sealed record SettlementInfo(
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta"))));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

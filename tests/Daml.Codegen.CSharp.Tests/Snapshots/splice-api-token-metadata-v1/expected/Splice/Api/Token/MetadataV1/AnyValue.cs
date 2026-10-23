@@ -72,6 +72,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     public sealed record AV_Text(string Value) : AnyValue
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AV_Text";
 
         /// <inheritdoc />
@@ -81,6 +90,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     /// <summary>AV_Int constructor.</summary>
     public sealed record AV_Int(long Value) : AnyValue
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "AV_Int";
 
@@ -92,6 +110,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     public sealed record AV_Decimal(decimal Value) : AnyValue
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AV_Decimal";
 
         /// <inheritdoc />
@@ -101,6 +128,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     /// <summary>AV_Bool constructor.</summary>
     public sealed record AV_Bool(bool Value) : AnyValue
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "AV_Bool";
 
@@ -112,6 +148,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     public sealed record AV_Date(global::System.DateOnly Value) : AnyValue
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateOnly>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AV_Date";
 
         /// <inheritdoc />
@@ -121,6 +166,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     /// <summary>AV_Time constructor.</summary>
     public sealed record AV_Time(global::System.DateTimeOffset Value) : AnyValue
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "AV_Time";
 
@@ -132,6 +186,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     public sealed record AV_RelTime(global::Daml.Runtime.Stdlib.RelTime Value) : AnyValue
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.RelTime>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AV_RelTime";
 
         /// <inheritdoc />
@@ -142,6 +205,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     public sealed record AV_Party(global::Daml.Runtime.Data.Party Value) : AnyValue
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "AV_Party";
 
         /// <inheritdoc />
@@ -151,6 +223,15 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
     /// <summary>AV_ContractId constructor.</summary>
     public sealed record AV_ContractId(global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract> Value) : AnyValue
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.MetadataV1.IAnyContract>>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <inheritdoc />
         public override string Tag => "AV_ContractId";
 
@@ -229,5 +310,4 @@ public abstract record AnyValue : global::Daml.Runtime.Data.IDamlVariant<AnyValu
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("AV_Map", new global::Daml.Runtime.Data.DamlTextMap(Value.ToDictionary(kv => kv.Key, kv => (global::Daml.Runtime.Data.DamlValue)kv.Value.ToVariant())));
     }
-
 }

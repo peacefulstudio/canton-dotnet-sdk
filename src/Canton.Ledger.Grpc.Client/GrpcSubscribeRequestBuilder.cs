@@ -4,7 +4,6 @@
 using Canton.Ledger.Kernel.Streams;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime.Contracts;
-using Daml.Runtime.Grpc;
 using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
 using RuntimeCommands = Daml.Runtime.Commands;
 

@@ -41,11 +41,19 @@ internal interface IDiscriminatedUnionJsonConverterFactory;
 /// <remarks>
 /// <para>
 /// <see cref="Read{TUnion}"/> parses each arm's JSON subtree via
-/// <c>JsonDocument.ParseValue(ref Utf8JsonReader)</c>, which continues the ambient
-/// <see cref="Utf8JsonReader"/>'s own token-depth tracking rather than starting fresh — so a union
-/// nested inside itself on the wire is already caught by <see cref="System.Text.Json"/>'s own reader
-/// depth guard (threaded from <see cref="JsonSerializerOptions.MaxDepth"/>) before any of this type's
-/// code runs, with System.Text.Json's own <see cref="JsonException"/>. No extra guard is needed here.
+/// <c>JsonDocument.ParseValue(ref Utf8JsonReader)</c>, which is iterative and honours
+/// <see cref="JsonSerializerOptions.MaxDepth"/>, but then deserializes the arm through a nested
+/// <c>JsonNode.Deserialize</c> call that starts a fresh <see cref="Utf8JsonReader"/> at depth 0. A union
+/// nested inside itself therefore re-enters this type at CLR-call-stack cost for every level, and a
+/// caller who raises <see cref="JsonSerializerOptions.MaxDepth"/> past what the native call stack can
+/// hold would otherwise crash the process with an uncatchable stack overflow. <see cref="Read{TUnion}"/>
+/// therefore tracks its own effective nesting depth the way <see cref="Write{TUnion}"/> does — the
+/// ambient <see cref="Utf8JsonReader.CurrentDepth"/> plus a thread-static baseline carried across the
+/// nested <c>Deserialize</c> calls — and fails with a <see cref="JsonException"/> once it reaches
+/// <see cref="MaxSafeNestingDepth"/>. Unlike <see cref="Write{TUnion}"/>, no
+/// <see cref="RuntimeHelpers.TryEnsureSufficientExecutionStack"/> check accompanies it: when the stack
+/// really is low, unwinding the exception through the remaining frames overflows it anyway, so only a
+/// fixed ceiling well short of that point protects the process.
 /// </para>
 /// <para>
 /// Neither <see cref="Read{TUnion}"/> nor <see cref="Write{TUnion}"/> supports a
@@ -101,12 +109,12 @@ internal interface IDiscriminatedUnionJsonConverterFactory;
 /// <c>Optional</c> wrapper → its <see cref="JsonConverter{T}"/>.TryWrite → the object converter →
 /// <c>JsonTypeInfo</c>.Serialize → <c>WriteNodeAsObject</c>), and that platform's real per-level
 /// cost through this chain outran both guards' margins well before the counted default of 64.
-/// <see cref="Write{TUnion}"/> therefore also enforces <see cref="MaxSafeWriteDepth"/>: a fixed,
+/// <see cref="Write{TUnion}"/> therefore also enforces <see cref="MaxSafeNestingDepth"/>: a fixed,
 /// platform-independent ceiling chosen with real margin below <see cref="DefaultMaxDepth"/>. The
-/// depth actually enforced is <c>Math.Min(callerOrDefaultMaxDepth, MaxSafeWriteDepth)</c>, so a
+/// depth actually enforced is <c>Math.Min(callerOrDefaultMaxDepth, MaxSafeNestingDepth)</c>, so a
 /// caller-configured <see cref="JsonSerializerOptions.MaxDepth"/> smaller than
-/// <see cref="MaxSafeWriteDepth"/> is still honoured exactly as before, but one larger than it no
-/// longer opts into recursion deeper than <see cref="MaxSafeWriteDepth"/> on this write path — the
+/// <see cref="MaxSafeNestingDepth"/> is still honoured exactly as before, but one larger than it no
+/// longer opts into recursion deeper than <see cref="MaxSafeNestingDepth"/> on this write path — the
 /// real per-level native stack cost that crashed CI does not shrink just because the caller asked
 /// for a larger counted-depth budget, so unlike <see cref="JsonSerializerOptions.MaxDepth"/> itself,
 /// this internal safety ceiling is a hardcoded cap that a caller cannot opt out of by raising
@@ -149,15 +157,18 @@ internal static class DiscriminatedUnionJson
     private const int DefaultMaxDepth = 64;
 
     /// <summary>
-    /// Fixed, platform-independent ceiling on <see cref="Write{TUnion}"/>'s own effective
-    /// nesting-depth counter — see <see cref="Write{TUnion}"/>'s remarks for why a caller-configured
-    /// <see cref="JsonSerializerOptions.MaxDepth"/> above this value no longer raises the depth this
-    /// write path will actually recurse to.
+    /// Fixed, platform-independent ceiling on the effective nesting-depth counters of
+    /// <see cref="Read{TUnion}"/> and <see cref="Write{TUnion}"/> — see <see cref="Write{TUnion}"/>'s
+    /// remarks for why a caller-configured <see cref="JsonSerializerOptions.MaxDepth"/> above this value
+    /// no longer raises the depth either path will actually recurse to.
     /// </summary>
-    private const int MaxSafeWriteDepth = 20;
+    private const int MaxSafeNestingDepth = 20;
 
     [ThreadStatic]
     private static int t_depthBaseline;
+
+    [ThreadStatic]
+    private static int t_readDepthBaseline;
 
     private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> ArmOptionsCache = new();
 
@@ -169,6 +180,16 @@ internal static class DiscriminatedUnionJson
         where TUnion : notnull
     {
         EnsureNoReferenceHandler(options, typeName);
+
+        var effectiveDepth = t_readDepthBaseline + reader.CurrentDepth;
+        if (effectiveDepth >= MaxSafeNestingDepth)
+        {
+            throw new JsonException(
+                $"{typeName} exceeded the maximum union nesting depth of {MaxSafeNestingDepth} while reading: "
+                + "each nested union re-enters JsonSerializer.Deserialize as a fresh operation, so the call "
+                + "stack grows with every level and a payload nested deeper could overflow it and crash the "
+                + "process. This ceiling is fixed and does not follow JsonSerializerOptions.MaxDepth.");
+        }
 
         using var document = JsonDocument.ParseValue(ref reader);
         var root = document.RootElement;
@@ -189,6 +210,8 @@ internal static class DiscriminatedUnionJson
                 $"{typeName} names an unknown case \"{caseName}\"; expected one of {string.Join(", ", cases.Keys)}.");
         }
 
+        var previousDepthBaseline = t_readDepthBaseline;
+        t_readDepthBaseline = effectiveDepth;
         try
         {
             var armNode = JsonObject.Create(root)!;
@@ -204,6 +227,10 @@ internal static class DiscriminatedUnionJson
         {
             throw new JsonException($"Cannot read {typeName} case \"{caseName}\": {ex.Message}", ex);
         }
+        finally
+        {
+            t_readDepthBaseline = previousDepthBaseline;
+        }
     }
 
     internal static void Write<TUnion>(Utf8JsonWriter writer, TUnion value, JsonSerializerOptions options, string typeName)
@@ -214,7 +241,7 @@ internal static class DiscriminatedUnionJson
         var armType = value.GetType();
 
         var configuredMaxDepth = EffectiveMaxDepth(options);
-        var maxDepth = Math.Min(configuredMaxDepth, MaxSafeWriteDepth);
+        var maxDepth = Math.Min(configuredMaxDepth, MaxSafeNestingDepth);
         var effectiveDepth = t_depthBaseline + writer.CurrentDepth;
         var stackLow = !RuntimeHelpers.TryEnsureSufficientExecutionStack();
         if (effectiveDepth >= maxDepth || stackLow)
@@ -270,7 +297,7 @@ internal static class DiscriminatedUnionJson
         arm.WriteTo(writer);
     }
 
-    private static void EnsureNoReferenceHandler(JsonSerializerOptions options, string typeName)
+    internal static void EnsureNoReferenceHandler(JsonSerializerOptions options, string typeName)
     {
         if (options.ReferenceHandler is not null)
         {

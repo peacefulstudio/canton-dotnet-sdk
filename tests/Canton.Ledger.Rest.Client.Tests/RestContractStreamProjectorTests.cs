@@ -418,10 +418,8 @@ public class RestContractStreamProjectorTests
         RestContractStreamProjector.DisclosureOf(response).Should().BeNull();
     }
 
-    [Fact]
-    public async Task DisclosureOf_a_blob_that_is_not_base64_is_null_and_logs_a_warning()
-    {
-        var response = await ActiveContractsResponseFrom(
+    private static Task<GetActiveContractsResponse> ActiveContractWithABlobThatIsNotBase64() =>
+        ActiveContractsResponseFrom(
             """
             {
               "contractEntry": {
@@ -439,10 +437,27 @@ public class RestContractStreamProjectorTests
               }
             }
             """);
+
+    [Fact]
+    public async Task DisclosureOf_a_blob_that_is_not_base64_is_null_and_logs_a_warning_without_the_contract_id_by_default()
+    {
+        var response = await ActiveContractWithABlobThatIsNotBase64();
         var loggerFactory = new CapturingLoggerFactory();
 
         RestContractStreamProjector.DisclosureOf(response, loggerFactory.CreateLogger("test")).Should().BeNull();
-        loggerFactory.Records.Should().ContainSingle(record => record.Level == LogLevel.Warning);
+        loggerFactory.Records.Should().ContainSingle(record => record.Level == LogLevel.Warning).Which.Message.Should().Be(
+            "The created_event_blob of a contract in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
+
+    [Fact]
+    public async Task DisclosureOf_a_blob_that_is_not_base64_logs_the_contract_id_when_asked_to()
+    {
+        var response = await ActiveContractWithABlobThatIsNotBase64();
+        var loggerFactory = new CapturingLoggerFactory();
+
+        RestContractStreamProjector.DisclosureOf(response, loggerFactory.CreateLogger("test"), logContractId: true).Should().BeNull();
+        loggerFactory.Records.Should().ContainSingle(record => record.Level == LogLevel.Warning).Which.Message.Should().Be(
+            "The created_event_blob of contract 00holding in the active-contract snapshot is not base64 — its row carries no Disclosure");
     }
 
     [Fact]

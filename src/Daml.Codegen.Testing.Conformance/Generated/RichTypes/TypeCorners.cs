@@ -144,33 +144,33 @@ public sealed partial record TypeCorners(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Owner);
-        hash.Add(BoxedText);
-        hash.Add(BoxedProfile);
-        hash.Add(Slot);
-        hash.Add(NestedNote);
-        hash.Add(MaybeMaybeNote);
-        hash.Add(Crate);
+        hash.Add(Owner, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(BoxedText, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>>.Default);
+        hash.Add(BoxedProfile, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>>.Default);
+        hash.Add(Slot, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>>.Default);
+        hash.Add(NestedNote, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>?>.Default);
+        hash.Add(MaybeMaybeNote, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>>.Default);
+        hash.Add(Crate, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string>>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(QuotaByParty));
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(LabelByRank));
-        hash.Add(RankOrLabel);
-        hash.Add(NoteOrRank);
-        hash.Add(Pair);
-        hash.Add(Triple);
-        hash.Add(Branch);
-        hash.Add(Whole);
-        hash.Add(Finest);
+        hash.Add(RankOrLabel, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Either<long, string>>.Default);
+        hash.Add(NoteOrRank, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long>>.Default);
+        hash.Add(Pair, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Tuple2<string, long>>.Default);
+        hash.Add(Triple, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Stdlib.Tuple3<string, long, bool>>.Default);
+        hash.Add(Branch, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Branch>.Default);
+        hash.Add(Whole, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+        hash.Add(Finest, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
         return hash.ToHashCode();
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "TypeCorners");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "TypeCorners");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a";
+    public static string PackageId => "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-ha8d30776aa45";
+    public static string PackageName => "richtypes-h25b56c547fd1";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -200,22 +200,22 @@ public sealed partial record TypeCorners(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TypeCorners FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TypeCorners(
-        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner").As<global::Daml.Runtime.Data.DamlParty>()),
-        BoxedText: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.FromRecord(record.GetRequiredField("boxedText").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null),
-        BoxedProfile: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>.FromRecord(record.GetRequiredField("boxedProfile").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.FromRecord(__v0.As<global::Daml.Runtime.Data.DamlRecord>()), null),
-        Slot: global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>.FromVariant(record.GetRequiredField("slot").As<global::Daml.Runtime.Data.DamlVariant>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
-        NestedNote: record.GetOptionalField("nestedNote").AsOptional().HasValue ? global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>.FromRecord(record.GetOptionalField("nestedNote").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v0, __optional2 => __optional2.As<global::Daml.Runtime.Data.DamlText>().Value), global::Daml.Runtime.Data.DamlOptional.None) : null,
-        MaybeMaybeNote: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("maybeMaybeNote"), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value)),
-        Crate: global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string>.FromRecord(record.GetRequiredField("crate").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null),
-        QuotaByParty: (global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long>)record.GetRequiredField("quotaByParty").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Daml.Runtime.Data.Party.FromDamlValue(kv.Key.As<global::Daml.Runtime.Data.DamlParty>()), kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value),
-        LabelByRank: (global::System.Collections.Generic.IReadOnlyDictionary<long, string>)record.GetRequiredField("labelByRank").As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlInt64>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value),
-        RankOrLabel: global::Daml.Runtime.Stdlib.Either<long, string>.FromValue(record.GetRequiredField("rankOrLabel"), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, __v1 => __v1.As<global::Daml.Runtime.Data.DamlText>().Value),
-        NoteOrRank: global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long>.FromValue(record.GetRequiredField("noteOrRank"), __v0 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value), __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value),
-        Pair: global::Daml.Runtime.Stdlib.Tuple2<string, long>.FromRecord(record.GetRequiredField("pair").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
-        Triple: global::Daml.Runtime.Stdlib.Tuple3<string, long, bool>.FromRecord(record.GetRequiredField("triple").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null, __v2 => __v2.As<global::Daml.Runtime.Data.DamlBool>().Value, null),
-        Branch: global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.FromRecord(record.GetRequiredField("branch").As<global::Daml.Runtime.Data.DamlRecord>()),
-        Whole: record.GetRequiredField("whole").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-        Finest: record.GetRequiredField("finest").As<global::Daml.Runtime.Data.DamlNumeric>().Value
+        Owner: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("owner", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        BoxedText: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.FromRecord(record.GetRequiredField("boxedText", 1).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null),
+        BoxedProfile: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Codegen.Testing.Conformance.RichTypes.Profile>.FromRecord(record.GetRequiredField("boxedProfile", 2).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Codegen.Testing.Conformance.RichTypes.Profile.FromRecord(__v0.As<global::Daml.Runtime.Data.DamlRecord>()), null),
+        Slot: global::Daml.Codegen.Testing.Conformance.RichTypes.Slot<long>.FromVariant(record.GetRequiredField("slot", 3).As<global::Daml.Runtime.Data.DamlVariant>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        NestedNote: record.GetOptionalField("nestedNote", 4).AsOptional().HasValue ? global::Daml.Codegen.Testing.Conformance.RichTypes.Box<global::Daml.Runtime.Stdlib.Optional<string>>.FromRecord(record.GetOptionalField("nestedNote", 4).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v0, __optional2 => __optional2.As<global::Daml.Runtime.Data.DamlText>().Value), global::Daml.Runtime.Data.DamlOptional.None) : null,
+        MaybeMaybeNote: global::Daml.Runtime.Stdlib.Optional<global::Daml.Runtime.Stdlib.Optional<string>>.FromChainValue(record.GetOptionalChainField("maybeMaybeNote", 5), __optional0 => global::Daml.Runtime.Stdlib.Optional<string>.FromChainValue(__optional0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value)),
+        Crate: global::Daml.Codegen.Testing.Conformance.RichTypes.Crate<string>.FromRecord(record.GetRequiredField("crate", 6).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null),
+        QuotaByParty: (global::System.Collections.Generic.IReadOnlyDictionary<global::Daml.Runtime.Data.Party, long>)record.GetRequiredField("quotaByParty", 7).As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => global::Daml.Runtime.Data.Party.FromDamlValue(kv.Key.As<global::Daml.Runtime.Data.DamlParty>()), kv => kv.Value.As<global::Daml.Runtime.Data.DamlInt64>().Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default),
+        LabelByRank: (global::System.Collections.Generic.IReadOnlyDictionary<long, string>)record.GetRequiredField("labelByRank", 8).As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary(kv => kv.Key.As<global::Daml.Runtime.Data.DamlInt64>().Value, kv => kv.Value.As<global::Daml.Runtime.Data.DamlText>().Value, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default),
+        RankOrLabel: global::Daml.Runtime.Stdlib.Either<long, string>.FromValue(record.GetRequiredField("rankOrLabel", 9), __v0 => __v0.As<global::Daml.Runtime.Data.DamlInt64>().Value, __v1 => __v1.As<global::Daml.Runtime.Data.DamlText>().Value),
+        NoteOrRank: global::Daml.Runtime.Stdlib.Either<global::Daml.Runtime.Stdlib.Optional<string>, long>.FromValue(record.GetRequiredField("noteOrRank", 10), __v0 => global::Daml.Runtime.Stdlib.Optional<string>.FromValue(__v0, __optional1 => __optional1.As<global::Daml.Runtime.Data.DamlText>().Value), __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value),
+        Pair: global::Daml.Runtime.Stdlib.Tuple2<string, long>.FromRecord(record.GetRequiredField("pair", 11).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null),
+        Triple: global::Daml.Runtime.Stdlib.Tuple3<string, long, bool>.FromRecord(record.GetRequiredField("triple", 12).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null, __v1 => __v1.As<global::Daml.Runtime.Data.DamlInt64>().Value, null, __v2 => __v2.As<global::Daml.Runtime.Data.DamlBool>().Value, null),
+        Branch: global::Daml.Codegen.Testing.Conformance.RichTypes.Branch.FromRecord(record.GetRequiredField("branch", 13).As<global::Daml.Runtime.Data.DamlRecord>()),
+        Whole: record.GetRequiredField("whole", 14).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+        Finest: record.GetRequiredField("finest", 15).As<global::Daml.Runtime.Data.DamlNumeric>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -278,7 +278,6 @@ public sealed partial record TypeCorners(
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive, ChoiceRebox];
-
 }
 
 
@@ -320,7 +319,7 @@ public static class TypeCornersExtensions
     /// <param name="owner">Controller party from the Daml <c>controller</c> clause, routed into the submission's <c>actAs</c> set.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
@@ -361,7 +360,7 @@ public static class TypeCornersExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
@@ -395,7 +394,7 @@ public static class TypeCornersExtensions
     /// <param name="argument">The choice argument.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
@@ -436,7 +435,7 @@ public static class TypeCornersExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<global::Daml.Codegen.Testing.Conformance.RichTypes.TypeCorners>>> TryReboxAsync(
@@ -539,7 +538,7 @@ public static class TypeCornersNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(

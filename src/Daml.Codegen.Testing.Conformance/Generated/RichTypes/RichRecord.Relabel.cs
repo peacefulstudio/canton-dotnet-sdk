@@ -18,6 +18,14 @@ public sealed partial record RichRecord
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("newLabel")] string NewLabel
     ) : global::Daml.Runtime.Data.IDamlRecord<Relabel>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(NewLabel, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("newLabel", new global::Daml.Runtime.Data.DamlText(NewLabel))
@@ -25,7 +33,7 @@ public sealed partial record RichRecord
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Relabel FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Relabel(
-            NewLabel: record.GetRequiredField("newLabel").As<global::Daml.Runtime.Data.DamlText>().Value
+            NewLabel: record.GetRequiredField("newLabel", 0).As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record RichRecord
                 global::Daml.Runtime.Data.DamlField.Create("newLabel", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newLabel"), context.Field("newLabel")))
             );
         }
-
     }
 }

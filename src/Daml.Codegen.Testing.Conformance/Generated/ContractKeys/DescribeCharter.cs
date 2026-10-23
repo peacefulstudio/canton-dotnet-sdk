@@ -27,5 +27,4 @@ public sealed record DescribeCharter : global::Daml.Runtime.Data.IDamlRecord<Des
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return global::Daml.Runtime.Data.DamlRecord.Create();
     }
-
 }

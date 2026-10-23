@@ -6,6 +6,7 @@ using System.Net;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Resilience;
+using Canton.Ledger.Kernel.Telemetry;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -42,11 +43,18 @@ public sealed class RestAdminClientTests : IDisposable
         return ClientWith(retryHandler);
     }
 
-    private RestAdminClient ClientWith(HttpMessageHandler handler)
+    private RestAdminClient ClientWith(HttpMessageHandler handler, bool emitPartyAndContractSpanTags = false)
     {
         var factory = new StubHttpClientFactory(handler);
         _factories.Add(factory);
-        return new RestAdminClient(factory);
+        return new RestAdminClient(
+            factory,
+            logger: null,
+            Options.Create(new RestLedgerClientOptions
+            {
+                HttpAddress = "http://localhost:7575",
+                EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+            }));
     }
 
     [Fact]
@@ -770,24 +778,24 @@ public sealed class RestAdminClientTests : IDisposable
     }
 
     [Fact]
-    public async Task GetUserAsync_records_a_RestAdminClient_span_tagged_with_the_user_id()
+    public async Task GetUserAsync_records_a_RestAdminClient_span_tagged_with_the_user_id_when_opted_in()
     {
-        using var capture = ActivityCapture.Of("Canton.Ledger.Rest.Client.RestAdminClient");
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.RestAdminClient);
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, """{"user": {"id": "carol"}}""");
-        IAdminClient client = ClientWith(transport);
+        IAdminClient client = ClientWith(transport, emitPartyAndContractSpanTags: true);
 
         await client.GetUserAsync("carol", TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
         activity.OperationName.Should().Be("RestAdminClient.GetUserAsync");
-        activity.GetTagItem("canton.user_id").Should().Be("carol");
+        activity.GetTagItem(LedgerActivityTagNames.CantonUserId).Should().Be("carol");
         activity.Status.Should().Be(ActivityStatusCode.Unset);
     }
 
     [Fact]
     public async Task GetPackageAsync_records_a_failed_RestAdminClient_span_tagged_with_the_package_id()
     {
-        using var capture = ActivityCapture.Of("Canton.Ledger.Rest.Client.RestAdminClient");
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.RestAdminClient);
         var transport = new RecordingHttpHandler().WithResponse(
             HttpStatusCode.NotFound,
             """{"code": "PACKAGE_NOT_FOUND", "cause": "package 1220ff not found", "grpcCodeValue": 5, "errorCategory": 11, "context": {}}""");
@@ -798,15 +806,15 @@ public sealed class RestAdminClientTests : IDisposable
         await act.Should().ThrowAsync<LedgerOperationException>();
         var activity = capture.Activities.Should().ContainSingle().Subject;
         activity.OperationName.Should().Be("RestAdminClient.GetPackageAsync");
-        activity.GetTagItem("daml.package_id").Should().Be("1220ff");
+        activity.GetTagItem(LedgerActivityTagNames.DamlPackageId).Should().Be("1220ff");
         activity.Status.Should().Be(ActivityStatusCode.Error);
-        activity.GetTagItem("error.type").Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
+        activity.GetTagItem(RestActivityHandler.ErrorType).Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
     }
 
     [Fact]
     public async Task GetUserAsync_leaves_the_span_of_an_unknown_user_unfailed()
     {
-        using var capture = ActivityCapture.Of("Canton.Ledger.Rest.Client.RestAdminClient");
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.RestAdminClient);
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.NotFound, UserNotFoundBody);
         IAdminClient client = ClientWith(transport);
 
@@ -820,7 +828,12 @@ public sealed class RestAdminClientTests : IDisposable
         var factory = new StubHttpClientFactory(transport);
         _factories.Add(factory);
         var logs = new CapturingLoggerFactory();
-        return (new RestAdminClient(factory, logs.CreateLogger<RestAdminClient>()), logs);
+        var options = Options.Create(new RestLedgerClientOptions
+        {
+            HttpAddress = "http://localhost:7575",
+            EmitPartyAndContractSpanTags = true,
+        });
+        return (new RestAdminClient(factory, logs.CreateLogger<RestAdminClient>(), options), logs);
     }
 
     private static IEnumerable<(LogLevel Level, string Message)> LevelsAndMessages(CapturingLoggerFactory logs) =>

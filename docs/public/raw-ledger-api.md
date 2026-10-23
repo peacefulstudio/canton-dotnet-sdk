@@ -60,9 +60,8 @@ built from the generated `PackageName` property.
 
 ## gRPC Ledger API
 
-The runtime types can be converted to/from the gRPC protobuf types with
-`Daml.Runtime.Grpc`; `Canton.Ledger.Grpc.Client` packages that conversion behind
-`ILedgerClient` so most applications never touch the protos, and `Canton.Ledger.Grpc`
+`Canton.Ledger.Grpc.Client` converts the runtime types to and from the gRPC protobuf types
+behind `ILedgerClient`, so most applications never touch the protos, and `Canton.Ledger.Grpc`
 exposes the raw stubs for the rest. See the
 [Canton documentation](https://docs.canton.network/) for raw gRPC
 integration details.

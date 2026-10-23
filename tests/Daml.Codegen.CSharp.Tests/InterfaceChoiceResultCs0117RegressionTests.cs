@@ -495,12 +495,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
         files.Select(f => f.RelativePath).Should().Contain(p => p.EndsWith("IFactory__.cs"));
     }
 
-    // Deliberately declares each interface with no matching interface-placeholder
-    // record: the real Daml-LF compiler always emits one alongside every interface,
-    // but that placeholder record's own name is disambiguated only by its module (a
-    // separate, pre-existing gap, not part of this marker-name fix). Omitting it
-    // isolates this DAR to exactly the marker-collision family under test.
-    private static DarModel TwoModuleInterfaceMarkerCollisionDar(string firstModuleName, string secondModuleName)
+    private static DarModel TwoModuleInterfaceMarkerCollisionDarWithoutInterfacePlaceholderRecords(string firstModuleName, string secondModuleName)
     {
         DamlModule InterfaceOnlyModule(string moduleName) => new()
         {
@@ -527,7 +522,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
     public void InterfaceChoiceResultCs0117Regression_two_same_named_interfaces_in_different_modules_compile_cleanly_with_distinct_markers()
     {
         CompilesCleanly(
-            TwoModuleInterfaceMarkerCollisionDar("Alpha.Module", "Beta.Module"),
+            TwoModuleInterfaceMarkerCollisionDarWithoutInterfacePlaceholderRecords("Alpha.Module", "Beta.Module"),
             "two interfaces named Factory in different modules, both sanitising to marker IFactory, must not both declare a public IFactory type in the same flat namespace");
     }
 
@@ -536,7 +531,7 @@ public class InterfaceChoiceResultCs0117RegressionTests
     {
         string WinnerModuleName(string firstModuleName, string secondModuleName)
         {
-            var files = CreateGenerator().Generate(TwoModuleInterfaceMarkerCollisionDar(firstModuleName, secondModuleName));
+            var files = CreateGenerator().Generate(TwoModuleInterfaceMarkerCollisionDarWithoutInterfacePlaceholderRecords(firstModuleName, secondModuleName));
             var winnerFile = files.Single(f => f.RelativePath.EndsWith("IFactory.cs", StringComparison.Ordinal));
             return winnerFile.Content.Contains("\"Alpha.Module\"", StringComparison.Ordinal) ? "Alpha.Module" : "Beta.Module";
         }

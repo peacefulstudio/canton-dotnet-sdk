@@ -15,7 +15,8 @@ namespace Canton.Ledger.Rest.Client;
 internal sealed partial class RestCallEnvelope(
     IHttpClientFactory httpClientFactory,
     ILogger logger,
-    long maxResponseBodyBytes = RestLedgerClientOptions.DefaultMaxResponseBodyBytes)
+    long maxResponseBodyBytes = RestLedgerClientOptions.DefaultMaxResponseBodyBytes,
+    TimeSpan? defaultTimeout = null)
 {
     public async Task<TResult> SendAsync<TResponse, TResult>(
         RestCall call,
@@ -128,32 +129,31 @@ internal sealed partial class RestCallEnvelope(
         CancellationToken cancellationToken)
     {
         var client = CreateClient();
-        using var timeoutSource = CreateTimeoutSource(timeout, cancellationToken);
-        var requestToken = timeoutSource?.Token ?? cancellationToken;
+        var attemptTimeout = timeout ?? defaultTimeout;
 
         HttpResponseMessage response;
         var afterRetry = false;
         try
         {
-            using var request = CreateRequest(call);
+            using var request = CreateRequest(call, attemptTimeout);
             BearerTokenHandler.RecordCallerCancellation(request, cancellationToken);
-            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestToken)
+            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
             afterRetry = RestRetryHandler.WasRetried(request);
         }
         catch (Exception failure) when (IsNoAnswerFailure(failure, cancellationToken))
         {
-            return Failed<TResult>(ClassifyTransport(failure, DeadlineExceeded(timeout)));
+            return Failed<TResult>(ClassifyTransport(failure, HttpClientTimeoutExceeded));
         }
 
         using (response)
         {
-            using var bodyTimeoutSource = CreateBodyTimeoutSource(client, timeout, cancellationToken);
-            var bodyToken = bodyTimeoutSource?.Token ?? requestToken;
+            using var bodyTimeoutSource = CreateBodyTimeoutSource(client, attemptTimeout, cancellationToken);
+            var bodyToken = bodyTimeoutSource?.Token ?? cancellationToken;
 
             if (!response.IsSuccessStatusCode)
             {
-                return await RejectionAsync<TResult>(response, afterRetry, timeout, bodyToken, cancellationToken)
+                return await RejectionAsync<TResult>(response, afterRetry, attemptTimeout, bodyToken, cancellationToken)
                     .ConfigureAwait(false);
             }
 
@@ -166,7 +166,7 @@ internal sealed partial class RestCallEnvelope(
                 return Failed<TResult>(ClassifyResponse(
                     call.Kind,
                     failure,
-                    DeadlineExceededWhileReading(timeout),
+                    DeadlineExceededWhileReading(attemptTimeout),
                     call.MalformedBodyMessagePrefix,
                     updateIdAfterFailure(),
                     cancellationToken));
@@ -192,9 +192,17 @@ internal sealed partial class RestCallEnvelope(
         }
     }
 
-    private static HttpRequestMessage CreateRequest(RestCall call)
+    private static HttpRequestMessage CreateRequest(RestCall call, TimeSpan? attemptTimeout)
     {
         var request = new HttpRequestMessage(call.Method, call.Path);
+        if (attemptTimeout is { } timeout)
+        {
+            RestAttemptTimeoutHandler.SetAttemptTimeout(request, timeout);
+        }
+        if (call.PathTemplate is { } pathTemplate)
+        {
+            request.Options.Set(RestActivityHandler.PathTemplateOption, pathTemplate);
+        }
         if (call.Replayable)
         {
             RestRetryHandler.MarkReplayable(request);
@@ -278,8 +286,7 @@ internal sealed partial class RestCallEnvelope(
     private static Attempt<TResult> Failed<TResult>(LedgerCallEnding ending) =>
         new Attempt<TResult>.Failed(ending);
 
-    private static string DeadlineExceeded(TimeSpan? timeout) =>
-        $"Request exceeded the {DescribeDeadline(timeout)} deadline.";
+    private const string HttpClientTimeoutExceeded = "Request exceeded the HttpClient default deadline.";
 
     private static string DeadlineExceededWhileReading(TimeSpan? timeout) =>
         $"Request exceeded the {DescribeDeadline(timeout)} deadline while reading the response body.";
@@ -288,18 +295,14 @@ internal sealed partial class RestCallEnvelope(
         timeout is { } window ? window.ToString() : "HttpClient default";
 
     internal static CancellationTokenSource? CreateBodyTimeoutSource(
-        HttpClient client, TimeSpan? timeout, CancellationToken cancellationToken) =>
-        timeout is null && client.Timeout != Timeout.InfiniteTimeSpan
-            ? CreateTimeoutSource(client.Timeout, cancellationToken)
-            : null;
-
-    internal static CancellationTokenSource? CreateTimeoutSource(TimeSpan? timeout, CancellationToken cancellationToken)
+        HttpClient client, TimeSpan? timeout, CancellationToken cancellationToken)
     {
-        if (timeout is not { } window)
+        var window = timeout ?? (client.Timeout != Timeout.InfiniteTimeSpan ? client.Timeout : null);
+        if (window is not { } bodyWindow)
             return null;
 
         var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        source.CancelAfter(window);
+        source.CancelAfter(bodyWindow);
         return source;
     }
 

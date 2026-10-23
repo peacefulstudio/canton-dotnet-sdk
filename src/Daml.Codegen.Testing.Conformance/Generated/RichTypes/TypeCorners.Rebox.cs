@@ -18,6 +18,14 @@ public sealed partial record TypeCorners
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("replacement")] global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string> Replacement
     ) : global::Daml.Runtime.Data.IDamlRecord<Rebox>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Replacement, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("replacement", Replacement.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(new global::Daml.Runtime.Data.DamlText(__t0))))
@@ -25,7 +33,7 @@ public sealed partial record TypeCorners
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Rebox FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Rebox(
-            Replacement: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.FromRecord(record.GetRequiredField("replacement").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null)
+            Replacement: global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.FromRecord(record.GetRequiredField("replacement", 0).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => __v0.As<global::Daml.Runtime.Data.DamlText>().Value, null)
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record TypeCorners
                 global::Daml.Runtime.Data.DamlField.Create("replacement", global::Daml.Codegen.Testing.Conformance.RichTypes.Box<string>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "replacement"), context.Field("replacement"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(__json0, __ctx0), null))
             );
         }
-
     }
 }

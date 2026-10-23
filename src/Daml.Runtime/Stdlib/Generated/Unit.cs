@@ -20,6 +20,14 @@ public sealed record Unit<TA>(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("_1")] TA _1
 ) where TA : notnull
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(_1, global::Daml.Runtime.Data.DamlEqualityComparer<TA>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord(global::System.Func<TA, global::Daml.Runtime.Data.DamlValue> convertTA) => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("_1", convertTA(_1))
@@ -27,7 +35,7 @@ public sealed record Unit<TA>(
 
     /// <summary>Creates an instance from a DamlRecord. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
     public static Unit<TA> FromRecord(global::Daml.Runtime.Data.DamlRecord record, global::System.Func<global::Daml.Runtime.Data.DamlValue, TA> convertTA, global::Daml.Runtime.Data.DamlValue? absentTA) => new Unit<TA>(
-        _1: record.GetTypeParameterField("_1", convertTA, absentTA)
+        _1: record.GetTypeParameterField("_1", 0, convertTA, absentTA)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection. Each <c>absent</c> argument is what an omitted field of that type parameter reads as: <c>DamlOptional.None</c> when the instantiation is an <c>Optional</c>, <c>null</c> when it is required.</summary>
@@ -39,5 +47,4 @@ public sealed record Unit<TA>(
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.AddTypeParameterField(fields, json, context, "_1", readTA, absentTA);
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

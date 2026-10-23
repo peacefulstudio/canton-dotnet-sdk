@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.Shared.props" />
+
+  <PropertyGroup>
+    <DamlCodegenMode Condition="'$(DamlCodegenMode)' == ''">Standalone</DamlCodegenMode>
+    <DamlCodegenOciRepository Condition="'$(DamlCodegenOciRepository)' == ''">ghcr.io/peacefulstudio/dpm-codegen-cs</DamlCodegenOciRepository>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(DamlCodegenBundleVersion)' == '' and Exists('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.BundleVersion.g.txt')">
+    <DamlCodegenBundleVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.BundleVersion.g.txt').Trim())</DamlCodegenBundleVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.DpmFloor.g.txt')">
+    <_DamlDpmMinimumVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.DpmFloor.g.txt').Trim())</_DamlDpmMinimumVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.BundleVersion.g.txt')">
+    <_DamlCodegenPackageVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.BundleVersion.g.txt').Trim())</_DamlCodegenPackageVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.BundleDigest.g.txt')">
+    <_DamlCodegenPackageBundleDigest>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)Daml.Codegen.CSharp.MSBuild.BundleDigest.g.txt').Trim())</_DamlCodegenPackageBundleDigest>
+  </PropertyGroup>
+</Project>

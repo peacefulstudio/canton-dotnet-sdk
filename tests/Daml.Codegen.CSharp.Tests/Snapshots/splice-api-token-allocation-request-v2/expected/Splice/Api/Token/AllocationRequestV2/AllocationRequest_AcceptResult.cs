@@ -16,6 +16,14 @@ public sealed record AllocationRequest_AcceptResult(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("meta")] global::Splice.Api.Token.MetadataV1.Metadata Meta
 ) : global::Daml.Runtime.Data.IDamlRecord<AllocationRequest_AcceptResult>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("meta", Meta.ToRecord())
@@ -23,7 +31,7 @@ public sealed record AllocationRequest_AcceptResult(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationRequest_AcceptResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationRequest_AcceptResult(
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 0).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record AllocationRequest_AcceptResult(
             global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
-
 }

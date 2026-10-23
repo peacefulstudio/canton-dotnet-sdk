@@ -17,6 +17,14 @@ public sealed record AmuletConversionRateFeed_UpdateResult(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("cid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed> Cid
 ) : global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed_UpdateResult>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Cid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("cid", Cid.ToDamlValue())
@@ -24,7 +32,7 @@ public sealed record AmuletConversionRateFeed_UpdateResult(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AmuletConversionRateFeed_UpdateResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed_UpdateResult(
-        Cid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed>(record.GetRequiredField("cid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
+        Cid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Ans.AmuletConversionRateFeed.AmuletConversionRateFeed>(record.GetRequiredField("cid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,5 +44,4 @@ public sealed record AmuletConversionRateFeed_UpdateResult(
             global::Daml.Runtime.Data.DamlField.Create("cid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "cid"), context.Field("cid")))
         );
     }
-
 }

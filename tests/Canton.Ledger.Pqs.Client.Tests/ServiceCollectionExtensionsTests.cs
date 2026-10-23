@@ -48,6 +48,39 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddPqsClient_configuration_binds_EmitPartyAndContractSpanTags()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionString"] = "Host=localhost;Database=pqs",
+                ["EmitPartyAndContractSpanTags"] = "true",
+            })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddPqsClient(configuration);
+
+        var options = services.BuildServiceProvider().GetRequiredService<IOptions<PqsClientOptions>>();
+
+        options.Value.EmitPartyAndContractSpanTags.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddPqsClient_action_sets_EmitPartyAndContractSpanTags()
+    {
+        var services = new ServiceCollection();
+        services.AddPqsClient(o =>
+        {
+            o.ConnectionString = "Host=localhost;Database=pqs";
+            o.EmitPartyAndContractSpanTags = true;
+        });
+
+        var options = services.BuildServiceProvider().GetRequiredService<IOptions<PqsClientOptions>>();
+
+        options.Value.EmitPartyAndContractSpanTags.Should().BeTrue();
+    }
+
+    [Fact]
     public void AddPqsClient_configuration_returns_services_for_chaining()
     {
         var services = new ServiceCollection();

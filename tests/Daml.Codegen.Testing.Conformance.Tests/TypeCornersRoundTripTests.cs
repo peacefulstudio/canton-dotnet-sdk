@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Daml.Runtime.Data;
 using Daml.Runtime.Serialization;
 using Daml.Runtime.Stdlib;
@@ -140,34 +141,18 @@ public class TypeCornersRoundTripTests
             .Should().BeOfType<DamlOptional>();
     }
 
-    public sealed record NestedNoteBox(
-        [property: DamlFieldAttribute("item")] Optional<string> Item) : IDamlRecord<NestedNoteBox>
+    private static TypeCorners ReadWithNestedNote(string nestedNoteJson)
     {
-        public DamlRecord ToRecord() => DamlRecord.Create(
-            DamlField.Create("item", Item.ToValue(value => new DamlText(value))));
-
-        public static NestedNoteBox FromRecord(DamlRecord record) =>
-            new(Optional<string>.FromValue(record.GetOptionalField("item"), value => value.As<DamlText>().Value));
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context)
-        {
-            DamlLfJsonDecoders.RequireObject(json, context);
-            var fields = new List<DamlField>(1);
-            DamlLfJsonDecoders.AddFieldIfPresent(fields, json, "item", present => DamlLfJsonDecoders.ReadOptional(
-                present, context.Field("item"),
-                (itemJson, itemContext) => DamlLfJsonDecoders.ReadText(itemJson, itemContext)));
-            return DamlRecord.Create(fields.ToArray());
-        }
+        var payload = JsonNode.Parse(DamlJsonSerializer.Serialize(Sample().ToRecord()))!.AsObject();
+        payload["nestedNote"] = JsonNode.Parse(nestedNoteJson);
+        return TypeCorners.FromRecord(DamlLfJsonReader.ReadRecord<TypeCorners>(payload.ToJsonString()));
     }
 
     [Fact]
     public void TypeCornersRoundTrip_decodes_the_wrapped_optional_field_from_its_flat_json_payload()
     {
-        var carried = DamlLfJsonReader.ReadRecord<NestedNoteBox>("""{"item":"deep"}""");
-        var absent = DamlLfJsonReader.ReadRecord<NestedNoteBox>("""{"item":null}""");
-
-        var innerPresent = TypeCorners.FromRecord(SampleRecordWith("nestedNote", DamlOptional.Some(carried)));
-        var innerAbsent = TypeCorners.FromRecord(SampleRecordWith("nestedNote", DamlOptional.Some(absent)));
+        var innerPresent = ReadWithNestedNote("""{"item":"deep"}""");
+        var innerAbsent = ReadWithNestedNote("""{"item":null}""");
 
         innerPresent.NestedNote!.Item.GetValueOrThrow().Should().Be("deep");
         innerAbsent.NestedNote!.Item.HasValue.Should().BeFalse();
@@ -176,7 +161,7 @@ public class TypeCornersRoundTripTests
     [Fact]
     public void TypeCornersRoundTrip_rejects_the_array_form_for_the_wrapped_optional_field()
     {
-        var readArrayForm = () => DamlLfJsonReader.ReadRecord<NestedNoteBox>("""{"item":["deep"]}""");
+        var readArrayForm = () => ReadWithNestedNote("""{"item":["deep"]}""");
 
         readArrayForm.Should().Throw<JsonException>(
             "the Daml type under this wrapper is a flat Optional Text, so the array form belongs "

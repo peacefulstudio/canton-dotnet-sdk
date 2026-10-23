@@ -18,6 +18,16 @@ public sealed record Account(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
 ) : global::Daml.Runtime.Data.IDamlRecord<Account>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Owner, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party?>.Default);
+        hash.Add(Provider, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party?>.Default);
+        hash.Add(Id, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("owner", Owner is { } __Owner ? new global::Daml.Runtime.Data.DamlOptional(__Owner.ToDamlValue()) : global::Daml.Runtime.Data.DamlOptional.None),
@@ -27,9 +37,9 @@ public sealed record Account(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Account FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Account(
-        Owner: record.GetOptionalField("owner").AsOptional().HasValue ? global::Daml.Runtime.Data.Party.FromDamlValue(record.GetOptionalField("owner").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlParty>()) : null,
-        Provider: record.GetOptionalField("provider").AsOptional().HasValue ? global::Daml.Runtime.Data.Party.FromDamlValue(record.GetOptionalField("provider").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlParty>()) : null,
-        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
+        Owner: record.GetOptionalField("owner", 0).AsOptional().HasValue ? global::Daml.Runtime.Data.Party.FromDamlValue(record.GetOptionalField("owner", 0).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlParty>()) : null,
+        Provider: record.GetOptionalField("provider", 1).AsOptional().HasValue ? global::Daml.Runtime.Data.Party.FromDamlValue(record.GetOptionalField("provider", 1).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlParty>()) : null,
+        Id: record.GetRequiredField("id", 2).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -43,5 +53,4 @@ public sealed record Account(
         fields.Add(global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id"))));
         return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
     }
-
 }

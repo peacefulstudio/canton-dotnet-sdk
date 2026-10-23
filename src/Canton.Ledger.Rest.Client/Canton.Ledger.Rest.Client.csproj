@@ -11,8 +11,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Integration.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Integration.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Client.Parity.Tests" />
-    <InternalsVisibleTo Include="Canton.Ledger.Client.PublishedBindings.Tests" />
   </ItemGroup>
 
   <ItemGroup>

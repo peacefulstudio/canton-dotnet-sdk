@@ -17,6 +17,14 @@ public sealed record AllocationInstructionResult_Output_AllocationInstructionRes
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("allocationInstructionCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationInstructionV2.IAllocationInstruction> AllocationInstructionCid
 ) : global::Daml.Runtime.Data.IDamlRecord<AllocationInstructionResult_Output_AllocationInstructionResult_Pending>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(AllocationInstructionCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationInstructionV2.IAllocationInstruction>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("allocationInstructionCid", AllocationInstructionCid.ToDamlValue())
@@ -24,7 +32,7 @@ public sealed record AllocationInstructionResult_Output_AllocationInstructionRes
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationInstructionResult_Output_AllocationInstructionResult_Pending FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationInstructionResult_Output_AllocationInstructionResult_Pending(
-        AllocationInstructionCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationInstructionV2.IAllocationInstruction>(record.GetRequiredField("allocationInstructionCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
+        AllocationInstructionCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.AllocationInstructionV2.IAllocationInstruction>(record.GetRequiredField("allocationInstructionCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,5 +44,4 @@ public sealed record AllocationInstructionResult_Output_AllocationInstructionRes
             global::Daml.Runtime.Data.DamlField.Create("allocationInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "allocationInstructionCid"), context.Field("allocationInstructionCid")))
         );
     }
-
 }

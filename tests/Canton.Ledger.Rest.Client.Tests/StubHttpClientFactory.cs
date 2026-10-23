@@ -13,7 +13,7 @@ internal sealed class StubHttpClientFactory(HttpMessageHandler handler, TimeSpan
     public HttpClient CreateClient(string name)
     {
         Assert.Equal(ServiceCollectionExtensions.HttpClientName, name);
-        return _client ??= new HttpClient(handler, disposeHandler: false)
+        return _client ??= new HttpClient(new RestAttemptTimeoutHandler { InnerHandler = handler }, disposeHandler: false)
         {
             BaseAddress = new Uri("http://localhost:7575"),
             Timeout = clientTimeout ?? TimeSpan.FromSeconds(100),

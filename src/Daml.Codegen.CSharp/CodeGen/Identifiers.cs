@@ -93,7 +93,7 @@ internal static class Identifiers
     /// <summary>
     /// Injectively maps a Daml LF name to a C# identifier body, leaving keyword
     /// collisions unescaped. Demangles damlc's mangling (<c>$$</c> → <c>$</c>,
-    /// <c>$uXXXX</c> → the UTF-16 code unit) and then escapes every character C#
+    /// <c>$uXXXX</c> → the UTF-16 code unit, <c>$UXXXXXXXX</c> → the code point) and then escapes every character C#
     /// forbids as <c>_uXXXX</c> (lowercase hex), doubling a literal <c>_</c> to
     /// <c>__</c> only where it would otherwise read back as an escape, and escaping a
     /// leading digit rather than prefixing it — so distinct Daml names never share a
@@ -132,6 +132,11 @@ internal static class Identifiers
                 demangled.Append((char)Convert.ToInt32(mangled.Substring(i + 2, 4), 16));
                 i += 6;
             }
+            else if (TryReadAstralEscape(mangled, i, out var astral))
+            {
+                demangled.Append(astral);
+                i += AstralEscapeLength;
+            }
             else
             {
                 demangled.Append(mangled[i]);
@@ -139,6 +144,35 @@ internal static class Identifiers
             }
         }
         return demangled.ToString();
+    }
+
+    private const int AstralEscapeLength = 10;
+
+    private static bool TryReadAstralEscape(string mangled, int start, out string codePoint)
+    {
+        codePoint = string.Empty;
+        if (start + AstralEscapeLength > mangled.Length || mangled[start] != '$' || mangled[start + 1] != 'U')
+        {
+            return false;
+        }
+
+        var digits = mangled.AsSpan(start + 2, AstralEscapeLength - 2);
+        foreach (var digit in digits)
+        {
+            if (!IsLowerHexDigit(digit))
+            {
+                return false;
+            }
+        }
+
+        var value = int.Parse(digits, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+        if (!Rune.IsValid(value))
+        {
+            return false;
+        }
+
+        codePoint = char.ConvertFromUtf32(value);
+        return true;
     }
 
     private static string EscapeToIdentifier(string demangled)

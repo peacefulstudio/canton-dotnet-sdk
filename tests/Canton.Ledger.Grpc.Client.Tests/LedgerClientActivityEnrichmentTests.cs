@@ -108,11 +108,11 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             .ContainSingle(a => a.GetTagItem(ActivityHelper.RpcMethod) as string == "SubmitAndWaitForTransaction")
             .Subject;
         activity.Kind.Should().Be(ActivityKind.Client);
-        activity.GetTagItem("rpc.system").Should().Be("grpc");
-        activity.GetTagItem("rpc.service").Should().Be("com.daml.ledger.api.v2.CommandService");
-        activity.GetTagItem("server.address").Should().Be("localhost");
-        activity.GetTagItem("server.port").Should().Be(5001);
-        activity.GetTagItem("daml.choice").Should().Be("Archive");
+        activity.GetTagItem(ActivityHelper.RpcSystem).Should().Be("grpc");
+        activity.GetTagItem(ActivityHelper.RpcService).Should().Be("com.daml.ledger.api.v2.CommandService");
+        activity.GetTagItem(ActivityHelper.ServerAddress).Should().Be("localhost");
+        activity.GetTagItem(ActivityHelper.ServerPort).Should().Be(5001);
+        activity.GetTagItem(LedgerActivityTagNames.DamlChoice).Should().Be("Archive");
     }
 
     [Fact]
@@ -128,9 +128,9 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             ArchiveCommand(contractId), ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("daml.contract_id").Should().BeNull();
-        activity.GetTagItem("canton.submitter.act_as").Should().BeNull();
-        activity.GetTagItem("canton.submitter.read_as").Should().BeNull();
+        activity.GetTagItem(LedgerActivityTagNames.DamlContractId).Should().BeNull();
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterActAs).Should().BeNull();
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterReadAs).Should().BeNull();
     }
 
     [Fact]
@@ -147,10 +147,10 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             ArchiveCommand(contractId), ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("daml.contract_id").Should().Be(contractId);
-        activity.GetTagItem("canton.submitter.act_as").Should().Be("party::alice");
-        activity.GetTagItem("daml.choice").Should().Be("Archive");
-        activity.GetTagItem("rpc.method").Should().Be("SubmitAndWaitForTransaction");
+        activity.GetTagItem(LedgerActivityTagNames.DamlContractId).Should().Be(contractId);
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterActAs).Should().Be("party::alice");
+        activity.GetTagItem(LedgerActivityTagNames.DamlChoice).Should().Be("Archive");
+        activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("SubmitAndWaitForTransaction");
     }
 
     [Fact]
@@ -165,10 +165,10 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             LedgerOffset.At(7), AliceReadingAsObserver, cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("canton.submitter.act_as").Should().BeNull();
-        activity.GetTagItem("canton.submitter.read_as").Should().BeNull();
-        activity.GetTagItem("canton.offset").Should().Be(7L);
-        activity.GetTagItem("rpc.method").Should().Be("GetUpdateByOffset");
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterActAs).Should().BeNull();
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterReadAs).Should().BeNull();
+        activity.GetTagItem(LedgerActivityTagNames.CantonOffset).Should().Be(7L);
+        activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("GetUpdateByOffset");
     }
 
     [Fact]
@@ -184,9 +184,9 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             LedgerOffset.At(7), AliceReadingAsObserver, cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("canton.submitter.act_as").Should().Be("party::alice");
-        activity.GetTagItem("canton.submitter.read_as").Should().Be("party::observer");
-        activity.GetTagItem("canton.offset").Should().Be(7L);
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterActAs).Should().Be("party::alice");
+        activity.GetTagItem(LedgerActivityTagNames.CantonSubmitterReadAs).Should().Be("party::observer");
+        activity.GetTagItem(LedgerActivityTagNames.CantonOffset).Should().Be(7L);
     }
 
     [Fact]
@@ -201,9 +201,9 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             ActAs, "participant::p1", cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("canton.party_id").Should().BeNull();
-        activity.GetTagItem("canton.participant_id").Should().Be("participant::p1");
-        activity.GetTagItem("rpc.method").Should().Be("GetConnectedSynchronizers");
+        activity.GetTagItem(LedgerActivityTagNames.CantonPartyId).Should().BeNull();
+        activity.GetTagItem(LedgerActivityTagNames.CantonParticipantId).Should().Be("participant::p1");
+        activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("GetConnectedSynchronizers");
     }
 
     [Fact]
@@ -219,8 +219,8 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             ActAs, "participant::p1", cancellationToken: TestContext.Current.CancellationToken);
 
         var activity = capture.Activities.Should().ContainSingle().Subject;
-        activity.GetTagItem("canton.party_id").Should().Be("party::alice");
-        activity.GetTagItem("canton.participant_id").Should().Be("participant::p1");
+        activity.GetTagItem(LedgerActivityTagNames.CantonPartyId).Should().Be("party::alice");
+        activity.GetTagItem(LedgerActivityTagNames.CantonParticipantId).Should().Be("participant::p1");
     }
 
     [Fact]
@@ -300,6 +300,7 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
     [Fact]
     public async Task GetLedgerEndAsync_records_an_RpcException_as_an_activity_error()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"network down {Guid.NewGuid()}";
         var ex = new RpcException(new Status(StatusCode.Unavailable, detail));
         _stateService
@@ -364,6 +365,7 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
     [Fact]
     public async Task SubmitAndWaitAsync_records_an_RpcException_as_an_activity_error()
     {
+        _options.EmitPartyAndContractSpanTags = true;
         var detail = $"network down {Guid.NewGuid()}";
         var ex = new RpcException(new Status(StatusCode.Unavailable, detail));
         _commandService

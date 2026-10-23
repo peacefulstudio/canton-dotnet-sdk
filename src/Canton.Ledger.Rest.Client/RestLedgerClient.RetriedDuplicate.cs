@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Globalization;
+using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Wire;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime.Outcomes;
 using Microsoft.Extensions.Logging;
 
@@ -39,12 +41,29 @@ internal sealed partial class RestLedgerClient
             LogRetriedDuplicateResolved(_logger, commandId, completionOffset);
             return new ExerciseOutcome<TProjection>.One(projected);
         }
-        catch (Exception pointReadFailure) when (pointReadFailure is not OperationCanceledException)
+        catch (Exception pointReadFailure) when (StreamEventClassifier.IsNotCancellation(pointReadFailure))
         {
-            LogRetriedDuplicatePointReadFailed(_logger, commandId, completionOffset, pointReadFailure.Message, pointReadFailure);
+            LogRetriedDuplicatePointReadFailed(commandId, completionOffset, pointReadFailure);
             return duplicate;
         }
     }
+
+    private void LogRetriedDuplicatePointReadFailed(string commandId, long completionOffset, Exception pointReadFailure)
+    {
+        if (_emitPartyAndContractSpanTags)
+        {
+            LogRetriedDuplicatePointReadFailedWithDetail(_logger, commandId, completionOffset, pointReadFailure.Message, pointReadFailure);
+        }
+        else
+        {
+            LogRetriedDuplicatePointReadFailed(_logger, commandId, completionOffset, StatusOf(pointReadFailure));
+        }
+    }
+
+    private static string StatusOf(Exception failure) =>
+        failure is LedgerOperationException { Status: TransportStatus.Http(var statusCode) }
+            ? ((int)statusCode).ToString(CultureInfo.InvariantCulture)
+            : failure.GetType().Name;
 
     private static Func<Raw.Transaction, TProjection> OnlyOfCommand<TProjection>(
         string commandId,
@@ -61,6 +80,9 @@ internal sealed partial class RestLedgerClient
     [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND but the rejection carried no usable completion_offset to resolve the committed transaction; surfacing the DUPLICATE_COMMAND error")]
     private static partial void LogRetriedDuplicateUnresolved(ILogger logger, string commandId);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND but the point read at completion offset {CompletionOffset} failed with {Status}; surfacing the DUPLICATE_COMMAND error")]
+    private static partial void LogRetriedDuplicatePointReadFailed(ILogger logger, string commandId, long completionOffset, string status);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Retried submission {CommandId} was rejected as DUPLICATE_COMMAND but the point read at completion offset {CompletionOffset} failed ({Detail}); surfacing the DUPLICATE_COMMAND error")]
-    private static partial void LogRetriedDuplicatePointReadFailed(ILogger logger, string commandId, long completionOffset, string detail, Exception exception);
+    private static partial void LogRetriedDuplicatePointReadFailedWithDetail(ILogger logger, string commandId, long completionOffset, string detail, Exception exception);
 }

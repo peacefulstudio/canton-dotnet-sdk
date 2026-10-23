@@ -1,18 +1,26 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Kernel.Streams;
+using Canton.Ledger.Kernel.Telemetry;
 using Daml.Ledger.Abstractions;
 using Grpc.Core;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Canton.Ledger.Grpc.Client;
 
-internal sealed partial class LedgerHealthCheck(ILedgerClient ledgerClient, ILogger<LedgerHealthCheck>? logger = null) : IHealthCheck
+internal sealed partial class LedgerHealthCheck(
+    ILedgerClient ledgerClient,
+    ILogger<LedgerHealthCheck>? logger = null,
+    IOptions<LedgerClientOptions>? options = null) : IHealthCheck
 {
     private readonly ILedgerClient _ledgerClient = ledgerClient ?? throw new ArgumentNullException(nameof(ledgerClient));
-    private readonly ILogger<LedgerHealthCheck> _logger = logger ?? NullLogger<LedgerHealthCheck>.Instance;
+    private readonly bool _emitPartyAndContractSpanTags = options?.Value.EmitPartyAndContractSpanTags ?? false;
+    private readonly ILogger _logger = (logger ?? NullLogger<LedgerHealthCheck>.Instance)
+        .RedactingExceptionsUnless(options?.Value.EmitPartyAndContractSpanTags ?? false);
 
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -32,14 +40,14 @@ internal sealed partial class LedgerHealthCheck(ILedgerClient ledgerClient, ILog
         {
             throw CallerCancellation.AsOperationCanceled(ex, cancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (StreamEventClassifier.IsNotCancellation(ex))
         {
             LogUnhealthy(_logger, ex);
 
             return new HealthCheckResult(
                 context.Registration.FailureStatus,
                 description: "Canton participant node is unreachable.",
-                exception: ex);
+                exception: ex.RedactingUnless(_emitPartyAndContractSpanTags));
         }
     }
 

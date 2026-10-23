@@ -70,8 +70,7 @@ internal sealed partial class TemplateEmitter(
         }
 
         var className = context.EmittedTypeName(module.Name, template.Name);
-        indent.CurrentTypeName = className;
-        indent.CurrentReservedMemberNames = context.TemplateFieldReservedNames(template);
+        var reservedMemberNames = context.TemplateFieldReservedNames(template);
 
         var keyWitness = DescribeKeyWitness(className, template, fields);
 
@@ -89,7 +88,7 @@ internal sealed partial class TemplateEmitter(
         if (fields.Count > 0)
         {
             indent.Append($"public sealed partial record {className}(");
-            recordSerialization.WriteRecordParameters(indent, fields);
+            recordSerialization.WriteRecordParameters(indent, className, reservedMemberNames, fields);
             indent.AppendLine($") : {interfaces}");
         }
         else
@@ -100,7 +99,7 @@ internal sealed partial class TemplateEmitter(
         indent.AppendLine("{");
         indent.Indent();
 
-        recordSerialization.WriteCollectionValueSemantics(indent, className, fields);
+        recordSerialization.WriteCollectionValueSemantics(indent, className, className, reservedMemberNames, fields);
         WriteTemplateMetadata(indent, package, module, template);
 
         if (keyWitness is not null)
@@ -108,11 +107,11 @@ internal sealed partial class TemplateEmitter(
             WriteKeyWitness(indent, module, template, keyWitness);
         }
 
-        recordSerialization.WriteToRecordMethod(indent, fields, []);
-        recordSerialization.WriteFromRecordMethod(indent, className, fields, []);
+        recordSerialization.WriteToRecordMethod(indent, className, reservedMemberNames, fields, []);
+        recordSerialization.WriteFromRecordMethod(indent, className, className, reservedMemberNames, fields, []);
         recordSerialization.WriteReadDamlLfJsonMethod(indent, fields, []);
 
-        choiceEmitter.WriteChoiceDescriptors(indent, template);
+        choiceEmitter.WriteChoiceDescriptors(indent, template, className);
 
         var choicesFieldTakingTheMemberName = fields.FirstOrDefault(
             field => Identifiers.MemberName(field.Name, className, context.TemplateFieldReservedNames(template)) == ChoicesMemberName);
@@ -142,6 +141,7 @@ internal sealed partial class TemplateEmitter(
 
         choiceEmitter.WriteChoiceByKeyCommandBuilders(indent, template, className);
 
+        indent.TrimTrailingBlankLine();
         indent.Dedent();
         indent.AppendLine("}");
         indent.AppendLine();
@@ -168,8 +168,7 @@ internal sealed partial class TemplateEmitter(
         indent.Indent();
 
         var choiceTypeName = EmitterHelpers.SanitizeIdentifier(choice.Name);
-        indent.CurrentTypeName = choiceTypeName;
-        indent.CurrentReservedMemberNames = ReservedMemberNames.OfRecordField();
+        var reservedMemberNames = ReservedMemberNames.OfRecordField();
 
         if (options.GenerateXmlDocs)
         {
@@ -181,7 +180,7 @@ internal sealed partial class TemplateEmitter(
         if (record.Fields.Count > 0)
         {
             indent.Append($"public sealed record {choiceTypeName}(");
-            recordSerialization.WriteRecordParameters(indent, record.Fields);
+            recordSerialization.WriteRecordParameters(indent, choiceTypeName, reservedMemberNames, record.Fields);
             indent.AppendLine($") : {TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{choiceTypeName}>");
         }
         else
@@ -192,11 +191,12 @@ internal sealed partial class TemplateEmitter(
         indent.AppendLine("{");
         indent.Indent();
 
-        recordSerialization.WriteCollectionValueSemantics(indent, choiceTypeName, record.Fields);
-        recordSerialization.WriteToRecordMethod(indent, record.Fields, []);
-        recordSerialization.WriteFromRecordMethod(indent, choiceTypeName, record.Fields, []);
+        recordSerialization.WriteCollectionValueSemantics(indent, choiceTypeName, choiceTypeName, reservedMemberNames, record.Fields);
+        recordSerialization.WriteToRecordMethod(indent, choiceTypeName, reservedMemberNames, record.Fields, []);
+        recordSerialization.WriteFromRecordMethod(indent, choiceTypeName, choiceTypeName, reservedMemberNames, record.Fields, []);
         recordSerialization.WriteReadDamlLfJsonMethod(indent, record.Fields, []);
 
+        indent.TrimTrailingBlankLine();
         indent.Dedent();
         indent.AppendLine("}");
 

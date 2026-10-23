@@ -15,6 +15,9 @@ namespace Daml.Runtime.Stdlib;
 /// </summary>
 public sealed record RelTime([property: DamlFieldAttribute("microseconds")] long Microseconds) : IDamlRecord<RelTime>
 {
+    /// <inheritdoc />
+    public override int GetHashCode() => DamlHash.Int64(Microseconds);
+
     /// <summary>Encodes this RelTime as the single-field <c>microseconds</c> wire record.</summary>
     public DamlRecord ToRecord() => DamlRecord.Create(
         DamlField.Create("microseconds", new DamlInt64(Microseconds))
@@ -22,7 +25,7 @@ public sealed record RelTime([property: DamlFieldAttribute("microseconds")] long
 
     /// <summary>Decodes a RelTime from its <c>microseconds</c> wire record.</summary>
     public static RelTime FromRecord(DamlRecord record) => new(
-        Microseconds: record.GetRequiredField("microseconds").As<DamlInt64>().Value
+        Microseconds: record.GetRequiredField("microseconds", 0).As<DamlInt64>().Value
     );
 
     /// <summary>Decodes a RelTime directly from its <c>microseconds</c> Daml-LF JSON record.</summary>

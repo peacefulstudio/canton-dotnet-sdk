@@ -30,13 +30,21 @@ namespace Daml.Codegen.CSharp;
 /// <c>--schema-only</c>, the proto carries <see cref="DamlPartyAnalysis.Dynamic"/>
 /// on every template and choice and the typed-<c>actAs</c> codegen path
 /// falls back to an explicit <c>SubmitterInfo</c> parameter.
+/// <para>
+/// Trust boundary: this reader takes every package id from the proto on trust. An intermediate carries
+/// no payload bytes, so unlike <c>DalfReader.Parse</c>, which derives a package id as the SHA-256 of the
+/// payload, nothing here can verify an id against content. It checks shape only: a package id, an upgraded
+/// package id and a type-constructor package id must be 64 lowercase hexadecimal characters (a
+/// type-constructor package id may also be empty, meaning the enclosing package). A package name keeps
+/// the looser package-coordinate check.
+/// </para>
 /// </summary>
 public static partial class IntermediateDarReader
 {
-    [GeneratedRegex(@"\A[A-Za-z_][A-Za-z0-9_$]*\z")]
+    [GeneratedRegex(@"\A[A-Za-z_$][A-Za-z0-9_$]*\z")]
     private static partial Regex IdentifierGrammar();
 
-    [GeneratedRegex(@"\A[A-Za-z0-9._-]+\z")]
+    [GeneratedRegex(@"\A(?=[._-]*[A-Za-z0-9])[A-Za-z0-9._-]+\z")]
     private static partial Regex PackageCoordinateGrammar();
 
     private static string RequireIdentifier(string value, string kind)
@@ -45,14 +53,23 @@ public static partial class IntermediateDarReader
         {
             throw new InvalidDataException(
                 $"IntermediateDar {kind} '{value}' is not a valid Daml-LF identifier " +
-                "([A-Za-z_][A-Za-z0-9_$]*). Names outside the grammar are rejected because the " +
+                "([A-Za-z_$][A-Za-z0-9_$]*). Names outside the grammar are rejected because the " +
                 "emitter interpolates them into generated C# source and string literals.");
         }
         return value;
     }
 
-    private static string JoinValidatedSegments(IEnumerable<string> segments, string kind) =>
-        string.Join(".", segments.Select(segment => RequireIdentifier(segment, kind)));
+    private static string JoinValidatedSegments(IEnumerable<string> segments, string kind)
+    {
+        var validated = segments.Select(segment => RequireIdentifier(segment, kind)).ToList();
+        if (validated.Count == 0)
+        {
+            throw new InvalidDataException(
+                $"IntermediateDar {kind} list is empty: a name needs at least one segment. " +
+                "An empty name would emit a source file at the root of the output directory.");
+        }
+        return string.Join(".", validated);
+    }
 
     private static string RequireDottedIdentifier(string value, string kind)
     {
@@ -60,8 +77,23 @@ public static partial class IntermediateDarReader
         {
             throw new InvalidDataException(
                 $"IntermediateDar {kind} '{value}' is not a valid dotted Daml-LF identifier " +
-                "(period-separated [A-Za-z_][A-Za-z0-9_$]* segments). Names outside the grammar are rejected " +
+                "(period-separated [A-Za-z_$][A-Za-z0-9_$]* segments). Names outside the grammar are rejected " +
                 "because the emitter interpolates them into generated C# source and string literals.");
+        }
+        return value;
+    }
+
+    [GeneratedRegex(@"\A[0-9a-f]{64}\z")]
+    private static partial Regex PackageIdGrammar();
+
+    private static string RequirePackageId(string value, string kind)
+    {
+        if (!PackageIdGrammar().IsMatch(value))
+        {
+            throw new InvalidDataException(
+                $"IntermediateDar {kind} '{value}' is not a package id: a Daml-LF package id is " +
+                "64 lowercase hexadecimal characters. A truncated, upper-cased or hand-edited id is rejected " +
+                "because the intermediate carries no payload to verify it against.");
         }
         return value;
     }
@@ -72,7 +104,7 @@ public static partial class IntermediateDarReader
         {
             throw new InvalidDataException(
                 $"IntermediateDar {kind} '{value}' is not a valid package coordinate " +
-                "(non-empty [A-Za-z0-9._-]+). Values outside the grammar are rejected because the " +
+                "(non-empty [A-Za-z0-9._-]+ with at least one letter or digit). Values outside the grammar are rejected because the " +
                 "emitter interpolates them into generated C# source and string literals.");
         }
         return value;
@@ -97,15 +129,16 @@ public static partial class IntermediateDarReader
     private static DamlPackage ConvertPackage(PbPackage pkg) =>
         new()
         {
-            PackageId = RequirePackageCoordinate(pkg.PackageId, "package id"),
+            PackageId = RequirePackageId(pkg.PackageId, "package id"),
             Name = RequirePackageCoordinate(pkg.PackageName, "package name"),
             Version = ParseVersion(pkg.PackageVersion),
+            RawVersion = pkg.PackageVersion,
             LfVersion = pkg.LanguageVersion,
             Modules = pkg.Modules.Select(ConvertModule).ToList(),
             DependencyReferences = [],
             UpgradedPackageId = string.IsNullOrEmpty(pkg.UpgradedPackageId)
                 ? null
-                : RequirePackageCoordinate(pkg.UpgradedPackageId, "upgraded package id"),
+                : RequirePackageId(pkg.UpgradedPackageId, "upgraded package id"),
         };
 
     private static DamlModule ConvertModule(PbModule module)
@@ -312,12 +345,12 @@ public static partial class IntermediateDarReader
         return new DamlTypeApp(head, args);
     }
 
-    private static string RequirePackageCoordinateOrSamePackageMarker(string packageId, string kind) =>
-        packageId.Length == 0 ? packageId : RequirePackageCoordinate(packageId, kind);
+    private static string RequirePackageIdOrSamePackageMarker(string packageId, string kind) =>
+        packageId.Length == 0 ? packageId : RequirePackageId(packageId, kind);
 
     private static DamlTypeRef ConvertTypeConRef(PbTypeConName tcn) =>
         new(
-            RequirePackageCoordinateOrSamePackageMarker(tcn.PackageId, "type-constructor package id"),
+            RequirePackageIdOrSamePackageMarker(tcn.PackageId, "type-constructor package id"),
             JoinValidatedSegments(tcn.ModuleNameSegments, "type-constructor module segment"),
             JoinValidatedSegments(tcn.NameSegments, "type-constructor name segment"));
 

@@ -16,7 +16,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_serialize_date_fields_correctly()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -39,11 +38,9 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var dateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("DateRecord.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         dateFile.Should().NotBeNull();
         var code = dateFile!.Content;
 
@@ -54,7 +51,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_serialize_timestamp_fields_correctly()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -76,11 +72,9 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var timestampFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("TimestampRecord.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         timestampFile.Should().NotBeNull();
         var code = timestampFile!.Content;
 
@@ -91,7 +85,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_serialize_contract_id_fields_correctly()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -115,11 +108,9 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var refFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Reference.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         refFile.Should().NotBeNull();
         var code = refFile!.Content;
 
@@ -130,7 +121,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_serialize_type_ref_fields_correctly()
     {
-        // Arrange - A record referencing another record type
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -160,11 +150,9 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var outerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Outer.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         outerFile.Should().NotBeNull();
         var code = outerFile!.Content;
 
@@ -179,7 +167,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_empty_record()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -198,15 +185,12 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var emptyFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("EmptyRecord.cs", global::System.StringComparison.Ordinal));
 
-        // Assert
         emptyFile.Should().NotBeNull();
         var code = emptyFile!.Content;
 
-        // Record with no primary constructor parameters
         code.Should().Contain("public sealed record EmptyRecord : global::Daml.Runtime.Data.IDamlRecord<EmptyRecord>");
         code.Should().Contain("DamlRecord.Create(");
     }
@@ -218,7 +202,6 @@ public partial class CodeGenEdgeCaseTests
     [Fact]
     public void Generate_should_handle_multiple_modules()
     {
-        // Arrange
         var module1 = new DamlModule
         {
             Name = "Module.One",
@@ -267,10 +250,8 @@ public partial class CodeGenEdgeCaseTests
 
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
 
-        // Assert
         files.Count.Should().BeGreaterThanOrEqualTo(2);
 
         var type1File = files.FirstOrDefault(f => f.RelativePath.EndsWith("Type1.cs", global::System.StringComparison.Ordinal));

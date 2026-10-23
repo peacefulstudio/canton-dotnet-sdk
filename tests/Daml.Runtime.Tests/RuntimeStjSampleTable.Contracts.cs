@@ -56,6 +56,19 @@ internal static partial class RuntimeStjSampleTable
             PackageName = "sample-package",
         };
 
+    private static TreeEvent.Exercised SampleTreeExercisedWithNestedExercises =>
+        SampleTreeExercised with
+        {
+            EventId = "1:5",
+            ChildEvents = Eq<TreeEvent>(
+                SampleTreeExercised with
+                {
+                    EventId = "1:6",
+                    ChildEvents = Eq<TreeEvent>(SampleTreeExercised with { Consuming = false }, SampleTreeCreated),
+                },
+                SampleTreeCreated with { EventId = "1:7" }),
+        };
+
     private static void AddContracts(Dictionary<Type, object[]> samples)
     {
         samples[typeof(DamlTypeKind)] = [DamlTypeKind.Interface];
@@ -102,6 +115,7 @@ internal static partial class RuntimeStjSampleTable
                 new CommandId("cmd-1"))
             {
                 ExercisedEvents = Eq(SampleExercisedEvent, SampleExercisedEvent with { Consuming = false }),
+                PaidTrafficCost = 4096L,
             },
             new TransactionResult(
                 "update-2",
@@ -115,8 +129,15 @@ internal static partial class RuntimeStjSampleTable
             new TransactionTree(
                 "update-1",
                 LedgerOffset.At(321),
-                Eq<TreeEvent>(SampleTreeExercised, SampleTreeCreated)),
+                Eq<TreeEvent>(SampleTreeExercised, SampleTreeCreated))
+            {
+                PaidTrafficCost = 4096L,
+            },
+            new TransactionTree(
+                "update-2",
+                LedgerOffset.At(322),
+                Eq<TreeEvent>(SampleTreeExercisedWithNestedExercises, SampleTreeCreated with { EventId = "1:8" })),
         ];
-        samples[typeof(TreeEvent)] = [SampleTreeCreated, SampleTreeExercised];
+        samples[typeof(TreeEvent)] = [SampleTreeCreated, SampleTreeExercised, SampleTreeExercisedWithNestedExercises];
     }
 }

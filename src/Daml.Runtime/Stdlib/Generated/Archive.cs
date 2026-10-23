@@ -27,5 +27,4 @@ public sealed record Archive : global::Daml.Runtime.Data.IDamlRecord<Archive>
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireObject(json, context);
         return global::Daml.Runtime.Data.DamlRecord.Create();
     }
-
 }

@@ -13,18 +13,9 @@ public partial class CodeGenEdgeCaseTests
 {
     #region Cross-Package Type Reference Tests
 
-    // Cross-DAR type refs are the headline of the spike: a generated record can
-    // reference types defined in a different DAR shipped in the same archive (e.g.
-    // splice-api-token-holding-v1's HoldingView references
-    // splice-api-token-metadata-v1's Metadata). The codegen needs to (a) emit a
-    // fully qualified C# name, (b) record the foreign package id so a
-    // <PackageReference> ends up in the generated csproj. These tests pin both
-    // halves down independent of any specific Splice version.
-
     [Fact]
     public void Generate_should_emit_fully_qualified_name_for_foreign_package_type_ref()
     {
-        // Arrange — main package references a record defined in a foreign package.
         const string ForeignPackageId = "foreign-pkg-id";
 
         var foreignModule = new DamlModule
@@ -64,19 +55,17 @@ public partial class CodeGenEdgeCaseTests
         var dar = CreateMultiPackageDar(mainPkg, foreignPkg);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar).ToList();
         var wrapper = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", global::System.StringComparison.Ordinal));
 
         wrapper.Should().NotBeNull();
         wrapper!.Content.Should().Contain("global::Foreign.Module.Meta Meta");
-        wrapper.Content.Should().Contain("global::Foreign.Module.Meta.FromRecord(record.GetRequiredField(\"meta\").As<global::Daml.Runtime.Data.DamlRecord>())");
+        wrapper.Content.Should().Contain("global::Foreign.Module.Meta.FromRecord(record.GetRequiredField(\"meta\", 0).As<global::Daml.Runtime.Data.DamlRecord>())");
     }
 
     [Fact]
     public void Generate_should_emit_PackageReference_for_each_foreign_package_referenced()
     {
-        // Arrange — two foreign packages, both referenced by fields of the main type.
         var foreignA = CreateTestPackage(
             "foreign-a-id",
             "foreign-a",
@@ -128,18 +117,16 @@ public partial class CodeGenEdgeCaseTests
         };
         var generator = CreateGenerator(options);
 
-        // Act
         var files = generator.Generate(dar).ToList();
         var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
 
-        // Assert
         csproj.Should().NotBeNull();
         csproj!.Content.Should().Contain("<PackageReference Include=\"Foreign.A\" Version=\"1.0.0.*-*\" />");
         csproj.Content.Should().Contain("<PackageReference Include=\"Foreign.B\" Version=\"1.0.0.*-*\" />");
     }
 
     [Fact]
-    public void Generate_should_not_emit_foreign_namespace_or_PackageReference_for_unmapped_type_in_placeholder_package()
+    public void Generate_should_throw_for_a_field_of_an_unmapped_type_in_a_placeholder_package()
     {
         const string ForeignPackageId = "foreign-no-metadata-id";
 
@@ -188,17 +175,9 @@ public partial class CodeGenEdgeCaseTests
         };
         var generator = CreateGenerator(options);
 
-        var files = generator.Generate(dar).ToList();
-        var wrapper = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", global::System.StringComparison.Ordinal));
-        var csproj = files.FirstOrDefault(f => f.RelativePath.EndsWith(".csproj", global::System.StringComparison.Ordinal));
+        var generate = () => generator.Generate(dar).ToList();
 
-        wrapper.Should().NotBeNull();
-        wrapper!.Content.Should().Contain("[property: global::Daml.Runtime.Data.DamlFieldAttribute(\"meta\")] Meta Meta");
-        wrapper.Content.Should().NotContain("No.Package.Metadata");
-
-        csproj.Should().NotBeNull();
-        csproj!.Content.Should().NotContain("No.Package.Metadata");
-        csproj.Content.Should().NotContain("PackageReference Include=\".");
+        generate.Should().Throw<CodegenException>().WithMessage("*Foreign.Module:Meta*");
     }
 
     [Fact]

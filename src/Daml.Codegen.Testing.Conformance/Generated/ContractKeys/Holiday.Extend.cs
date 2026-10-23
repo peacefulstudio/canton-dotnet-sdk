@@ -18,6 +18,14 @@ public sealed partial record Holiday
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("added")] string Added
     ) : global::Daml.Runtime.Data.IDamlRecord<Extend>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Added, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("added", new global::Daml.Runtime.Data.DamlText(Added))
@@ -25,7 +33,7 @@ public sealed partial record Holiday
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Extend FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Extend(
-            Added: record.GetRequiredField("added").As<global::Daml.Runtime.Data.DamlText>().Value
+            Added: record.GetRequiredField("added", 0).As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record Holiday
                 global::Daml.Runtime.Data.DamlField.Create("added", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "added"), context.Field("added")))
             );
         }
-
     }
 }

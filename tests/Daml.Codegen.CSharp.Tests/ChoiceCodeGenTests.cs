@@ -26,7 +26,6 @@ public class ChoiceCodeGenTests
     [Fact]
     public void Generate_should_reference_existing_type_for_local_data_type_argument()
     {
-        // Arrange
         var transferArgFields = new[]
         {
             new DamlFieldDefinition("newOwner", new DamlPrimitiveType(DamlPrimitive.Party)),
@@ -81,20 +80,18 @@ public class ChoiceCodeGenTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(StdlibStub).Build();
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
 
-        // Assert
         assetFile.Should().NotBeNull();
         var code = assetFile!.Content;
 
-        // Should reference the Transfer data type, not generate a nested TransferArgument
-        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Asset, Transfer, global::Test.Module.Transfer_Result>");
+        code.Should().Contain(
+            "global::Daml.Runtime.Commands.Choice<Asset, Transfer, global::Test.Module.Transfer_Result>",
+            because: "the choice references the Transfer data type instead of a nested TransferArgument");
         code.Should().Contain("ArgumentEncoder = arg => arg.ToRecord()");
         code.Should().Contain("ResultDecoder = val => global::Test.Module.Transfer_Result.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>())");
 
-        // Should NOT contain a nested argument class
         code.Should().NotContain("public sealed record TransferArgument");
         code.Should().NotContain("public sealed record TransferArg");
     }
@@ -220,7 +217,6 @@ public class ChoiceCodeGenTests
     [Fact]
     public void Generate_should_use_DamlUnit_for_Unit_argument()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -255,11 +251,9 @@ public class ChoiceCodeGenTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(StdlibStub).Build();
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var contractFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("MyTemplate.cs", StringComparison.Ordinal));
 
-        // Assert
         contractFile.Should().NotBeNull();
         var code = contractFile!.Content;
 
@@ -271,7 +265,6 @@ public class ChoiceCodeGenTests
     [Fact]
     public void Generate_should_encode_Archive_choice_argument_as_empty_record()
     {
-        // Arrange - Archive is a special external type reference
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -306,11 +299,9 @@ public class ChoiceCodeGenTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(StdlibStub).Build();
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var templateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("MyTemplate.cs", StringComparison.Ordinal));
 
-        // Assert
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
@@ -322,7 +313,6 @@ public class ChoiceCodeGenTests
     [Fact]
     public void Generate_should_decode_ContractId_result_correctly()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -369,11 +359,9 @@ public class ChoiceCodeGenTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(StdlibStub).Build();
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var factoryFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Factory.cs", StringComparison.Ordinal));
 
-        // Assert
         factoryFile.Should().NotBeNull();
         var code = factoryFile!.Content;
 
@@ -384,7 +372,6 @@ public class ChoiceCodeGenTests
     [Fact]
     public void Generate_should_decode_primitive_results_correctly()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -433,15 +420,12 @@ public class ChoiceCodeGenTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(StdlibStub).Build();
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var counterFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Counter.cs", StringComparison.Ordinal));
 
-        // Assert
         counterFile.Should().NotBeNull();
         var code = counterFile!.Content;
 
-        // Check primitive result decoders
         code.Should().Contain("global::Daml.Runtime.Commands.Choice<Counter, global::Daml.Runtime.Data.DamlUnit, long> ChoiceGetCount");
         code.Should().Contain("ResultDecoder = val => val.As<global::Daml.Runtime.Data.DamlInt64>().Value");
 
@@ -455,7 +439,6 @@ public class ChoiceCodeGenTests
     [Fact]
     public void Generate_should_handle_multiple_choices_with_different_arg_types()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -466,7 +449,6 @@ public class ChoiceCodeGenTests
                     Name = "Holding",
                     Choices =
                     [
-                        // Local data type argument
                         new DamlChoice
                         {
                             Name = "Split",
@@ -474,7 +456,6 @@ public class ChoiceCodeGenTests
                             ArgumentType = new DamlTypeRef("", "Test.Module", "Split"),
                             ReturnType = new DamlTypeRef("", "Test.Module", "Split_Result")
                         },
-                        // Unit argument
                         new DamlChoice
                         {
                             Name = "GetBalance",
@@ -482,7 +463,6 @@ public class ChoiceCodeGenTests
                             ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
                             ReturnType = new DamlPrimitiveType(DamlPrimitive.Numeric)
                         },
-                        // External Archive argument
                         new DamlChoice
                         {
                             Name = "Archive",
@@ -517,23 +497,20 @@ public class ChoiceCodeGenTests
         var dar = new DamlModelBuilder().WithModule(module).WithDependency(StdlibStub).Build();
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var holdingFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Holding.cs", StringComparison.Ordinal));
 
-        // Assert
         holdingFile.Should().NotBeNull();
         var code = holdingFile!.Content;
 
-        // Split - uses local data type
         code.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, Split, global::Test.Module.Split_Result> ChoiceSplit");
         code.Should().Contain("ArgumentEncoder = arg => arg.ToRecord(),");
 
-        // GetBalance - uses Unit argument
         code.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, global::Daml.Runtime.Data.DamlUnit, decimal> ChoiceGetBalance");
 
-        // Archive - DamlUnit type parameters, but the wire argument encodes as an empty DamlRecord
-        code.Should().Contain("global::Daml.Runtime.Commands.Choice<Holding, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive");
+        code.Should().Contain(
+            "global::Daml.Runtime.Commands.Choice<Holding, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive",
+            because: "Archive uses DamlUnit type parameters while its wire argument encodes as an empty DamlRecord");
     }
 
     [Fact]

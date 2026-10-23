@@ -76,11 +76,11 @@ public sealed record SettlementFactory_SettleBatch(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Settlement);
+        hash.Add(Settlement, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationV2.SettlementInfo>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(TransferLegs));
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Allocations));
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Actors));
-        hash.Add(ExtraArgs);
+        hash.Add(ExtraArgs, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default);
         return hash.ToHashCode();
     }
 
@@ -95,11 +95,11 @@ public sealed record SettlementFactory_SettleBatch(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static SettlementFactory_SettleBatch FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new SettlementFactory_SettleBatch(
-        Settlement: global::Splice.Api.Token.AllocationV2.SettlementInfo.FromRecord(record.GetRequiredField("settlement").As<global::Daml.Runtime.Data.DamlRecord>()),
-        TransferLegs: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLeg>)record.GetRequiredField("transferLegs").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLeg.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
-        Allocations: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.FinalizedAllocation>)record.GetRequiredField("allocations").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.FinalizedAllocation.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
-        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
-        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<global::Daml.Runtime.Data.DamlRecord>())
+        Settlement: global::Splice.Api.Token.AllocationV2.SettlementInfo.FromRecord(record.GetRequiredField("settlement", 0).As<global::Daml.Runtime.Data.DamlRecord>()),
+        TransferLegs: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.TransferLeg>)record.GetRequiredField("transferLegs", 1).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.TransferLeg.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        Allocations: (global::System.Collections.Generic.IReadOnlyList<global::Splice.Api.Token.AllocationV2.FinalizedAllocation>)record.GetRequiredField("allocations", 2).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Splice.Api.Token.AllocationV2.FinalizedAllocation.FromRecord(x.As<global::Daml.Runtime.Data.DamlRecord>())).ToList(),
+        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors", 3).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs", 4).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -115,5 +115,4 @@ public sealed record SettlementFactory_SettleBatch(
             global::Daml.Runtime.Data.DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
         );
     }
-
 }

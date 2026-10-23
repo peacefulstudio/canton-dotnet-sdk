@@ -53,9 +53,9 @@ public sealed record AllocationInstructionResult(
     public override int GetHashCode()
     {
         var hash = new global::System.HashCode();
-        hash.Add(Output);
+        hash.Add(Output, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output>.Default);
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(AuthorizerChangeCids));
-        hash.Add(Meta);
+        hash.Add(Meta, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.Metadata>.Default);
         return hash.ToHashCode();
     }
 
@@ -68,9 +68,9 @@ public sealed record AllocationInstructionResult(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AllocationInstructionResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AllocationInstructionResult(
-        Output: global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output.FromVariant(record.GetRequiredField("output").As<global::Daml.Runtime.Data.DamlVariant>()),
-        AuthorizerChangeCids: (global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>>)record.GetRequiredField("authorizerChangeCids").As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList()),
-        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta").As<global::Daml.Runtime.Data.DamlRecord>())
+        Output: global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionResult_Output.FromVariant(record.GetRequiredField("output", 0).As<global::Daml.Runtime.Data.DamlVariant>()),
+        AuthorizerChangeCids: (global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>>)record.GetRequiredField("authorizerChangeCids", 1).As<global::Daml.Runtime.Data.DamlTextMap>().Values.ToDictionary(kv => kv.Key, kv => (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>>)kv.Value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.HoldingV2.IHolding>(x.As<global::Daml.Runtime.Contracts.DamlContractId>().Value)).ToList()),
+        Meta: global::Splice.Api.Token.MetadataV1.Metadata.FromRecord(record.GetRequiredField("meta", 2).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -84,5 +84,4 @@ public sealed record AllocationInstructionResult(
             global::Daml.Runtime.Data.DamlField.Create("meta", global::Splice.Api.Token.MetadataV1.Metadata.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "meta"), context.Field("meta")))
         );
     }
-
 }

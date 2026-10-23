@@ -54,40 +54,57 @@ public sealed record DamlRecord(
         GetField(name) ?? throw MissingField(name);
 
     /// <summary>
-    /// Gets a field whose Daml type is a flat <c>Optional</c>, reading an omitted field as
+    /// Gets a required field by name, or by <paramref name="index"/> when the record arrived without
+    /// field labels (every label is empty), as a non-verbose gRPC <c>GetContract</c> answers. A record
+    /// with any label is read by name only, so a missing name still throws. Called by generated
+    /// <c>FromRecord</c> methods.
+    /// </summary>
+    /// <param name="name">The field label.</param>
+    /// <param name="index">The field's position in the Daml record declaration.</param>
+    /// <returns>The field's value.</returns>
+    /// <exception cref="InvalidOperationException">The record has no such field.</exception>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public DamlValue GetRequiredField(string name, int index) =>
+        FindField(name, index) ?? throw MissingField(name);
+
+    /// <summary>
+    /// Gets a field whose Daml type is a flat <c>Optional</c> by name, or by <paramref name="index"/> when
+    /// the record arrived without field labels, reading an omitted field as
     /// <see cref="DamlOptional.None"/>. The Ledger API leaves out a record field whose value is a
     /// trailing <c>None</c>, and a payload written before an upgrade added the field has no such field.
     /// Called by generated <c>FromRecord</c> methods.
     /// </summary>
     /// <param name="name">The field label.</param>
+    /// <param name="index">The field's position in the Daml record declaration.</param>
     /// <returns>The field's value, or <see cref="DamlOptional.None"/> when the record has no such field.</returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public DamlValue GetOptionalField(string name) =>
-        GetField(name) ?? DamlOptional.None;
+    public DamlValue GetOptionalField(string name, int index) =>
+        FindField(name, index) ?? DamlOptional.None;
 
     /// <summary>
-    /// Gets a field whose Daml type is a nested <c>Optional (Optional a)</c> chain, reading an
-    /// omitted field as <see cref="DamlOptionalChain.None"/>, for the reasons
-    /// <see cref="GetOptionalField"/> gives. Called by generated <c>FromRecord</c> methods.
+    /// Gets a field whose Daml type is a nested <c>Optional (Optional a)</c> chain by name, or by
+    /// <paramref name="index"/> when the record arrived without field labels, reading an omitted field as
+    /// <see cref="DamlOptionalChain.None"/>. Called by generated <c>FromRecord</c> methods.
     /// </summary>
     /// <param name="name">The field label.</param>
+    /// <param name="index">The field's position in the Daml record declaration.</param>
     /// <returns>The field's value, or <see cref="DamlOptionalChain.None"/> when the record has no such field.</returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public DamlValue GetOptionalChainField(string name) =>
-        GetField(name) ?? DamlOptionalChain.None;
+    public DamlValue GetOptionalChainField(string name, int index) =>
+        FindField(name, index) ?? DamlOptionalChain.None;
 
     /// <summary>
-    /// Gets and converts a field whose Daml type is a type parameter. A present field is converted by
-    /// <paramref name="convert"/>. An omitted field is handed to <paramref name="convert"/> as
+    /// Gets and converts a field whose Daml type is a type parameter, by name or by
+    /// <paramref name="index"/> when the record arrived without field labels. A present field is converted
+    /// by <paramref name="convert"/>. An omitted field is handed to <paramref name="convert"/> as
     /// <paramref name="absentReadsAs"/> when the call site gives one, which it does when the
-    /// instantiation is an <c>Optional</c>, flat or nested: the Ledger API leaves out a field whose
-    /// value is a trailing <c>None</c>, and <see cref="DamlOptional.None"/> reads as <c>None</c> at
-    /// either level. An omitted field at an instantiation that is not an <c>Optional</c> is
-    /// required, and the converter is not called. Called by generated <c>FromRecord</c> methods and
-    /// the stdlib tuples.
+    /// instantiation is an <c>Optional</c>, flat or nested. An omitted field at an instantiation that
+    /// is not an <c>Optional</c> is required, and the converter is not called. Called by generated
+    /// <c>FromRecord</c> methods and the stdlib tuples.
     /// </summary>
     /// <typeparam name="T">The instantiation's C# type.</typeparam>
     /// <param name="name">The field label.</param>
+    /// <param name="index">The field's position in the Daml record declaration.</param>
     /// <param name="convert">The instantiation's converter.</param>
     /// <param name="absentReadsAs">
     /// What an omitted field reads as: <see cref="DamlOptional.None"/> when the instantiation is an
@@ -98,12 +115,25 @@ public sealed record DamlRecord(
     /// The field is omitted and <paramref name="absentReadsAs"/> is <see langword="null"/>.
     /// </exception>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public T GetTypeParameterField<T>(string name, Func<DamlValue, T> convert, DamlValue? absentReadsAs)
+    public T GetTypeParameterField<T>(string name, int index, Func<DamlValue, T> convert, DamlValue? absentReadsAs)
     {
         ArgumentNullException.ThrowIfNull(convert);
-        var value = GetField(name) ?? absentReadsAs ?? throw MissingField(name);
+        var value = FindField(name, index) ?? absentReadsAs ?? throw MissingField(name);
         return convert(value);
     }
+
+    private DamlValue? FindField(string name, int index)
+    {
+        if (!ArrivedWithoutLabels())
+        {
+            return GetField(name);
+        }
+
+        return index < Fields.Count ? Fields[index].Value : null;
+    }
+
+    private bool ArrivedWithoutLabels() =>
+        Fields.Count > 0 && Fields.All(entry => entry.Label.Length == 0);
 
     private static InvalidOperationException MissingField(string name) =>
         new($"Required field '{name}' not found in record.");

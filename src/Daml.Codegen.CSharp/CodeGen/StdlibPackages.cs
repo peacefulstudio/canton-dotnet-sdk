@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Text.RegularExpressions;
 using Daml.Codegen.Intermediate.Model;
 using RuntimeNamespaces = Daml.Runtime.RuntimeNamespaces;
 
@@ -13,18 +14,26 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// <c>Require</c>s needed by emitted field types. Shared by the emitter and the
 /// cross-package resolver so both agree on what is stdlib.
 /// </summary>
-internal static class StdlibPackages
+internal static partial class StdlibPackages
 {
     /// <summary>
     /// Returns true for packages whose types are baked into <c>Daml.Runtime</c>
     /// (daml-prim, daml-stdlib) and therefore must not be emitted as a
     /// PackageReference. Cross-package refs into these packages are mapped to
-    /// <c>Daml.Runtime.Stdlib.*</c> types.
+    /// <c>Daml.Runtime.Stdlib.*</c> types. Only the names the Daml SDK gives its stdlib packages
+    /// qualify: <c>daml-prim</c>, <c>daml-stdlib</c>, <c>daml-stdlib-&lt;sdk version&gt;</c>, and
+    /// the per-module component packages <c>daml-prim-</c>, <c>daml-stdlib-</c> and
+    /// <c>ghc-stdlib-</c> followed by a <c>DA</c> or <c>GHC</c> module path in hyphenated
+    /// PascalCase. A name that merely starts like one, such as <c>daml-stdlib-evil</c>, is a
+    /// user package.
     /// </summary>
     public static bool IsStdlibPackage(string packageName) =>
-        packageName.StartsWith("daml-prim", StringComparison.Ordinal)
-        || packageName.StartsWith("daml-stdlib", StringComparison.Ordinal)
-        || packageName.StartsWith("ghc-stdlib", StringComparison.Ordinal);
+        StdlibPackageName().IsMatch(packageName);
+
+    [GeneratedRegex(
+        @"^(?:daml-prim|daml-stdlib|daml-stdlib-\d+(?:\.\d+)+|(?:daml-prim|daml-stdlib|ghc-stdlib)-(?:DA|GHC)(?:-[A-Z][A-Za-z0-9]*)+)$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex StdlibPackageName();
 
     /// <summary>Returns true for packages carrying no usable name metadata.</summary>
     public static bool IsPlaceholderPackageName(string packageName) =>

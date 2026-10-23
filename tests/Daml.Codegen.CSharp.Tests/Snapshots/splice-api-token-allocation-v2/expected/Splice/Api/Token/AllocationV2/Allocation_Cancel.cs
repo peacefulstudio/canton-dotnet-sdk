@@ -47,7 +47,7 @@ public sealed record Allocation_Cancel(
     {
         var hash = new global::System.HashCode();
         hash.Add(global::Daml.Runtime.Data.DamlFieldCollections.Hash(Actors));
-        hash.Add(ExtraArgs);
+        hash.Add(ExtraArgs, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.MetadataV1.ExtraArgs>.Default);
         return hash.ToHashCode();
     }
 
@@ -59,8 +59,8 @@ public sealed record Allocation_Cancel(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Allocation_Cancel FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Allocation_Cancel(
-        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors").As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
-        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs").As<global::Daml.Runtime.Data.DamlRecord>())
+        Actors: (global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Data.Party>)record.GetRequiredField("actors", 0).As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => global::Daml.Runtime.Data.Party.FromDamlValue(x.As<global::Daml.Runtime.Data.DamlParty>())).ToList(),
+        ExtraArgs: global::Splice.Api.Token.MetadataV1.ExtraArgs.FromRecord(record.GetRequiredField("extraArgs", 1).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -73,5 +73,4 @@ public sealed record Allocation_Cancel(
             global::Daml.Runtime.Data.DamlField.Create("extraArgs", global::Splice.Api.Token.MetadataV1.ExtraArgs.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "extraArgs"), context.Field("extraArgs")))
         );
     }
-
 }

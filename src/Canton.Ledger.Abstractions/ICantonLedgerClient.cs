@@ -50,8 +50,9 @@ namespace Canton.Ledger.Abstractions;
 /// <see cref="TransportStatus.NoResponse"/> on JSON; a participant that answered over HTTP is
 /// <see cref="TransportStatus.Http"/>; a body that cannot be decoded is
 /// <see cref="TransportStatus.UndecodableBody"/> on both. <see cref="TransportStatus.NoResponse"/> is
-/// never reported by gRPC. A caller that must behave the same on both transports branches on
-/// <see cref="LedgerOperationException.Category"/> and <see cref="LedgerOperationException.CommitState"/>,
+/// reported by gRPC only for a call that was never sent because the token could not be acquired
+/// (<see cref="CommitState.NotCommitted"/>, see below). A caller that must behave the same on both
+/// transports branches on <see cref="LedgerOperationException.Category"/> and <see cref="LedgerOperationException.CommitState"/>,
 /// not on the status arm.
 /// </description>
 /// </item>
@@ -699,9 +700,9 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <param name="contractId">The id of the contract to disclose.</param>
     /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
     /// <param name="timeout">
-    /// Per-call deadline overriding the client's default. When <see langword="null"/>, the gRPC client falls
-    /// back to <c>LedgerClientOptions.Timeout</c> and the JSON Ledger API client to its
-    /// <c>HttpClient</c> timeout.
+    /// Per-attempt deadline overriding the client's default. When <see langword="null"/>, the gRPC client falls
+    /// back to <c>LedgerClientOptions.Timeout</c> and the JSON Ledger API client to
+    /// <c>RestLedgerClientOptions.Timeout</c>, 30 seconds by default on both.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>

@@ -38,20 +38,9 @@ internal sealed partial class LedgerClient
             timeout: timeout,
             configureActivity: activity =>
             {
-                activity?.SetTag(LedgerActivityTagNames.DamlContractId, contractId.Value);
+                activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, contractId.Value);
                 activity.SetSubmitterTags(submitter, _options);
             }).ConfigureAwait(false);
-
-        // Workaround: Canton 3.5.18's ContractService.GetContract has no verbose option and answers
-        // create_arguments without field labels, which the by-name payload decoding cannot read.
-        if (created?.CreateArguments is { } arguments && arguments.Fields.Any(field => field.Label.Length == 0))
-        {
-            var lifecycle = await GetEventsByContractIdAsync(contractId, submitter, timeout, cancellationToken).ConfigureAwait(false);
-            return lifecycle.Created is { } labelled
-                ? new CreatedContract<T>(labelled.ContractId, labelled.Payload, labelled.Key, labelled.WitnessParties)
-                : throw new InvalidOperationException(
-                    $"Contract '{contractId.Value}' was served without field labels and is not visible to the event query.");
-        }
 
         try
         {
@@ -86,7 +75,7 @@ internal sealed partial class LedgerClient
             timeout: timeout,
             configureActivity: activity =>
             {
-                activity?.SetTag(LedgerActivityTagNames.DamlContractId, contractId.Value);
+                activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, contractId.Value);
                 activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
                 activity.SetSubmitterTags(submitter, _options);
             });
@@ -116,7 +105,7 @@ internal sealed partial class LedgerClient
                 timeout: timeout,
                 configureActivity: activity =>
                 {
-                    activity?.SetTag(LedgerActivityTagNames.DamlContractId, contractId.Value);
+                    activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, contractId.Value);
                     activity.SetSubmitterTags(submitter, _options);
                 },
                 isExpectedFailure: IsContractEventsNotFound).ConfigureAwait(false);
@@ -260,7 +249,7 @@ internal sealed partial class LedgerClient
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
-            LogCompletionStreamError(_logger, openingFault.Status, openingFault.Message);
+            LogCompletionStreamError(_logger, openingFault.Status, _options.StatusDescriptionOf(openingFault.Status, openingFault.Message));
             yield return new CompletionStreamEvent.StreamError(
                 openingFault.Status, openingFault.Message, openingFault.Category, openingFault.ErrorId, openingFault.SourceException);
             yield break;

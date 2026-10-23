@@ -4,6 +4,7 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Data;
@@ -106,6 +107,13 @@ public interface IDamlVariant<TSelf> : IDamlVariant
 /// <summary>
 /// Base class for all Daml primitive and composite values.
 /// </summary>
+/// <remarks>
+/// A value declared as <see cref="DamlValue"/> serializes with <see cref="System.Text.Json"/> as its
+/// concrete arm's own JSON object with a <c>"$case"</c> member naming the arm first, and reads back
+/// as that arm, on default options and with no registration. This is a CLR round-trip contract, not
+/// the Daml-LF wire encoding; read a participant or PQS payload with <see cref="DamlLfJsonReader"/>.
+/// </remarks>
+[JsonConverter(typeof(DamlValueClrJsonConverter))]
 public abstract record DamlValue
 {
     /// <summary>

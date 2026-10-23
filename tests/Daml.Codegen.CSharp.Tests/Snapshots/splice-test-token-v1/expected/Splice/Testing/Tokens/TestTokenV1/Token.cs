@@ -26,6 +26,14 @@ public sealed partial record Token(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("holding")] global::Splice.Api.Token.HoldingV1.HoldingView Holding
 ) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IImplements<global::Splice.Api.Token.HoldingV1.IHolding>, global::Daml.Runtime.Contracts.IHasChoices<Token>, global::Daml.Runtime.Data.IDamlRecord<Token>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Holding, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Api.Token.HoldingV1.HoldingView>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Gets the template identifier.</summary>
     public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("da294b5651ed00af8565fd31351d0c1d8778f10393d250e32c9844311f681436", "Splice.Testing.Tokens.TestTokenV1", "Token");
 
@@ -48,7 +56,7 @@ public sealed partial record Token(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Token FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Token(
-        Holding: global::Splice.Api.Token.HoldingV1.HoldingView.FromRecord(record.GetRequiredField("holding").As<global::Daml.Runtime.Data.DamlRecord>())
+        Holding: global::Splice.Api.Token.HoldingV1.HoldingView.FromRecord(record.GetRequiredField("holding", 0).As<global::Daml.Runtime.Data.DamlRecord>())
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -82,7 +90,6 @@ public sealed partial record Token(
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     public static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> Choices { get; } = [ChoiceArchive];
-
 }
 
 
@@ -158,7 +165,7 @@ public static class TokenNonContractExtensions
     /// <param name="submitter">The submitter party set (<c>actAs</c> + optional <c>readAs</c>), so a submitter that must read contracts it does not act as stays expressible.</param>
     /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-choice default would bucket every submission of the same choice under one ID.</param>
     /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
-    /// <param name="timeout">Optional per-call deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> applies no deadline. An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
     /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static async global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Data.DamlUnit>> TryArchiveAsync(

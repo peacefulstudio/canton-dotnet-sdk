@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Daml.Codegen.Intermediate.Model;
@@ -15,25 +16,35 @@ namespace Daml.Codegen.Intermediate.Model;
 /// </summary>
 public static class PackageVersionParser
 {
-    private static readonly Regex ThreePart = new(@"^(\d+)\.(\d+)\.(\d+)", RegexOptions.Compiled);
+    private static readonly Regex LeadingSegments =
+        new(@"^(\d+)(?:\.(\d+))?(?:\.(\d+))?", RegexOptions.Compiled);
 
     /// <summary>
-    /// Parses a Daml package version. Accepts <c>Major.Minor.Patch</c>
-    /// (any trailing characters are ignored). Returns
-    /// <see cref="Version">Version(0, 0, 0)</see> when the input does not
-    /// match the 3-part shape or any segment overflows <see cref="int"/>.
+    /// Parses a Daml package version. Accepts one or more dot-separated numeric
+    /// segments: a missing minor or patch segment reads as <c>0</c> (<c>2</c> is
+    /// <c>2.0.0</c>, <c>1.0</c> is <c>1.0.0</c>), segments beyond the third and any
+    /// trailing characters are ignored. Returns
+    /// <see cref="Version">Version(0, 0, 0)</see> when the input does not start with
+    /// a number or a segment overflows <see cref="int"/>.
     /// </summary>
     public static Version Parse(string? raw)
     {
         if (raw is null) return new Version(0, 0, 0);
-        var match = ThreePart.Match(raw);
+        var match = LeadingSegments.Match(raw);
         if (!match.Success) return new Version(0, 0, 0);
-        if (!int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var major)
-            || !int.TryParse(match.Groups[2].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var minor)
-            || !int.TryParse(match.Groups[3].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var patch))
+        if (!TryParseSegment(match.Groups[1], out var major)
+            || !TryParseSegment(match.Groups[2], out var minor)
+            || !TryParseSegment(match.Groups[3], out var patch))
         {
             return new Version(0, 0, 0);
         }
         return new Version(major, minor, patch);
+    }
+
+    private static bool TryParseSegment(Group segment, out int value)
+    {
+        value = 0;
+        return !segment.Success
+            || int.TryParse(segment.Value, NumberStyles.None, CultureInfo.InvariantCulture, out value);
     }
 }

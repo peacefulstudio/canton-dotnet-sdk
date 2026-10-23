@@ -228,7 +228,7 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
-        _ = key; // type-inference carrier only; decode uses T.Key per IHasKey
+        _ = key;
 
         var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
             .ConfigureAwait(false);

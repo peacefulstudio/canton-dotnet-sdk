@@ -27,7 +27,7 @@ internal sealed partial class RestAdminClient
         return TracedAsync(
             nameof(GetPackageStatusAsync),
             () => _calls.SendAsync<Raw.GetPackageStatusResponse, PackageStatus>(
-                Read($"{PackagesPath}/{Uri.EscapeDataString(packageId)}/status", "package status"),
+                Read($"{PackagesPath}/{Uri.EscapeDataString(packageId)}/status", "package status", $"{PackagePathTemplate}/status"),
                 response => response.PackageStatus switch
                 {
                     null or Raw.GetPackageStatusResponsePackageStatus.PACKAGE_STATUS_UNSPECIFIED => PackageStatus.Unspecified,

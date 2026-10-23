@@ -19,8 +19,8 @@ namespace Canton.Ledger.Rest.Client;
 /// JSON, the encoding the Canton JSON Ledger API expects for contract payloads and choice arguments.
 /// </summary>
 /// <remarks>
-/// Not retired by digital-asset/canton#527. Daml-LF JSON's shape depends on the template's Daml
-/// type, so no OpenAPI schema can express it and this transformation is irreducible.
+/// Daml-LF JSON's shape depends on the template's Daml type, so no OpenAPI schema can express it
+/// and this transformation is irreducible.
 /// </remarks>
 internal static class DamlLfJsonWriter
 {

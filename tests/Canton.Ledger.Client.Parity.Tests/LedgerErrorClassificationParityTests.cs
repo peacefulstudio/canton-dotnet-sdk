@@ -214,6 +214,16 @@ public class LedgerErrorClassificationParityTests
                 () => RedactedFailure(StatusCode.PermissionDenied),
                 () => JsonResponse(HttpStatusCode.Forbidden, RedactedBody(grpcCodeValue: 7)),
                 DamlErrorCategory.AuthorizationChecksFailed),
+
+            ["an authentication failure with no error detail from a proxy"] = new(
+                () => new RpcException(new GrpcCallStatus(StatusCode.Unauthenticated, "unauthenticated")),
+                () => JsonResponse(HttpStatusCode.Unauthorized, string.Empty),
+                DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials),
+
+            ["an authorization failure with no error detail from a proxy"] = new(
+                () => new RpcException(new GrpcCallStatus(StatusCode.PermissionDenied, "forbidden")),
+                () => JsonResponse(HttpStatusCode.Forbidden, string.Empty),
+                DamlErrorCategory.AuthorizationChecksFailed),
         };
 
     private static string RedactedBody(int grpcCodeValue) =>

@@ -17,13 +17,16 @@ internal sealed class FakeStreamReader<T> : IAsyncStreamReader<T>
 
     private readonly IReadOnlyList<T> _items;
     private readonly Exception? _afterItemsException;
+    private readonly bool _holdsOpenAfterItems;
     private int _index = -1;
     private T _current = default!;
 
-    public FakeStreamReader(IEnumerable<T> items, Exception? afterItemsException = null)
+    public FakeStreamReader(
+        IEnumerable<T> items, Exception? afterItemsException = null, bool holdsOpenAfterItems = false)
     {
         _items = items.ToList();
         _afterItemsException = afterItemsException;
+        _holdsOpenAfterItems = holdsOpenAfterItems;
     }
 
     public T Current => _current;
@@ -48,6 +51,20 @@ internal sealed class FakeStreamReader<T> : IAsyncStreamReader<T>
             return Task.FromException<bool>(_afterItemsException);
         }
 
-        return Task.FromResult(false);
+        return _holdsOpenAfterItems ? HoldOpenUntilCancelled(cancellationToken) : Task.FromResult(false);
+    }
+
+    private static async Task<bool> HoldOpenUntilCancelled(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new RpcException(new Status(StatusCode.Cancelled, CancelledByClientDetail));
+        }
+
+        return false;
     }
 }

@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Daml.Codegen.Intermediate.Model;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Daml.Codegen.CSharp.CodeGen;
 
@@ -20,11 +18,10 @@ namespace Daml.Codegen.CSharp.CodeGen;
 /// disagree about a name. The foreign data-type index and the discovered external-package-id set
 /// are DAR-scoped — they live for the resolver's lifetime, not per package.
 /// </summary>
-internal sealed partial class DarCrossPackageResolver
+internal sealed class DarCrossPackageResolver
 {
     private readonly IDarSource _dar;
     private readonly PackageNameTableCache _nameTables;
-    private readonly ILogger _logger;
     private readonly HashSet<string> _discoveredExternalPackageIds = [];
     private readonly Dictionary<string, ILookup<(string Module, string Name), DamlDataTypeDefinition>> _foreignDataTypeCache = [];
 
@@ -34,14 +31,12 @@ internal sealed partial class DarCrossPackageResolver
     /// The name tables of the archive, shared with the emit contexts: a reference into the main
     /// package is spelled under the same namespace prefix the main package is emitted with.
     /// </param>
-    /// <param name="logger">Where unmapped-stdlib warnings go; omit it and the resolver stays silent.</param>
-    public DarCrossPackageResolver(IDarSource dar, PackageNameTableCache nameTables, ILogger? logger = null)
+    public DarCrossPackageResolver(IDarSource dar, PackageNameTableCache nameTables)
     {
         ArgumentNullException.ThrowIfNull(dar);
         ArgumentNullException.ThrowIfNull(nameTables);
         _dar = dar;
         _nameTables = nameTables;
-        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>The external package ids encountered during resolution so far.</summary>
@@ -74,15 +69,15 @@ internal sealed partial class DarCrossPackageResolver
 
     /// <summary>
     /// Resolves <paramref name="typeRef"/> to a C# identifier or fully qualified name.
-    /// Every ref to a type declared in the DAR, other than an unmapped stdlib type,
-    /// returns a <c>global::</c>-rooted name. A local ref returns the emitted name under the
+    /// Every ref to a type declared in the DAR returns a <c>global::</c>-rooted name. A local ref returns the emitted name under the
     /// namespace of the module that homes the type — the emitting module or another module of
     /// the same package — and a nested choice-argument type is qualified with its parent
     /// template name under the template's module namespace. A cross-package ref returns the
     /// same shape under the referent module's namespace and records the package id so a
     /// <c>&lt;PackageReference&gt;</c> can be emitted for it. A stdlib ref returns the mapped
-    /// runtime type, rooted by <see cref="TypeReferenceQualifier.Qualify"/>, or, when the
-    /// stdlib type has no mapping, its bare sanitized name with warning 1100 logged.
+    /// runtime type, rooted by <see cref="TypeReferenceQualifier.Qualify"/>; a stdlib type
+    /// with no mapping throws <see cref="CodegenException"/>, because the name it would
+    /// emit resolves to nothing.
     /// </summary>
     public string Resolve(DamlTypeRef typeRef, PackageEmitContext context)
     {
@@ -108,8 +103,9 @@ internal sealed partial class DarCrossPackageResolver
             {
                 return TypeReferenceQualifier.Qualify(mapped);
             }
-            LogUnmappedStdlibType(_logger, foreignPkg.Name, typeRef.Module, typeRef.Name);
-            return Identifiers.Sanitize(typeRef.Name);
+            throw new CodegenException(
+                $"The Daml standard library type {foreignPkg.Name}:{typeRef.Module}:{typeRef.Name} has no Daml.Runtime mapping, so no C# type can be emitted for it. " +
+                "Either stop using the type in a serializable position, or request the mapping.");
         }
 
         _discoveredExternalPackageIds.Add(typeRef.PackageId);
@@ -167,10 +163,4 @@ internal sealed partial class DarCrossPackageResolver
                 clash);
         }
     }
-
-    [LoggerMessage(
-        EventId = 1100,
-        Level = LogLevel.Warning,
-        Message = "Unmapped stdlib type {PackageName}:{ModuleName}:{TypeName} \u2014 generated code will not compile (no stdlib mapping for this type yet)")]
-    private static partial void LogUnmappedStdlibType(ILogger logger, string packageName, string moduleName, string typeName);
 }

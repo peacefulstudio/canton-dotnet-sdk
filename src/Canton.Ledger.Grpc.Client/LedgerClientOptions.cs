@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Security;
+using Canton.Ledger.Kernel.Validation;
 using Grpc.Net.Client;
 
 namespace Canton.Ledger.Grpc.Client;
@@ -14,7 +15,8 @@ namespace Canton.Ledger.Grpc.Client;
 public sealed class LedgerClientOptions : IValidatableObject
 {
     /// <summary>
-    /// The gRPC endpoint address (e.g., "https://localhost:5001"). An <c>http</c> address opens a
+    /// The gRPC endpoint address (e.g., "https://localhost:5001"), an absolute <c>http</c> or
+    /// <c>https</c> URI that validation requires at startup. An <c>http</c> address opens a
     /// cleartext channel: when a token-issuing
     /// <see cref="Canton.Ledger.Abstractions.ITokenProvider"/> is configured, bearer
     /// tokens are sent in cleartext, readable by anyone on the network path, and the client
@@ -119,11 +121,19 @@ public sealed class LedgerClientOptions : IValidatableObject
     public TlsOptions Tls { get; set; } = new();
 
     /// <summary>
-    /// Whether the client's spans carry the party and contract identifiers of the call they trace:
-    /// <c>canton.submitter.act_as</c>, <c>canton.submitter.read_as</c>, <c>canton.party_id</c>,
-    /// <c>canton.party_id_hint</c> and <c>daml.contract_id</c>. Off by default, so anyone with read
-    /// access to the tracing backend cannot read who transacted on which contract; every other span
-    /// attribute is emitted either way.
+    /// Whether the client's spans and admin logs carry the party, contract and user identifiers of
+    /// the call they trace: <c>canton.submitter.act_as</c>, <c>canton.submitter.read_as</c>,
+    /// <c>canton.party_id</c>, <c>canton.party_id_hint</c>, <c>daml.contract_id</c> and
+    /// <c>canton.user_id</c> on spans, and the party and user ids in the <c>Party allocated</c>,
+    /// <c>User created</c>, <c>Rights granted</c> and <c>Rights revoked</c> log lines. Off by
+    /// default, so anyone with read access to the tracing backend or the logs cannot read who
+    /// transacted on which contract or whom the participant administers; every other span
+    /// attribute is emitted either way. Off, a failed call's span status, its <c>Submit failed</c>
+    /// warning and the stream-failure warnings carry the gRPC status code instead of the server's
+    /// status detail, which can name a party or contract, and every logged exception is
+    /// recorded as a redaction wrapper whose <c>exception.type</c> is the wrapper, whose message is the
+    /// original type's full name and whose stack is the original's, because decode-failure messages embed
+    /// contract ids. Alerting that keys on the original <c>exception.type</c> needs this option on.
     /// </summary>
     /// <remarks>
     /// Opt in only where the tracing backend is trusted with the same data as the ledger itself:
@@ -141,6 +151,13 @@ public sealed class LedgerClientOptions : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var nestedResults = new List<ValidationResult>();
+        var addressFailure = AddressValidation.RequireAbsoluteHttpUri(
+            GrpcAddress, nameof(GrpcAddress), "https://localhost:5001");
+        if (addressFailure is not null)
+        {
+            nestedResults.Add(addressFailure);
+        }
+
         Validator.TryValidateObject(
             Retry, new ValidationContext(Retry), nestedResults, validateAllProperties: true);
         Validator.TryValidateObject(

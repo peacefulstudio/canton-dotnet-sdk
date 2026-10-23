@@ -14,6 +14,8 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Serialization;
+using Canton.Ledger.Testing.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 using RuntimeCommands = Daml.Runtime.Commands;
@@ -156,12 +158,18 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
                 : throw new HttpRequestException("the identity provider is unreachable");
     }
 
-    private RestLedgerClient ClientRetrying(ScriptedHandler transport, bool retryEnabled = true, ITokenProvider? tokenProvider = null)
+    private RestLedgerClient ClientRetrying(
+        ScriptedHandler transport,
+        bool retryEnabled = true,
+        ITokenProvider? tokenProvider = null,
+        ILogger<RestLedgerClient>? logger = null,
+        bool emitPartyAndContractSpanTags = false)
     {
         var options = new RestLedgerClientOptions
         {
             HttpAddress = "http://localhost:7575",
             Retry = new RetryOptions { Enabled = retryEnabled, MaxRetryAttempts = 1, Delay = TimeSpan.Zero },
+            EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
         };
         HttpMessageHandler participant = tokenProvider is null
             ? transport
@@ -169,7 +177,7 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
         var pipeline = new RestRetryHandler(Options.Create(options)) { InnerHandler = participant };
         var factory = new StubHttpClientFactory(pipeline);
         _factories.Add(factory);
-        return new RestLedgerClient(factory, Options.Create(options));
+        return new RestLedgerClient(factory, Options.Create(options), logger);
     }
 
     [Fact]
@@ -345,6 +353,42 @@ public sealed class RestLedgerClientRetriedDuplicateTests : IDisposable
         outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.DamlError>()
             .Which.ErrorId.Should().Be("DUPLICATE_COMMAND");
         transport.Paths.Should().Equal(SubmitPath, SubmitPath, UpdateByOffsetPath);
+    }
+
+    private async Task<(string Category, LogLevel Level, string Message, Exception? Exception)> WarningOfAFailedPointRead(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new ScriptedHandler(
+            LostResponse,
+            Json(HttpStatusCode.Conflict, AcceptedDuplicate),
+            Json(HttpStatusCode.NotFound, """{"code": "UPDATE_NOT_FOUND", "cause": "no update for party::alice", "context": {}, "errorCategory": 11}"""));
+        using var logs = new CapturingLoggerFactory();
+        var client = ClientRetrying(
+            transport,
+            logger: logs.CreateLogger<RestLedgerClient>(),
+            emitPartyAndContractSpanTags: emitPartyAndContractSpanTags);
+
+        await client.TrySubmitAndWaitForTransactionAsync(Submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        return logs.Records.Single(record => record.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_logs_a_failed_point_read_with_its_status_but_not_the_server_message_by_default()
+    {
+        var warning = await WarningOfAFailedPointRead(emitPartyAndContractSpanTags: false);
+
+        warning.Message.Should().Be(
+            "Retried submission cmd-1 was rejected as DUPLICATE_COMMAND but the point read at completion offset 9663 failed with 404; surfacing the DUPLICATE_COMMAND error");
+        warning.Exception.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_logs_the_server_message_of_a_failed_point_read_when_opted_in()
+    {
+        var warning = await WarningOfAFailedPointRead(emitPartyAndContractSpanTags: true);
+
+        warning.Message.Should().Contain("failed (no update for party::alice); surfacing the DUPLICATE_COMMAND error");
+        warning.Exception.Should().NotBeNull();
     }
 
     [Fact]

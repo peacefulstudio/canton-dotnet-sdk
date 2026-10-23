@@ -12,8 +12,9 @@ import org.scalatest.{EitherValues, Inspectors, OptionValues}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.io.{IOException, OutputStream}
-import java.nio.file.{Files, Paths}
+import java.io.{ByteArrayOutputStream, IOException, OutputStream}
+import java.nio.file.{Files, Path, Paths}
+import java.util.zip.{ZipEntry, ZipFile, ZipOutputStream}
 
 class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with OptionValues with Inspectors {
 
@@ -28,6 +29,59 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
       "../tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-amulet-name-service/splice-amulet-name-service.dar"
     )
   )
+
+
+  private def rewriteDar(source: Path)(transform: (String, Array[Byte]) => Option[(String, Array[Byte])]): Path = {
+    val target = Files.createTempFile("hostile-dar-", ".dar")
+    val zip    = new ZipFile(source.toFile)
+    val out    = new ZipOutputStream(Files.newOutputStream(target))
+    try {
+      val entries = zip.entries()
+      while (entries.hasMoreElements) {
+        val entry = entries.nextElement()
+        val bytes = zip.getInputStream(entry).readAllBytes()
+        transform(entry.getName, bytes).foreach { case (name, content) =>
+          out.putNextEntry(new ZipEntry(name))
+          out.write(content)
+          out.closeEntry()
+        }
+      }
+    } finally {
+      out.close()
+      zip.close()
+    }
+    target
+  }
+
+  private def captureStderr(body: => Int): (Int, String) = {
+    val original = System.err
+    val captured = new ByteArrayOutputStream()
+    val replacement = new java.io.PrintStream(captured, true, "UTF-8")
+    System.setErr(replacement)
+    try {
+      val code = body
+      replacement.flush()
+      (code, captured.toString("UTF-8"))
+    } finally System.setErr(original)
+  }
+
+  private def runCliOnHostileDar(dar: Path, extraArgs: String*): (Int, String) = {
+    val outPath = Files.createTempFile("intermediate-dar-hostile-", ".binpb")
+    try {
+      captureStderr(Decode.runCli(List("--dar", dar.toString, "--out", outPath.toString) ++ extraArgs))
+    } finally {
+      Files.deleteIfExists(outPath)
+      Files.deleteIfExists(dar)
+    }
+  }
+
+  private def assertReportedWithoutStackTrace(result: (Int, String)): Unit = {
+    val (code, stderr) = result
+    code shouldBe 1
+    stderr should startWith("Failed to read DAR")
+    stderr should not include "\tat "
+    stderr should not include "Exception in thread"
+  }
 
   private def nonEmptyProto: IntermediateDar =
     IntermediateDar(main = Some(IntermediatePackage(packageId = "abc", packageName = "p")))
@@ -64,6 +118,21 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
 
     "reject missing --out" in {
       Decode.parseArgs(List("--dar", "a.dar")) shouldBe Left("Missing required argument: --out")
+    }
+
+    "report a trailing --dar as a missing value, not an unrecognised argument" in {
+      Decode.parseArgs(List("--out", "b.binpb", "--dar")) shouldBe Left("Missing value for --dar")
+    }
+
+    "report a trailing --out as a missing value, not an unrecognised argument" in {
+      Decode.parseArgs(List("--dar", "a.dar", "--out")) shouldBe Left("Missing value for --out")
+    }
+
+    "exit with code 2 and name the missing value when --dar is the last argument" in {
+      val (code, stderr) = captureStderr(Decode.runCli(List("--out", "b.binpb", "--dar")))
+      code shouldBe 2
+      stderr should include("Missing value for --dar")
+      stderr should not include "Unrecognised argument"
     }
 
     "reject unknown arguments" in {
@@ -249,6 +318,88 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
       } finally {
         Files.deleteIfExists(outPath)
       }
+    }
+
+    "exit with code 1 and a Failed to read DAR message when the DAR is random bytes" in {
+      val randomBytes = new java.util.Random(42L)
+      val noise       = new Array[Byte](4096)
+      randomBytes.nextBytes(noise)
+      def noiseDar = Files.write(Files.createTempFile("hostile-dar-", ".dar"), noise)
+      assertReportedWithoutStackTrace(runCliOnHostileDar(noiseDar))
+      assertReportedWithoutStackTrace(runCliOnHostileDar(noiseDar, "--schema-only"))
+    }
+
+    "exit with code 1 and a Failed to read DAR message when the DAR has no manifest" in {
+      val dar = rewriteDar(FixtureDar) { (name, bytes) =>
+        if (name == "META-INF/MANIFEST.MF") None else Some((name, bytes))
+      }
+      assertReportedWithoutStackTrace(runCliOnHostileDar(dar))
+    }
+
+    "exit with code 1 and a Failed to read DAR message when a dalf no longer matches its hash" in {
+      val dar = rewriteDar(FixtureDar) { (name, bytes) =>
+        if (name.endsWith(".dalf") && bytes.nonEmpty) Some((name, bytes.updated(bytes.length - 1, (bytes.last ^ 0x5a).toByte)))
+        else Some((name, bytes))
+      }
+      assertReportedWithoutStackTrace(runCliOnHostileDar(dar))
+    }
+
+    "exit with code 1 and a Failed to read DAR message when a manifest line exceeds the line limit" in {
+      val dar = rewriteDar(FixtureDar) { (name, bytes) =>
+        if (name == "META-INF/MANIFEST.MF") {
+          val oversized = ("Dalfs: " + "a" * 600 + "\n").getBytes("UTF-8")
+          Some((name, bytes ++ oversized))
+        } else Some((name, bytes))
+      }
+      assertReportedWithoutStackTrace(runCliOnHostileDar(dar))
+    }
+
+    def runCliOnDarWithManifestSuffix(suffix: String): (Int, String) = {
+      val dar = rewriteDar(FixtureDar) { (name, bytes) =>
+        if (name == "META-INF/MANIFEST.MF") Some((name, bytes ++ suffix.getBytes("UTF-8")))
+        else Some((name, bytes))
+      }
+      runCliOnHostileDar(dar)
+    }
+
+    def paddingLine(contentBytes: Int): String = "Padding: " + "a" * (contentBytes - "Padding: ".length)
+
+    "accept a manifest line of 511 bytes before its terminator, whichever terminator ends it" in {
+      for (terminator <- List("\n", "\r\n", "\r")) {
+        withClue(s"terminator ${terminator.map(c => c.toInt)}: ") {
+          runCliOnDarWithManifestSuffix(paddingLine(511) + terminator)._1 shouldBe 0
+        }
+      }
+    }
+
+    "accept a manifest continuation line of 511 bytes" in {
+      runCliOnDarWithManifestSuffix("Padding: x\n " + "a" * 510 + "\n")._1 shouldBe 0
+    }
+
+    "accept an unterminated final manifest line of 511 bytes" in {
+      runCliOnDarWithManifestSuffix(paddingLine(511))._1 shouldBe 0
+    }
+
+    "count manifest line length in bytes, not characters" in {
+      val padding = "Padding: " + "\u00e9" * 251
+      runCliOnDarWithManifestSuffix(padding + "\n")._1 shouldBe 0
+      assertReportedWithoutStackTrace(runCliOnDarWithManifestSuffix(padding + "a\n"))
+    }
+
+    "reject a manifest line of 512 bytes before its terminator, whichever terminator ends it" in {
+      for (terminator <- List("\n", "\r\n", "\r")) {
+        withClue(s"terminator ${terminator.map(c => c.toInt)}: ") {
+          assertReportedWithoutStackTrace(runCliOnDarWithManifestSuffix(paddingLine(512) + terminator))
+        }
+      }
+    }
+
+    "reject a manifest continuation line of 512 bytes" in {
+      assertReportedWithoutStackTrace(runCliOnDarWithManifestSuffix("Padding: x\n " + "a" * 511 + "\n"))
+    }
+
+    "reject an unterminated final manifest line of 512 bytes" in {
+      assertReportedWithoutStackTrace(runCliOnDarWithManifestSuffix(paddingLine(512)))
     }
 
     "exit with code 1 when runCli fails to read a non-existent DAR" in {

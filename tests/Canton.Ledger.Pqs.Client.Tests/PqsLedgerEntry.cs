@@ -37,5 +37,5 @@ internal sealed record PqsLedgerEntry(
         Owner: record.GetRequiredField("owner").As<DamlParty>().Value,
         Quantity: record.GetRequiredField("quantity").As<DamlInt64>().Value,
         Price: record.GetRequiredField("price").As<DamlNumeric>().Value,
-        Note: record.GetOptionalField("note").As<DamlOptional>().Value?.As<DamlText>().Value);
+        Note: record.GetOptionalField("note", 3).As<DamlOptional>().Value?.As<DamlText>().Value);
 }

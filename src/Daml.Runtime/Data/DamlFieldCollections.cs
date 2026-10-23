@@ -46,7 +46,7 @@ public static class DamlFieldCollections
     {
         null => null,
         { Count: 0 } => ReadOnlyDictionary<TKey, TValue>.Empty,
-        _ => entries.ToDictionary(),
+        _ => entries.ToDictionary(DamlEqualityComparer<TKey>.Default),
     };
 
     /// <summary>Compares two lists element by element, in order.</summary>
@@ -118,7 +118,7 @@ public static class DamlFieldCollections
         var hash = new HashCode();
         foreach (var value in values)
         {
-            hash.Add(value);
+            hash.Add(value, DamlEqualityComparer<T>.Default);
         }
         return hash.ToHashCode();
     }
@@ -138,7 +138,10 @@ public static class DamlFieldCollections
         var hash = 0;
         foreach (var (key, value) in entries)
         {
-            hash ^= HashCode.Combine(key, value);
+            var entryHash = new HashCode();
+            entryHash.Add(key, DamlEqualityComparer<TKey>.Default);
+            entryHash.Add(value, DamlEqualityComparer<TValue>.Default);
+            hash ^= entryHash.ToHashCode();
         }
         return hash;
     }

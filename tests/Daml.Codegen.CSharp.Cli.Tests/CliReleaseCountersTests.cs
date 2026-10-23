@@ -14,7 +14,7 @@ namespace Daml.Codegen.CSharp.Cli.Tests;
 /// <summary>
 /// CLI integration tests for the <c>--release-counters &lt;path&gt;</c> wire-up.
 /// The publish workflow points the CLI at a JSON store of
-/// <see cref="Daml.Codegen.CSharp.Versioning.JsonReleaseCounterStore"/> generation
+/// <see cref="Daml.Codegen.CSharp.Cli.Versioning.JsonReleaseCounterStore"/> generation
 /// ordinals and the CLI stamps the 4th NuGet version segment from the store — a
 /// codegen-generation ordinal keyed by <c>--codegen-version</c> — rather than from
 /// the static <c>--emitter-counter</c> override.

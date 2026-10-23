@@ -20,19 +20,22 @@ internal sealed class LedgerCallInvoker
 {
     internal static readonly ActivitySource Source = LedgerActivitySource.Create<LedgerClient>();
 
-    private const string RetryAttemptActivityName = "LedgerClient.RetryAttempt";
+    internal const string RetryAttemptActivityName = "LedgerClient.RetryAttempt";
 
     private readonly ResiliencePipeline _retryPipeline;
     private readonly ITokenProvider? _tokenProvider;
     private readonly LedgerClientOptions _options;
     private readonly string _serverAddress;
     private readonly int _serverPort;
+    private readonly TimeProvider _timeProvider;
 
-    internal LedgerCallInvoker(LedgerClientOptions options, ITokenProvider? tokenProvider)
+    internal LedgerCallInvoker(LedgerClientOptions options, ITokenProvider? tokenProvider, TimeProvider? timeProvider = null)
     {
         _options = options;
         _tokenProvider = tokenProvider;
-        _retryPipeline = RetryPipelineFactory.Create(options.Retry, IsTransientRpcFailure, RecordRetryAttempt);
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _retryPipeline = RetryPipelineFactory.Create(
+            options.Retry, IsTransientRpcFailure, attempt => RecordRetryAttempt(attempt, options), _timeProvider);
         (_serverAddress, _serverPort) = ActivityHelper.ParseServerEndpoint(_options.GrpcAddress);
     }
 
@@ -282,7 +285,7 @@ internal sealed class LedgerCallInvoker
         }
         catch (RpcException ex)
         {
-            activity.RecordGrpcError(ex);
+            activity.RecordGrpcError(ex, _options);
             throw RpcCallEnding.Rejected(ex, afterRetry: receipt.Retried).ToException(kind, receipt.CommandId);
         }
         catch (TokenAcquisitionException tokenFailure)
@@ -294,7 +297,8 @@ internal sealed class LedgerCallInvoker
         catch (Exception decodeFailure) when (receipt.ResponseReceived && MalformedResponse.IsWireDecodeFailure(decodeFailure))
         {
             var undecodable = RpcCallEnding.Undecodable(decodeFailure).ToException(kind, receipt.CommandId);
-            activity.RecordInfraError(new TransportStatus.UndecodableBody(), undecodable.Message);
+            var status = new TransportStatus.UndecodableBody();
+            activity.RecordInfraError(status, _options.StatusDescriptionOf(status, undecodable.Message));
             throw undecodable;
         }
     }
@@ -322,7 +326,7 @@ internal sealed class LedgerCallInvoker
     }
 
     internal DateTime? GetDeadline(TimeSpan? perCallTimeout = null) =>
-        CallContextHelper.GetDeadline(perCallTimeout ?? _options.Timeout);
+        CallContextHelper.GetDeadline(perCallTimeout ?? _options.Timeout, _timeProvider);
 
     internal void TagServerCall(Activity? activity, ServiceDescriptor service, string method) =>
         activity.SetGrpcCallTags(service, method, _serverAddress, _serverPort);
@@ -330,7 +334,7 @@ internal sealed class LedgerCallInvoker
     private static bool IsTransientRpcFailure(Exception exception) =>
         exception is RpcException { StatusCode: StatusCode.Unavailable or StatusCode.DeadlineExceeded };
 
-    private static void RecordRetryAttempt(RetryAttempt attempt)
+    private static void RecordRetryAttempt(RetryAttempt attempt, LedgerClientOptions options)
     {
         using var activity = Source.StartActivity(RetryAttemptActivityName, ActivityKind.Internal);
         if (activity is null) return;
@@ -339,16 +343,11 @@ internal sealed class LedgerCallInvoker
         activity.SetTag(LedgerActivityTagNames.RetryDelayMs, attempt.RetryDelay.TotalMilliseconds);
         if (attempt.Exception is RpcException rpcException)
         {
-            activity.SetStatus(ActivityStatusCode.Error, rpcException.Status.Detail);
+            activity.SetStatus(ActivityStatusCode.Error, options.StatusDescriptionOf(rpcException));
             activity.SetTag(ActivityHelper.RpcGrpcStatusCode, (int)rpcException.StatusCode);
             activity.SetTag(ActivityHelper.ErrorType, rpcException.StatusCode.ToString());
         }
     }
-}
-
-internal sealed class RetryAbandonedException(RpcException sentAttemptFailure) : Exception
-{
-    internal RpcException SentAttemptFailure { get; } = sentAttemptFailure;
 }
 
 internal readonly record struct StreamOpening(Metadata? Headers, StreamFault? Fault);

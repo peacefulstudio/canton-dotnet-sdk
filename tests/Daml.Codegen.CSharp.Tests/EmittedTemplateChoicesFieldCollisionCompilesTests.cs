@@ -182,11 +182,8 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_template_with_a_nested_choice_arg_type_named_Choices_degrades_the_witness_to_an_explicit_implementation_and_compiles()
+    public void Emitted_template_with_a_nested_choice_arg_type_named_Choices_degrades_the_witness_to_an_explicit_implementation_avoiding_CS0102_and_compiles()
     {
-        // A non-Unit choice named "Choices" with a same-package argument type causes
-        // WriteNestedChoiceArgumentType to emit "public sealed record Choices" inside
-        // the template partial — colliding with the static Choices property (CS0102).
         const string moduleName = "Test.Module";
         const string localPackageId = "test-package-id";
         var module = new DamlModule
@@ -347,15 +344,8 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
     }
 
     [Fact]
-    public void Emitted_choice_named_IHasChoices_root_qualifies_the_explicit_witness_interface_name_and_compiles()
+    public void Emitted_choice_named_IHasChoices_root_qualifies_the_explicit_witness_interface_name_avoiding_CS0308_and_compiles()
     {
-        // A non-Unit choice named "IHasChoices" with a same-package argument type causes
-        // GenerateNestedChoiceArgumentType to emit a nested record named "IHasChoices" inside the
-        // template partial. When the template also has a payload field named "choices" (which takes
-        // the Choices member name), the witness degrades to an explicit IHasChoices<TSelf>.Choices
-        // implementation — and that interface reference must be root-qualified, because the nested
-        // record "IHasChoices" otherwise shadows the generic Daml.Runtime.Contracts.IHasChoices<>
-        // making the non-generic nested record incompatible with the generic constraint (CS0308).
         const string moduleName = "Test.Module";
         const string localPackageId = "test-package-id";
         var module = new DamlModule
@@ -623,7 +613,7 @@ public class EmittedTemplateChoicesFieldCollisionCompilesTests
 
         var vault = SourceOf(files, TemplateFileName);
         vault.Should().Contain(
-            "Detail: global::Test.Module.Detail.FromRecord(record.GetRequiredField(\"detail\").As<global::Daml.Runtime.Data.DamlRecord>())",
+            "Detail: global::Test.Module.Detail.FromRecord(record.GetRequiredField(\"detail\", 1).As<global::Daml.Runtime.Data.DamlRecord>())",
             "the template's own record-typed payload field deserialization must be root-qualified once the nested choice-arg record named 'DamlRecord' shadows the runtime type");
         vault.Should().Contain(
             "ResultDecoder = val => global::Test.Module.Detail.FromRecord(val.As<global::Daml.Runtime.Data.DamlRecord>()),",

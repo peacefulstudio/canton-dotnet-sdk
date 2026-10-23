@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --version 0.7.0
+dotnet add package Daml.Runtime --version 0.7.1
 ```
 
 ## Usage
@@ -103,6 +103,30 @@ asked for them, which `CreateOneByExerciseAsync<T>` and
 result produced without interface data for `T`, instead of reporting that
 nothing matched.
 
+### Typed Ids from Raw Records
+
+A raw read-side record keeps its contract id as a `string`. `ContractIdAs<T>()` wraps it as a
+`ContractId<T>` after checking `T` against what the record says the contract is, where
+`new ContractId<T>(record.ContractId)` checks nothing:
+
+```csharp
+using Daml.Runtime.Contracts;
+using IouContract = Iou.Iou;
+
+// created is a CreatedContract; ExercisedEvent, TreeEvent.Created and TreeEvent.Exercised work too.
+ContractId<IouContract> iouId = created.ContractIdAs<IouContract>();
+```
+
+It matches the way the transaction-result projections above do: a template by package name,
+module and entity, an interface by the interfaces the record carries (`InterfaceIds`, or the
+`InterfaceId` an exercise went through). A `T` the record does not satisfy throws
+`InvalidOperationException` naming the record's template id and `T`'s id.
+
+For an interface `T` the check sees only the interface views on the record: on a created record the
+views the transaction filter requested (`include_interface_view`), on an exercised record only the
+interface a choice was exercised through. A contract that implements `T` still throws when that view
+was not requested, so request the view, or use the template type.
+
 ### Reading a Choice Result
 
 A choice's result is read from the exercise of that choice, never from the contracts the
@@ -191,8 +215,7 @@ The record `ReadRecord<T>` returns holds only the fields the payload sent. Both 
 out a record's trailing `None` fields: gRPC every one, the JSON Ledger API those of a flat
 `Optional` (it still sends a nested `Optional`'s `None` as `[]`), so an untyped `DamlRecord` can
 lack an `Optional` field its type declares. Read an `Optional` field of an untyped record with
-`GetOptionalField` or `GetOptionalChainField`, which read an absent field as `None`, rather than
-`GetField` or `GetRequiredField`.
+`GetField`, and treat `null` as `None`, rather than `GetRequiredField`, which throws for an absent field.
 
 ### System.Text.Json Converters
 
@@ -295,12 +318,11 @@ the `#nullable enable` the emitter otherwise writes — carries no annotation to
 parameters is marked required, and an absent member binds to `null`. The CHANGELOG records that
 limit in full.
 
-Not every record round-trips yet, and the gaps below are older than the converters rather than introduced by them. `DamlValue` is abstract and carries no `[JsonConverter]`, so a record carrying a `DamlValue` — a `DamlRecord` payload in `CreatedEvent` or `CreatedContract`, an `ExercisedEvent`'s choice argument — writes those values as `{}` and throws `NotSupportedException` reading them back. Registering `DamlValueJsonConverter` does not close the gap: it writes the untyped Daml-LF JSON spelling, which does not say which `DamlValue` it came from, so a `DamlParty` field reads back as a `DamlText`.
+A value declared as `DamlValue` does round-trip, with no registration: `DamlValue` carries its own `[JsonConverter]`, which writes the concrete arm's object with a `"$case"` member naming the arm first, for example `{"$case":"DamlInt64","Value":42}` or `{"$case":"DamlOptional","Value":null}`, and reads it back as the same arm. A record carrying a `DamlValue`, such as the `DamlRecord` payload in `CreatedEvent` or `CreatedContract` or an `ExercisedEvent`'s choice argument, round-trips through it. This is a CLR shape, not the Daml-LF encoding: `DamlValueJsonConverter` writes the untyped Daml-LF JSON spelling, which does not say which `DamlValue` it came from, so a `DamlParty` field reads back as a `DamlText` through it. Read a ledger or PQS payload with `DamlLfJsonReader`. A value declared as its own arm, for example `DamlInt64`, keeps that arm's plain object with no `"$case"`.
 
-One gap has no converter to add. `TreeEvent` is abstract and
-carries no `[JsonDerivedType]`, so a `TransactionTree` writes its root events as `{}`. Of the
-event records carrying `EquatableArray<T>` members, `ArchivedEvent` is the only one that
-round-trips on these options alone.
+A `DamlGenMap` declared as itself, or as a member of your own type, writes its entries as `{"Entries":[{"Key":…,"Value":…}]}`, each key and value a `DamlValue` with its `"$case"`, and reads back with the same entries in the same order; a payload with a duplicate key is refused with a `JsonException`.
+
+A value declared as `TreeEvent` round-trips the same way, with no registration: `TreeEvent` carries its own `[JsonConverter]`, which writes the arm's object with a `"$case"` member naming the arm first, for example `{"$case":"Created","EventId":"1:0",…}`, and writes an `Exercised` arm's `ChildEvents` the same way, level by level, so a whole `TransactionTree` reads back as itself. `JsonSerializerOptions.MaxDepth` bounds how deep a tree may nest, on write and on read.
 
 Two families are written, never read back, by design. The commands (`CreateCommand`,
 `ExerciseCommand`, `ExerciseByKeyCommand`, `CreateAndExerciseCommand`) and the
@@ -313,7 +335,7 @@ contract-id string cannot name its `T`; declare `ContractId<T>`, which round-tri
 contract-id string, and which is the type every created id and `ContractId` choice result already
 carries.
 
-`TransactionResult` round-trips when it carries no created contracts and no exercised events — a created contract's `DamlRecord` payload and an exercised event's choice argument hit the `DamlValue` gap above — and the converters on its two scalar
+`TransactionResult` round-trips, created contracts and exercised events included — a created contract's `DamlRecord` payload and an exercised event's choice argument go through the `DamlValue` converter above — and the converters on its two scalar
 members are what make it. `LedgerOffset` (the type of `CompletionOffset`) and `CommandId` are `readonly record struct`s
 exposing only a get-only
 `Value`, and `System.Text.Json` prefers a struct's implicit parameterless constructor unless

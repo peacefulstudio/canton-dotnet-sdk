@@ -25,9 +25,9 @@ namespace Canton.Ledger.Rest.Client;
 /// </para>
 /// </summary>
 /// <remarks>
-/// Retired by digital-asset/canton#527, which would have the JSON HTTP API generated from the
-/// annotated protobuf definitions this period shape comes from. proto3 maps int64 to a JSON string
-/// precisely to avoid the precision loss a raw number causes past 2^53.
+/// Bridges the JSON API's wire encoding of the deduplication period, which differs from the proto3
+/// JSON our proto-derived specification describes. proto3 maps int64 to a JSON string precisely to
+/// avoid the precision loss a raw number causes past 2^53.
 /// </remarks>
 internal sealed class DeduplicationPeriodJsonConverter : JsonConverter<DeduplicationPeriod>
 {

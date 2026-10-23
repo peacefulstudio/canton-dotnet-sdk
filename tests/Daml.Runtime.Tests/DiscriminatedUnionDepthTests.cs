@@ -12,7 +12,7 @@ namespace Daml.Runtime.Tests;
 /// <summary>
 /// Pins <see cref="Daml.Runtime.Serialization.DiscriminatedUnionJson"/>'s depth behaviour on both
 /// sides of the wire — see the type's remarks for why <see cref="DiscriminatedUnionJson.Write{TUnion}"/>
-/// needs its own re-entrant guard while <see cref="DiscriminatedUnionJson.Read{TUnion}"/> does not.
+/// and <see cref="DiscriminatedUnionJson.Read{TUnion}"/> each need their own re-entrant guard.
 /// </summary>
 public class DiscriminatedUnionDepthTests
 {
@@ -78,6 +78,26 @@ public class DiscriminatedUnionDepthTests
         }
 
         return (value, declaredType);
+    }
+
+    private static string BuildOptionalHopsSeparatedByPlainLayersJson(int hops, int layersPerHop)
+    {
+        var json = new StringBuilder();
+        var closingBraces = 0;
+        for (var hop = 0; hop < hops; hop++)
+        {
+            json.Append("{\"$case\":\"Some\",\"Value\":");
+            closingBraces++;
+            for (var layer = 0; layer < layersPerHop; layer++)
+            {
+                json.Append("{\"Next\":");
+                closingBraces++;
+            }
+        }
+
+        json.Append("{\"$case\":\"Some\",\"Value\":1");
+        json.Append('}', closingBraces + 1);
+        return json.ToString();
     }
 
     [Fact]
@@ -156,21 +176,78 @@ public class DiscriminatedUnionDepthTests
     }
 
     [Fact]
-    public void Optional_read_relies_on_System_Text_Json_own_reader_depth_guard_past_the_default_MaxDepth()
+    public void Optional_read_accepts_nesting_at_its_hardcoded_safety_ceiling_of_20_levels()
     {
-        var (_, declaredType) = BuildNestedOptional(NestingLevelsPastDefaultMaxDepth - 1);
-        var json = BuildNestedOptionalJson(NestingLevelsPastDefaultMaxDepth);
+        var (expected, declaredType) = BuildNestedOptional(19);
+        var json = BuildNestedOptionalJson(20);
+
+        var actual = JsonSerializer.Deserialize(json, declaredType, MaxDepthWellAboveTheSafetyCeilingOptions);
+
+        actual.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Optional_read_refuses_nesting_one_level_past_its_hardcoded_safety_ceiling()
+    {
+        var (_, declaredType) = BuildNestedOptional(20);
+        var json = BuildNestedOptionalJson(21);
+
+        var act = () => JsonSerializer.Deserialize(json, declaredType, MaxDepthWellAboveTheSafetyCeilingOptions);
+
+        act.Should().Throw<JsonException>().WithMessage(
+            "Optional<Int32> exceeded the maximum union nesting depth of 20 while reading: each nested union "
+            + "re-enters JsonSerializer.Deserialize as a fresh operation, so the call stack grows with every level "
+            + "and a payload nested deeper could overflow it and crash the process. This ceiling is fixed and "
+            + "does not follow JsonSerializerOptions.MaxDepth.*");
+    }
+
+    [Fact]
+    public void Optional_read_that_was_refused_does_not_poison_the_next_read_on_the_same_thread()
+    {
+        var (_, refusedType) = BuildNestedOptional(20);
+        var refusedJson = BuildNestedOptionalJson(21);
+        var (expected, acceptedType) = BuildNestedOptional(19);
+        var acceptedJson = BuildNestedOptionalJson(20);
+
+        var refused = () => JsonSerializer.Deserialize(refusedJson, refusedType, MaxDepthWellAboveTheSafetyCeilingOptions);
+        refused.Should().Throw<JsonException>().WithMessage("*exceeded the maximum union nesting depth of 20 while reading*");
+        var accepted = JsonSerializer.Deserialize(acceptedJson, acceptedType, MaxDepthWellAboveTheSafetyCeilingOptions);
+
+        accepted.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Optional_read_refuses_nesting_past_the_ceiling_under_the_default_MaxDepth_too()
+    {
+        var (_, declaredType) = BuildNestedOptional(30);
+        var json = BuildNestedOptionalJson(31);
 
         var act = () => JsonSerializer.Deserialize(json, declaredType);
 
-        act.Should().Throw<JsonException>().WithMessage("*maximum configured depth of 64*", because:
-            "DiscriminatedUnionJson.Read has no depth guard of its own — JsonDocument.ParseValue(ref "
-            + "reader) continues the ambient Utf8JsonReader's own token-depth tracking, so System.Text."
-            + "Json's own reader depth guard (threaded from JsonSerializerOptions.MaxDepth, default 64) "
-            + "already throws before any of this type's code runs; the JSON text here is built "
-            + "directly rather than through DiscriminatedUnionJson.Write, since Write's own hardcoded "
-            + "safety ceiling of 20 would otherwise refuse to produce JSON nested this deep in the "
-            + "first place");
+        act.Should().Throw<JsonException>().WithMessage("*exceeded the maximum union nesting depth of 20 while reading*");
+    }
+
+    [Fact]
+    public void Optional_read_throws_JsonException_instead_of_crashing_on_a_payload_nested_10000_levels_deep()
+    {
+        var (_, declaredType) = BuildNestedOptional(99);
+        var json = BuildNestedOptionalJson(10_000);
+        var unboundedDepthOptions = new JsonSerializerOptions { MaxDepth = int.MaxValue };
+
+        var act = () => JsonSerializer.Deserialize(json, declaredType, unboundedDepthOptions);
+
+        act.Should().Throw<JsonException>().WithMessage("*exceeded the maximum union nesting depth of 20 while reading*");
+    }
+
+    [Fact]
+    public void Optional_read_counts_ordinary_layers_between_nested_unions_toward_the_ceiling()
+    {
+        var (_, declaredType) = BuildOptionalHopsSeparatedByPlainLayers(hops: 8, layersPerHop: 3);
+        var json = BuildOptionalHopsSeparatedByPlainLayersJson(hops: 8, layersPerHop: 3);
+
+        var act = () => JsonSerializer.Deserialize(json, declaredType, MaxDepthWellAboveTheSafetyCeilingOptions);
+
+        act.Should().Throw<JsonException>().WithMessage("*exceeded the maximum union nesting depth of 20 while reading*");
     }
 
     [Fact]

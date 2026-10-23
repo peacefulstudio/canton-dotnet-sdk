@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Description>Tests for Daml.Codegen.DarParser.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\Roslyn\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <Compile Include="..\Shared\Bash\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <Content Include="..\..\conformance\stable-packages\**\*.dalf" Link="Fixtures\stable-packages\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Codegen.DarParser\Daml.Codegen.DarParser.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.CSharp\Daml.Codegen.CSharp.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Tooling\Daml.Codegen.Tooling.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-api-token-holding-v1\splice-api-token-holding-v1.dar" Link="Fixtures\splice-api-token-holding-v1.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-amulet-name-service\splice-amulet-name-service.dar" Link="Fixtures\splice-amulet-name-service.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\defaulttarget\defaulttarget.dar" Link="Fixtures\defaulttarget.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\defaulttarget\daml.yaml" Link="Fixtures\defaulttarget.daml.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\richtypes\richtypes.dar" Link="Fixtures\richtypes.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\conformance\contractkeys\contractkeys.dar" Link="Fixtures\contractkeys.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Snapshot fixtures for the parser-direct drift-detection test. The DAR +
+      expected/ tree are copied alongside the test assembly under
+      Fixtures/Snapshots/<name>/ so the test does not depend on the repo source
+      layout at runtime. The expected .cs files are generated codegen output to
+      compare against, NOT source, so they are excluded from the Compile set.
+      UnifiedDiff is shared from the sibling test project. Refresh procedure:
+      see Fixtures/Snapshots/splice-api-token-holding-v1/README.md.
+    -->
+    <Compile Include="..\Daml.Codegen.CSharp.Tests\UnifiedDiff.cs" Link="UnifiedDiff.cs" />
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-api-token-holding-v1\splice-api-token-holding-v1.dar" Link="Fixtures\Snapshots\splice-api-token-holding-v1\splice-api-token-holding-v1.dar">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-api-token-holding-v1\intermediate.binpb" Link="Fixtures\Snapshots\splice-api-token-holding-v1\intermediate.binpb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!--
+      JVM-produced intermediate carrying real interface methods on the wire:
+      the read -> write -> read fixed-point fixture for the interface-method
+      writer (splice-api-token-holding-v1 is methodless — a methods
+      fixed-point check on it would be vacuous).
+    -->
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-api-token-transfer-instruction-v2\intermediate.binpb" Link="Fixtures\Snapshots\splice-api-token-transfer-instruction-v2\intermediate.binpb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-api-token-holding-v1\README.md" Link="Fixtures\Snapshots\splice-api-token-holding-v1\README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\splice-api-token-holding-v1\expected\**\*" Link="Fixtures\Snapshots\splice-api-token-holding-v1\expected\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

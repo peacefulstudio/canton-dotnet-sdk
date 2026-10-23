@@ -159,12 +159,7 @@ internal static class RestSubscribeRequestBuilder
                         {
                             InterfaceFilter = new WireInterfaceFilter
                             {
-                                InterfaceId = new Raw.Identifier
-                                {
-                                    PackageId = $"#{interfaceView.PackageName}",
-                                    ModuleName = interfaceView.Identifier.ModuleName,
-                                    EntityName = interfaceView.Identifier.EntityName,
-                                },
+                                InterfaceId = RestWireConversions.ToPackageNameReference(interfaceView),
                                 IncludeInterfaceView = true,
                             },
                         },

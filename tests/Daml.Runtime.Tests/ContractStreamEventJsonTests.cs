@@ -276,7 +276,7 @@ public class ContractStreamEventJsonTests
         var act = () => JsonSerializer.Deserialize<ContractStreamEvent<TestTemplate>>("\"c\"");
 
         act.Should().Throw<JsonException>()
-            .WithMessage("*Expected object token for ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate>*");
+            .WithMessage("*Expected object token for ContractStreamEvent<TestTemplate>*");
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public class ContractStreamEventJsonTests
 
         act.Should().Throw<JsonException>()
             .WithMessage(
-                "*ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate> is missing the "
+                "*ContractStreamEvent<TestTemplate> is missing the "
                 + "\"$case\" discriminator*");
     }
 
@@ -320,7 +320,7 @@ public class ContractStreamEventJsonTests
 
         act.Should().Throw<JsonException>()
             .WithMessage(
-                "*ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate> names an unknown "
+                "*ContractStreamEvent<TestTemplate> names an unknown "
                 + "case \"Renamed\"*Created, Archived, Exercised, Assigned, Unassigned, Checkpoint, "
                 + "StreamError, Unclassified*");
     }
@@ -342,13 +342,13 @@ public class ContractStreamEventJsonTests
 
         act.Should().Throw<JsonException>().WithMessage(
             "Reference handling is not supported for "
-            + "ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate>: this Daml union's "
+            + "ContractStreamEvent<TestTemplate>: this Daml union's "
             + "converter reaches its arm's payload through a nested JsonSerializer call that starts "
             + "its own independent reference resolver, so JsonSerializerOptions.ReferenceHandler.Preserve "
             + "would silently duplicate an aliased object under a colliding \"$id\" and "
             + "ReferenceHandler.IgnoreCycles would not recognize a cycle through this type at all. "
             + "Serialize or deserialize a value containing "
-            + "ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate> with "
+            + "ContractStreamEvent<TestTemplate> with "
             + "JsonSerializerOptions.ReferenceHandler left null.");
     }
 
@@ -363,13 +363,13 @@ public class ContractStreamEventJsonTests
 
         act.Should().Throw<JsonException>().WithMessage(
             "Reference handling is not supported for "
-            + "ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate>: this Daml union's "
+            + "ContractStreamEvent<TestTemplate>: this Daml union's "
             + "converter reaches its arm's payload through a nested JsonSerializer call that starts "
             + "its own independent reference resolver, so JsonSerializerOptions.ReferenceHandler.Preserve "
             + "would silently duplicate an aliased object under a colliding \"$id\" and "
             + "ReferenceHandler.IgnoreCycles would not recognize a cycle through this type at all. "
             + "Serialize or deserialize a value containing "
-            + "ContractStreamEvent<ContractStreamEventJsonTests.TestTemplate> with "
+            + "ContractStreamEvent<TestTemplate> with "
             + "JsonSerializerOptions.ReferenceHandler left null.");
     }
 
@@ -417,22 +417,5 @@ public class ContractStreamEventJsonTests
             + "attribute on the arm nor the registration, so the arm keeps writing its own plain "
             + "members with no \"$case\", exactly as it did before this factory started matching "
             + "arm types at all");
-    }
-
-    private sealed record TestTemplate(string Owner) : ITemplate, IDamlRecord<TestTemplate>
-    {
-        public static Identifier TemplateId { get; } = new("pkg", "M", "TestTemplate");
-        public static string PackageId => "pkg";
-        public static string PackageName => "test";
-        public static Version PackageVersion { get; } = new(0, 1, 0);
-        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
-
-        public DamlRecord ToRecord() => DamlRecord.Create(new DamlField("owner", new DamlText(Owner)));
-
-        public static TestTemplate FromRecord(DamlRecord record) =>
-            new((record.GetField("owner") as DamlText)?.Value ?? string.Empty);
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
-            throw new NotSupportedException();
     }
 }

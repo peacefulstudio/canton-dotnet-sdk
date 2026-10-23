@@ -50,6 +50,15 @@ public abstract record Outcome : global::Daml.Runtime.Data.IDamlVariant<Outcome>
     public sealed record Win(global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome_Win Value) : Outcome
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Codegen.Testing.Conformance.RichTypes.Outcome_Win>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "Win";
 
         /// <inheritdoc />
@@ -65,5 +74,4 @@ public abstract record Outcome : global::Daml.Runtime.Data.IDamlVariant<Outcome>
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("Pending", global::Daml.Runtime.Data.DamlUnit.Instance);
     }
-
 }

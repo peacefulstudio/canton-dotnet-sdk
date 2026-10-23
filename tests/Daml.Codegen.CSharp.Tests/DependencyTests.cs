@@ -15,13 +15,11 @@ public class DependencyTests
     [Fact]
     public void DamlPackageReference_should_store_package_id()
     {
-        // Arrange & Act
         var reference = new DamlPackageReference
         {
             PackageId = "abc123def456"
         };
 
-        // Assert
         reference.PackageId.Should().Be("abc123def456");
         reference.Name.Should().BeNull();
         reference.Version.Should().BeNull();
@@ -30,7 +28,6 @@ public class DependencyTests
     [Fact]
     public void DamlPackageReference_should_carry_name_and_version_set_at_construction()
     {
-        // Arrange & Act
         var reference = new DamlPackageReference
         {
             PackageId = "abc123def456",
@@ -38,7 +35,6 @@ public class DependencyTests
             Version = new Version(1, 2, 3)
         };
 
-        // Assert
         reference.Name.Should().Be("my-dependency");
         reference.Version.Should().Be(new Version(1, 2, 3));
     }
@@ -50,14 +46,12 @@ public class DependencyTests
     [Fact]
     public void DamlPackage_should_store_dependency_references()
     {
-        // Arrange
         var dependencies = new List<DamlPackageReference>
         {
             new() { PackageId = "dep1" },
             new() { PackageId = "dep2" }
         };
 
-        // Act
         var package = new DamlPackage
         {
             PackageId = "main-package",
@@ -68,7 +62,6 @@ public class DependencyTests
             DependencyReferences = dependencies
         };
 
-        // Assert
         package.DependencyReferences.Should().HaveCount(2);
         package.DependencyReferences[0].PackageId.Should().Be("dep1");
         package.DependencyReferences[1].PackageId.Should().Be("dep2");
@@ -81,7 +74,6 @@ public class DependencyTests
     [Fact]
     public void DarModel_GetPackageById_should_find_main_package()
     {
-        // Arrange
         var mainPackage = new DamlPackage
         {
             PackageId = "main-pkg-id",
@@ -98,17 +90,14 @@ public class DependencyTests
             Dependencies = []
         };
 
-        // Act
         var found = dar.GetPackageById("main-pkg-id");
 
-        // Assert
         found.Should().Be(mainPackage);
     }
 
     [Fact]
     public void DarModel_GetPackageById_should_find_dependency_package()
     {
-        // Arrange
         var mainPackage = new DamlPackage
         {
             PackageId = "main-pkg-id",
@@ -135,17 +124,14 @@ public class DependencyTests
             Dependencies = [depPackage]
         };
 
-        // Act
         var found = dar.GetPackageById("dep-pkg-id");
 
-        // Assert
         found.Should().Be(depPackage);
     }
 
     [Fact]
     public void DarModel_GetPackageById_should_return_null_for_unknown_id()
     {
-        // Arrange
         var mainPackage = new DamlPackage
         {
             PackageId = "main-pkg-id",
@@ -162,10 +148,8 @@ public class DependencyTests
             Dependencies = []
         };
 
-        // Act
         var found = dar.GetPackageById("unknown-id");
 
-        // Assert
         found.Should().BeNull();
     }
 

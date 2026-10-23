@@ -119,7 +119,7 @@ internal sealed partial class RestLedgerClient
                 continue;
             }
 
-            var disclosure = RestContractStreamProjector.DisclosureOf(entry, _logger);
+            var disclosure = RestContractStreamProjector.DisclosureOf(entry, _logger, _emitPartyAndContractSpanTags);
             foreach (var projected in RestInterfaceStreamProjector.ProjectActiveContractEntry<TInterface, TView>(
                 entry, _logger, effectiveOffset))
             {

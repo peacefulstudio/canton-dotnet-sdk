@@ -3,7 +3,7 @@
 
 using AwesomeAssertions;
 using Daml.Runtime.Serialization;
-using Daml.Runtime.Tests;
+using Daml.Codegen.Testing.Conformance.Tests;
 using Xunit;
 
 namespace Canton.Ledger.Rest.Client.Tests;
@@ -12,7 +12,7 @@ namespace Canton.Ledger.Rest.Client.Tests;
 /// Holds the REST submission path to the runtime writer: for every capture the participant sent, the
 /// <c>createArguments</c> or <c>choiceArgument</c> bytes of the request are exactly the bytes
 /// <see cref="DamlJsonSerializer"/> writes. The wire grammar itself is pinned once, by
-/// <c>SerializedWireShapeMatchesCaptureTests</c> in the runtime suite.
+/// <c>SerializedWireShapeMatchesCaptureTests</c> in the conformance suite.
 /// </summary>
 public sealed class RestSerializedWireShapeMatchesCaptureTests : IDisposable
 {
@@ -22,14 +22,14 @@ public sealed class RestSerializedWireShapeMatchesCaptureTests : IDisposable
 
     [Theory]
     [MemberData(
-        nameof(DamlLfJsonReaderWireSamplesTests.DecodedWireSamplePayloads),
-        MemberType = typeof(DamlLfJsonReaderWireSamplesTests))]
+        nameof(WireCaptures.DecodedWireSamplePayloads),
+        MemberType = typeof(WireCaptures))]
     public async Task SubmitAndWaitAsync_writes_the_runtime_writers_bytes_for_every_captured_payload(
         string fileName, string payloadPath, string shapeName)
     {
-        using var document = DamlLfJsonReaderWireSamplesTests.LoadWireSample(fileName);
-        var captured = DamlLfJsonReaderWireSamplesTests.ResolvePayload(document.RootElement, payloadPath);
-        var record = DamlLfJsonReaderWireSamplesTests.DeclaredShapes[shapeName](captured);
+        using var document = WireCaptures.LoadWireSample(fileName);
+        var captured = WireCaptures.ResolvePayload(document.RootElement, payloadPath);
+        var record = WireCaptures.DeclaredShapes[shapeName](captured);
 
         var submitted = await _recorder.CreateArgumentsOnTheWire(record);
 
@@ -38,15 +38,15 @@ public sealed class RestSerializedWireShapeMatchesCaptureTests : IDisposable
 
     [Theory]
     [MemberData(
-        nameof(DamlLfJsonReaderWireSamplesTests.AcceptedNestedOptionalCandidates),
-        MemberType = typeof(DamlLfJsonReaderWireSamplesTests))]
+        nameof(WireCaptures.AcceptedNestedOptionalCandidates),
+        MemberType = typeof(WireCaptures))]
     public async Task SubmitAndWaitAsync_writes_the_runtime_writers_bytes_for_every_accepted_nested_optional(
         string candidate)
     {
-        using var document = DamlLfJsonReaderWireSamplesTests.LoadWireSample(
-            DamlLfJsonReaderWireSamplesTests.NestedOptionalProbe);
+        using var document = WireCaptures.LoadWireSample(
+            WireCaptures.NestedOptionalProbe);
         var echoed = document.RootElement.GetProperty("response").GetProperty(candidate).GetProperty("echoed");
-        var nestedNote = DamlLfJsonReaderWireSamplesTests.ReadOptionalOptionalText(echoed);
+        var nestedNote = WireCaptures.ReadOptionalOptionalText(echoed);
 
         var submitted = await _recorder.ChoiceArgumentOnTheWire(nestedNote);
 
@@ -56,12 +56,12 @@ public sealed class RestSerializedWireShapeMatchesCaptureTests : IDisposable
     [Fact]
     public void RestSerializedWireShapeMatchesCapture_should_hold_the_request_against_every_capture_on_disk()
     {
-        var capturesTheRequestIsHeldAgainst = FirstColumnOf(DamlLfJsonReaderWireSamplesTests.DecodedWireSamplePayloads)
-            .Append(DamlLfJsonReaderWireSamplesTests.NestedOptionalProbe)
+        var capturesTheRequestIsHeldAgainst = FirstColumnOf(WireCaptures.DecodedWireSamplePayloads)
+            .Append(WireCaptures.NestedOptionalProbe)
             .Distinct();
 
         capturesTheRequestIsHeldAgainst.Should().BeEquivalentTo(
-            Directory.EnumerateFiles(DamlLfJsonReaderWireSamplesTests.CorpusDirectory, "*.json").Select(Path.GetFileName),
+            Directory.EnumerateFiles(WireCaptures.CorpusDirectory, "*.json").Select(Path.GetFileName),
             "a capture the REST request is never held against would let it drift from the runtime writer");
     }
 

@@ -13,6 +13,7 @@ using Canton.Ledger.Kernel.Authentication.TokenGeneration;
 using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Security;
 using Canton.Ledger.Kernel.Telemetry;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Rest.Client.Raw;
 using Daml.Ledger.Abstractions;
 using Microsoft.Extensions.Configuration;
@@ -47,6 +48,25 @@ public class ServiceCollectionExtensionsTests
         using var httpClient = provider.GetRequiredService<IHttpClientFactory>()
             .CreateClient(ServiceCollectionExtensions.HttpClientName);
         httpClient.BaseAddress.Should().Be(new Uri("http://ledger.example:7575"));
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_configures_the_named_HttpClient_consumers_address_by_the_literal_name()
+    {
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options => options.HttpAddress = "http://ledger.example:7575");
+        using var provider = services.BuildServiceProvider();
+
+        using var httpClient = provider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient(ServiceCollectionExtensions.HttpClientName);
+
+        httpClient.BaseAddress.Should().Be(new Uri("http://ledger.example:7575"));
+    }
+
+    [Fact]
+    public void HttpClientName_is_the_literal_consumers_register_handlers_under()
+    {
+        ServiceCollectionExtensions.HttpClientName.Should().Be("Canton.Ledger.Rest");
     }
 
     [Fact]
@@ -144,6 +164,83 @@ public class ServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         provider.GetRequiredService<IOptions<RestLedgerClientOptions>>()
             .Value.HttpAddress.Should().Be("http://ledger.example:7575");
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_leaves_EmitPartyAndContractSpanTags_off_when_configuration_omits_it()
+    {
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["HttpAddress"] = "http://ledger.example:7575" })
+            .Build();
+
+        services.AddRestLedgerClient(config);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IOptions<RestLedgerClientOptions>>()
+            .Value.EmitPartyAndContractSpanTags.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_binds_EmitPartyAndContractSpanTags_from_configuration()
+    {
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["HttpAddress"] = "http://ledger.example:7575",
+                ["EmitPartyAndContractSpanTags"] = "true",
+            })
+            .Build();
+
+        services.AddRestLedgerClient(config);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IOptions<RestLedgerClientOptions>>()
+            .Value.EmitPartyAndContractSpanTags.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddRestLedgerRawApis_binds_EmitPartyAndContractSpanTags_from_configuration()
+    {
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["HttpAddress"] = "http://ledger.example:7575",
+                ["EmitPartyAndContractSpanTags"] = "true",
+            })
+            .Build();
+
+        services.AddRestLedgerRawApis(config);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IOptions<RestLedgerClientOptions>>()
+            .Value.EmitPartyAndContractSpanTags.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AddRestLedgerClient_hands_EmitPartyAndContractSpanTags_to_the_resolved_admin_client(bool emit)
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponse(System.Net.HttpStatusCode.OK, """{"user": {"id": "carol-user"}}""");
+        var services = new ServiceCollection();
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "http://ledger.example:7575";
+            options.EmitPartyAndContractSpanTags = emit;
+        });
+        services.AddHttpClient(ServiceCollectionExtensions.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(() => transport);
+        using var provider = services.BuildServiceProvider();
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.RestAdminClient);
+
+        await provider.GetRequiredService<IAdminClient>().GetUserAsync("carol-user", TestContext.Current.CancellationToken);
+
+        capture.Activities.Should().ContainSingle().Which.GetTagItem(LedgerActivityTagNames.CantonUserId)
+            .Should().Be(emit ? "carol-user" : null);
     }
 
     [Fact]
@@ -496,6 +593,29 @@ public class ServiceCollectionExtensionsTests
         var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
 
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddRestLedgerClient_reports_the_exact_auth_tls_mismatch_message()
+    {
+        var services = new ServiceCollection();
+        services.AddCantonAuth(options =>
+        {
+            options.ClientId = "client";
+            options.ClientSecret = "secret";
+            options.Domain = "https://auth.example.com";
+        });
+        services.AddRestLedgerClient(options =>
+        {
+            options.HttpAddress = "https://ledger.example:7575";
+            options.Tls = new TlsOptions { ClientCertificatePemPath = "ledger-client.pem" };
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider.GetRequiredService<IOptions<RestLedgerClientOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>()
+            .Which.Failures.Should().Contain("RestLedgerClientOptions.Tls is configured while client-credentials authentication uses an unconfigured ClientCredentialsOptions.Tls. Configure TLS separately for the token endpoint.");
     }
 
     [Fact]

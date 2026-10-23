@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using Daml.Runtime.Contracts;
@@ -22,6 +23,8 @@ internal static class UndecodedJsonReader
         return read(document.RootElement, DamlLfJsonDecodeContext.Root(rootName, limits));
     }
 
+    [RequiresUnreferencedCode("Reading a generated record closes a generic method over the target type, which is not trimming-safe.")]
+    [RequiresDynamicCode("Reading a generated record closes a generic method over the target type at run time, which requires dynamic code generation.")]
     internal static DamlValue Read(DamlUndecodedJson undecoded, Type targetType) =>
         ReadWith(undecoded, targetType.Name, (json, context) => ReadAs(json, context, targetType));
 

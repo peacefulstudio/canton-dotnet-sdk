@@ -62,9 +62,9 @@ internal sealed class WrappedOneOfJsonConverterFactory : JsonConverterFactory
 /// </para>
 /// </summary>
 /// <remarks>
-/// Retired by digital-asset/canton#527, which would have the JSON HTTP API generated from the
-/// annotated protobuf definitions these wrappers come from. The <c>value</c> level is an artefact
-/// of the Scala case classes the current server derives its codecs from.
+/// Bridges the JSON API's wire encoding of a oneOf, which differs from the proto3 JSON our
+/// proto-derived specification describes. The <c>value</c> level is an artefact of the Scala case
+/// classes the server derives its codecs from.
 /// </remarks>
 internal sealed class WrappedOneOfJsonConverter<T>(FrozenSet<string> bareArms) : JsonConverter<T>
     where T : new()

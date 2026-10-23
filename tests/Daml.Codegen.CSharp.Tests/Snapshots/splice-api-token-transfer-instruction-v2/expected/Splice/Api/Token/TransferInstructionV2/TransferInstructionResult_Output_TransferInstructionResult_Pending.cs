@@ -17,6 +17,14 @@ public sealed record TransferInstructionResult_Output_TransferInstructionResult_
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("transferInstructionCid")] global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction> TransferInstructionCid
 ) : global::Daml.Runtime.Data.IDamlRecord<TransferInstructionResult_Output_TransferInstructionResult_Pending>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(TransferInstructionCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("transferInstructionCid", TransferInstructionCid.ToDamlValue())
@@ -24,7 +32,7 @@ public sealed record TransferInstructionResult_Output_TransferInstructionResult_
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static TransferInstructionResult_Output_TransferInstructionResult_Pending FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new TransferInstructionResult_Output_TransferInstructionResult_Pending(
-        TransferInstructionCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>(record.GetRequiredField("transferInstructionCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
+        TransferInstructionCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.Api.Token.TransferInstructionV2.ITransferInstruction>(record.GetRequiredField("transferInstructionCid", 0).As<global::Daml.Runtime.Contracts.DamlContractId>().Value)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,5 +44,4 @@ public sealed record TransferInstructionResult_Output_TransferInstructionResult_
             global::Daml.Runtime.Data.DamlField.Create("transferInstructionCid", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "transferInstructionCid"), context.Field("transferInstructionCid")))
         );
     }
-
 }

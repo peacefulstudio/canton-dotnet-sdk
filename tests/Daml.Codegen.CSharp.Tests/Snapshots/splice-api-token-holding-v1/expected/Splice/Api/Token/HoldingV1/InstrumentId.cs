@@ -17,6 +17,15 @@ public sealed record InstrumentId(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("id")] string Id
 ) : global::Daml.Runtime.Data.IDamlRecord<InstrumentId>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(Admin, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Data.Party>.Default);
+        hash.Add(Id, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("admin", Admin.ToDamlValue()),
@@ -25,8 +34,8 @@ public sealed record InstrumentId(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static InstrumentId FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new InstrumentId(
-        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin").As<global::Daml.Runtime.Data.DamlParty>()),
-        Id: record.GetRequiredField("id").As<global::Daml.Runtime.Data.DamlText>().Value
+        Admin: global::Daml.Runtime.Data.Party.FromDamlValue(record.GetRequiredField("admin", 0).As<global::Daml.Runtime.Data.DamlParty>()),
+        Id: record.GetRequiredField("id", 1).As<global::Daml.Runtime.Data.DamlText>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -39,5 +48,4 @@ public sealed record InstrumentId(
             global::Daml.Runtime.Data.DamlField.Create("id", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "id"), context.Field("id")))
         );
     }
-
 }

@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\wire-samples\data\*.json" LinkBase="wire-samples\data" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\Daml.Runtime\README.md" Link="Daml.Runtime.README.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

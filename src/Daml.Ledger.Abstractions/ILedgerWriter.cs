@@ -39,14 +39,20 @@ public interface ILedgerWriter
     /// whether the submission was accepted before deciding to retry.
     /// </param>
     /// <param name="timeout">
-    /// Optional per-call deadline, applied best-effort by the transport. gRPC transports
-    /// map it to <c>CallOptions.Deadline</c>, which bounds server-side call duration —
-    /// still not a hard guarantee that participant-side work stops the instant the
-    /// deadline elapses. Transports without a server-side deadline, such as JSON/REST,
-    /// apply a client-side bound only and cannot stop the participant working on the
-    /// call. An overrun is a transport failure and surfaces as an
-    /// <see cref="ExerciseOutcome{TResult}.InfraError"/> outcome. <c>null</c>
-    /// applies no deadline; <paramref name="cancellationToken"/> then remains the only bound.
+    /// Optional deadline for each attempt of the call, applied best-effort by the transport.
+    /// <c>null</c> falls back to the client-wide <c>Timeout</c> option of the registered
+    /// transport, 30 seconds unless the host changes it, on gRPC and JSON/REST alike; that option
+    /// set to <c>null</c> applies no deadline, leaving <paramref name="cancellationToken"/> as the
+    /// only bound. gRPC transports map the deadline to <c>CallOptions.Deadline</c>, which bounds
+    /// server-side call duration — still not a hard guarantee that participant-side work stops the
+    /// instant the deadline elapses. Transports without a server-side deadline, such as JSON/REST,
+    /// apply a client-side bound only and cannot stop the participant working on the call. An
+    /// overrun is a transport failure and surfaces as an
+    /// <see cref="ExerciseOutcome{TResult}.InfraError"/> outcome. When the transport's retry
+    /// pipeline is enabled, every attempt is granted a fresh deadline and an attempt that overruns
+    /// is retried, so the worst case for one call is <c>timeout × (1 + MaxRetryAttempts)</c> plus
+    /// the backoff between attempts. A caller who needs a hard cap on the whole call passes a
+    /// <paramref name="cancellationToken"/> that it cancels after that time.
     /// </param>
     /// <param name="cancellationToken">
     /// Cancellation token. When this token is cancelled, implementations must throw

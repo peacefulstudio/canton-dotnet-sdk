@@ -1,6 +1,8 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Kernel.Streams;
+using Canton.Ledger.Kernel.Telemetry;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,7 +15,8 @@ internal sealed partial class PqsHealthCheck(IOptions<PqsClientOptions> options,
 {
     private readonly PqsClientOptions _options = (options ?? throw new ArgumentNullException(nameof(options))).Value;
     private readonly NpgsqlDataSource? _dataSource = dataSource;
-    private readonly ILogger<PqsHealthCheck> _logger = logger ?? NullLogger<PqsHealthCheck>.Instance;
+    private readonly ILogger _logger = (logger ?? NullLogger<PqsHealthCheck>.Instance)
+        .RedactingExceptionsUnless(options.Value.EmitPartyAndContractSpanTags);
 
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -37,14 +40,14 @@ internal sealed partial class PqsHealthCheck(IOptions<PqsClientOptions> options,
                 }
             }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (StreamEventClassifier.IsNotCancellation(ex))
         {
             LogUnhealthy(_logger, ex);
 
             return new HealthCheckResult(
                 context.Registration.FailureStatus,
                 description: "PQS database is unreachable.",
-                exception: ex);
+                exception: ex.RedactingUnless(_options.EmitPartyAndContractSpanTags));
         }
     }
 

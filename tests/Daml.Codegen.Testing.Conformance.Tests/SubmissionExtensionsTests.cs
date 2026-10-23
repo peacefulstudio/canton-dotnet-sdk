@@ -7,6 +7,7 @@ using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Xunit;
+using Daml.Runtime.Stdlib;
 
 namespace Daml.Codegen.Testing.Conformance.Tests;
 
@@ -67,8 +68,11 @@ public class SubmissionExtensionsTests
             AsOf: new DateOnly(2026, 1, 1),
             ObservedAt: DateTimeOffset.UnixEpoch,
             Note: null,
+            NestedNote: new Optional<Optional<string>>.None(),
             Tags: new List<string>(),
             Attributes: new Dictionary<string, string>(),
+            GenMap: new Dictionary<Party, long>(),
+            UnitField: DamlUnit.Instance,
             Marker: new ContractId<Marker>("m"),
             HoldingCid: new ContractId<IHolding>("00h"),
             HoldingCids: new List<ContractId<IHolding>>(),

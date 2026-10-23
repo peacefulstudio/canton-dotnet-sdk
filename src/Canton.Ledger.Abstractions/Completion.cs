@@ -43,14 +43,15 @@ namespace Canton.Ledger.Abstractions;
 /// responses and will always look larger.
 /// <para>
 /// Not nullable, because the wire has no presence to carry: <c>completion.proto</c>
-/// declares <c>paid_traffic_cost</c> as a bare <c>int64</c>, so a participant that reports
-/// nothing and a participant that reports a genuine zero are indistinguishable over gRPC.
-/// Modelling the field as nullable would invent a distinction one transport cannot make
-/// and would put the two transports' projections of the same completion at odds. A zero
-/// therefore means "nothing was charged, or nothing was said"; read it as a floor, not as
-/// a confirmed charge. The sibling fields on the update carriers do declare presence
-/// (<c>optional int64</c> on <c>transaction.proto</c> and <c>reassignment.proto</c>), so a
-/// neutral shape for those may model absence when it gains one.
+/// declares <c>paid_traffic_cost</c> as a bare <c>int64</c>, so Canton itself uses zero for
+/// two different cases. A zero means either that the command was rejected before its
+/// confirmation request was ordered, so nothing was paid, or that the completion was
+/// processed before the participant served traffic cost, so nothing was said. The two are
+/// indistinguishable over gRPC, and modelling the field as nullable would invent a distinction
+/// one transport cannot make and put the two transports' projections of the same completion at
+/// odds. Read a zero as a floor, not as a confirmed charge. The transaction carriers do declare
+/// presence (<c>optional int64</c> on <c>transaction.proto</c>), which is why
+/// <c>TransactionResult.PaidTrafficCost</c> and <c>TransactionTree.PaidTrafficCost</c> are nullable.
 /// </para></param>
 /// <param name="TraceContext">The W3C trace context the participant propagated with this
 /// completion, for joining the submission to a distributed trace; null when the completion

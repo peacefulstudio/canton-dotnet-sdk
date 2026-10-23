@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions.Testing.Conformance\Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
     <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Testing\Canton.Ledger.Testing.csproj" />
   </ItemGroup>
 
 </Project>

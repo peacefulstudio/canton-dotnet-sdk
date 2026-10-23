@@ -25,7 +25,7 @@ public class DamlJsonSerializerTextInferenceTests
     [Fact]
     public void DeserializeRecord_should_handle_DamlTimestamp()
     {
-        var json = """{"timestamp":"2023-06-15T12:30:45+00:00"}""";
+        var json = """{"timestamp":"2023-06-15T12:30:45Z"}""";
 
         var record = DamlJsonSerializer.DeserializeRecord(json);
 
@@ -73,7 +73,7 @@ public class DamlJsonSerializerTextInferenceTests
     {
         { "2023-06-15T12:30:45Z", new DateTimeOffset(2023, 6, 15, 12, 30, 45, TimeSpan.Zero) },
         { "2023-06-15T12:30:45.123Z", new DateTimeOffset(2023, 6, 15, 12, 30, 45, 123, TimeSpan.Zero) },
-        { "2023-06-15T12:30:45.0000000+00:00", new DateTimeOffset(2023, 6, 15, 12, 30, 45, TimeSpan.Zero) },
+        { "2023-06-15T12:30:45.123456Z", new DateTimeOffset(2023, 6, 15, 12, 30, 45, TimeSpan.Zero).AddTicks(1_234_560) },
     };
 
     [Theory]
@@ -215,15 +215,5 @@ public class DamlJsonSerializerTextInferenceTests
         var record = DamlJsonSerializer.DeserializeRecord(json);
 
         record.GetRequiredField("amount").Should().Be(new DamlText(beyondInt64Range));
-    }
-
-    [Fact]
-    public void DeserializeRecord_should_assume_utc_for_offsetless_canonical_timestamp()
-    {
-        var record = DamlJsonSerializer.DeserializeRecord("""{"at":"2023-06-15T12:30:45"}""");
-
-        var timestamp = record.GetRequiredField("at").As<DamlTimestamp>().Value;
-        timestamp.Offset.Should().Be(TimeSpan.Zero);
-        timestamp.Should().Be(new DateTimeOffset(2023, 6, 15, 12, 30, 45, TimeSpan.Zero));
     }
 }

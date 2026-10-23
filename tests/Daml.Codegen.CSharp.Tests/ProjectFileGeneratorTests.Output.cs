@@ -13,7 +13,6 @@ public partial class ProjectFileGeneratorTests
     [Fact]
     public void GenerateProjectFile_should_include_target_framework()
     {
-        // Arrange
         var options = CreateOptions(targetFramework: "net9.0");
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -26,17 +25,14 @@ public partial class ProjectFileGeneratorTests
             DependencyReferences = []
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package);
 
-        // Assert
         file.Content.Should().Contain("<TargetFramework>net9.0</TargetFramework>");
     }
 
     [Fact]
     public void GenerateProjectFile_should_include_nullable_when_enabled()
     {
-        // Arrange
         var options = CreateOptions(enableNullable: true);
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -49,17 +45,14 @@ public partial class ProjectFileGeneratorTests
             DependencyReferences = []
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package);
 
-        // Assert
         file.Content.Should().Contain("<Nullable>enable</Nullable>");
     }
 
     [Fact]
     public void GenerateProjectFile_should_not_include_nullable_when_disabled()
     {
-        // Arrange
         var options = CreateOptions(enableNullable: false);
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -72,17 +65,14 @@ public partial class ProjectFileGeneratorTests
             DependencyReferences = []
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package);
 
-        // Assert
         file.Content.Should().NotContain("<Nullable>");
     }
 
     [Fact]
     public void GenerateProjectFile_should_include_implicit_usings()
     {
-        // Arrange
         var options = CreateOptions();
         var generator = new ProjectFileGenerator(options);
         var package = new DamlPackage
@@ -95,10 +85,8 @@ public partial class ProjectFileGeneratorTests
             DependencyReferences = []
         };
 
-        // Act
         var file = generator.GenerateProjectFile(package);
 
-        // Assert
         file.Content.Should().Contain("<ImplicitUsings>enable</ImplicitUsings>");
     }
 

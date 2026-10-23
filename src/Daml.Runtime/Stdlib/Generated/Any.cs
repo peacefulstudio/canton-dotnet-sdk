@@ -16,6 +16,14 @@ public sealed record Any(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("getAny")] bool GetAny
 ) : global::Daml.Runtime.Data.IDamlRecord<Any>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(GetAny, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("getAny", new global::Daml.Runtime.Data.DamlBool(GetAny))
@@ -23,7 +31,7 @@ public sealed record Any(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static Any FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Any(
-        GetAny: record.GetRequiredField("getAny").As<global::Daml.Runtime.Data.DamlBool>().Value
+        GetAny: record.GetRequiredField("getAny", 0).As<global::Daml.Runtime.Data.DamlBool>().Value
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -35,5 +43,4 @@ public sealed record Any(
             global::Daml.Runtime.Data.DamlField.Create("getAny", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "getAny"), context.Field("getAny")))
         );
     }
-
 }

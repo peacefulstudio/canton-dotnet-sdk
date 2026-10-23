@@ -163,7 +163,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_create_generic_record_with_type_parameters()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -186,11 +185,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var containerFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Container.cs", StringComparison.Ordinal));
 
-        // Assert
         containerFile.Should().NotBeNull();
         var code = containerFile!.Content;
 
@@ -201,7 +198,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_create_generic_record_with_multiple_type_parameters()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -225,11 +221,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var pairFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Pair.cs", StringComparison.Ordinal));
 
-        // Assert
         pairFile.Should().NotBeNull();
         var code = pairFile!.Content;
 
@@ -241,7 +235,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_create_generic_variant_with_type_parameters()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -265,11 +258,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var eitherFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Either.cs", StringComparison.Ordinal));
 
-        // Assert
         eitherFile.Should().NotBeNull();
         var code = eitherFile!.Content;
 
@@ -281,7 +272,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_include_typeparam_documentation_for_generic_types()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -304,11 +294,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var boxFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Box.cs", StringComparison.Ordinal));
 
-        // Assert
         boxFile.Should().NotBeNull();
         var code = boxFile!.Content;
 
@@ -318,7 +306,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_handle_record_without_type_parameters()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -328,7 +315,7 @@ public class NewFeaturesCodeGenTests
                 new DamlDataType
                 {
                     Name = "NonGeneric",
-                    TypeParams = [], // Empty type params
+                    TypeParams = [],
                     Definition = new DamlRecordDefinition(
                     [
                         new DamlFieldDefinition("value", new DamlPrimitiveType(DamlPrimitive.Text))
@@ -341,11 +328,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var nonGenericFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("NonGeneric.cs", StringComparison.Ordinal));
 
-        // Assert
         nonGenericFile.Should().NotBeNull();
         var code = nonGenericFile!.Content;
 
@@ -356,7 +341,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_sanitize_type_parameter_names()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -380,11 +364,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var wrapperFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", StringComparison.Ordinal));
 
-        // Assert
         wrapperFile.Should().NotBeNull();
         var code = wrapperFile!.Content;
 
@@ -399,7 +381,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_implement_IUpgradeable_when_package_has_upgraded_package_id()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -428,11 +409,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module, upgradedPackageId: "previous-package-id-12345");
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var templateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("UpgradedTemplate.cs", StringComparison.Ordinal));
 
-        // Assert
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
@@ -443,7 +422,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_not_implement_IUpgradeable_when_no_upgraded_package()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -472,11 +450,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module, upgradedPackageId: null);
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var templateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("NormalTemplate.cs", StringComparison.Ordinal));
 
-        // Assert
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
@@ -487,7 +463,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_include_upgraded_package_id_documentation()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -516,11 +491,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module, upgradedPackageId: "old-package-id");
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var templateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("DocumentedUpgrade.cs", StringComparison.Ordinal));
 
-        // Assert
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
@@ -530,7 +503,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_carry_both_the_contract_key_and_IUpgradeable_when_applicable()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -561,11 +533,9 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module, upgradedPackageId: "previous-version-id");
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
         var templateFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("FullFeaturedTemplate.cs", StringComparison.Ordinal));
 
-        // Assert
         templateFile.Should().NotBeNull();
         var code = templateFile!.Content;
 
@@ -581,7 +551,6 @@ public class NewFeaturesCodeGenTests
     [Fact]
     public void Generate_should_handle_module_with_templates_interfaces_and_data_types()
     {
-        // Arrange
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -629,24 +598,19 @@ public class NewFeaturesCodeGenTests
         var dar = CreateTestDar(module, upgradedPackageId: "old-pkg-id");
         var generator = CreateGenerator();
 
-        // Act
         var files = generator.Generate(dar);
 
-        // Assert
         files.Should().HaveCountGreaterThan(2);
 
-        // Template should exist with key and upgrade support
         var assetFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Asset.cs", StringComparison.Ordinal));
         assetFile.Should().NotBeNull();
         assetFile!.Content.Should().Contain("global::Daml.Runtime.Contracts.IHasKey<Asset, global::Daml.Runtime.Data.Party>");
         assetFile.Content.Should().Contain("IUpgradeable");
 
-        // Generic data type should exist
         var wrapperFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("Wrapper.cs", StringComparison.Ordinal));
         wrapperFile.Should().NotBeNull();
         wrapperFile!.Content.Should().Contain("Wrapper<TT>");
 
-        // Interface should exist
         var interfaceFile = files.FirstOrDefault(f => f.RelativePath.EndsWith("ITransferable.cs", StringComparison.Ordinal));
         interfaceFile.Should().NotBeNull();
         interfaceFile!.Content.Should().Contain("public interface ITransferable");

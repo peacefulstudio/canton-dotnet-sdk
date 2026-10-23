@@ -11,6 +11,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Client.Parity.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Integration.Tests" />
+    <InternalsVisibleTo Include="Daml.Codegen.Testing.Conformance.Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +33,6 @@
     <ProjectReference Include="..\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
     <ProjectReference Include="..\Canton.Ledger.Kernel\Canton.Ledger.Kernel.csproj" />
     <ProjectReference Include="..\Canton.Ledger.Grpc\Canton.Ledger.Grpc.csproj" />
-    <ProjectReference Include="..\Daml.Runtime.Grpc\Daml.Runtime.Grpc.csproj" />
   </ItemGroup>
 
   <ItemGroup>

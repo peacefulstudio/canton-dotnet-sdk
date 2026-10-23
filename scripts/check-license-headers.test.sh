@@ -42,7 +42,14 @@ through:
  14. --fix writes the headers, keeps a shebang and an '@echo off' first, keeps
      the executable bit, preserves CRLF in files that use it, leaves no
      staging file behind, and the tree then passes a plain check;
- 15. --print-scan-paths lists every scan path the gate walks.
+ 15. with --root and PATH arguments, only the passed files are checked:
+     a headerless one fails — exit 1, a good one passes without the
+     type-coverage self-check, and a file outside the scan paths, under a
+     .licenseignore path, under a pruned directory, or no longer on disk is
+     skipped; an in-scope file of an unclassified type or without extension
+     or shebang is still reported — exit 2; --fix touches only the passed
+     files;
+ 16. with no arguments the gate scans the tree it lives in, as it always has.
 
 Exits non-zero on any assertion failure.
 EOF
@@ -130,10 +137,21 @@ assert_exit() {
   local label="$1" expected="$2" tree="$3" flag="${4:-}"
   local actual=0
   if [ -n "$flag" ]; then
-    bash "$gate" "$flag" "$tree" >/dev/null 2>&1 || actual=$?
+    bash "$gate" "$flag" --root "$tree" >/dev/null 2>&1 || actual=$?
   else
-    bash "$gate" "$tree" >/dev/null 2>&1 || actual=$?
+    bash "$gate" --root "$tree" >/dev/null 2>&1 || actual=$?
   fi
+  if [ "$actual" -eq "$expected" ]; then
+    report pass "$label"
+  else
+    report fail "$label — expected exit $expected, got $actual"
+  fi
+}
+
+assert_exit_for_paths() {
+  local label="$1" expected="$2" tree="$3" actual=0
+  shift 3
+  bash "$gate" --root "$tree" "$@" >/dev/null 2>&1 || actual=$?
   if [ "$actual" -eq "$expected" ]; then
     report pass "$label"
   else
@@ -263,7 +281,7 @@ fi
 staging_check_tree="$(new_tree staging-check)"
 drop_lines "$staging_check_tree/conformance/Fixture.daml" 1 2
 mkdir -p "$staging_check_tree/.tmpdir"
-TMPDIR="$staging_check_tree/.tmpdir" bash "$gate" --fix "$staging_check_tree" >/dev/null 2>&1
+TMPDIR="$staging_check_tree/.tmpdir" bash "$gate" --fix --root "$staging_check_tree" >/dev/null 2>&1
 staging_leftovers="$(find "$staging_check_tree/.tmpdir" -name 'license-header.*')"
 if [ -z "$staging_leftovers" ]; then
   report pass "--fix leaves no staging file behind"
@@ -288,18 +306,99 @@ for unheadered in benchmarks/Bench.cs .github/scripts/ci.sh; do
   assert_exit "a headerless $unheadered fails the gate" 1 "$unheadered_tree"
 done
 
-printed_paths="$(bash "$gate" --print-scan-paths)"
-missing_from_print=""
-for path in src tests jvm-helper samples scripts conformance proto benchmarks \
-  .github/scripts CONTEXT.md Directory.Build.props coverage.settings.xml .editorconfig .pre-commit-config.yaml; do
-  if ! grep -qxF -- "$path" <<<"$printed_paths"; then
-    missing_from_print="$missing_from_print $path"
-  fi
-done
-if [ -z "$missing_from_print" ]; then
-  report pass "--print-scan-paths lists every scan path the gate walks"
+path_headerless_tree="$(new_tree path-headerless)"
+drop_lines "$path_headerless_tree/src/Thing.cs" 1 2
+assert_exit_for_paths "a passed file missing its header fails the gate" 1 \
+  "$path_headerless_tree" src/Thing.cs
+
+path_good_tree="$(new_tree path-good)"
+rm "$path_good_tree/conformance/Fixture.daml"
+assert_exit_for_paths "a passed file with a good header passes without the type-coverage self-check" 0 \
+  "$path_good_tree" src/Thing.cs
+
+
+path_outside_tree="$(new_tree path-outside)"
+mkdir -p "$path_outside_tree/docs"
+printf 'namespace Notes { }\n' >"$path_outside_tree/docs/Notes.cs"
+assert_exit_for_paths "a passed file outside the scan paths is ignored" 0 \
+  "$path_outside_tree" docs/Notes.cs
+
+path_untouched_tree="$(new_tree path-untouched)"
+drop_lines "$path_untouched_tree/src/Thing.cs" 1 2
+assert_exit_for_paths "a headerless file that was not passed is not looked at" 0 \
+  "$path_untouched_tree" benchmarks/Bench.cs
+
+path_ignored_tree="$(new_tree path-ignored)"
+mkdir -p "$path_ignored_tree/src/vendor"
+printf 'syntax = "proto3";\n' >"$path_ignored_tree/src/vendor/foreign.proto"
+printf 'src/vendor/\n' >"$path_ignored_tree/.licenseignore"
+assert_exit_for_paths "a passed file under a .licenseignore path is skipped" 0 \
+  "$path_ignored_tree" src/vendor/foreign.proto
+
+path_generated_tree="$(new_tree path-generated)"
+mkdir -p "$path_generated_tree/src/Generated"
+printf 'namespace Emitted { }\n' >"$path_generated_tree/src/Generated/Emitted.cs"
+assert_exit_for_paths "a passed file under a pruned directory is skipped" 0 \
+  "$path_generated_tree" src/Generated/Emitted.cs
+
+path_deleted_tree="$(new_tree path-deleted)"
+assert_exit_for_paths "a passed path that no longer exists is skipped" 0 \
+  "$path_deleted_tree" src/Gone.cs
+
+path_unclassified_tree="$(new_tree path-unclassified)"
+printf 'body { color: red }\n' >"$path_unclassified_tree/src/theme.css"
+assert_exit_for_paths "a passed in-scope file of a type classified nowhere is reported" 2 \
+  "$path_unclassified_tree" src/theme.css
+
+path_opaque_tree="$(new_tree path-opaque)"
+printf '3.4.11\n' >"$path_opaque_tree/src/version"
+assert_exit_for_paths "a passed in-scope file with neither extension nor shebang is reported" 2 \
+  "$path_opaque_tree" src/version
+
+path_absolute_tree="$(new_tree path-absolute)"
+drop_lines "$path_absolute_tree/src/Thing.cs" 1 2
+assert_exit_for_paths "a passed absolute path inside the root is checked" 1 \
+  "$path_absolute_tree" "$path_absolute_tree/src/Thing.cs"
+assert_exit_for_paths "a passed absolute path outside the root is ignored" 0 \
+  "$path_absolute_tree" "$work_dir/elsewhere/Thing.cs"
+
+path_dot_slash_tree="$(new_tree path-dot-slash)"
+drop_lines "$path_dot_slash_tree/src/Thing.cs" 1 2
+assert_exit_for_paths "a passed ./-prefixed path is checked" 1 \
+  "$path_dot_slash_tree" ./src/Thing.cs
+
+path_mixed_tree="$(new_tree path-mixed)"
+drop_lines "$path_mixed_tree/src/Thing.cs" 1 2
+assert_exit_for_paths "one headerless file among several passed ones fails the gate" 1 \
+  "$path_mixed_tree" benchmarks/Bench.cs src/Thing.cs docs/Notes.cs
+
+path_fix_tree="$(new_tree path-fix)"
+drop_lines "$path_fix_tree/src/Thing.cs" 1 2
+drop_lines "$path_fix_tree/benchmarks/Bench.cs" 1 2
+assert_exit_for_paths "--fix with a passed path exits 0" 0 "$path_fix_tree" --fix src/Thing.cs
+if grep -q 'SPDX-License-Identifier' "$path_fix_tree/src/Thing.cs" \
+  && ! grep -q 'SPDX-License-Identifier' "$path_fix_tree/benchmarks/Bench.cs"; then
+  report pass "--fix with a passed path writes that file's header and no other"
 else
-  report fail "--print-scan-paths omitted:$missing_from_print"
+  report fail "--fix with a passed path touched the wrong files"
+fi
+
+default_root_tree="$(new_tree default-root)"
+cp "$gate" "$default_root_tree/scripts/check-license-headers.sh"
+default_root_exit=0
+bash "$default_root_tree/scripts/check-license-headers.sh" >/dev/null 2>&1 || default_root_exit=$?
+if [ "$default_root_exit" -eq 0 ]; then
+  report pass "with no arguments the gate scans the tree it lives in"
+else
+  report fail "with no arguments the gate exited $default_root_exit on a complete tree"
+fi
+drop_lines "$default_root_tree/benchmarks/Bench.cs" 1 2
+default_root_exit=0
+bash "$default_root_tree/scripts/check-license-headers.sh" >/dev/null 2>&1 || default_root_exit=$?
+if [ "$default_root_exit" -eq 1 ]; then
+  report pass "with no arguments the gate reports a headerless file anywhere in the tree"
+else
+  report fail "with no arguments the gate exited $default_root_exit on a tree with a headerless file"
 fi
 
 if [ "$failures" -ne 0 ]; then

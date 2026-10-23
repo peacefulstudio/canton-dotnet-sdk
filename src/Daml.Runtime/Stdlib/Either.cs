@@ -40,13 +40,23 @@ public abstract record Either<TL, TR>
     /// The <c>Left</c> constructor of <c>DA.Types.Either</c>.
     /// </summary>
     /// <param name="Value">The carried left value.</param>
-    public sealed record Left(TL Value) : Either<TL, TR>;
+    public sealed record Left(TL Value) : Either<TL, TR>
+    {
+        /// <inheritdoc />
+        public override int GetHashCode() =>
+            HashCode.Combine(base.GetHashCode(), DamlEqualityComparer<TL>.Default.GetHashCode(Value));
+    }
 
     /// <summary>
     /// The <c>Right</c> constructor of <c>DA.Types.Either</c>.
     /// </summary>
     /// <param name="Value">The carried right value.</param>
-    public sealed record Right(TR Value) : Either<TL, TR>;
+    public sealed record Right(TR Value) : Either<TL, TR>
+    {
+        /// <inheritdoc />
+        public override int GetHashCode() =>
+            HashCode.Combine(base.GetHashCode(), DamlEqualityComparer<TR>.Default.GetHashCode(Value));
+    }
 
     /// <summary>
     /// Converts this value to its <see cref="DamlValue"/> wire representation.

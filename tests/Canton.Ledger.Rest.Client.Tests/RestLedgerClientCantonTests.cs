@@ -28,7 +28,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     [ModuleInitializer]
     internal static void RegisterHandWrittenTemplates()
     {
-        GeneratedTypeReaders.ForRecord<TestTemplate>();
+        GeneratedTypeReaders.ForRecord<OwnedTemplate>();
     }
 
     private static readonly Party Alice = new("party::alice");
@@ -52,30 +52,22 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         return factory;
     }
 
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
-    {
-        public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "CantonTemplate");
-        public static string PackageId => "pkg";
-        public static string PackageName => "pkg-name";
-        public static Version PackageVersion { get; } = new(0, 1, 0);
-        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
-        public DamlRecord ToRecord() => new(TemplateId, [new DamlField("owner", Alice.ToDamlValue())]);
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
-            TestRecordReader.Read(
-                json,
-                context,
-                ("owner", DamlLfJsonDecoders.ReadParty));
-        public static TestTemplate FromRecord(DamlRecord record) =>
-            new();
-    }
-
     private RestLedgerClient ClientWith(RecordingHttpHandler transport, string? userId = null) =>
         new(TrackedFactory(transport), Options.Create(new RestLedgerClientOptions
         {
             HttpAddress = "http://localhost:7575",
             UserId = userId,
         }));
+
+    private RestLedgerClient ClientLogging(RecordingHttpHandler transport, CapturingLoggerFactory logs, bool emitPartyAndContractSpanTags) =>
+        new(
+            TrackedFactory(transport),
+            Options.Create(new RestLedgerClientOptions
+            {
+                HttpAddress = "http://localhost:7575",
+                EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+            }),
+            logs.CreateLogger<RestLedgerClient>());
 
     private const string ViewedInterfaceIdJson =
         """{"packageId": "viewed-pkg", "moduleName": "Token.Api", "entityName": "IViewedHolding"}""";
@@ -157,6 +149,37 @@ public sealed class RestLedgerClientCantonTests : IDisposable
 
         transport.Requests.Single(request => request.PathAndQuery == "/v2/state/active-contracts-page")
             .Body.Should().Contain("\"includeCreatedEventBlob\":true");
+    }
+
+    private async Task<List<string>> WarningsOfAnInterfaceSnapshotWhoseBlobIsNotBase64(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseForPath(
+                "/v2/state/active-contracts-page",
+                HttpStatusCode.OK,
+                ViewedActiveContractsPage("00holding", OkViewJson, nextPageToken: null, createdEventBlob: "not base64!"));
+        using var logs = new CapturingLoggerFactory();
+        ICantonLedgerClient client = ClientLogging(transport, logs, emitPartyAndContractSpanTags);
+
+        await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        return logs.Records.Where(r => r.Level == LogLevel.Warning).Select(r => r.Message).ToList();
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_warns_about_a_blob_that_is_not_base64_without_the_contract_id_by_default()
+    {
+        (await WarningsOfAnInterfaceSnapshotWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: false)).Should().Equal(
+            "The created_event_blob of a contract in the active-contract snapshot is not base64 — its row carries no Disclosure");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_warns_about_a_blob_that_is_not_base64_with_the_contract_id_when_opted_in()
+    {
+        (await WarningsOfAnInterfaceSnapshotWhoseBlobIsNotBase64(emitPartyAndContractSpanTags: true)).Should().Equal(
+            "The created_event_blob of contract 00holding in the active-contract snapshot is not base64 — its row carries no Disclosure");
     }
 
     [Fact]
@@ -503,7 +526,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
         var client = ClientWith(transport, userId: "test-user");
-        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate()))
             .WithActAs(Alice)
             .WithCommandId(new RuntimeCommands.CommandId("cmd-fire"));
 
@@ -521,7 +544,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     {
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
         var client = ClientWith(transport);
-        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate()))
             .WithActAs(Alice);
 
         var commandId = await client.SubmitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
@@ -538,7 +561,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
             HttpStatusCode.BadRequest,
             """{"code": 3, "message": "invalid", "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "INVALID_ARGUMENT", "metadata": {}}]}""");
         var client = ClientWith(transport);
-        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+        var submission = RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate()))
             .WithActAs(Alice);
 
         var act = () => client.SubmitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
@@ -595,7 +618,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         Func<Task> act = operation switch
         {
             nameof(RestLedgerClient.SubmitAsync) => () => client.SubmitAsync(
-                RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate())).WithActAs(Alice),
+                RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate())).WithActAs(Alice),
                 cancellationToken: cancellationToken),
             _ => () => client.SubmitReassignmentAsync(
                 ReassignmentSubmission.Of(
@@ -681,7 +704,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         };
 
     private static RuntimeCommands.CommandsSubmission FireSubmission() =>
-        RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()))
+        RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate()))
             .WithActAs(Alice);
 
     private static ReassignmentSubmission FireReassignment() =>
@@ -707,7 +730,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                         "reassignmentCounter": "1",
                         "contractId": "00cid",
                         "packageName": "pkg-name",
-                        "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "CantonTemplate"},
+                        "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"},
                         "source": "sync-a",
                         "target": "sync-b",
                         "witnessParties": ["party::alice"]
@@ -722,11 +745,11 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         var submission = ReassignmentSubmission.Of(
             new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
 
-        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<OwnedTemplate>(
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        var one = outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.One>().Subject;
-        var unassigned = one.Result.Should().BeOfType<ContractStreamEvent<TestTemplate>.Unassigned>().Subject;
+        var one = outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<OwnedTemplate>>.One>().Subject;
+        var unassigned = one.Result.Should().BeOfType<ContractStreamEvent<OwnedTemplate>.Unassigned>().Subject;
         unassigned.ContractId.Value.Should().Be("00cid");
         unassigned.ReassignmentId.Should().Be("reassign-1");
         transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/commands/submit-and-wait-for-reassignment");
@@ -742,10 +765,10 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         var submission = ReassignmentSubmission.Of(
             new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
 
-        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<OwnedTemplate>(
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.DamlError>()
+        outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<OwnedTemplate>>.DamlError>()
             .Which.ErrorId.Should().Be("REASSIGNMENT_REJECTED");
     }
 
@@ -757,10 +780,10 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         var submission = ReassignmentSubmission.Of(
             new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
 
-        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<OwnedTemplate>(
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.InfraError>()
+        outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<OwnedTemplate>>.InfraError>()
             .Which.Message.Should().Contain("connection refused");
     }
 
@@ -778,11 +801,11 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         var submission = ReassignmentSubmission.Of(
             new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
 
-        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<TestTemplate>(
+        var outcome = await client.TrySubmitAndWaitForReassignmentAsync<OwnedTemplate>(
             submission, cancellationToken: TestContext.Current.CancellationToken);
 
         var undecodable = outcome.Should()
-            .BeOfType<ExerciseOutcome<ContractStreamEvent<TestTemplate>>.CommittedUndecodable>().Subject;
+            .BeOfType<ExerciseOutcome<ContractStreamEvent<OwnedTemplate>>.CommittedUndecodable>().Subject;
         undecodable.UpdateId.Should().Be("upd-1");
         undecodable.Message.Should().StartWith("Could not decode the reassignment in the ledger response:");
         undecodable.SourceException.Should().BeSameAs(logger.Failure);
@@ -793,6 +816,8 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         private bool _hasFailed;
 
         public InvalidOperationException Failure { get; } = new("the log sink rejected the write");
+
+        public List<Exception?> ExceptionsWrittenAfterTheFailure { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -807,6 +832,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         {
             if (_hasFailed)
             {
+                ExceptionsWrittenAfterTheFailure.Add(exception);
                 return;
             }
 
@@ -831,7 +857,7 @@ public sealed class RestLedgerClientCantonTests : IDisposable
                       "contractId": "00holding",
                       "nodeId": 0,
                       "packageName": "pkg-name",
-                      "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "CantonTemplate"},
+                      "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"},
                       "createArgument": {"owner": "party::alice"}
                     }
                   }
@@ -841,4 +867,114 @@ public sealed class RestLedgerClientCantonTests : IDisposable
           }
         }
         """;
+
+    private async Task<Exception?> ExceptionLoggedByAnUndecodableSynchronizersBody(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"connectedSynchronizers": [{"synchronizerAlias": "a", "synchronizerId": "a::id", "permission": 99}]}""");
+        using var logs = new CapturingLoggerFactory();
+        var client = ClientLogging(transport, logs, emitPartyAndContractSpanTags);
+
+        var act = () => client.GetConnectedSynchronizersAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<LedgerOperationException>();
+        return logs.Records
+            .Single(record => record.Message.StartsWith("The participant answered successfully, but the response body", StringComparison.Ordinal))
+            .Exception;
+    }
+
+    [Fact]
+    public async Task An_undecodable_response_body_logs_only_the_exception_type_by_default()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableSynchronizersBody(emitPartyAndContractSpanTags: false);
+
+        exception!.Message.Should().Be("Canton.Ledger.Abstractions.MalformedResponseException");
+    }
+
+    [Fact]
+    public async Task An_undecodable_response_body_logs_its_exception_when_party_and_contract_tags_are_opted_in()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableSynchronizersBody(emitPartyAndContractSpanTags: true);
+
+        exception.Should().BeOfType<Canton.Ledger.Abstractions.MalformedResponseException>();
+    }
+
+    private async Task<Exception?> ExceptionLoggedByAnUndecodableReassignment(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"reassignment": {"updateId": "upd-1", "offset": "not-an-offset", "events": []}}""");
+        var logger = new LoggerFailingOnItsFirstWrite();
+        var client = new RestLedgerClient(
+            TrackedFactory(transport),
+            Options.Create(new RestLedgerClientOptions
+            {
+                HttpAddress = "http://localhost:7575",
+                EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+            }),
+            logger);
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00cid", new SynchronizerId("sync-a"), new SynchronizerId("sync-b")), Alice);
+
+        await client.TrySubmitAndWaitForReassignmentAsync<OwnedTemplate>(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        return logger.ExceptionsWrittenAfterTheFailure.Single();
+    }
+
+    [Fact]
+    public async Task An_undecodable_reassignment_logs_only_the_exception_type_by_default()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableReassignment(emitPartyAndContractSpanTags: false);
+
+        exception!.Message.Should().Be("System.InvalidOperationException");
+    }
+
+    [Fact]
+    public async Task An_undecodable_reassignment_logs_its_exception_when_party_and_contract_tags_are_opted_in()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableReassignment(emitPartyAndContractSpanTags: true);
+
+        exception.Should().BeOfType<InvalidOperationException>()
+            .Which.Message.Should().Be("the log sink rejected the write");
+    }
+
+    private async Task<Exception?> ExceptionLoggedByAnUndecodableCreatedEvent(bool emitPartyAndContractSpanTags)
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponse(
+                HttpStatusCode.OK,
+                """
+                {"activeContracts": [{"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "5", "contractId": "00holding", "packageName": "pkg-name", "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"}, "createArgument": {"owner": 5}}, "synchronizerId": "sync-1"}}}]}
+                """)
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 5}""");
+        using var logs = new CapturingLoggerFactory();
+        var client = ClientLogging(transport, logs, emitPartyAndContractSpanTags);
+
+        await foreach (var _ in client.SubscribeActiveAsync<OwnedTemplate>(
+            Alice, cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        return logs.Records
+            .Single(record => record.Message.StartsWith("Could not decode event at offset 5", StringComparison.Ordinal))
+            .Exception;
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_logs_only_the_exception_type_of_an_undecodable_created_event_by_default()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableCreatedEvent(emitPartyAndContractSpanTags: false);
+
+        exception!.Message.Should().Be("Canton.Ledger.Abstractions.MalformedResponseException");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_logs_the_exception_of_an_undecodable_created_event_when_party_and_contract_tags_are_opted_in()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableCreatedEvent(emitPartyAndContractSpanTags: true);
+
+        exception.Should().BeOfType<Canton.Ledger.Abstractions.MalformedResponseException>();
+    }
 }

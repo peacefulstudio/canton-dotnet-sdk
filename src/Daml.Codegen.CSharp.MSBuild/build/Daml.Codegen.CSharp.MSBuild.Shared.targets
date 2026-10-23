@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    $(DamlGeneratedDir)'s "default if unset" belongs in Daml.Codegen.CSharp.MSBuild.Shared.props
+    conceptually, but $(IntermediateOutputPath) — which that default is built from — is only
+    set by the .NET SDK's own closing targets import, which always comes after every NuGet
+    package's props AND targets files. A file-scope PropertyGroup in either .props or .targets
+    would snapshot $(IntermediateOutputPath) while it is still empty. Every target below that
+    reads $(DamlGeneratedDir) depends on this one so it resolves at execution time instead,
+    once the SDK has actually set it.
+  -->
+  <Target Name="DamlResolveGeneratedDir">
+    <PropertyGroup Condition="'$(DamlGeneratedDir)' == ''">
+      <DamlGeneratedDir>$(IntermediateOutputPath)DamlGenerated/</DamlGeneratedDir>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+    Workaround for MSBuild evaluating a target's Condition before its BeforeTargets run: these
+    targets stay declared above DamlGenerateBindings, because a DamlArchive item added after
+    DamlGenerateBindings' '@(DamlArchive)' != '' Condition was evaluated skips generation silently
+    and surfaces only as CS0246 in the consumer's own code.
+  -->
+  <Target Name="DamlResolveProject" Condition="'@(DamlProject)' != ''">
+    <Error Code="DAML0003"
+           Text="Exactly one &lt;DamlProject&gt; item is supported per project (found @(DamlProject->Count())). Split the Daml projects into separate .NET projects."
+           Condition="'@(DamlProject->Count())' != '1'" />
+    <PropertyGroup>
+      <_DamlProjectFullPath>@(DamlProject->'%(FullPath)')</_DamlProjectFullPath>
+    </PropertyGroup>
+    <PropertyGroup>
+      <_DamlProjectDirectory>$([MSBuild]::EnsureTrailingSlash('$(_DamlProjectFullPath)'))</_DamlProjectDirectory>
+      <_DamlProjectName>$([System.IO.Path]::GetFileName($(_DamlProjectDirectory.TrimEnd('\/'))))</_DamlProjectName>
+      <_DamlProjectBuildDirectory>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'DamlBuild'))</_DamlProjectBuildDirectory>
+      <_DamlProjectDar>$(_DamlProjectBuildDirectory)$(_DamlProjectName).dar</_DamlProjectDar>
+    </PropertyGroup>
+    <Error Code="DAML0004"
+           Text="The Daml project directory $(_DamlProjectDirectory) has no daml.yaml. A &lt;DamlProject&gt; item's Include is the directory holding daml.yaml."
+           Condition="!Exists('$(_DamlProjectDirectory)daml.yaml')" />
+    <ItemGroup>
+      <_DamlProjectSource Include="$(_DamlProjectDirectory)**/*.daml;$(_DamlProjectDirectory)**/*.dar"
+                          Exclude="$(_DamlProjectDirectory).daml/**" />
+      <_DamlProjectInput Include="@(_DamlProjectSource);$(_DamlProjectDirectory)daml.yaml;@(DamlProject->'%(DataDependencies)')" />
+      <DamlArchive Include="$(_DamlProjectDar)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="DamlBuildProject"
+          BeforeTargets="BeforeBuild"
+          DependsOnTargets="DamlResolveProject"
+          Inputs="@(_DamlProjectInput)"
+          Outputs="$(_DamlProjectDar)"
+          Condition="'@(DamlProject)' != ''">
+
+    <Exec Command="dpm version"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_DamlProjectDpmVersionExitCode" />
+    </Exec>
+    <Error Code="DAML0001"
+           Text="dpm was not found on PATH (or `dpm version` failed), so the Daml project $(_DamlProjectDirectory) cannot be built into a DAR. Install dpm from https://github.com/digital-asset/dpm/releases and ensure it is on PATH, or reference a prebuilt .dar through a &lt;DamlArchive&gt; item instead. No JDK is needed."
+           Condition="'$(_DamlProjectDpmVersionExitCode)' != '0'" />
+
+    <MakeDir Directories="$(_DamlProjectBuildDirectory)" />
+    <Message Text="dpm build $(_DamlProjectDirectory) -> $(_DamlProjectDar)" Importance="high" />
+    <Exec Command="dpm build -o &quot;$(_DamlProjectDar)&quot;"
+          WorkingDirectory="$(_DamlProjectDirectory)"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="normal"
+          StandardErrorImportance="high">
+      <Output TaskParameter="ExitCode" PropertyName="_DamlProjectBuildExitCode" />
+    </Exec>
+    <Error Code="DAML0002"
+           Text="dpm build failed with exit code $(_DamlProjectBuildExitCode) for the Daml project $(_DamlProjectDirectory)"
+           Condition="'$(_DamlProjectBuildExitCode)' != '0'" />
+  </Target>
+
+  <Target Name="DamlCleanProject" AfterTargets="Clean">
+    <RemoveDir Directories="$(IntermediateOutputPath)DamlBuild" Condition="Exists('$(IntermediateOutputPath)DamlBuild')" />
+  </Target>
+
+  <!-- Ensure the generated directory exists -->
+  <Target Name="DamlEnsureGeneratedDir" BeforeTargets="DamlGenerateBindings" DependsOnTargets="DamlResolveGeneratedDir" Condition="'@(DamlArchive)' != ''">
+    <MakeDir Directories="$(DamlGeneratedDir)" />
+  </Target>
+
+  <Target Name="DamlWriteCodegenVersionStamp"
+          BeforeTargets="DamlGenerateBindings"
+          DependsOnTargets="DamlEnsureGeneratedDir"
+          Condition="'@(DamlArchive)' != ''">
+    <ItemGroup>
+      <_DamlCodegenVersionStampLines Include="package-version=$(_DamlCodegenPackageVersion)" />
+      <_DamlCodegenVersionStampLines Include="bundle-version=$(DamlCodegenBundleVersion)" Condition="'$(DamlCodegenBundleVersion)' != ''" />
+      <_DamlCodegenVersionStampLines Include="bundle-digest=$(DamlCodegenBundleDigest)" Condition="'$(DamlCodegenBundleDigest)' != ''" />
+      <_DamlCodegenVersionStampLines Include="namespace=$(DamlNamespace)" />
+      <_DamlCodegenVersionStampLines Include="include-dependencies=$(DamlIncludeDependencies)" />
+      <_DamlCodegenVersionStampLines Include="nullable=$(DamlNullable)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(DamlGeneratedDir).codegen-version"
+                      Lines="@(_DamlCodegenVersionStampLines)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+  </Target>
+
+  <!-- Main target: Generate C# bindings via the adapter selected by $(DamlCodegenTool) -->
+  <Target Name="DamlGenerateBindings"
+          BeforeTargets="BeforeBuild"
+          DependsOnTargets="DamlResolveGeneratedDir"
+          Inputs="@(DamlArchive);$(DamlGeneratedDir).codegen-version"
+          Outputs="$(DamlGeneratedDir).daml-generated"
+          Condition="'@(DamlArchive)' != ''">
+
+    <Message Text="Generating Daml C# bindings..." Importance="high" />
+    <Message Text="  DAR files: @(DamlArchive)" Importance="normal" />
+    <Message Text="  Output: $(DamlGeneratedDir)" Importance="normal" />
+
+    <!-- Execute the code generator -->
+    <Exec Command="$(DamlCodegenTool) $(_DamlCodegenArgs)"
+          WorkingDirectory="$(DamlCodegenToolWorkingDirectory)"
+          EnvironmentVariables="$(_DamlCodegenToolEnvironment)"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="normal"
+          StandardErrorImportance="high">
+      <Output TaskParameter="ExitCode" PropertyName="_DamlExitCode" />
+    </Exec>
+
+    <!-- Create marker file for incremental builds -->
+    <Touch Files="$(DamlGeneratedDir).daml-generated" AlwaysCreate="true" Condition="'$(_DamlExitCode)' == '0'" />
+
+    <Error Text="Daml code generation failed with exit code $(_DamlExitCode)"
+           Condition="'$(_DamlExitCode)' != '0'" />
+  </Target>
+
+  <!-- Include generated files in compilation -->
+  <Target Name="DamlIncludeGeneratedFiles"
+          BeforeTargets="CoreCompile"
+          AfterTargets="DamlGenerateBindings"
+          DependsOnTargets="DamlResolveGeneratedDir"
+          Condition="'@(DamlArchive)' != ''">
+
+    <ItemGroup>
+      <Compile Include="$(DamlGeneratedDir)**/*.cs" Exclude="@(Compile)" />
+    </ItemGroup>
+
+    <Message Text="Added generated Daml files to compilation" Importance="normal" />
+  </Target>
+
+  <!-- Clean target: Remove generated files -->
+  <Target Name="DamlClean" AfterTargets="Clean" DependsOnTargets="DamlResolveGeneratedDir" Condition="'@(DamlArchive)' != '' or '@(DamlProject)' != ''">
+    <RemoveDir Directories="$(DamlGeneratedDir)" Condition="Exists('$(DamlGeneratedDir)')" />
+    <Message Text="Cleaned Daml generated files" Importance="normal" />
+  </Target>
+
+</Project>

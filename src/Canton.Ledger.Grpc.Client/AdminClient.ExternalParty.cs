@@ -46,7 +46,7 @@ internal sealed partial class AdminClient
                     generated.TopologyTransactions.Select(transaction => transaction.Memory).ToList(),
                     generated.MultiHash.Memory))),
             cancellationToken,
-            configureActivity: activity => activity.SetPartyOrContractTag(_options, LedgerActivityTagNames.CantonPartyIdHint, request.PartyIdHint));
+            configureActivity: activity => activity.SetIdentifierTag(_options, LedgerActivityTagNames.CantonPartyIdHint, request.PartyIdHint));
     }
 
     /// <inheritdoc />

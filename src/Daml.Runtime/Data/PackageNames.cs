@@ -6,6 +6,8 @@ namespace Daml.Runtime.Data;
 
 internal static class PackageNames
 {
+    internal const string ReferencePrefix = "#";
+
     internal static bool IsPlaceholder(string? packageName) =>
         string.IsNullOrEmpty(packageName)
         || packageName is "-no-package-metadata" or "UnknownPackage";

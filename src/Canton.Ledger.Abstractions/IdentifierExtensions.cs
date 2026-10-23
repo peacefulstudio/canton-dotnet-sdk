@@ -15,8 +15,6 @@ namespace Canton.Ledger.Abstractions;
 /// </summary>
 public static class IdentifierExtensions
 {
-    private const string PackageNameReferencePrefix = "#";
-
     /// <summary>Extension members for <see cref="Identifier"/>.</summary>
     extension(Identifier)
     {
@@ -35,19 +33,10 @@ public static class IdentifierExtensions
         /// </exception>
         public static Identifier ForPackageName(string packageName, string moduleName, string entityName)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
             ArgumentException.ThrowIfNullOrWhiteSpace(moduleName);
             ArgumentException.ThrowIfNullOrWhiteSpace(entityName);
 
-            if (packageName.StartsWith(PackageNameReferencePrefix, StringComparison.Ordinal))
-            {
-                throw new ArgumentException(
-                    $"Package name '{packageName}' already carries the '#' by-package-name prefix; "
-                    + "pass the bare package name.",
-                    nameof(packageName));
-            }
-
-            return new Identifier($"{PackageNameReferencePrefix}{packageName}", moduleName, entityName);
+            return new Identifier(string.Empty, moduleName, entityName).WithPackageNameReference(packageName);
         }
     }
 }

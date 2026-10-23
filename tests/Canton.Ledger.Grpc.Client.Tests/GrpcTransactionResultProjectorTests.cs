@@ -9,6 +9,7 @@ using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
 using Xunit;
+using ProtoArchivedEvent = Com.Daml.Ledger.Api.V2.ArchivedEvent;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
 using ProtoExercisedEvent = Com.Daml.Ledger.Api.V2.ExercisedEvent;
 using ProtoIdentifier = Com.Daml.Ledger.Api.V2.Identifier;
@@ -297,6 +298,70 @@ public class GrpcTransactionResultProjectorTests
 
         act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
             "Malformed response from ledger: ExercisedEvent for contract '00holding' has no choice, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_a_created_event_with_a_blank_contract_id(string contractId)
+    {
+        var transaction = new Transaction { UpdateId = "u-blank-created", Offset = 1L };
+        transaction.Events.Add(new Event
+        {
+            Created = new ProtoCreatedEvent
+            {
+                ContractId = contractId,
+                TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
+                CreateArguments = new ProtoRecord(),
+            },
+        });
+
+        var act = () => GrpcTransactionResultProjector.Project(
+            new SubmitAndWaitForTransactionResponse { Transaction = transaction });
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: a created event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_an_exercised_event_with_a_blank_contract_id(string contractId)
+    {
+        var exercised = ExercisedWithUnitPayloads();
+        exercised.ContractId = contractId;
+
+        var act = () => GrpcTransactionResultProjector.Project(TransactionWith(exercised));
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: an exercised event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_for_an_archived_event_with_a_blank_contract_id(string contractId)
+    {
+        var transaction = new Transaction { UpdateId = "u-blank-archived", Offset = 1L };
+        transaction.Events.Add(new Event { Archived = new ProtoArchivedEvent { ContractId = "00kept" } });
+        transaction.Events.Add(new Event { Archived = new ProtoArchivedEvent { ContractId = contractId } });
+
+        var act = () => GrpcTransactionResultProjector.Project(transaction);
+
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: an archived event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Fact]
+    public void Project_collects_the_contract_ids_of_archived_events()
+    {
+        var transaction = new Transaction { UpdateId = "u-archived", Offset = 1L };
+        transaction.Events.Add(new Event { Archived = new ProtoArchivedEvent { ContractId = "00first" } });
+        transaction.Events.Add(new Event { Archived = new ProtoArchivedEvent { ContractId = "00second" } });
+
+        var result = GrpcTransactionResultProjector.Project(transaction);
+
+        result.ArchivedContractIds.Should().Equal("00first", "00second");
     }
 
     private static ProtoExercisedEvent ExercisedWithUnitPayloads() => new()

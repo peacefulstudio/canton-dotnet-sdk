@@ -16,6 +16,8 @@ public static class LedgerResults
 {
     /// <summary>Builds a <see cref="TransactionResult"/>.</summary>
     /// <returns>The transaction result.</returns>
+    /// <exception cref="ArgumentException">An element of <paramref name="archivedContractIds"/> is
+    /// null, empty or whitespace.</exception>
     public static TransactionResult Transaction(
         string updateId,
         LedgerOffset completionOffset,

@@ -17,7 +17,7 @@ namespace Daml.Codegen.CSharp;
 /// console streams sees every record the moment the logging call returns. Verbosity maps onto
 /// <see cref="LogLevel"/> as 0 = errors only, 1 = warnings, 2 = information, 3 = debug.
 /// </remarks>
-public sealed class VerbosityConsoleLoggerProvider : ILoggerProvider
+internal sealed class VerbosityConsoleLoggerProvider : ILoggerProvider
 {
     private readonly LogLevel _minimumLevel;
 

@@ -9,6 +9,7 @@ using System.Text.Json;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Results;
 using Canton.Ledger.Kernel.Streams;
+using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
@@ -103,8 +104,9 @@ internal sealed partial class RestLedgerClient
     private readonly int _activeContractsPageSize;
     private readonly TimeSpan _streamWindowIdleTimeout;
     private readonly TimeSpan _shortestHonouredWindowHold;
+    private readonly bool _emitPartyAndContractSpanTags;
     private readonly TimeProvider _timeProvider;
-    private readonly ILogger<RestLedgerClient> _logger;
+    private readonly ILogger _logger;
 
     /// <inheritdoc />
     /// <remarks>
@@ -159,17 +161,19 @@ internal sealed partial class RestLedgerClient
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
         _userId = options?.Value.UserId;
+        _emitPartyAndContractSpanTags = options?.Value.EmitPartyAndContractSpanTags ?? false;
         _streamWindowLimit = options?.Value.StreamWindowLimit ?? RestLedgerClientOptions.DefaultStreamWindowLimit;
         _activeContractsPageSize = (int)Math.Min(_streamWindowLimit, int.MaxValue);
         _streamWindowIdleTimeout =
             options?.Value.StreamWindowIdleTimeout ?? RestLedgerClientOptions.DefaultStreamWindowIdleTimeout;
         _shortestHonouredWindowHold = ShortestHonouredWindowHold(_streamWindowIdleTimeout);
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _logger = logger ?? NullLogger<RestLedgerClient>.Instance;
+        _logger = (logger ?? NullLogger<RestLedgerClient>.Instance).RedactingExceptionsUnless(_emitPartyAndContractSpanTags);
         _calls = new RestCallEnvelope(
             httpClientFactory,
             _logger,
-            options?.Value.MaxResponseBodyBytes ?? RestLedgerClientOptions.DefaultMaxResponseBodyBytes);
+            options?.Value.MaxResponseBodyBytes ?? RestLedgerClientOptions.DefaultMaxResponseBodyBytes,
+            options is null ? RestLedgerClientOptions.DefaultTimeout : options.Value.Timeout);
     }
 
     /// <inheritdoc />
@@ -269,7 +273,7 @@ internal sealed partial class RestLedgerClient
                 continue;
             }
 
-            var disclosure = RestContractStreamProjector.DisclosureOf(entry, _logger);
+            var disclosure = RestContractStreamProjector.DisclosureOf(entry, _logger, _emitPartyAndContractSpanTags);
             foreach (var projected in RestContractStreamProjector.ProjectActiveContractEntry<T>(entry, _logger, effectiveOffset))
             {
                 yield return ContractSnapshotEntryArms<T>.From(projected, disclosure);
@@ -619,8 +623,20 @@ internal sealed partial class RestLedgerClient
         };
         var fault = ending.ToStreamFault();
 
-        LogStreamWindowFailed(_logger, new TransportStatus.NoResponse(), fault.Message);
+        LogStreamWindowFailed(new TransportStatus.NoResponse(), fault.Message);
         return fault;
+    }
+
+    private void LogStreamWindowFailed(TransportStatus status, string detail)
+    {
+        if (_emitPartyAndContractSpanTags)
+        {
+            LogStreamWindowFailedWithDetail(_logger, status, detail);
+        }
+        else
+        {
+            LogStreamWindowFailed(_logger, status);
+        }
     }
 
     private async Task<StreamFault> WindowFaultAsync(HttpResponseMessage response, CancellationToken cancellationToken)
@@ -632,7 +648,7 @@ internal sealed partial class RestLedgerClient
             rejection = rejection with { Error = rejection.Error.WithMessage(rejection.Error.Message + WindowLimitHint) };
         }
 
-        LogStreamWindowFailed(_logger, rejection.Error.Status, rejection.Error.Message);
+        LogStreamWindowFailed(rejection.Error.Status, rejection.Error.Message);
         return rejection.ToStreamFault();
     }
 
@@ -888,7 +904,7 @@ internal sealed partial class RestLedgerClient
         RuntimeCommands.CommandId? commandId) =>
         RuntimeCommands.CommandsSubmission.Single(command)
             .WithSubmitter(submitter)
-            .WithCommandId(commandId ?? new RuntimeCommands.CommandId(Guid.NewGuid().ToString()))
+            .WithCommandId(commandId ?? RuntimeCommands.IdMinting.MintCommandId())
             .WithWorkflowId(new RuntimeCommands.WorkflowId(workflowId));
 
     /// <summary>
@@ -901,8 +917,11 @@ internal sealed partial class RestLedgerClient
     {
     }
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Stream window request failed with status {Status} — surfaced in-band as a terminal StreamError")]
+    private static partial void LogStreamWindowFailed(ILogger logger, TransportStatus status);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Stream window request failed with status {Status} — surfaced in-band as a terminal StreamError: {Detail}")]
-    private static partial void LogStreamWindowFailed(ILogger logger, TransportStatus status, string detail);
+    private static partial void LogStreamWindowFailedWithDetail(ILogger logger, TransportStatus status, string detail);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Stream window response body from {Path} could not be decoded — surfaced in-band as a terminal StreamError")]
     private static partial void LogStreamWindowBodyUndecodable(ILogger logger, string path, Exception exception);

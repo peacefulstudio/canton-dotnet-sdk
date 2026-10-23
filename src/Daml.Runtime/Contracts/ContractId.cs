@@ -89,23 +89,33 @@ public sealed record ContractId<T> : ContractId where T : IDamlType
 /// <summary>
 /// Represents a contract ID as a Daml value.
 /// </summary>
+/// <param name="Value">The ledger contract-id string; stored verbatim.</param>
+/// <param name="TemplateId">The template or interface the contract id refers to, when known.</param>
+/// <exception cref="ArgumentException">
+/// <paramref name="Value"/> is null, empty, or whitespace, at construction or through a
+/// <c>with</c> expression.
+/// </exception>
 public sealed record DamlContractId(string Value, Identifier? TemplateId = null) : DamlValue
 {
+    private readonly string _value = ReadSideContractId.Require(Value, nameof(Value));
+
+    /// <summary>The ledger contract-id string (non-null, non-whitespace), stored verbatim.</summary>
+    [JsonPropertyOrder(-1)]
+    public string Value
+    {
+        get => _value;
+        init => _value = ReadSideContractId.Require(value, nameof(Value));
+    }
+
     /// <summary>
     /// Produces a validated <see cref="ContractId{T}"/> from this raw wire carrier.
-    /// <see cref="DamlContractId"/> itself carries the contract-id string unvalidated
-    /// (by design, the erased/wire contract id stays an unvalidated string; validation
-    /// happens at the typed <see cref="ContractId{T}"/> boundary); this
-    /// method — together with the typed <see cref="ContractId{T}"/> constructors and
-    /// casts — is the validation boundary for raw wire values.
+    /// <see cref="DamlContractId"/> itself rejects a null, empty or whitespace
+    /// contract-id string at construction; this method attaches the static template witness.
     /// </summary>
     /// <typeparam name="T">The Daml template or interface witness for the typed id.</typeparam>
-    /// <exception cref="System.ArgumentException">
-    /// Thrown when the carried <see cref="Value"/> is null, empty, or whitespace.
-    /// </exception>
     public ContractId<T> ToTyped<T>() where T : IDamlType => new(Value);
 
-    /// <summary>Returns the carried (unvalidated) contract-id string.</summary>
+    /// <summary>Returns the carried contract-id string.</summary>
     public override string ToString() => Value;
 }
 

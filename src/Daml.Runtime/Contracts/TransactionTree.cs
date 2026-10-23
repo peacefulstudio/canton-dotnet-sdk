@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.Json.Serialization;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Data;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime.Contracts;
 
@@ -23,7 +25,20 @@ namespace Daml.Runtime.Contracts;
 public sealed record TransactionTree(
     string UpdateId,
     LedgerOffset CompletionOffset,
-    EquatableArray<TreeEvent> RootEvents);
+    EquatableArray<TreeEvent> RootEvents)
+{
+    /// <summary>
+    /// The traffic cost, in bytes, of the confirmation request the submitting participant paid
+    /// for this transaction; <c>null</c> when the participant reported none. It is the
+    /// confirmation-request cost only, so the estimate it is comparable to is
+    /// <c>TrafficCostEstimate.ConfirmationRequestCost</c>, never <c>TrafficCostEstimate.TotalCost</c>,
+    /// which also counts the confirmation responses and will always look larger. It is <c>null</c>
+    /// when the transaction was initiated by another participant, initiated offline through the
+    /// repair service, or processed before the participant served traffic cost, and when it was
+    /// read for a party that did not submit it. A reported zero stays <c>0</c>.
+    /// </summary>
+    public long? PaidTrafficCost { get; init; }
+}
 
 /// <summary>
 /// A single node in a <see cref="TransactionTree"/>: either a contract
@@ -31,6 +46,14 @@ public sealed record TransactionTree(
 /// Exercise nodes carry the events they directly caused, preserving the
 /// ledger's causal hierarchy.
 /// </summary>
+/// <remarks>
+/// Serializes through <see cref="System.Text.Json"/> as the arm's own object with a
+/// <c>"$case"</c> discriminator naming the arm, e.g. <c>{"$case":"Created","EventId":"1:0",…}</c>,
+/// and an <see cref="Exercised"/> arm's <see cref="Exercised.ChildEvents"/> are written the same
+/// way, so a whole tree reads back as itself. <see cref="System.Text.Json.JsonSerializerOptions.MaxDepth"/>
+/// bounds how deep a tree may nest.
+/// </remarks>
+[JsonConverter(typeof(TreeEventJsonConverter))]
 public abstract record TreeEvent
 {
     private TreeEvent()
@@ -78,7 +101,9 @@ public abstract record TreeEvent
     /// A contract creation node in a <see cref="TransactionTree"/>.
     /// </summary>
     /// <param name="EventId">The ledger-assigned event identifier.</param>
-    /// <param name="ContractId">The on-ledger contract ID of the created contract.</param>
+    /// <param name="ContractId">The on-ledger contract ID of the created contract. Must not be null,
+    /// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+    /// construction and through a <c>with</c> expression.</param>
     /// <param name="TemplateId">The template identifier (package + module + entity).</param>
     /// <param name="CreateArguments">Wire-level create-argument payload.</param>
     /// <param name="WitnessParties">Parties notified of this event.</param>
@@ -90,7 +115,7 @@ public abstract record TreeEvent
     /// <c>null</c> when the transport does not supply it. Mirrors
     /// <see cref="CreatedEvent.CreatedAt"/>.</param>
     public sealed record Created(
-        string EventId,
+        [property: JsonPropertyOrder(-2)] string EventId,
         string ContractId,
         Identifier TemplateId,
         DamlRecord CreateArguments,
@@ -100,6 +125,16 @@ public abstract record TreeEvent
         ContractKey? ContractKey = null,
         DateTimeOffset? CreatedAt = null) : TreeEvent
     {
+        private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+        /// <summary>The on-ledger contract ID of the created contract (non-null, non-whitespace).</summary>
+        [JsonPropertyOrder(-1)]
+        public string ContractId
+        {
+            get => _contractId;
+            init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+        }
+
         /// <summary>
         /// Interface ids the participant computed for this created event
         /// (Canton gRPC <c>CreatedEvent.interface_views[].interface_id</c>).
@@ -135,7 +170,9 @@ public abstract record TreeEvent
     /// exercise directly caused as <see cref="ChildEvents"/>.
     /// </summary>
     /// <param name="EventId">The ledger-assigned event identifier.</param>
-    /// <param name="ContractId">The on-ledger contract ID the choice was exercised on.</param>
+    /// <param name="ContractId">The on-ledger contract ID the choice was exercised on. Must not be null,
+    /// empty or whitespace; the record throws <see cref="ArgumentException"/> otherwise, at
+    /// construction and through a <c>with</c> expression.</param>
     /// <param name="TemplateId">The template that defines the exercised choice. The package
     /// id may differ from the target contract's package id when the contract has been
     /// upgraded or downgraded.</param>
@@ -152,7 +189,7 @@ public abstract record TreeEvent
     /// <param name="ChildEvents">The events this exercise directly caused — its
     /// sub-creates and sub-exercises — in transaction order.</param>
     public sealed record Exercised(
-        string EventId,
+        [property: JsonPropertyOrder(-2)] string EventId,
         string ContractId,
         Identifier TemplateId,
         Identifier? InterfaceId,
@@ -164,6 +201,16 @@ public abstract record TreeEvent
         EquatableArray<Party> WitnessParties,
         EquatableArray<TreeEvent> ChildEvents) : TreeEvent
     {
+        private readonly string _contractId = ReadSideContractId.Require(ContractId, nameof(ContractId));
+
+        /// <summary>The on-ledger contract ID the choice was exercised on (non-null, non-whitespace).</summary>
+        [JsonPropertyOrder(-1)]
+        public string ContractId
+        {
+            get => _contractId;
+            init => _contractId = ReadSideContractId.Require(value, nameof(ContractId));
+        }
+
         /// <summary>
         /// The name of the package that defines <see cref="TemplateId"/> (Canton <c>ExercisedEvent.package_name</c>);
         /// <see langword="null"/> when the transport reported none. Flattened through to

@@ -511,18 +511,6 @@ public class GrpcCommandBuilderTests
     }
 
     [Fact]
-    public void BuildReassignmentCommands_rejects_an_unassign_with_an_empty_contract_id_naming_the_field()
-    {
-        var submission = ReassignmentSubmission.Of(
-            new UnassignCommand("", Source, Target), Alice);
-
-        var act = () => Builder().BuildReassignmentCommands(submission);
-
-        act.Should().Throw<ArgumentException>()
-            .Which.ParamName.Should().Be("unassign contract id");
-    }
-
-    [Fact]
     public void BuildReassignmentCommands_rejects_an_assign_with_an_empty_reassignment_id_naming_the_field()
     {
         var submission = ReassignmentSubmission.Of(

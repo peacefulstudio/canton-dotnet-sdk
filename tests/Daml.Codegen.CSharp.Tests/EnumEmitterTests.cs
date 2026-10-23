@@ -61,6 +61,15 @@ public class EnumEmitterTests
     }
 
     [Fact]
+    public void EnumEmitter_closes_the_extensions_class_right_after_the_expected_constructors_field()
+    {
+        var output = EmitEnum("Status", ["Pending", "Active"]);
+
+        output.Should().EndWith("    private static readonly string[] ExpectedConstructors = [\"Pending\", \"Active\"];\n}\n");
+        output.Should().NotContain("\n\n}");
+    }
+
+    [Fact]
     public void EnumEmitter_names_extension_methods_after_their_DamlEnum_type()
     {
         var output = EmitEnum("Status", ["Pending", "Active"]);

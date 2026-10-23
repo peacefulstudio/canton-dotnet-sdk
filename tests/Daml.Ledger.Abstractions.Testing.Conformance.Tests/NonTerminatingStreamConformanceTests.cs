@@ -215,7 +215,7 @@ public sealed class NonTerminatingStreamConformanceTests
         protected override SubmitterInfo Reader { get; } = new Party("alice");
     }
 
-    private sealed class StreamBudgetFakeClient : ILedgerClient
+    private sealed class StreamBudgetFakeClient : NotSupportedLedgerClient
     {
         private static readonly LedgerOffset LedgerEnd = LedgerOffset.At(3);
 
@@ -231,12 +231,11 @@ public sealed class NonTerminatingStreamConformanceTests
             _interfaceTerminates = interfaceTerminates;
         }
 
-        public async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
+        public override async IAsyncEnumerable<AcsSnapshotEntry<T>> SubscribeActiveAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
             bool includeDisclosure = false,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
-            where T : ITemplate, IDamlRecord<T>
         {
             if (!_templateTerminates)
             {
@@ -266,14 +265,12 @@ public sealed class NonTerminatingStreamConformanceTests
             yield return new AcsSnapshotEntry<T>.Checkpoint(new StakeholderResume(effective));
         }
 
-        public async IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
+        public override async IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> SubscribeActiveAsync<TInterface, TView>(
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset = null,
             bool includeDisclosure = false,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
-            where TInterface : IDamlInterface, IHasView<TView>
-            where TView : IDamlRecord<TView>
         {
             if (!_interfaceTerminates)
             {
@@ -303,12 +300,11 @@ public sealed class NonTerminatingStreamConformanceTests
             yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.Checkpoint(new StakeholderResume(effective));
         }
 
-        public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
+        public override IAsyncEnumerable<ContractStreamEvent<T>> SubscribeAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? fromOffset = null,
             LedgerOffset? toOffset = null,
-            CancellationToken cancellationToken = default)
-            where T : ITemplate, IDamlRecord<T> =>
+            CancellationToken cancellationToken = default) =>
             Stream(
                 _templateTerminates,
                 () => new ContractStreamEvent<T>.Checkpoint(LedgerOffset.Begin),
@@ -317,12 +313,11 @@ public sealed class NonTerminatingStreamConformanceTests
                 toOffset,
                 cancellationToken);
 
-        public IAsyncEnumerable<ContractStreamEvent<T>> SubscribeLedgerEffectsAsync<T>(
+        public override IAsyncEnumerable<ContractStreamEvent<T>> SubscribeLedgerEffectsAsync<T>(
             SubmitterInfo submitter,
             LedgerOffset? fromOffset = null,
             LedgerOffset? toOffset = null,
-            CancellationToken cancellationToken = default)
-            where T : ITemplate, IDamlRecord<T> =>
+            CancellationToken cancellationToken = default) =>
             Stream(
                 _templateTerminates,
                 () => new ContractStreamEvent<T>.Checkpoint(LedgerOffset.Begin),
@@ -331,14 +326,12 @@ public sealed class NonTerminatingStreamConformanceTests
                 toOffset,
                 cancellationToken);
 
-        public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
+        public override IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? fromOffset = null,
             LedgerOffset? toOffset = null,
-            CancellationToken cancellationToken = default)
-            where TInterface : IDamlInterface, IHasView<TView>
-            where TView : IDamlRecord<TView> =>
+            CancellationToken cancellationToken = default) =>
             Stream(
                 _interfaceTerminates,
                 () => new InterfaceStreamEvent<TInterface, TView>.Checkpoint(LedgerOffset.Begin),
@@ -347,14 +340,12 @@ public sealed class NonTerminatingStreamConformanceTests
                 toOffset,
                 cancellationToken);
 
-        public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeLedgerEffectsAsync<TInterface, TView>(
+        public override IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeLedgerEffectsAsync<TInterface, TView>(
             ViewDescriptor<TInterface, TView> view,
             SubmitterInfo submitter,
             LedgerOffset? fromOffset = null,
             LedgerOffset? toOffset = null,
-            CancellationToken cancellationToken = default)
-            where TInterface : IDamlInterface, IHasView<TView>
-            where TView : IDamlRecord<TView> =>
+            CancellationToken cancellationToken = default) =>
             Stream(
                 _interfaceTerminates,
                 () => new InterfaceStreamEvent<TInterface, TView>.Checkpoint(LedgerOffset.Begin),
@@ -458,35 +449,8 @@ public sealed class NonTerminatingStreamConformanceTests
                 LedgerOffset.At(2), new SynchronizerId("sync"), [new Party("alice")]));
         }
 
-        public Task<LedgerOffset> GetLedgerEndAsync(
+        public override Task<LedgerOffset> GetLedgerEndAsync(
             TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
             Task.FromResult(LedgerEnd);
-
-        public Task<ExerciseOutcome<TResult>> TryExerciseAsync<TResult>(
-            ExerciseCommand command, SubmitterInfo submitter, string? workflowId = null,
-            CommandId? commandId = null,
-            TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<SubmitAndWaitResult> SubmitAndWaitAsync(
-            CommandsSubmission submission, SubmitterInfo submitter, TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<ExerciseOutcome<TransactionResult>> TrySubmitAndWaitForTransactionAsync(
-            CommandsSubmission submission, SubmitterInfo submitter, TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateAsync<TTemplate>(
-            TTemplate payload, SubmitterInfo submitter, string? workflowId = null,
-            CommandId? commandId = null,
-            TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-            where TTemplate : ITemplate =>
-            throw new NotSupportedException();
-
-        public void Dispose()
-        {
-        }
     }
 }

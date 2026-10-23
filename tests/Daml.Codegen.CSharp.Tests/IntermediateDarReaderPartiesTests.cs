@@ -119,7 +119,7 @@ public partial class IntermediateDarReaderTests
         {
             Main = new PbPackage
             {
-                PackageId = "p1",
+                PackageId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 PackageName = "test",
                 PackageVersion = "1.0.0",
                 LanguageVersion = "2.1",

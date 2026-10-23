@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackageId>Daml.Codegen.DarParser.Cli</PackageId>
+    <Description>CLI hosting the pure-.NET dar2intermediate producer (DarParser → IntermediateDar protobuf). Bundled in the Daml.Codegen.CSharp.MSBuild package, which chains it into the Daml.Codegen.CSharp.Cli emitter for JDK-free &lt;DamlArchive&gt; codegen under DamlCodegenMode=Standalone.</Description>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Daml.Codegen.DarParser.Cli</RootNamespace>
+    <AssemblyName>Daml.Codegen.DarParser.Cli</AssemblyName>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daml.Codegen.CSharp\Daml.Codegen.CSharp.csproj" />
+    <ProjectReference Include="..\Daml.Codegen.DarParser\Daml.Codegen.DarParser.csproj" />
+    <ProjectReference Include="..\Daml.Codegen.Tooling\Daml.Codegen.Tooling.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Daml.Codegen.DarParser.Cli.Tests" />
+  </ItemGroup>
+
+</Project>

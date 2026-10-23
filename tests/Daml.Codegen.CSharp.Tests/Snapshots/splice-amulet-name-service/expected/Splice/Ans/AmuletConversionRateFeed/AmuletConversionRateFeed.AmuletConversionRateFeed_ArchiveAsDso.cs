@@ -18,6 +18,14 @@ public sealed partial record AmuletConversionRateFeed
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("reason")] string Reason
     ) : global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed_ArchiveAsDso>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(Reason, global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("reason", new global::Daml.Runtime.Data.DamlText(Reason))
@@ -25,7 +33,7 @@ public sealed partial record AmuletConversionRateFeed
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static AmuletConversionRateFeed_ArchiveAsDso FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed_ArchiveAsDso(
-            Reason: record.GetRequiredField("reason").As<global::Daml.Runtime.Data.DamlText>().Value
+            Reason: record.GetRequiredField("reason", 0).As<global::Daml.Runtime.Data.DamlText>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record AmuletConversionRateFeed
                 global::Daml.Runtime.Data.DamlField.Create("reason", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadText(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "reason"), context.Field("reason")))
             );
         }
-
     }
 }

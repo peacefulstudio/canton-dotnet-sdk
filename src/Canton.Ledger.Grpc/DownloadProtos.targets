@@ -9,9 +9,6 @@
   -->
 
   <PropertyGroup>
-    <!-- Proto output directory -->
-    <ProtoSourceDir>$(MSBuildThisFileDirectory)Proto</ProtoSourceDir>
-
     <!-- Maven artifact versions -->
     <GoogleCommonProtosVersion>2.78.0</GoogleCommonProtosVersion>
 
@@ -32,59 +29,98 @@
     <LedgerApiValueProtoUrl>$(MavenCentralBase)/com/daml/ledger-api-value-proto/$(CantonVersion)/ledger-api-value-proto-$(CantonVersion).jar</LedgerApiValueProtoUrl>
     <GoogleCommonProtosUrl>$(MavenCentralBase)/com/google/api/grpc/proto-google-common-protos/$(GoogleCommonProtosVersion)/proto-google-common-protos-$(GoogleCommonProtosVersion).jar</GoogleCommonProtosUrl>
 
-    <!-- Cache directory for downloaded JARs -->
+    <!-- Holds the published download of each version pair and the staging directory of each run -->
     <ProtoCacheDir>$(MSBuildThisFileDirectory)obj/proto-cache</ProtoCacheDir>
 
-    <!-- Marker file to track if protos are already downloaded -->
-    <ProtoMarkerFile>$(ProtoSourceDir)/.downloaded-$(CantonVersion)-$(GoogleCommonProtosVersion)</ProtoMarkerFile>
+    <!-- The published download: the verified JARs beside the extracted protos. It appears
+         whole, by one rename, or not at all, so its existence is the "already downloaded"
+         signal. -->
+    <_PublishedProtoDir>$(ProtoCacheDir)/$(CantonVersion)-$(GoogleCommonProtosVersion)</_PublishedProtoDir>
+
+    <!-- Proto output directory -->
+    <ProtoSourceDir>$(_PublishedProtoDir)/protos</ProtoSourceDir>
   </PropertyGroup>
+
+  <!-- MSBuild has no directory-move task (the Move task fails with MSB3681 on a directory) and
+       blocks System.IO.Directory.Move as a property function (MSB4185), so the one atomic
+       rename that publishes a download is this inline task. It reports Published=false when
+       the destination already exists, which is how a build learns another build published first. -->
+  <UsingTask TaskName="PublishDirectory"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <SourceDirectory ParameterType="System.String" Required="true" />
+      <DestinationDirectory ParameterType="System.String" Required="true" />
+      <Published ParameterType="System.Boolean" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        try
+        {
+            Directory.Move(SourceDirectory, DestinationDirectory);
+            Published = true;
+        }
+        catch (IOException) when (Directory.Exists(DestinationDirectory))
+        {
+            Published = false;
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
 
   <Target Name="RequirePinnedCantonVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild">
     <Error Condition="'$(CantonVersion)' == ''"
-           Text="CantonVersion is empty, so every proto download URL, pinned checksum pairing and cache marker in this file would resolve to an unpinned artifact. The Canton version is authored once, as the CantonVersion property in Directory.Build.props; building this project outside that import must pass -p:CantonVersion=X.Y.Z explicitly. Refusing to download protos rather than guessing a version." />
+           Text="CantonVersion is empty, so every proto download URL, pinned checksum pairing and published proto directory in this file would resolve to an unpinned artifact. The Canton version is authored once, as the CantonVersion property in Directory.Build.props; building this project outside that import must pass -p:CantonVersion=X.Y.Z explicitly. Refusing to download protos rather than guessing a version." />
   </Target>
 
-  <!-- Download protos during Restore phase so they exist before build -->
-  <Target Name="DownloadProtos" DependsOnTargets="RequirePinnedCantonVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild" Condition="!Exists('$(ProtoMarkerFile)')">
+  <!-- Download protos during Restore phase so they exist before build. Everything is staged
+       under a directory unique to this run, then published by renaming that directory to
+       $(_PublishedProtoDir) in one step. The rename fails when the destination exists, so
+       of any number of concurrent builds exactly one publishes and the rest discard their
+       staging. Concurrent builds sharing one destination break MSBuild's DownloadFile
+       (exclusive open, deletes the file on failure) and Unzip, and its Move deletes an
+       existing destination before moving on non-Windows (dotnet/msbuild Move.cs) while
+       failing on a file in use on Windows, so publishing file by file over another build's
+       files makes that build fail with MSB3954 or MSB3677. -->
+  <Target Name="DownloadProtos" DependsOnTargets="RequirePinnedCantonVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild" Condition="!Exists('$(_PublishedProtoDir)')">
+    <PropertyGroup>
+      <_ProtoStagingDir>$(ProtoCacheDir)/staging-$([System.Guid]::NewGuid().ToString('N'))</_ProtoStagingDir>
+      <_StagedLedgerApiProtoJar>$(_ProtoStagingDir)/ledger-api-proto-$(CantonVersion).jar</_StagedLedgerApiProtoJar>
+      <_StagedLedgerApiValueProtoJar>$(_ProtoStagingDir)/ledger-api-value-proto-$(CantonVersion).jar</_StagedLedgerApiValueProtoJar>
+      <_StagedGoogleCommonProtosJar>$(_ProtoStagingDir)/proto-google-common-protos-$(GoogleCommonProtosVersion).jar</_StagedGoogleCommonProtosJar>
+      <_StagedProtoTree>$(_ProtoStagingDir)/protos</_StagedProtoTree>
+    </PropertyGroup>
+
     <Message Importance="high" Text="Downloading Canton Ledger API protos (version $(CantonVersion))..." />
 
-    <!-- Create directories -->
-    <MakeDir Directories="$(ProtoCacheDir)" />
-    <MakeDir Directories="$(ProtoSourceDir)" />
+    <MakeDir Directories="$(_ProtoStagingDir);$(_StagedProtoTree)" />
 
-    <!-- Download JARs -->
-    <DownloadFile
-      SourceUrl="$(LedgerApiProtoUrl)"
-      DestinationFolder="$(ProtoCacheDir)"
-      DestinationFileName="ledger-api-proto-$(CantonVersion).jar"
-      SkipUnchangedFiles="true" />
+    <DownloadFile SourceUrl="$(LedgerApiProtoUrl)"
+                  DestinationFolder="$(_ProtoStagingDir)"
+                  DestinationFileName="ledger-api-proto-$(CantonVersion).jar" />
 
-    <DownloadFile
-      SourceUrl="$(LedgerApiValueProtoUrl)"
-      DestinationFolder="$(ProtoCacheDir)"
-      DestinationFileName="ledger-api-value-proto-$(CantonVersion).jar"
-      SkipUnchangedFiles="true" />
+    <DownloadFile SourceUrl="$(LedgerApiValueProtoUrl)"
+                  DestinationFolder="$(_ProtoStagingDir)"
+                  DestinationFileName="ledger-api-value-proto-$(CantonVersion).jar" />
 
-    <DownloadFile
-      SourceUrl="$(GoogleCommonProtosUrl)"
-      DestinationFolder="$(ProtoCacheDir)"
-      DestinationFileName="proto-google-common-protos-$(GoogleCommonProtosVersion).jar"
-      SkipUnchangedFiles="true" />
+    <DownloadFile SourceUrl="$(GoogleCommonProtosUrl)"
+                  DestinationFolder="$(_ProtoStagingDir)"
+                  DestinationFileName="proto-google-common-protos-$(GoogleCommonProtosVersion).jar" />
 
-    <!-- Verify SHA-256 checksums before unzipping -->
-    <GetFileHash Files="$(ProtoCacheDir)/ledger-api-proto-$(CantonVersion).jar" Algorithm="SHA256">
+    <GetFileHash Files="$(_StagedLedgerApiProtoJar)" Algorithm="SHA256">
       <Output TaskParameter="Hash" PropertyName="_LedgerApiProtoActualHash" />
     </GetFileHash>
     <Error Condition="'$(_LedgerApiProtoActualHash)' != '$(LedgerApiProtoHash)'"
            Text="SHA-256 mismatch for ledger-api-proto-$(CantonVersion).jar: expected $(LedgerApiProtoHash), got $(_LedgerApiProtoActualHash)" />
 
-    <GetFileHash Files="$(ProtoCacheDir)/ledger-api-value-proto-$(CantonVersion).jar" Algorithm="SHA256">
+    <GetFileHash Files="$(_StagedLedgerApiValueProtoJar)" Algorithm="SHA256">
       <Output TaskParameter="Hash" PropertyName="_LedgerApiValueProtoActualHash" />
     </GetFileHash>
     <Error Condition="'$(_LedgerApiValueProtoActualHash)' != '$(LedgerApiValueProtoHash)'"
            Text="SHA-256 mismatch for ledger-api-value-proto-$(CantonVersion).jar: expected $(LedgerApiValueProtoHash), got $(_LedgerApiValueProtoActualHash)" />
 
-    <GetFileHash Files="$(ProtoCacheDir)/proto-google-common-protos-$(GoogleCommonProtosVersion).jar" Algorithm="SHA256">
+    <GetFileHash Files="$(_StagedGoogleCommonProtosJar)" Algorithm="SHA256">
       <Output TaskParameter="Hash" PropertyName="_GoogleCommonProtosActualHash" />
     </GetFileHash>
     <Error Condition="'$(_GoogleCommonProtosActualHash)' != '$(GoogleCommonProtosHash)'"
@@ -96,42 +132,52 @@
          cross '/', silently dropping the admin/interactive/testing protos. Full archives
          are extracted (no Include filter): the Protobuf globs in the csproj select what
          is compiled, and $(ProtoSourceDir) is gitignored. -->
-    <Unzip SourceFiles="$(ProtoCacheDir)/ledger-api-proto-$(CantonVersion).jar"
-           DestinationFolder="$(ProtoSourceDir)"
+    <Unzip SourceFiles="$(_StagedLedgerApiProtoJar)"
+           DestinationFolder="$(_StagedProtoTree)"
            OverwriteReadOnlyFiles="true" />
 
-    <Unzip SourceFiles="$(ProtoCacheDir)/ledger-api-value-proto-$(CantonVersion).jar"
-           DestinationFolder="$(ProtoSourceDir)"
+    <Unzip SourceFiles="$(_StagedLedgerApiValueProtoJar)"
+           DestinationFolder="$(_StagedProtoTree)"
            OverwriteReadOnlyFiles="true" />
 
-    <Unzip SourceFiles="$(ProtoCacheDir)/proto-google-common-protos-$(GoogleCommonProtosVersion).jar"
-           DestinationFolder="$(ProtoSourceDir)"
+    <Unzip SourceFiles="$(_StagedGoogleCommonProtosJar)"
+           DestinationFolder="$(_StagedProtoTree)"
            OverwriteReadOnlyFiles="true" />
 
-    <!-- Create marker file -->
-    <WriteLinesToFile File="$(ProtoMarkerFile)" Lines="Downloaded: $(CantonVersion) + $(GoogleCommonProtosVersion)" Overwrite="true" />
+    <PublishDirectory SourceDirectory="$(_ProtoStagingDir)" DestinationDirectory="$(_PublishedProtoDir)">
+      <Output TaskParameter="Published" PropertyName="_ProtoPublished" />
+    </PublishDirectory>
 
-    <Message Importance="high" Text="Proto files downloaded successfully to $(ProtoSourceDir)" />
+    <RemoveDir Condition="'$(_ProtoPublished)' != 'true'" Directories="$(_ProtoStagingDir)" />
+
+    <Message Importance="high" Condition="'$(_ProtoPublished)' != 'true'" Text="Another build already published the Canton Ledger API protos; discarded this run's download." />
+    <Message Importance="high" Condition="'$(_ProtoPublished)' == 'true'" Text="Proto files downloaded successfully to $(ProtoSourceDir)" />
+
+    <OnError ExecuteTargets="RemoveProtoStagingDir" />
+  </Target>
+
+  <Target Name="RemoveProtoStagingDir">
+    <RemoveDir Directories="$(_ProtoStagingDir)" />
   </Target>
 
   <!-- Verify cached JAR checksums on every build, even when DownloadProtos is skipped
-       because the marker file exists. Catches tampered cache files and pinned-hash
+       because the published directory exists. Catches tampered cache files and pinned-hash
        changes without requiring a fresh download. -->
   <Target Name="VerifyProtoChecksums" AfterTargets="DownloadProtos"
-          Condition="Exists('$(ProtoCacheDir)/ledger-api-proto-$(CantonVersion).jar')">
-    <GetFileHash Files="$(ProtoCacheDir)/ledger-api-proto-$(CantonVersion).jar" Algorithm="SHA256">
+          Condition="Exists('$(_PublishedProtoDir)/ledger-api-proto-$(CantonVersion).jar')">
+    <GetFileHash Files="$(_PublishedProtoDir)/ledger-api-proto-$(CantonVersion).jar" Algorithm="SHA256">
       <Output TaskParameter="Hash" PropertyName="_CachedLedgerApiProtoHash" />
     </GetFileHash>
     <Error Condition="'$(_CachedLedgerApiProtoHash)' != '$(LedgerApiProtoHash)'"
            Text="SHA-256 mismatch for cached ledger-api-proto-$(CantonVersion).jar: expected $(LedgerApiProtoHash), got $(_CachedLedgerApiProtoHash)" />
 
-    <GetFileHash Files="$(ProtoCacheDir)/ledger-api-value-proto-$(CantonVersion).jar" Algorithm="SHA256">
+    <GetFileHash Files="$(_PublishedProtoDir)/ledger-api-value-proto-$(CantonVersion).jar" Algorithm="SHA256">
       <Output TaskParameter="Hash" PropertyName="_CachedLedgerApiValueProtoHash" />
     </GetFileHash>
     <Error Condition="'$(_CachedLedgerApiValueProtoHash)' != '$(LedgerApiValueProtoHash)'"
            Text="SHA-256 mismatch for cached ledger-api-value-proto-$(CantonVersion).jar: expected $(LedgerApiValueProtoHash), got $(_CachedLedgerApiValueProtoHash)" />
 
-    <GetFileHash Files="$(ProtoCacheDir)/proto-google-common-protos-$(GoogleCommonProtosVersion).jar" Algorithm="SHA256">
+    <GetFileHash Files="$(_PublishedProtoDir)/proto-google-common-protos-$(GoogleCommonProtosVersion).jar" Algorithm="SHA256">
       <Output TaskParameter="Hash" PropertyName="_CachedGoogleCommonProtosHash" />
     </GetFileHash>
     <Error Condition="'$(_CachedGoogleCommonProtosHash)' != '$(GoogleCommonProtosHash)'"
@@ -140,7 +186,6 @@
 
   <!-- Clean target to remove downloaded protos -->
   <Target Name="CleanProtos" AfterTargets="Clean">
-    <RemoveDir Directories="$(ProtoSourceDir)" />
     <RemoveDir Directories="$(ProtoCacheDir)" />
   </Target>
 

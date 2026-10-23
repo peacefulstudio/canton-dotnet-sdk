@@ -47,7 +47,7 @@ internal static class RestExternalSigningConversions
 
     private static ServedDuration ToServed(TimeSpan delay)
     {
-        var (seconds, nanos) = WireDuration.PartsOf(RestWireConversions.ToWireDuration(delay));
+        var (seconds, nanos) = WireDuration.PartsOf(WireDuration.CanonicalOf(delay));
         return new ServedDuration(seconds, nanos);
     }
 }

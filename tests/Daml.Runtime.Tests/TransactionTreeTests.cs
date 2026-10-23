@@ -313,6 +313,36 @@ public class TransactionTreeTests
     }
 
     [Fact]
+    public void ToTransactionResult_preserves_the_paid_traffic_cost_of_the_tree()
+    {
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [MakeCreated("00alice")]) { PaidTrafficCost = 4096L };
+
+        var result = tree.ToTransactionResult();
+
+        result.PaidTrafficCost.Should().Be(4096L);
+    }
+
+    [Fact]
+    public void ToTransactionResult_preserves_a_reported_zero_paid_traffic_cost()
+    {
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [MakeCreated("00alice")]) { PaidTrafficCost = 0L };
+
+        var result = tree.ToTransactionResult();
+
+        result.PaidTrafficCost.Should().Be(0L);
+    }
+
+    [Fact]
+    public void ToTransactionResult_leaves_the_paid_traffic_cost_absent_when_the_tree_reports_none()
+    {
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [MakeCreated("00alice")]);
+
+        var result = tree.ToTransactionResult();
+
+        result.PaidTrafficCost.Should().BeNull();
+    }
+
+    [Fact]
     public void ToTransactionResult_preserves_interface_ids_on_created_contracts()
     {
         var interfaceId = new RuntimeIdentifier("test-pkg", "Acme.Foo", "IAsset");

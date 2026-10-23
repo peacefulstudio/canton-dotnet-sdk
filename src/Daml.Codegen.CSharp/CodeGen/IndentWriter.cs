@@ -15,10 +15,6 @@ internal sealed class IndentWriter(StringBuilder sb)
 
     private readonly SortedSet<string> _requiredUsings = new(StringComparer.Ordinal);
 
-    public string CurrentTypeName { get; set; } = "";
-
-    public IReadOnlySet<string> CurrentReservedMemberNames { get; set; } = new HashSet<string>();
-
     /// <summary>Records that the given namespace is referenced in this file.</summary>
     public void Require(string ns) => _requiredUsings.Add(ns);
 
@@ -58,6 +54,14 @@ internal sealed class IndentWriter(StringBuilder sb)
     /// <c>.editorconfig</c> pins repo-wide.
     /// </remarks>
     private const char Newline = '\n';
+
+    public void TrimTrailingBlankLine()
+    {
+        if (sb.Length >= 2 && sb[^1] == Newline && sb[^2] == Newline)
+        {
+            sb.Length--;
+        }
+    }
 
     public void AppendLine(string? line = null)
     {

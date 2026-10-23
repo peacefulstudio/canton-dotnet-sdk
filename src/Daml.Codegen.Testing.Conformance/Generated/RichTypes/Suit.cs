@@ -62,5 +62,4 @@ public static class SuitExtensions
         global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadEnumConstructor(json, context, ExpectedConstructors);
 
     private static readonly string[] ExpectedConstructors = ["Clubs", "Diamonds", "Hearts", "Spades"];
-
 }

@@ -65,12 +65,12 @@ internal static class StjRoundTrip
                 + $"{knownRootCause}. Delete its known-broken entry.");
         }
 
-        // Run the serialize stage independently so a new serialization regression is not masked
-        // by the known-broken entry: no documented root cause is a serialization failure, so
-        // serialize must always succeed.
+        AssertSerializeStageIsNotMaskedByKnownBrokenEntry(roundTripCase, leg);
+    }
+
+    private static void AssertSerializeStageIsNotMaskedByKnownBrokenEntry(StjRoundTripCase roundTripCase, StjOptionsLeg leg) =>
         Step(roundTripCase, leg, "serialize", () =>
             JsonSerializer.Serialize(roundTripCase.Sample, roundTripCase.DeclaredType, OptionsFor(leg)));
-    }
 
     private static bool Fails(StjRoundTripCase roundTripCase, StjOptionsLeg leg)
     {

@@ -383,31 +383,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(ITokenProvider.None);
     }
 
-    private static void AddAuthTlsValidation(IServiceCollection services)
-    {
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IValidateOptions<LedgerClientOptions>, AuthTlsOptionsValidator>());
-    }
-
-    private sealed class AuthTlsOptionsValidator(
-        IServiceProvider serviceProvider,
-        IOptions<ClientCredentialsOptions> authOptions) : IValidateOptions<LedgerClientOptions>
-    {
-        public ValidateOptionsResult Validate(string? name, LedgerClientOptions options)
-        {
-            if (name != Options.DefaultName)
-                return ValidateOptionsResult.Skip;
-
-            if (serviceProvider.GetService<ClientCredentialsRegistration>() is null)
-                return ValidateOptionsResult.Success;
-
-            return options.Tls.IsConfigured
-                && !authOptions.Value.Tls.IsConfigured
-                    ? ValidateOptionsResult.Fail(
-                        "LedgerClientOptions.Tls is configured while client-credentials authentication "
-                        + "uses an unconfigured ClientCredentialsOptions.Tls. Configure TLS separately "
-                        + "for the token endpoint.")
-                    : ValidateOptionsResult.Success;
-        }
-    }
+    private static void AddAuthTlsValidation(IServiceCollection services) =>
+        services.AddAuthTlsValidation<LedgerClientOptions>(options => options.Tls, "LedgerClientOptions");
 }

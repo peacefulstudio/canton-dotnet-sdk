@@ -7,6 +7,7 @@ using Daml.Runtime.Serialization;
 using AwesomeAssertions;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Xunit;
+using Daml.Runtime.Stdlib;
 
 namespace Daml.Codegen.Testing.Conformance.Tests;
 
@@ -21,8 +22,11 @@ public class RichRecordRoundTripTests
         AsOf: new DateOnly(2026, 6, 4),
         ObservedAt: new DateTimeOffset(2026, 6, 4, 12, 30, 0, TimeSpan.Zero),
         Note: note,
+        NestedNote: new Optional<Optional<string>>.Some(new Optional<string>.Some("deep")),
         Tags: new List<string> { "a", "b" },
         Attributes: new Dictionary<string, string> { ["k1"] = "v1", ["k2"] = "v2" },
+        GenMap: new Dictionary<Party, long> { [new Party("alice")] = 7L },
+        UnitField: DamlUnit.Instance,
         Marker: new ContractId<Marker>("marker-cid"),
         HoldingCid: new ContractId<IHolding>("00aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"),
         HoldingCids: new List<ContractId<IHolding>>
@@ -133,8 +137,11 @@ public class RichRecordRoundTripTests
             AsOf: new DateOnly(2026, 1, 1),
             ObservedAt: DateTimeOffset.UnixEpoch,
             Note: null,
+            NestedNote: new Optional<Optional<string>>.Some(new Optional<string>.Some("deep")),
             Tags: new List<string>(),
             Attributes: new Dictionary<string, string>(),
+            GenMap: new Dictionary<Party, long> { [new Party("alice")] = 7L },
+            UnitField: DamlUnit.Instance,
             Marker: new ContractId<Marker>("m"),
             HoldingCid: new ContractId<IHolding>("00h"),
             HoldingCids: new List<ContractId<IHolding>>(),

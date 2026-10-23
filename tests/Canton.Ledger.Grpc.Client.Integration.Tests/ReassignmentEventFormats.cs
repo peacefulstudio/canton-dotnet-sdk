@@ -4,7 +4,6 @@
 using Com.Daml.Ledger.Api.V2;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
-using Daml.Runtime.Grpc;
 
 namespace Canton.Ledger.Grpc.Client.Integration.Tests;
 

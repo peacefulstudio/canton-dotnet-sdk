@@ -23,6 +23,17 @@ public sealed partial record AmuletConversionRateFeed
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("newNextUpdateAfter")] global::System.DateTimeOffset NewNextUpdateAfter
     ) : global::Daml.Runtime.Data.IDamlRecord<AmuletConversionRateFeed_Update>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(AmuletConversionRate, global::Daml.Runtime.Data.DamlEqualityComparer<decimal>.Default);
+            hash.Add(AmuletRulesCid, global::Daml.Runtime.Data.DamlEqualityComparer<global::Daml.Runtime.Contracts.ContractId<global::Splice.AmuletRules.AmuletRules>>.Default);
+            hash.Add(MarkerContextO, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Ans.AmuletConversionRateFeed.MarkerContext?>.Default);
+            hash.Add(NewNextUpdateAfter, global::Daml.Runtime.Data.DamlEqualityComparer<global::System.DateTimeOffset>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("amuletConversionRate", new global::Daml.Runtime.Data.DamlNumeric(AmuletConversionRate)),
@@ -33,10 +44,10 @@ public sealed partial record AmuletConversionRateFeed
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static AmuletConversionRateFeed_Update FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AmuletConversionRateFeed_Update(
-            AmuletConversionRate: record.GetRequiredField("amuletConversionRate").As<global::Daml.Runtime.Data.DamlNumeric>().Value,
-            AmuletRulesCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.AmuletRules.AmuletRules>(record.GetRequiredField("amuletRulesCid").As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
-            MarkerContextO: record.GetOptionalField("markerContextO").AsOptional().HasValue ? global::Splice.Ans.AmuletConversionRateFeed.MarkerContext.FromRecord(record.GetOptionalField("markerContextO").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>()) : null,
-            NewNextUpdateAfter: record.GetRequiredField("newNextUpdateAfter").As<global::Daml.Runtime.Data.DamlTimestamp>().Value
+            AmuletConversionRate: record.GetRequiredField("amuletConversionRate", 0).As<global::Daml.Runtime.Data.DamlNumeric>().Value,
+            AmuletRulesCid: new global::Daml.Runtime.Contracts.ContractId<global::Splice.AmuletRules.AmuletRules>(record.GetRequiredField("amuletRulesCid", 1).As<global::Daml.Runtime.Contracts.DamlContractId>().Value),
+            MarkerContextO: record.GetOptionalField("markerContextO", 2).AsOptional().HasValue ? global::Splice.Ans.AmuletConversionRateFeed.MarkerContext.FromRecord(record.GetOptionalField("markerContextO", 2).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlRecord>()) : null,
+            NewNextUpdateAfter: record.GetRequiredField("newNextUpdateAfter", 3).As<global::Daml.Runtime.Data.DamlTimestamp>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -51,6 +62,5 @@ public sealed partial record AmuletConversionRateFeed
             fields.Add(global::Daml.Runtime.Data.DamlField.Create("newNextUpdateAfter", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadTimestamp(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "newNextUpdateAfter"), context.Field("newNextUpdateAfter"))));
             return global::Daml.Runtime.Data.DamlRecord.Create(fields.ToArray());
         }
-
     }
 }

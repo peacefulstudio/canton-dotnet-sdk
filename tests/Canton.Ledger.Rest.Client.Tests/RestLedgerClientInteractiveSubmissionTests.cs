@@ -26,7 +26,7 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
     [ModuleInitializer]
     internal static void RegisterHandWrittenTemplates()
     {
-        GeneratedTypeReaders.ForRecord<TestTemplate>();
+        GeneratedTypeReaders.ForRecord<OwnedTemplate>();
     }
 
     private static readonly Party Alice = new("party::alice");
@@ -39,21 +39,6 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
         {
             factory.Dispose();
         }
-    }
-
-    private sealed record TestTemplate : ITemplate, IDamlRecord<TestTemplate>
-    {
-        public static RuntimeIdentifier TemplateId { get; } = new("pkg", "Module", "InteractiveTemplate");
-        public static string PackageId => "pkg";
-        public static string PackageName => "pkg-name";
-        public static Version PackageVersion { get; } = new(0, 1, 0);
-        public static DamlTypeDescriptor DamlTypeId { get; } = new(TemplateId, DamlTypeKind.Template, PackageName);
-        public DamlRecord ToRecord() => new(TemplateId, [new DamlField("owner", Alice.ToDamlValue())]);
-
-        public static DamlRecord __ReadDamlLfJson(JsonElement json, DamlLfJsonDecodeContext context) =>
-            TestRecordReader.Read(json, context, ("owner", DamlLfJsonDecoders.ReadParty));
-
-        public static TestTemplate FromRecord(DamlRecord record) => new();
     }
 
     private RestLedgerClient ClientWith(
@@ -104,7 +89,7 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
             .Should().BeTrue($"the request body {transport.LastRequestBody} should equal {expected}");
 
     private static RuntimeCommands.CommandsSubmission SingleCreateSubmission() =>
-        RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new TestTemplate()), Alice)
+        RuntimeCommands.CommandsSubmission.Single(RuntimeCommands.CreateCommand.For(new OwnedTemplate()), Alice)
             .WithCommandId(new RuntimeCommands.CommandId("cmd-1"));
 
     private static PreparedSubmission Prepared(HashingSchemeVersion version = HashingSchemeVersion.V2) =>
@@ -158,7 +143,7 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
                   "nodeId": 0,
                   "acsDelta": true,
                   "packageName": "pkg-name",
-                  "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "InteractiveTemplate"},
+                  "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"},
                   "createArgument": {"owner": "party::alice"}
                 }
               }
@@ -188,7 +173,7 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
               "userId": "test-user",
               "commandId": "cmd-1",
               "commands": [
-                {"CreateCommand": {"templateId": "#pkg-name:Module:InteractiveTemplate", "createArguments": {"owner": "party::alice"}}}
+                {"CreateCommand": {"templateId": "#pkg-name:Module:OwnedTemplate", "createArguments": {"owner": "party::alice"}}}
               ],
               "minLedgerTime": {"time": {"MinLedgerTimeRel": {"value": {"seconds": 90, "nanos": 500000000}}}},
               "actAs": ["party::alice"],

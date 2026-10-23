@@ -9,11 +9,14 @@ internal static class ActivityExtensions
 {
     internal const string ErrorType = SemanticConventions.ErrorType;
 
-    internal static void RecordException(this Activity? activity, Exception exception)
+    internal static void RecordException(this Activity? activity, Exception exception) =>
+        activity.RecordException(exception, exception.Message);
+
+    internal static void RecordException(this Activity? activity, Exception exception, string statusDescription)
     {
         if (activity is null) return;
 
-        activity.SetStatus(ActivityStatusCode.Error, exception.Message);
+        activity.SetStatus(ActivityStatusCode.Error, statusDescription);
         activity.SetTag(ErrorType, exception.GetType().FullName);
     }
 }

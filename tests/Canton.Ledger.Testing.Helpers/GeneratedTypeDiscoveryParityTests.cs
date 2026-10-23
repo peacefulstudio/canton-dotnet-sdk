@@ -45,7 +45,7 @@ public abstract class GeneratedTypeDiscoveryParityTests
 
         var outcome = await ExerciseAnsweringEchoedTailsAsync(
             new RuntimeIdentifier(
-                "628ba2f8b1c316e4e7df3db05ea1e840c22e0276787292aaf207631594a8ae2a", "RichTypes", "OptionalTails"),
+                "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "OptionalTails"),
             new ChoiceName("EchoOptionalTails"));
 
         outcome.Should().BeOfType<ExerciseOutcome<OptionalTails>.One>().Subject.Result.Should().Be(EchoedTails);

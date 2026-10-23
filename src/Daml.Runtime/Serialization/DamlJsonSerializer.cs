@@ -42,10 +42,11 @@ public static class DamlJsonSerializer
     private const string VariantValueKey = "value";
     internal const string CanonicalDateFormat = "yyyy-MM-dd";
     private const string CanonicalTimestampEmitFormat = "yyyy-MM-dd'T'HH:mm:ss.FFFFFF'Z'";
-    internal const string CanonicalTimestampParseFormat = "yyyy-MM-dd'T'HH':'mm':'ss.FFFFFFFK";
+    internal const string CanonicalTimestampParseFormat = "yyyy-MM-dd'T'HH':'mm':'ss.FFFFFF'Z'";
     internal const DateTimeStyles UtcNormalizingTimestampParseStyles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
     internal const int MaximumNestingDepth = 128;
     private const int JsonReaderWriterMaxDepth = 4 * MaximumNestingDepth;
+    private const int MaxExpandableExponent = 100;
     internal static readonly DamlJsonDeserializationLimits DefaultDeserializationLimits =
         DamlJsonDeserializationLimits.Default;
 
@@ -136,11 +137,6 @@ public static class DamlJsonSerializer
     /// beyond <see cref="decimal.MaxValue"/>. A value outside that 38-digit bound throws
     /// <see cref="JsonException"/> rather than degrading to <see cref="DamlText"/> or
     /// rounding.</description></item>
-    /// <item><description><see cref="DamlNumeric.Scale"/> is never written to JSON and
-    /// deserialization always reconstructs the default scale of 10. This is why
-    /// <see cref="DamlNumeric"/> equality compares the numeric value only —
-    /// a Numeric constructed with a non-default scale still round-trips equal, but the
-    /// original scale itself is lost.</description></item>
     /// <item><description>An explicit JSON <c>null</c> record field deserializes to
     /// <see cref="DamlOptional.None"/>; a Some value is flattened to its inner value on
     /// write, so schema-aware readers recover the wrapper via
@@ -200,29 +196,14 @@ public static class DamlJsonSerializer
     }
 
     /// <summary>
-    /// Deserializes JSON to a DamlRecord.
-    /// </summary>
-    public static DamlRecord DeserializeRecord(string json, JsonSerializerOptions? options = null)
-    {
-        EnsureWithinInputLimit(json, DefaultDeserializationLimits);
-        var node = JsonNode.Parse(json, nodeOptions: null, DocumentOptions)
-            ?? throw new JsonException("Expected a JSON object for a Daml record but found null");
-        if (node is not JsonObject obj)
-        {
-            throw new JsonException($"Expected a JSON object for a Daml record but found {node.GetValueKind()}");
-        }
-        return JsonObjectToRecord(obj, DefaultDeserializationLimits, depth: 0);
-    }
-
-    /// <summary>
-    /// Deserializes JSON to a DamlRecord with caller-supplied input-size and array-breadth limits.
+    /// Deserializes JSON to a DamlRecord, optionally with caller-supplied input-size and array-breadth limits.
     /// </summary>
     /// <remarks>
     /// A <see langword="null"/> <paramref name="limits"/>, including <c>default(DamlJsonDeserializationLimits)</c>,
     /// applies <see cref="DamlJsonDeserializationLimits.Default"/>.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="limits"/> is not a valid limit configuration.</exception>
-    public static DamlRecord DeserializeRecord(string json, DamlJsonDeserializationLimits? limits)
+    public static DamlRecord DeserializeRecord(string json, DamlJsonDeserializationLimits? limits = null)
     {
         var effectiveLimits = limits ?? DefaultDeserializationLimits;
         EnsureWithinInputLimit(json, effectiveLimits);
@@ -444,15 +425,40 @@ public static class DamlJsonSerializer
     private static DamlValue ParseJsonNumber(JsonElement element)
     {
         var raw = element.GetRawText();
-        return DamlNumeric.TryParseCanonical(raw, out var exact)
+        return DamlNumeric.TryParseCanonical(ExpandExponent(raw), out var exact)
             ? exact
-            : ParseNonCanonicalJsonNumber(raw, element);
+            : throw new JsonException($"Number '{raw}' cannot be represented as a Daml Numeric");
     }
 
-    private static DamlValue ParseNonCanonicalJsonNumber(string raw, JsonElement element) =>
-        element.TryGetDecimal(out var d)
-            ? new DamlNumeric(d)
-            : throw new JsonException($"Number '{raw}' cannot be represented as a Daml Numeric");
+    private static string ExpandExponent(string rawJsonNumber)
+    {
+        var exponentIndex = rawJsonNumber.AsSpan().IndexOfAny('e', 'E');
+        if (exponentIndex < 0)
+        {
+            return rawJsonNumber;
+        }
+
+        var exponentWithinBound = int.TryParse(rawJsonNumber.AsSpan(exponentIndex + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var exponent)
+            && exponent is >= -MaxExpandableExponent and <= MaxExpandableExponent;
+        if (!exponentWithinBound)
+        {
+            return string.Empty;
+        }
+
+        var sign = rawJsonNumber.StartsWith('-') ? "-" : string.Empty;
+        var mantissa = rawJsonNumber[sign.Length..exponentIndex];
+        var dotIndex = mantissa.IndexOf('.');
+        var fractionLength = dotIndex < 0 ? 0 : mantissa.Length - dotIndex - 1;
+        var digits = mantissa.Replace(".", string.Empty).TrimStart('0');
+        var scale = fractionLength - exponent;
+        if (scale <= 0)
+        {
+            return sign + (digits.Length == 0 ? "0" : digits + new string('0', -scale));
+        }
+
+        var padded = digits.PadLeft(scale + 1, '0');
+        return $"{sign}{padded[..^scale]}.{padded[^scale..]}";
+    }
 
     private static DamlValue InferStringValue(string s)
     {

@@ -94,6 +94,24 @@ public class RecordEmitterTests
     }
 
     [Fact]
+    public void RecordEmitter_closes_the_record_body_right_after_its_last_member()
+    {
+        var output = EmitRecord(Record("Profile", Field("nickname", DamlPrimitive.Text)));
+
+        output.Should().EndWith("    }\n}\n");
+        output.Should().NotContain("\n\n}");
+    }
+
+    [Fact]
+    public void RecordEmitter_closes_a_fieldless_record_body_right_after_its_last_member()
+    {
+        var output = EmitRecord(Record("Grade"));
+
+        output.Should().EndWith("    }\n}\n");
+        output.Should().NotContain("\n\n}");
+    }
+
+    [Fact]
     public void RecordEmitter_stamps_the_generic_IDamlRecord_facet_naming_the_record_itself()
     {
         var output = EmitRecord(Record("Profile", Field("nickname", DamlPrimitive.Text)));
@@ -226,8 +244,8 @@ public class RecordEmitterTests
                 [new DamlPrimitiveType(DamlPrimitive.Text)]))));
 
         output.Should().Contain(
-            "MaybeText: record.GetOptionalField(\"maybeText\").AsOptional().HasValue"
-            + " ? record.GetOptionalField(\"maybeText\").AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null",
+            "MaybeText: record.GetOptionalField(\"maybeText\", 0).AsOptional().HasValue"
+            + " ? record.GetOptionalField(\"maybeText\", 0).AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null",
             "FromRecord must normalize through AsOptional so JSON-decoded records, which flatten Some to the bare value, still decode");
         output.Should().NotContain(".As<global::Daml.Runtime.Data.DamlOptional>()");
     }
@@ -317,7 +335,7 @@ public class RecordEmitterTests
         var output = EmitRecord(Record("Simple", Field("value", DamlPrimitive.Text)));
 
         output.Should().Contain("public static Simple FromRecord(global::Daml.Runtime.Data.DamlRecord record)");
-        output.Should().Contain("record.GetRequiredField(\"value\")");
+        output.Should().Contain("record.GetRequiredField(\"value\", 0)");
     }
 
     [Fact]
@@ -364,7 +382,7 @@ public class RecordEmitterTests
         var code = files.First(f => f.RelativePath.EndsWith("Holder.cs", global::System.StringComparison.Ordinal)).Content;
 
         code.Should().Contain("DamlField.Create(\"pick\", Pick.ToVariant())");
-        code.Should().Contain("Pick: global::Test.Module.Choice.FromVariant(record.GetRequiredField(\"pick\").As<global::Daml.Runtime.Data.DamlVariant>())");
+        code.Should().Contain("Pick: global::Test.Module.Choice.FromVariant(record.GetRequiredField(\"pick\", 0).As<global::Daml.Runtime.Data.DamlVariant>())");
     }
 
     [Fact]

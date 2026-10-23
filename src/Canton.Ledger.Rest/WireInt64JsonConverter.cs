@@ -18,7 +18,8 @@ namespace Canton.Ledger.Rest.Client;
 /// </para>
 /// </summary>
 /// <remarks>
-/// Retired by digital-asset/canton#527. proto3 maps int64 to a JSON string to avoid the precision
+/// Bridges the JSON API's wire encoding of int64 fields, which differs from the proto3 JSON our
+/// proto-derived specification describes. proto3 maps int64 to a JSON string to avoid the precision
 /// loss a raw number causes past 2^53, which is why our specification is the correct one here.
 /// </remarks>
 internal sealed class WireInt64JsonConverter : JsonConverter<string>

@@ -31,11 +31,14 @@ internal sealed partial class ChoiceEmitter(
     /// <c>Choice&lt;...&gt;</c> property (with its argument encoder and result decoder)
     /// for every choice on <paramref name="template"/>.
     /// </summary>
-    internal void WriteChoiceDescriptors(IndentWriter indent, DamlTemplate template)
+    /// <param name="indent">The writer to append to.</param>
+    /// <param name="template">The template whose choices are described.</param>
+    /// <param name="templateTypeName">The emitted C# name of the template record, the owner type argument of each descriptor.</param>
+    internal void WriteChoiceDescriptors(IndentWriter indent, DamlTemplate template, string templateTypeName)
     {
         foreach (var choice in template.Choices)
         {
-            WriteChoiceMethod(indent, choice);
+            WriteChoiceMethod(indent, choice, templateTypeName);
         }
     }
 
@@ -120,7 +123,7 @@ internal sealed partial class ChoiceEmitter(
             + $"'{SanitizeIdentifier(choice.Name)}Arg' stub record into generated code.");
     }
 
-    private void WriteChoiceMethod(IndentWriter indent, DamlChoice choice)
+    private void WriteChoiceMethod(IndentWriter indent, DamlChoice choice, string templateTypeName)
     {
         var choiceName = SanitizeIdentifier(choice.Name);
         var returnType = mapper.MapType(choice.ReturnType);
@@ -140,7 +143,7 @@ internal sealed partial class ChoiceEmitter(
         var argTypeRef = argument.HasArgument
             ? argument.TypeName
             : TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlUnit);
-        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.Choice)}<{indent.CurrentTypeName}, {argTypeRef}, {returnType}> Choice{choiceName} {{ get; }} = new()");
+        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.Choice)}<{templateTypeName}, {argTypeRef}, {returnType}> Choice{choiceName} {{ get; }} = new()");
         indent.AppendLine("{");
         indent.Indent();
         indent.AppendLine($"Name = new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),");

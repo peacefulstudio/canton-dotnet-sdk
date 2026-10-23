@@ -318,6 +318,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ITokenProvider>(),
             sp.GetService<ILogger<BearerTokenHandler>>()));
         services.TryAddTransient<RestActivityHandler>();
+        services.TryAddTransient<RestAttemptTimeoutHandler>();
         services.TryAddTransient(static sp => new RestRetryHandler(
             sp.GetRequiredService<IOptions<RestLedgerClientOptions>>()));
 
@@ -328,6 +329,7 @@ public static class ServiceCollectionExtensions
                 client.BaseAddress = new Uri(options.HttpAddress, UriKind.Absolute);
             })
             .AddHttpMessageHandler<RestRetryHandler>()
+            .AddHttpMessageHandler<RestAttemptTimeoutHandler>()
             .AddHttpMessageHandler<BearerTokenHandler>()
             .AddHttpMessageHandler<RestActivityHandler>();
 
@@ -377,33 +379,8 @@ public static class ServiceCollectionExtensions
                 });
             });
 
-    private static void AddAuthTlsValidation(IServiceCollection services)
-    {
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IValidateOptions<RestLedgerClientOptions>, AuthTlsOptionsValidator>());
-    }
-
-    private sealed class AuthTlsOptionsValidator(
-        IServiceProvider serviceProvider,
-        IOptions<ClientCredentialsOptions> authOptions) : IValidateOptions<RestLedgerClientOptions>
-    {
-        public ValidateOptionsResult Validate(string? name, RestLedgerClientOptions options)
-        {
-            if (name != Options.DefaultName)
-                return ValidateOptionsResult.Skip;
-
-            if (serviceProvider.GetService<ClientCredentialsRegistration>() is null)
-                return ValidateOptionsResult.Success;
-
-            return options.Tls.IsConfigured
-                && !authOptions.Value.Tls.IsConfigured
-                    ? ValidateOptionsResult.Fail(
-                        "RestLedgerClientOptions.Tls is configured while client-credentials authentication "
-                        + "uses an unconfigured ClientCredentialsOptions.Tls. Configure TLS separately "
-                        + "for the token endpoint.")
-                    : ValidateOptionsResult.Success;
-        }
-    }
+    private static void AddAuthTlsValidation(IServiceCollection services) =>
+        services.AddAuthTlsValidation<RestLedgerClientOptions>(options => options.Tls, "RestLedgerClientOptions");
 
     private sealed class RestApisRegisteredMarker;
     private sealed class RestOptionsRegisteredMarker;

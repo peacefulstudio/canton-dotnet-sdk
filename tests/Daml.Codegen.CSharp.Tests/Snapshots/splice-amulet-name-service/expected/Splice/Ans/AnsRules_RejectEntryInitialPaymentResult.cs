@@ -17,6 +17,14 @@ public sealed record AnsRules_RejectEntryInitialPaymentResult(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("amuletSum")] global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>> AmuletSum
 ) : global::Daml.Runtime.Data.IDamlRecord<AnsRules_RejectEntryInitialPaymentResult>
 {
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new global::System.HashCode();
+        hash.Add(AmuletSum, global::Daml.Runtime.Data.DamlEqualityComparer<global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>>>.Default);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Converts this value to a DamlRecord.</summary>
     public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
         global::Daml.Runtime.Data.DamlField.Create("amuletSum", AmuletSum.ToRecord(__t0 => (global::Daml.Runtime.Data.DamlValue)(__t0.ToDamlValue())))
@@ -24,7 +32,7 @@ public sealed record AnsRules_RejectEntryInitialPaymentResult(
 
     /// <summary>Creates an instance from a DamlRecord.</summary>
     public static AnsRules_RejectEntryInitialPaymentResult FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new AnsRules_RejectEntryInitialPaymentResult(
-        AmuletSum: global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>>.FromRecord(record.GetRequiredField("amuletSum").As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>(__v0.As<global::Daml.Runtime.Contracts.DamlContractId>().Value), null)
+        AmuletSum: global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>>.FromRecord(record.GetRequiredField("amuletSum", 0).As<global::Daml.Runtime.Data.DamlRecord>(), __v0 => new global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>(__v0.As<global::Daml.Runtime.Contracts.DamlContractId>().Value), null)
     );
 
     /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -36,5 +44,4 @@ public sealed record AnsRules_RejectEntryInitialPaymentResult(
             global::Daml.Runtime.Data.DamlField.Create("amuletSum", global::Splice.Amulet.AmuletCreateSummary<global::Daml.Runtime.Contracts.ContractId<global::Splice.Amulet.Amulet>>.__ReadDamlLfJson(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "amuletSum"), context.Field("amuletSum"), (__json0, __ctx0) => global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadContractId(__json0, __ctx0), null))
         );
     }
-
 }

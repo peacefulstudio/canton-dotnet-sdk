@@ -48,10 +48,18 @@ public abstract record Minstd : global::Daml.Runtime.Data.IDamlVariant<Minstd>
     public sealed record Minstd_(long Value) : Minstd
     {
         /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(base.GetHashCode());
+            hash.Add(Value, global::Daml.Runtime.Data.DamlEqualityComparer<long>.Default);
+            return hash.ToHashCode();
+        }
+
+        /// <inheritdoc />
         public override string Tag => "Minstd";
 
         /// <inheritdoc />
         public override global::Daml.Runtime.Data.DamlVariant ToVariant() => global::Daml.Runtime.Data.DamlVariant.Create("Minstd", new global::Daml.Runtime.Data.DamlInt64(Value));
     }
-
 }

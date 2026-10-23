@@ -117,14 +117,8 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
     }
 
     [Fact]
-    public void Emitted_non_contract_choice_wrapper_compiles_for_optional_unit_return()
+    public void Emitted_non_contract_choice_wrapper_for_optional_unit_return_decodes_via_DamlUnit_cast_and_compiles()
     {
-        // Regression: GetFromValueConversion previously had no DamlPrimitive.Unit
-        // branch, so non-top-level () shapes — Optional (), [()], tuples
-        // containing () — fell through to `default!` in the emitted decoder,
-        // breaking typed projection at runtime. The Unit arm now decodes via
-        // .As<global::Daml.Runtime.Data.DamlUnit>(), so the optional-of-unit return must compile and
-        // produce a working DamlUnit?-typed decoder.
         var module = new DamlModule
         {
             Name = "Test.Module",
@@ -178,8 +172,6 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
 
         var probe = files.First(f => f.RelativePath.EndsWith("Probe.cs", StringComparison.Ordinal));
-        // The decoder reuses GetFromValueConversion; the new Unit arm must
-        // produce a .As<global::Daml.Runtime.Data.DamlUnit>() cast inside the optional decoder.
         probe.Content.Should().Contain(".As<global::Daml.Runtime.Data.DamlUnit>()");
         probe.Content.Should().NotContain("default! /* TODO: Implement deserialization for unit");
     }
@@ -187,12 +179,6 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
     [Fact]
     public void Emitted_non_contract_choice_wrappers_compile_for_decimal_record_and_unit_returns()
     {
-        // Pin the new <Choice>Async non-CID wrapper path against quiet drift —
-        // string-shape tests in NonContractChoiceWrapperTests assert the
-        // expected substrings, but only Roslyn catches missing qualifications,
-        // shadowed type names, or missing imports. The shapes here mirror the
-        // three return-type buckets Copilot called out: a primitive (Decimal),
-        // a record, and Unit (the DamlUnit path).
         var module = new DamlModule
         {
             Name = "Test.Module",

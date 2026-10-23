@@ -8,6 +8,8 @@ using Canton.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
+using Canton.Ledger.Testing.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 using RuntimeCommands = Daml.Runtime.Commands;
@@ -659,5 +661,46 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
         options.StreamWindowIdleTimeout.Should().Be(TimeSpan.FromMilliseconds(250));
         options.Validate(new System.ComponentModel.DataAnnotations.ValidationContext(options))
             .Should().BeEmpty();
+    }
+
+    private async Task<Exception?> ExceptionLoggedByAnUndecodableCompletion(bool emitPartyAndContractSpanTags)
+    {
+        var transport = RespondingWith(
+            """
+            [
+              {"completionResponse": {"Completion": {"value": {"commandId": "cmd-1", "updateId": "update-1", "offset": "42", "actAs": ["party::alice"], "status": {"code": 0}, "deduplicationPeriod": {"DeduplicationDuration": "not-a-duration"}}}}}
+            ]
+            """);
+        using var logs = new CapturingLoggerFactory();
+        var client = new RestLedgerClient(
+            TrackedFactory(transport),
+            Options.Create(new RestLedgerClientOptions
+            {
+                HttpAddress = "http://localhost:7575",
+                EmitPartyAndContractSpanTags = emitPartyAndContractSpanTags,
+            }),
+            logs.CreateLogger<RestLedgerClient>());
+
+        await DrainAsync(client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.Begin, TestContext.Current.CancellationToken));
+
+        return logs.Records
+            .Single(record => record.Message.StartsWith("Completion stream response body could not be decoded", StringComparison.Ordinal))
+            .Exception;
+    }
+
+    [Fact]
+    public async Task CompletionStreamAsync_logs_only_the_exception_type_of_an_undecodable_completion_by_default()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableCompletion(emitPartyAndContractSpanTags: false);
+
+        exception!.Message.Should().Be("System.FormatException");
+    }
+
+    [Fact]
+    public async Task CompletionStreamAsync_logs_the_exception_of_an_undecodable_completion_when_party_and_contract_tags_are_opted_in()
+    {
+        var exception = await ExceptionLoggedByAnUndecodableCompletion(emitPartyAndContractSpanTags: true);
+
+        exception.Should().BeOfType<FormatException>();
     }
 }

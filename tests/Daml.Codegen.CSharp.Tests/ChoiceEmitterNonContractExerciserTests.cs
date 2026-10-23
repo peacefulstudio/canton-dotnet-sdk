@@ -65,7 +65,7 @@ public class ChoiceEmitterNonContractExerciserTests
         var resolver = resolution.Resolver;
         var emitter = new ChoiceEmitter(context, resolver, new CodeGenOptions { NamespacePrefix = "Test.Package" }, new DamlTypeMapper(context, resolver), new PartyAnalysis());
         var sb = new StringBuilder();
-        var indent = new IndentWriter(sb) { CurrentTypeName = template.Name };
+        var indent = new IndentWriter(sb);
         emitter.TryWriteNonContractChoiceExtensions(indent, template);
         return sb.ToString();
     }

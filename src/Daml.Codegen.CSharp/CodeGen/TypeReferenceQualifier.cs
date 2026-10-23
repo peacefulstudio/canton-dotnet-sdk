@@ -23,6 +23,7 @@ internal static class TypeReferenceQualifier
             [RuntimeTypeNames.DamlField] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlFieldAttribute] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlFieldCollections] = RuntimeNamespaces.Data,
+            [RuntimeTypeNames.DamlEqualityComparer] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.DamlValue] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.IDamlValue] = RuntimeNamespaces.Data,
             [RuntimeTypeNames.IDamlRecord] = RuntimeNamespaces.Data,

@@ -17,8 +17,7 @@ namespace Canton.Ledger.Rest.Client;
 /// <c>Text</c>, and <c>{"fields":"hello"}</c> is a record with a field named <c>fields</c>.
 /// </summary>
 /// <remarks>
-/// Not retired by digital-asset/canton#527; the Daml-LF JSON encoding is type-directed and cannot be
-/// expressed in any OpenAPI schema.
+/// The Daml-LF JSON encoding is type-directed and cannot be expressed in any OpenAPI schema.
 /// </remarks>
 internal sealed class WireRecordJsonConverter : JsonConverter<Record>
 {

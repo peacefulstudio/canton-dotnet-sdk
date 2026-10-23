@@ -18,6 +18,14 @@ public sealed partial record TicketDesk
         [property: global::Daml.Runtime.Data.DamlFieldAttribute("withSecond")] bool WithSecond
     ) : global::Daml.Runtime.Data.IDamlRecord<Pair>
     {
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new global::System.HashCode();
+            hash.Add(WithSecond, global::Daml.Runtime.Data.DamlEqualityComparer<bool>.Default);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Converts this value to a DamlRecord.</summary>
         public global::Daml.Runtime.Data.DamlRecord ToRecord() => global::Daml.Runtime.Data.DamlRecord.Create(
             global::Daml.Runtime.Data.DamlField.Create("withSecond", new global::Daml.Runtime.Data.DamlBool(WithSecond))
@@ -25,7 +33,7 @@ public sealed partial record TicketDesk
 
         /// <summary>Creates an instance from a DamlRecord.</summary>
         public static Pair FromRecord(global::Daml.Runtime.Data.DamlRecord record) => new Pair(
-            WithSecond: record.GetRequiredField("withSecond").As<global::Daml.Runtime.Data.DamlBool>().Value
+            WithSecond: record.GetRequiredField("withSecond", 0).As<global::Daml.Runtime.Data.DamlBool>().Value
         );
 
         /// <summary>Decodes a Daml-LF JSON record directly into a DamlRecord, without going through reflection.</summary>
@@ -37,6 +45,5 @@ public sealed partial record TicketDesk
                 global::Daml.Runtime.Data.DamlField.Create("withSecond", global::Daml.Runtime.Serialization.DamlLfJsonDecoders.ReadBool(global::Daml.Runtime.Serialization.DamlLfJsonDecoders.RequireField(json, context, "withSecond"), context.Field("withSecond")))
             );
         }
-
     }
 }

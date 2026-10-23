@@ -49,6 +49,7 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Microsoft.Extensions.DependencyInjection;
+using IouContract = Iou.Iou;
 
 var services = new ServiceCollection();
 services.AddLedgerClient(options => options.GrpcAddress = "https://localhost:5001");
@@ -62,19 +63,19 @@ var party = await adminClient.AllocatePartyAsync("alice");
 var submitter = party.Party;
 
 var outcome = await ledgerClient.TryCreateAsync(
-    new MyTemplate("field1", "field2"),
+    new IouContract(Issuer: submitter, Owner: submitter, Currency: "USD", Amount: 100m),
     submitter);
 
 var contractId = outcome switch
 {
-    ExerciseOutcome<ContractId<MyTemplate>>.One ok => ok.Result,
-    ExerciseOutcome<ContractId<MyTemplate>>.DamlError err => throw new InvalidOperationException(err.ErrorId),
+    ExerciseOutcome<ContractId<IouContract>>.One ok => ok.Result,
+    ExerciseOutcome<ContractId<IouContract>>.DamlError err => throw new InvalidOperationException(err.ErrorId),
     _ => throw new InvalidOperationException(outcome.GetType().Name),
 };
 ```
 
 `TryCreateAsync(payload, submitter)` is the client's own method and works for any template;
-the generated `TryCreateAsync(payload)` overload from the [Quick Start](../../README.md#quick-start) derives
+the generated `TryCreateAsync(payload)` overload from the [generated code example](codegen.md#generated-code-example) derives
 the submitter for you. A host that reads its settings from configuration can register both
 clients and their authentication in one call with `services.AddCantonLedger(configuration)`,
 which reads the `Canton:Ledger` and `Canton:Auth` sections; with no `ITokenProvider` registered
@@ -96,6 +97,9 @@ A write that the opt-in `Retry` pipeline re-sent after a transient failure is `U
 When a write fails with `CommitState.Unknown`, do not resubmit it. `LedgerOperationException.CommandId` names the command id of the failed write, including an id the SDK minted for you, and every `ExerciseOutcome<T>` a `Try*` call returns carries the id in `CommandId`. Look that id up on the completion stream (`CompletionStreamAsync`) to learn whether the command committed: a resubmitted consuming exercise that already committed is rejected with `CONTRACT_NOT_FOUND`, not deduplicated.
 
 ```csharp
+using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
+
 try
 {
     await ledgerClient.ExerciseAsync(command, owner);
@@ -126,6 +130,7 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Pqs.Client;
 using Daml.Runtime.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using IouContract = Iou.Iou;
 
 var services = new ServiceCollection();
 services.AddPqsClient(options =>
@@ -135,21 +140,21 @@ await using var provider = services.BuildServiceProvider();
 var pqsClient = provider.GetRequiredService<IPqsClient>();
 
 // Query all active contracts of a template type
-var agreements = await pqsClient.QueryAsync<Agreement>();
+var ious = await pqsClient.QueryAsync<IouContract>();
 
 // Query with type-safe filters — field names resolve from codegen [DamlField] metadata
 var partyId = "party::alice";
-var filtered = await pqsClient.QueryAsync<Agreement>(
+var filtered = await pqsClient.QueryAsync<IouContract>(
     Filter.Or(
-        Filter.Field<Agreement>(a => a.Initiator, partyId),
-        Filter.Field<Agreement>(a => a.Counterparty, partyId)));
+        Filter.Field<IouContract>(i => i.Issuer, partyId),
+        Filter.Field<IouContract>(i => i.Owner, partyId)));
 
 // Fetch a single contract by ID
-var contractId = new ContractId<Agreement>("...");
-var contract = await pqsClient.FetchByIdAsync<Agreement>(contractId);
+var contractId = new ContractId<IouContract>("...");
+var contract = await pqsClient.FetchByIdAsync<IouContract>(contractId);
 
 // Check if a contract exists
-var exists = await pqsClient.ExistsAsync<Agreement>(contractId);
+var exists = await pqsClient.ExistsAsync<IouContract>(contractId);
 ```
 
 `Filter.Where<T>(predicate)` accepts a richer C# predicate — comparisons, nested records,
@@ -170,6 +175,7 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Microsoft.Extensions.DependencyInjection;
+using IouContract = Iou.Iou;
 
 var services = new ServiceCollection();
 services.AddLedgerClient(options => options.GrpcAddress = "https://localhost:5001");
@@ -183,11 +189,11 @@ var pqsClient = provider.GetRequiredService<IPqsClient>();
 var owner = new Party("Alice::1234...");
 
 // Create a contract from a generated template type
-var asset = new Asset(owner, "My Asset", 100m);
-var createOutcome = await ledgerClient.TryCreateAsync(asset, owner);
+var iou = new IouContract(Issuer: owner, Owner: owner, Currency: "USD", Amount: 100m);
+var createOutcome = await ledgerClient.TryCreateAsync(iou, owner);
 var contractId = createOutcome switch
 {
-    ExerciseOutcome<ContractId<Asset>>.One ok => ok.Result,
+    ExerciseOutcome<ContractId<IouContract>>.One ok => ok.Result,
     _ => throw new InvalidOperationException(createOutcome.GetType().Name),
 };
 
@@ -196,13 +202,13 @@ var contractId = createOutcome switch
 var command = ExerciseCommand.For(
     contractId,
     new ChoiceName("Transfer"),
-    new Asset.Transfer(NewOwner: new Party("Bob::5678...")).ToRecord());
+    new IouContract.Transfer(NewOwner: new Party("Bob::5678...")).ToRecord());
 
-var exerciseOutcome = await ledgerClient.TryExerciseAsync<ContractId<Asset>>(command, owner);
+var exerciseOutcome = await ledgerClient.TryExerciseAsync<ContractId<IouContract>>(command, owner);
 
 // Query the same contracts via PQS
-var assets = await pqsClient.QueryAsync<Asset>(
-    Filter.Field<Asset>(a => a.Owner, owner.Value));
+var owned = await pqsClient.QueryAsync<IouContract>(
+    Filter.Field<IouContract>(i => i.Owner, owner.Value));
 ```
 
 ## Authentication

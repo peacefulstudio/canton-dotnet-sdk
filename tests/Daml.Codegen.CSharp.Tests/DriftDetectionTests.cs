@@ -24,6 +24,11 @@ namespace Daml.Codegen.CSharp.Tests;
 /// codegen output legitimately changes, refresh the snapshot by following the
 /// procedure in <c>Snapshots/&lt;name&gt;/README.md</c>.
 ///
+/// The <c>richtypes</c>, <c>contractkeys</c> and <c>defaulttarget</c> snapshots own no
+/// <c>expected/</c> files: the test project links the matching module folders of
+/// <c>src/Daml.Codegen.Testing.Conformance/Generated</c> in, and the comparison drops the
+/// <c>Daml.Codegen.Testing.Conformance.</c> root namespace that tree is emitted under.
+///
 /// A snapshot for a package that emits no C# types (a Daml helper library of
 /// functions and re-exports, for example) is pinned by placing an
 /// <c>emits-no-types</c> marker file in its snapshot directory. Such a snapshot
@@ -211,7 +216,8 @@ public class DriftDetectionTests
         foreach (var (actual, expected) in actualFiles.Zip(expectedFiles))
         {
             var actualBytes = System.Text.Encoding.UTF8.GetBytes(actual.Content);
-            var expectedBytes = await File.ReadAllBytesAsync(expected.AbsolutePath, TestContext.Current.CancellationToken);
+            var expectedBytes = WithoutConformanceRootNamespace(
+                await File.ReadAllBytesAsync(expected.AbsolutePath, TestContext.Current.CancellationToken));
 
             if (!actualBytes.SequenceEqual(expectedBytes))
             {
@@ -223,6 +229,10 @@ public class DriftDetectionTests
             }
         }
     }
+
+    private static byte[] WithoutConformanceRootNamespace(byte[] sourceBytes) =>
+        System.Text.Encoding.UTF8.GetBytes(
+            System.Text.Encoding.UTF8.GetString(sourceBytes).Replace("Daml.Codegen.Testing.Conformance.", "", StringComparison.Ordinal));
 
     private static IReadOnlyList<GeneratedFile> MainAndNonStdlibDependencySources(
         CSharpCodeGenerator generator,

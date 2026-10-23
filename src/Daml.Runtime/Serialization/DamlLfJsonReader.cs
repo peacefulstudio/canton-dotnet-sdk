@@ -110,11 +110,6 @@ public static class DamlLfJsonReader
         }
     }
 
-    /// <summary>
-    /// Validates <paramref name="limits"/>, applies the shared hardened input-size guard to
-    /// <paramref name="json"/>, and parses it into <paramref name="document"/>, returning the root
-    /// decode context for <typeparamref name="T"/>.
-    /// </summary>
     private static DamlLfJsonDecodeContext ParseRoot<T>(
         string json, DamlJsonDeserializationLimits? limits, out JsonDocument document)
     {
