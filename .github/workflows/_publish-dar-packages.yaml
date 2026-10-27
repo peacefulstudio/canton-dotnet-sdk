@@ -162,18 +162,8 @@ jobs:
       - name: Seed the local feed with this release's core packages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
-        run: |
-          set -euo pipefail
-          FEED="$RUNNER_TEMP/local-feed"
-          TAG="${RELEASE_TAG_INPUT}"
-          mkdir -p "$FEED"
-          if gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.nupkg' --dir "$FEED" --clobber; then
-            echo "Seeded the local feed from $TAG:"
-            ls -1 "$FEED"
-          else
-            echo "::warning::could not seed the local feed from $TAG; restores fall back to nuget.org, which does not serve a just-pushed version until it finishes indexing"
-          fi
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: .github/scripts/seed-local-feed.sh
 
       - name: Generate, build, pack (multi-pass) via dpm codegen-cs
         env:

@@ -58,6 +58,8 @@ jobs:
         run: .github/scripts/resolve-sdk-components.test.sh
       - name: Self-test the dpm-codegen-cs digest pin
         run: .github/scripts/resolve-codegen-cs-digest.test.sh
+      - name: Self-test the local feed seeding and core package assertion
+        run: .github/scripts/seed-local-feed.test.sh
 
   intermediate-oracle:
     runs-on: ubuntu-latest
