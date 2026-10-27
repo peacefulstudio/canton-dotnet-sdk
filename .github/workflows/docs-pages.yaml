@@ -22,10 +22,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.script.outputs.present }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - id: script
+        run: |
+          set -euo pipefail
+          if [ -f scripts/build-docs-site.sh ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: detect
+    if: needs.detect.outputs.present == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
         with:
           global-json-file: global.json
