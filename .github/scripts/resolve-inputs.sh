@@ -45,13 +45,17 @@ EFFECTIVE_PACKAGE_LICENSE="${PACKAGE_LICENSE_INPUT:-Apache-2.0}"
 EFFECTIVE_DRY_RUN="${DRY_RUN_INPUT:-}"
 
 NUMERIC_COMPONENT='(0|[1-9][0-9]*)'
-DOTTED_LABEL='[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-NORMALIZED_VERSION="^$NUMERIC_COMPONENT\.$NUMERIC_COMPONENT\.$NUMERIC_COMPONENT(-$DOTTED_LABEL)?(\+$DOTTED_LABEL)?$"
+LOWERCASE_PRERELEASE='[0-9a-z-]+(\.[0-9a-z-]+)*'
+BUILD_METADATA='[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
+NORMALIZED_VERSION="^$NUMERIC_COMPONENT\.$NUMERIC_COMPONENT\.$NUMERIC_COMPONENT(-$LOWERCASE_PRERELEASE)?(\+$BUILD_METADATA)?$"
 
 normalized_candidate() {
-  local version="$1" core suffix part candidate
+  local version="$1" core prerelease metadata part candidate
   core="${version%%[-+]*}"
-  suffix="${version#"$core"}"
+  prerelease="${version#"$core"}"
+  prerelease="${prerelease%%+*}"
+  metadata="${version#"$core$prerelease"}"
+  prerelease="$(printf '%s' "$prerelease" | tr '[:upper:]' '[:lower:]')"
   [[ "$core" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || return 1
   local -a parts normalized_parts=()
   IFS=. read -r -a parts <<< "$core"
@@ -64,7 +68,7 @@ normalized_candidate() {
   if [ "${#normalized_parts[@]}" -eq 4 ] && [ "${normalized_parts[3]}" -eq 0 ]; then
     normalized_parts=("${normalized_parts[@]:0:3}")
   fi
-  candidate="$(IFS=.; echo "${normalized_parts[*]}")$suffix"
+  candidate="$(IFS=.; echo "${normalized_parts[*]}")$prerelease$metadata"
   [[ "$candidate" =~ $NORMALIZED_VERSION ]] || return 1
   echo "$candidate"
 }
@@ -73,7 +77,7 @@ if ! [[ "$EFFECTIVE_RUNTIME" =~ $NORMALIZED_VERSION ]]; then
   if candidate="$(normalized_candidate "$EFFECTIVE_RUNTIME")"; then
     echo "::error::runtime_version='$EFFECTIVE_RUNTIME' is not a NuGet-normalized version; use '$candidate'"
   else
-    echo "::error::runtime_version='$EFFECTIVE_RUNTIME' is not a NuGet-normalized version; expected MAJOR.MINOR.PATCH[-prerelease][+metadata] without leading zeroes"
+    echo "::error::runtime_version='$EFFECTIVE_RUNTIME' is not a NuGet-normalized version; expected MAJOR.MINOR.PATCH[-prerelease][+metadata] without leading zeroes or an uppercase prerelease"
   fi
   exit 1
 fi

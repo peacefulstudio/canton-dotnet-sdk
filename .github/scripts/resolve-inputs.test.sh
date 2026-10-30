@@ -53,6 +53,9 @@ expect_runtime "a leading zero is rejected with its normalized form" 0.07.1 1 "r
 expect_runtime "a leading zero keeps the prerelease and metadata in the normalized form" 01.7.1-preview.4+abc 1 "use '1.7.1-preview.4+abc'"
 expect_runtime "a two-part version is rejected with its normalized form" 0.7 1 "runtime_version='0.7' is not a NuGet-normalized version; use '0.7.0'"
 expect_runtime "a non-zero fourth component is rejected with the expected shape" 0.7.1.5 1 "runtime_version='0.7.1.5' is not a NuGet-normalized version; expected MAJOR.MINOR.PATCH[-prerelease][+metadata] without leading zeroes"
+expect_runtime "an uppercase prerelease label is rejected with its lowercase form" 0.8.0-Preview.4 1 "::error::runtime_version='0.8.0-Preview.4' is not a NuGet-normalized version; use '0.8.0-preview.4'"
+expect_runtime "an uppercase prerelease label keeps the build metadata as given" 0.8.0-RC.1+AbC 1 "use '0.8.0-rc.1+AbC'"
+expect_runtime "uppercase build metadata alone is accepted" 0.8.0-preview.4+AbC 0 "runtime=0.8.0-preview.4+AbC"
 expect_runtime "a non-version string is rejected" "latest" 1 "runtime_version='latest' is not a NuGet-normalized version"
 expect_runtime "a rejected runtime version writes nothing to GITHUB_ENV" 0.7.1.0 1 ""
 if [ -s "${work}/github-env" ]; then
