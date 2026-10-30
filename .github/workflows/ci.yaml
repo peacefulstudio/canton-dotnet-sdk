@@ -60,6 +60,8 @@ jobs:
         run: .github/scripts/resolve-codegen-cs-digest.test.sh
       - name: Self-test the local feed seeding and core package assertion
         run: .github/scripts/seed-local-feed.test.sh
+      - name: Self-test the publish input resolution and runtime version normalization check
+        run: .github/scripts/resolve-inputs.test.sh
 
   intermediate-oracle:
     runs-on: ubuntu-latest
