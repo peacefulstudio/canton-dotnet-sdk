@@ -53,7 +53,8 @@ else
   echo "Could not seed the local feed from $RELEASE_TAG; core packages must already be indexed on nuget.org."
 fi
 
-indexed_version="$(printf '%s' "${RUNTIME_VERSION%%+*}" | tr '[:upper:]' '[:lower:]')"
+metadata_free_version="${RUNTIME_VERSION%%+*}"
+indexed_version="$(printf '%s' "$metadata_free_version" | tr '[:upper:]' '[:lower:]')"
 
 is_indexed_on_nuget_org() {
   local id_lowercase
@@ -64,7 +65,7 @@ is_indexed_on_nuget_org() {
 
 unavailable=()
 for id in "${CORE_PACKAGE_IDS[@]}"; do
-  if [ -f "$FEED/$id.$RUNTIME_VERSION.nupkg" ]; then
+  if [ -f "$FEED/$id.$metadata_free_version.nupkg" ]; then
     echo "$id $RUNTIME_VERSION: in the local feed"
   elif is_indexed_on_nuget_org "$id" 2> /dev/null; then
     echo "$id $RUNTIME_VERSION: already indexed on nuget.org"

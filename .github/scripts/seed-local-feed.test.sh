@@ -136,6 +136,11 @@ run_seed fail "" "0.8.0-Preview.4+abc123"
 expect "a mixed-case prerelease with build metadata matches its normalised index entry" 0
 
 reset_indexes
+run_seed ok "Daml.Runtime.0.8.0-preview.4.nupkg Daml.Ledger.Abstractions.0.8.0-preview.4.nupkg" "0.8.0-preview.4+abc123"
+expect "a runtime version with build metadata matches the metadata-free local nupkg names" 0 "in the local feed"
+expect_no_log "nuget.org is not consulted when the metadata-free local nupkgs are present" "curl"
+
+reset_indexes
 run_seed ok "${both_assets}" ""
 expect "an empty runtime version fails closed" 1 "RUNTIME_VERSION"
 
