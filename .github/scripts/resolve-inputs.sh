@@ -44,8 +44,42 @@ EFFECTIVE_DAML_SDK="${DAML_SDK_VERSION_INPUT:-}"
 EFFECTIVE_PACKAGE_LICENSE="${PACKAGE_LICENSE_INPUT:-Apache-2.0}"
 EFFECTIVE_DRY_RUN="${DRY_RUN_INPUT:-}"
 
-if ! [[ "$EFFECTIVE_RUNTIME" =~ ^[A-Za-z0-9.+-]+$ ]]; then
-  echo "::error::runtime_version='$EFFECTIVE_RUNTIME' must be a NuGet version string"; exit 1
+NUMERIC_COMPONENT='(0|[1-9][0-9]*)'
+LOWERCASE_PRERELEASE='[0-9a-z-]+(\.[0-9a-z-]+)*'
+BUILD_METADATA='[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
+NORMALIZED_VERSION="^$NUMERIC_COMPONENT\.$NUMERIC_COMPONENT\.$NUMERIC_COMPONENT(-$LOWERCASE_PRERELEASE)?(\+$BUILD_METADATA)?$"
+
+normalized_candidate() {
+  local version="$1" core prerelease metadata part candidate
+  core="${version%%[-+]*}"
+  prerelease="${version#"$core"}"
+  prerelease="${prerelease%%+*}"
+  metadata="${version#"$core$prerelease"}"
+  prerelease="$(printf '%s' "$prerelease" | tr '[:upper:]' '[:lower:]')"
+  [[ "$core" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || return 1
+  local -a parts normalized_parts=()
+  IFS=. read -r -a parts <<< "$core"
+  for part in "${parts[@]}"; do
+    normalized_parts+=("$((10#$part))")
+  done
+  while [ "${#normalized_parts[@]}" -lt 3 ]; do
+    normalized_parts+=(0)
+  done
+  if [ "${#normalized_parts[@]}" -eq 4 ] && [ "${normalized_parts[3]}" -eq 0 ]; then
+    normalized_parts=("${normalized_parts[@]:0:3}")
+  fi
+  candidate="$(IFS=.; echo "${normalized_parts[*]}")$prerelease$metadata"
+  [[ "$candidate" =~ $NORMALIZED_VERSION ]] || return 1
+  echo "$candidate"
+}
+
+if ! [[ "$EFFECTIVE_RUNTIME" =~ $NORMALIZED_VERSION ]]; then
+  if candidate="$(normalized_candidate "$EFFECTIVE_RUNTIME")"; then
+    echo "::error::runtime_version='$EFFECTIVE_RUNTIME' is not a NuGet-normalized version; use '$candidate'"
+  else
+    echo "::error::runtime_version='$EFFECTIVE_RUNTIME' is not a NuGet-normalized version; expected MAJOR.MINOR.PATCH[-prerelease][+metadata] without leading zeroes or an uppercase prerelease"
+  fi
+  exit 1
 fi
 if ! [[ "$EFFECTIVE_CODEGEN_CS" =~ ^[A-Za-z0-9.+-]+$ ]]; then
   echo "::error::codegen_cs_version='$EFFECTIVE_CODEGEN_CS' must be a valid version string"; exit 1
