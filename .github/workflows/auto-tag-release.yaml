@@ -87,6 +87,8 @@ jobs:
 
           .github/scripts/changelog-section.sh "${version}" > /dev/null \
             || { echo "::error::CHANGELOG.md has no non-empty section for ${version}; refusing to tag"; exit 1; }
+          [ -s "release-notes/v${version}.md" ] \
+            || { echo "::error::release-notes/v${version}.md is missing or empty; refusing to tag"; exit 1; }
 
           if [ "${tag_exists}" = "true" ]; then
             echo "${tag} exists without a published or running release; dispatching it again"
