@@ -71,6 +71,8 @@ jobs:
             echo "::error::tag v${VERSION} does not match <Version> ${PROPS_VERSION} in Directory.Build.props at the tagged commit"; exit 1
           fi
           .github/scripts/changelog-section.sh "${VERSION}" > /dev/null
+          [ -s "release-notes/v${VERSION}.md" ] \
+            || { echo "::error::release-notes/v${VERSION}.md is missing or empty; refusing to release"; exit 1; }
           version_of() { awk -F': *' -v key="$1" '$1 == key { gsub(/["'"'"' ]/, "", $2); print $2 }' versions.yaml; }
           SPLICE="$(version_of splice)"
           FINANCE="$(version_of daml-finance)"
