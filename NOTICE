@@ -50,21 +50,21 @@ Version 2.0.
 The Canton.Ledger.Kernel package vendors the Canton topology, crypto and
 versioned-message protobuf definitions
 (src/Canton.Ledger.Kernel/Topology/Proto/com/digitalasset/canton/) from the
-Canton project at tag v3.6.1 (https://github.com/digital-asset/canton),
+Canton project (https://github.com/digital-asset/canton),
 Copyright Digital Asset (Switzerland) GmbH and/or its affiliates, licensed
 under the Apache License, Version 2.0, together with scalapb/scalapb.proto
-from ScalaPB v0.11.14 (https://github.com/scalapb/ScalaPB), licensed under
+from ScalaPB (https://github.com/scalapb/ScalaPB), licensed under
 the Apache License, Version 2.0. The vendored files are unmodified.
 
 The Canton.Ledger.Grpc package compiles, and the Canton.Ledger.Rest package
 derives its client from, the Canton Ledger API protobuf definitions
 (com/daml/ledger/api/v2/) published as the com.daml:ledger-api-proto and
-com.daml:ledger-api-value-proto artifacts at version 3.6.1 from the Canton
+com.daml:ledger-api-value-proto artifacts from the Canton
 project (https://github.com/digital-asset/canton), Copyright Digital Asset
 (Switzerland) GmbH and/or its affiliates, licensed under the Apache License,
 Version 2.0. Canton.Ledger.Grpc also compiles the Google common protobuf
 definitions (google/api, google/rpc, google/type, google/longrunning) from the
-com.google.api.grpc:proto-google-common-protos artifact at version 2.78.0,
+com.google.api.grpc:proto-google-common-protos artifact,
 Copyright Google LLC, licensed under the Apache License, Version 2.0. These protos
 are downloaded at build time and are not vendored. src/Canton.Ledger.Rest/spec/openapi.yaml is
 generated from the Ledger API protos, its descriptions taken verbatim from them,
