@@ -22,8 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {order: 1, cell: 'Canton 3.6.3 (SDK baseline)', localnet-ref: v0.9.3-1, image-tag: '', expected-canton: 3.6.3, gating: true}
-          - {order: 9, cell: 'LocalNet unreleased (dev)', localnet-ref: dev, image-tag: '', expected-canton: '', gating: false}
+          - {order: 1, cell: 'Canton 3.7.1 (SDK baseline)', localnet-ref: v0.10.0-1, image-tag: '', protocol-version: '', expected-canton: 3.7.1, gating: true}
+          - {order: 2, cell: 'Canton 3.7.1 @ PV36', localnet-ref: v0.10.0-1, image-tag: '', protocol-version: '36', expected-canton: 3.7.1, gating: true}
+          - {order: 9, cell: 'LocalNet unreleased (dev)', localnet-ref: dev, image-tag: '', protocol-version: '', expected-canton: '', gating: false}
     env:
       LOCALNET_DIR: ${{ github.workspace }}/canton-localnet
       LOCALNET_GRPC_URL: http://localhost:11901
@@ -95,6 +96,12 @@ jobs:
             echo "SPLICE_VERSION=${CELL_IMAGE_TAG}"
             echo "IMAGE_TAG=${CELL_IMAGE_TAG}"
           } >> "${GITHUB_ENV}"
+
+      - name: Select protocol version ${{ matrix.protocol-version }} over the LocalNet default
+        if: matrix.protocol-version != ''
+        env:
+          CELL_PROTOCOL_VERSION: ${{ matrix.protocol-version }}
+        run: echo "CANTON_PROTOCOL_VERSION=${CELL_PROTOCOL_VERSION}" >> "${GITHUB_ENV}"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
