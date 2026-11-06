@@ -45,11 +45,13 @@ internal sealed class ResponseReceipt
         }
     }
 
-    internal static void RecordCommandId(string commandId)
+    internal static void RecordCommandId(string commandId) => RecordCommandId(new CommandId(commandId));
+
+    internal static void RecordCommandId(CommandId? commandId)
     {
-        if (Current.Value is { } receipt)
+        if (commandId is { } id && Current.Value is { } receipt)
         {
-            receipt._commandId = new CommandId(commandId);
+            receipt._commandId = id;
         }
     }
 

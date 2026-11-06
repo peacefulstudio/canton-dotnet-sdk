@@ -16,19 +16,44 @@ namespace Canton.Ledger.Kernel.Telemetry;
 /// has, so no single span carries all of them. The party and contract identifiers —
 /// <see cref="CantonSubmitterActAs"/>, <see cref="CantonSubmitterReadAs"/>, <see cref="CantonPartyId"/>,
 /// <see cref="CantonPartyIdHint"/> and <see cref="DamlContractId"/> — are off by default and emitted
-/// only when a host opts in. Attribute names are part of the telemetry shape and
+/// only when a host opts in, as are the <see cref="DamlErrorMetadataPrefix"/> attributes, whose values
+/// can name parties and contracts. Attribute names are part of the telemetry shape and
 /// remain revisable in any preview before 1.0.
 /// </remarks>
 public static class LedgerActivityTagNames
 {
-    /// <summary>The Daml choice being exercised on the contract this span submits against.</summary>
+    /// <summary>
+    /// The Daml choice being exercised by the span's submission. A submission of several commands carries
+    /// the distinct choice names, comma-separated in the order the commands first name them; a create
+    /// carries none.
+    /// </summary>
     public const string DamlChoice = "daml.choice";
 
-    /// <summary>The contract id the span's exercise command targets. Emitted only when <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c> opts in.</summary>
+    /// <summary>The contract id the span's exercise command targets, comma-separated across a submission of several. Emitted only when <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c> or <c>RestLedgerClientOptions.EmitPartyAndContractSpanTags</c> opts in.</summary>
     public const string DamlContractId = "daml.contract_id";
 
-    /// <summary>The Daml template or interface the span's operation is scoped to.</summary>
+    /// <summary>
+    /// The Daml identifier of the template — or, for an interface exercise, the interface — the span's
+    /// operation is scoped to. The ledger clients put <c>packageId:Module:Entity</c> here, taken from the
+    /// command or the generated type's own identifier, and a submission of several commands carries the
+    /// distinct identifiers, comma-separated in the order the commands first name them. The PQS client puts
+    /// <c>packageName:Module:Entity</c> here, the form PQS's <c>active()</c> function takes.
+    /// </summary>
     public const string DamlTemplateId = "daml.template_id";
+
+    /// <summary>The Daml error id (for example <c>CONTRACT_NOT_FOUND</c>) the participant rejected the span's command with.</summary>
+    public const string DamlErrorId = "daml.error_id";
+
+    /// <summary>The name of the <c>DamlErrorCategory</c> the participant rejected the span's command with.</summary>
+    public const string DamlErrorCategory = "daml.error_category";
+
+    /// <summary>
+    /// The prefix of the attributes that carry a rejection's error metadata: one
+    /// <c>daml.error_metadata.&lt;key&gt;</c> attribute per metadata entry. A prefix, not a name on its own,
+    /// so it is absent from <see cref="All"/>. Emitted only when <c>LedgerClientOptions.EmitPartyAndContractSpanTags</c>
+    /// or <c>RestLedgerClientOptions.EmitPartyAndContractSpanTags</c> opts in.
+    /// </summary>
+    public const string DamlErrorMetadataPrefix = "daml.error_metadata.";
 
     /// <summary>The Daml package whose archive the span's operation fetched.</summary>
     public const string DamlPackageId = "daml.package_id";
@@ -87,6 +112,8 @@ public static class LedgerActivityTagNames
         DamlChoice,
         DamlContractId,
         DamlTemplateId,
+        DamlErrorId,
+        DamlErrorCategory,
         DamlPackageId,
         CantonOffset,
         CantonFromOffset,

@@ -106,4 +106,9 @@ public sealed class DamlModule
     /// Gets the interfaces defined in this module.
     /// </summary>
     public required IReadOnlyList<DamlInterface> Interfaces { get; init; }
+
+    /// <summary>
+    /// Gets the top-level values of this module whose whole body is a single literal.
+    /// </summary>
+    public IReadOnlyList<DamlConstant> Constants { get; init; } = [];
 }

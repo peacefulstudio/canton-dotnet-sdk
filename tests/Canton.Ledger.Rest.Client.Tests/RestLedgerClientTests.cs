@@ -884,7 +884,7 @@ public sealed class RestLedgerClientTests : IDisposable
 
         var result = await client.TryExerciseAsync<Party>(
                 command, Alice, cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync("GetOwner");
+            .OneOrThrowAsync();
 
         result.Value.Should().Be("party::alice");
     }

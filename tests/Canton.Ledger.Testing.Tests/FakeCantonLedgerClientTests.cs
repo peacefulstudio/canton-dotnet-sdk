@@ -71,7 +71,7 @@ public class FakeCantonLedgerClientTests
     public async Task CompletionStreamAsync_replays_staged_completion_events_in_order()
     {
         var accepted = new CompletionStreamEvent.CommandAccepted(CompletionFor("cmd-1", 7), "update-1");
-        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8));
+        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8), []);
         var rejected = new CompletionStreamEvent.CommandRejected(
             CompletionFor("cmd-2", 9),
             new CompletionStatus(3, "boom", "CONTRACT_NOT_FOUND", NoMetadata));
@@ -86,7 +86,7 @@ public class FakeCantonLedgerClientTests
     public async Task CompletionStreamAsync_reopening_from_an_observed_offset_omits_the_completions_already_observed()
     {
         var accepted = new CompletionStreamEvent.CommandAccepted(CompletionFor("cmd-1", 7), "update-1");
-        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8));
+        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8), []);
         var rejected = new CompletionStreamEvent.CommandRejected(
             CompletionFor("cmd-2", 9),
             new CompletionStatus(3, "boom", "CONTRACT_NOT_FOUND", NoMetadata));
@@ -114,7 +114,7 @@ public class FakeCantonLedgerClientTests
     public async Task CompletionStreamAsync_opened_past_the_last_staged_offset_yields_nothing()
     {
         var accepted = new CompletionStreamEvent.CommandAccepted(CompletionFor("cmd-1", 7), "update-1");
-        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8));
+        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8), []);
         var client = FakeLedgerClient.Create().WithCompletionEvents(accepted, checkpoint).Build();
 
         var events = await CollectAsync(

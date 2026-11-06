@@ -17,7 +17,7 @@ public sealed class ConformanceProbeInterfaceTests
     {
         var interfaceId = IConformanceProbe.InterfaceId;
 
-        interfaceId.PackageId.Should().Be("ledger-conformance-kit-pkg");
+        interfaceId.PackageId.Should().Be("40acda968038dce8336b3272860ef8687a1e925349b5d89a662ceac0a77e72d4");
         interfaceId.ModuleName.Should().Be("Conformance.Kit");
         interfaceId.EntityName.Should().Be("ConformanceProbe");
     }
@@ -25,8 +25,8 @@ public sealed class ConformanceProbeInterfaceTests
     [Fact]
     public void Interface_package_metadata_names_the_kit_package()
     {
-        InterfacePackageId<IConformanceProbe>().Should().Be("ledger-conformance-kit-pkg");
-        InterfacePackageName<IConformanceProbe>().Should().Be("ledger-conformance-kit");
+        InterfacePackageId<IConformanceProbe>().Should().Be("40acda968038dce8336b3272860ef8687a1e925349b5d89a662ceac0a77e72d4");
+        InterfacePackageName<IConformanceProbe>().Should().Be("conformancekit-hddd04e2d0e6f");
         InterfacePackageVersion<IConformanceProbe>().Should().Be(new Version(0, 1, 0));
     }
 
@@ -37,7 +37,7 @@ public sealed class ConformanceProbeInterfaceTests
 
         descriptor.Kind.Should().Be(DamlTypeKind.Interface);
         descriptor.Identifier.Should().Be(IConformanceProbe.InterfaceId);
-        descriptor.PackageName.Should().Be("ledger-conformance-kit");
+        descriptor.PackageName.Should().Be("conformancekit-hddd04e2d0e6f");
     }
 
     [Fact]

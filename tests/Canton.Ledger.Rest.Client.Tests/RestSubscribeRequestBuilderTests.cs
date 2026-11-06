@@ -102,6 +102,15 @@ public class RestSubscribeRequestBuilderTests
     }
 
     [Fact]
+    public void BuildGetActiveContractsPageRequest_asks_for_incomplete_reassignments()
+    {
+        var request = RestSubscribeRequestBuilder.BuildGetActiveContractsPageRequest<TemplateMarker>(
+            (SubmitterInfo)Alice, 42L, 75);
+
+        request.IncludeIncompleteReassignments.Should().Be(true);
+    }
+
+    [Fact]
     public void BuildGetActiveContractsPageRequest_sets_an_interface_filter_for_an_interface_marker()
     {
         var submitter = (SubmitterInfo)Alice;

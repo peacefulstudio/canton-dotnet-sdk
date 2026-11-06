@@ -8,7 +8,7 @@ set -euo pipefail
 # the artifact the JVM helper decodes with. The digital-asset/daml GitHub repo has no tag past
 # v3.4.11 and com.daml:daml-lf-archive-proto stops at 3.5.0 snapshots, so neither serves 3.6.x.
 # Usage: ./scripts/update-daml-protos.sh <daml-lf-archive-version>
-# Example: ./scripts/update-daml-protos.sh 3.6.1
+# Example: ./scripts/update-daml-protos.sh 3.6.4
 
 MAVEN_BASE="https://repo1.maven.org/maven2/com/daml/daml-lf-archive_2.13"
 PROTO_FILES=(daml_lf.proto daml_lf1.proto daml_lf2.proto)
@@ -20,7 +20,7 @@ TARGET_DIR="$PROJECT_ROOT/src/Daml.Codegen.DarParser/Proto/$PROTO_JAR_DIR"
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <daml-lf-archive-version>"
-  echo "Example: $0 3.6.1"
+  echo "Example: $0 3.6.4"
   exit 1
 fi
 

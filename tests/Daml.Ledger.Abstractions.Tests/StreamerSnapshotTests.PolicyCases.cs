@@ -5,7 +5,9 @@ using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
+using System.Runtime.CompilerServices;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Daml.Testing.SnapshotPolicy;
 using Xunit;
@@ -14,31 +16,46 @@ namespace Daml.Ledger.Abstractions.Tests;
 
 public sealed partial class StreamerSnapshotTests
 {
-    private static readonly IReadOnlyDictionary<string, Func<FakeStreamer, CancellationToken, Task<IReadOnlyList<string>>>> EntryPoints =
-        new Dictionary<string, Func<FakeStreamer, CancellationToken, Task<IReadOnlyList<string>>>>
+    private delegate Task<SnapshotRead> EntryPoint(
+        FakeStreamer streamer, TimeSpan? timeout, UnreadableRows policy, CancellationToken cancellationToken);
+
+    private static readonly IReadOnlyDictionary<string, EntryPoint> EntryPoints =
+        new Dictionary<string, EntryPoint>
         {
-            ["SnapshotAsync"] = async (streamer, cancellationToken) =>
-                (await streamer.SnapshotAsync<Probe>(Alice, cancellationToken: cancellationToken))
-                    .Select(contract => contract.Id.Value).ToList(),
-            ["SnapshotActiveAsync"] = async (streamer, cancellationToken) =>
-                (await streamer.SnapshotActiveAsync<Probe>(Alice, cancellationToken: cancellationToken))
-                    .Select(active => active.Contract.Id.Value).ToList(),
-            ["SnapshotAsync_keyed"] = async (streamer, cancellationToken) =>
-                (await streamer.SnapshotAsync(Probe.Key, Alice, cancellationToken: cancellationToken))
-                    .Select(contract => contract.Id.Value).ToList(),
-            ["SnapshotActiveAsync_keyed"] = async (streamer, cancellationToken) =>
-                (await streamer.SnapshotActiveAsync(Probe.Key, Alice, cancellationToken: cancellationToken))
-                    .Select(active => active.Contract.Id.Value).ToList(),
+            ["SnapshotAsync"] = async (streamer, timeout, policy, cancellationToken) =>
+            {
+                var snapshot = await streamer.SnapshotAsync<Probe>(
+                    Alice, timeout: timeout, unreadableRows: policy, cancellationToken: cancellationToken);
+                return new SnapshotRead(snapshot.Select(contract => contract.Id.Value).ToList(), snapshot.Unreadable);
+            },
+            ["SnapshotActiveAsync"] = async (streamer, timeout, policy, cancellationToken) =>
+            {
+                var snapshot = await streamer.SnapshotActiveAsync<Probe>(
+                    Alice, timeout: timeout, unreadableRows: policy, cancellationToken: cancellationToken);
+                return new SnapshotRead(snapshot.Select(active => active.Contract.Id.Value).ToList(), snapshot.Unreadable);
+            },
+            ["SnapshotAsync_keyed"] = async (streamer, timeout, policy, cancellationToken) =>
+            {
+                var snapshot = await streamer.SnapshotAsync(
+                    Probe.Key, Alice, timeout: timeout, unreadableRows: policy, cancellationToken: cancellationToken);
+                return new SnapshotRead(snapshot.Select(contract => contract.Id.Value).ToList(), snapshot.Unreadable);
+            },
+            ["SnapshotActiveAsync_keyed"] = async (streamer, timeout, policy, cancellationToken) =>
+            {
+                var snapshot = await streamer.SnapshotActiveAsync(
+                    Probe.Key, Alice, timeout: timeout, unreadableRows: policy, cancellationToken: cancellationToken);
+                return new SnapshotRead(snapshot.Select(active => active.Contract.Id.Value).ToList(), snapshot.Unreadable);
+            },
         };
 
-    public static TheoryData<string, string> PolicyCaseOnEntryPoint()
+    public static TheoryData<string, string, UnreadableRows> PolicyCaseOnEntryPoint()
     {
-        var data = new TheoryData<string, string>();
+        var data = new TheoryData<string, string, UnreadableRows>();
         foreach (var entryPoint in EntryPoints.Keys)
         {
-            foreach (var policyCase in SnapshotPolicyCases.Names)
+            foreach (var (policyCase, policy) in SnapshotPolicyCases.Combinations)
             {
-                data.Add(entryPoint, policyCase);
+                data.Add(entryPoint, policyCase, policy);
             }
         }
 
@@ -47,25 +64,69 @@ public sealed partial class StreamerSnapshotTests
 
     [Theory]
     [MemberData(nameof(PolicyCaseOnEntryPoint))]
-    public Task SnapshotPolicy_case_holds_on_entry_point(string entryPoint, string policyCase) =>
-        SnapshotPolicyCases.RunAsync(policyCase, new TemplateEntryPointDriver(EntryPoints[entryPoint]));
+    public Task SnapshotPolicy_case_holds_on_entry_point(string entryPoint, string policyCase, UnreadableRows policy) =>
+        SnapshotPolicyCases.RunAsync(policyCase, new TemplateEntryPointDriver(EntryPoints[entryPoint], policy));
 
-    private sealed class TemplateEntryPointDriver(
-        Func<FakeStreamer, CancellationToken, Task<IReadOnlyList<string>>> entryPoint) : ISnapshotPolicyDriver
+    private sealed class TemplateEntryPointDriver(EntryPoint entryPoint, UnreadableRows policy) : ISnapshotPolicyDriver
     {
+        private readonly TaskCompletionSource _stalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public UnreadableRows Policy { get; } = policy;
+
         public SnapshotPolicySubject Subject { get; } =
             new("Probe", "contract", "SubscribeActiveAsync");
 
-        public Task<IReadOnlyList<string>> DrainAsync(
+        public Task WhenStalled => _stalled.Task;
+
+        public Task<SnapshotRead> DrainAsync(
             IReadOnlyList<SnapshotStep> script,
             bool streamHonoursCancellation,
+            TimeSpan? timeout,
+            TimeProvider timeProvider,
             CancellationToken cancellationToken)
         {
-            var entries = script.Select(ToEntry).ToArray();
-            var streamer = streamHonoursCancellation
-                ? new FakeStreamer(entries)
-                : FakeStreamer.IgnoringCancellation(entries);
-            return entryPoint(streamer, cancellationToken);
+            var streamer = script.Any(step => step is SnapshotStep.Stall)
+                ? new FakeStreamer { TimeProvider = timeProvider, Source = token => Replay(script, token) }
+                : new FakeStreamer(script.Select(ToEntry).ToArray())
+                {
+                    TimeProvider = timeProvider,
+                    ObservesCancellation = streamHonoursCancellation,
+                };
+            return entryPoint(streamer, timeout, Policy, cancellationToken);
+        }
+
+        private async IAsyncEnumerable<AcsSnapshotEntry<Probe>> Replay(
+            IReadOnlyList<SnapshotStep> script,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            foreach (var step in script)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (step is SnapshotStep.Stall stall)
+                {
+                    _stalled.TrySetResult();
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ContinueWith(
+                        static _ => { },
+                        CancellationToken.None);
+
+                    if (stall.Ending == StallEnding.ThrowsCancellation)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
+                    if (stall.Ending == StallEnding.ReportsCancelledFaultInBand)
+                    {
+                        yield return new AcsSnapshotEntry<Probe>.StreamError(
+                            new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "CANCELLED");
+                    }
+
+                    yield break;
+                }
+
+                yield return ToEntry(step);
+                await Task.Yield();
+            }
         }
 
         private static AcsSnapshotEntry<Probe> ToEntry(SnapshotStep step) =>

@@ -18,16 +18,21 @@ internal sealed class TemplateSnapshotArmReader<T>
     private static readonly SnapshotSubject Subject =
         new(typeof(T).Name, "contract", "SubscribeActiveAsync");
 
-    public static Task<List<AcsSnapshotEntry<T>.Created>> DrainAsync(
+    public static Task<ActiveSnapshot<AcsSnapshotEntry<T>.Created>> DrainAsync(
         ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset,
         bool includeDisclosure,
+        TimeSpan? timeout,
+        UnreadableRows unreadableRows,
         CancellationToken cancellationToken) =>
         SnapshotDrain.DrainAsync(
-            streamer.SubscribeActiveAsync<T>(submitter, activeAtOffset, includeDisclosure, cancellationToken),
+            token => streamer.SubscribeActiveAsync<T>(submitter, activeAtOffset, includeDisclosure, token),
             Reader,
             Subject,
+            timeout,
+            unreadableRows,
+            streamer.TimeProvider,
             cancellationToken);
 
     public SnapshotArm<AcsSnapshotEntry<T>.Created> Read(AcsSnapshotEntry<T> entry) =>

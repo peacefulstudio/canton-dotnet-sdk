@@ -11,7 +11,8 @@ The clients target Canton Ledger API v2. `Canton.Ledger.Grpc` downloads the Cant
 
 | SDK Version | Canton Version |
 |-----------------|----------------|
-| 0.7.0 and later | 3.6.x |
+| 0.8.0 and later | 3.7.x |
+| 0.7.x | 3.6.x |
 | 0.6.x | 3.5.x |
 
 Before `0.6.0` the `Canton.Ledger.*` packages had their own version line:
@@ -23,19 +24,23 @@ Before `0.6.0` the `Canton.Ledger.*` packages had their own version line:
 | 0.2.x | 3.4.x |
 | 0.1.x | 3.4.x |
 
-The clients support Canton 3.6 only. Running them against a 3.5.x or older participant is untested and unsupported. If you're still on 3.5, use 0.6.x. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.6.1`. Any `3.6.x` patch works for both clients, because the vendored surface is stable within the minor.
+The clients support Canton 3.7 only. Running them against a participant older than 3.7 is untested and unsupported. If you're still on 3.6, use 0.7.x. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.7.1`. Any `3.7.x` patch works for both clients, because the vendored surface is stable within the minor. The clients are exercised on synchronizers at protocol version 36 and 37.
 
-A weekly cross-version matrix, described below, runs the live-ledger suites against every Canton 3.6 patch that's live on a Canton Network (MainNet, TestNet or DevNet), plus a non-gating LocalNet unreleased (`dev`) cell. It publishes a results table per run.
+A weekly cross-version matrix, described below, runs the live-ledger suites against every Canton 3.7 patch that's live on a Canton Network (MainNet, TestNet or DevNet), plus a non-gating LocalNet unreleased (`dev`) cell. It publishes a results table per run.
 
 ## Cells
 
 The workflow's `include:` list is the single source of truth for which cells run. There are
 two kinds:
 
-- **Live releases.** One gating cell per Canton 3.6 patch running on a Canton Network, each on
+- **Live releases.** One gating cell per Canton 3.7 patch running on a Canton Network, each on
   the matching [canton-localnet](https://github.com/peacefulstudio/canton-localnet) release tag.
   A cell is added when a patch goes live on a network, and removed when no network runs it any
-  more. The baseline (`<CantonVersion>` in `Directory.Build.props`) is one of these.
+  more. The baseline (`<CantonVersion>` in `Directory.Build.props`) is one of these. These cells
+  run the synchronizer at protocol version 37, LocalNet's default.
+- **Protocol version 36.** A gating `Canton 3.7.1 @ PV36` cell runs the baseline Canton patch
+  on a synchronizer at protocol version 36, so the clients are exercised on both protocol
+  versions.
 - **LocalNet unreleased (`dev`).** Runs canton-localnet's unreleased `dev` branch with no
   version expectation, as an early warning for the next LocalNet release. It is non-gating, so
   a red result never fails the run.
@@ -51,7 +56,7 @@ Each cell:
    minor is one the vendored spec accepts, with no environment override.
 
 Adding a cell is one line in `include:`, for example
-`- {order: 2, cell: 'Canton 3.6.N', localnet-ref: vX.Y.Z-N, image-tag: '', expected-canton: 3.6.N, gating: true}`.
+`- {order: 2, cell: 'Canton 3.7.N', localnet-ref: vX.Y.Z-N, image-tag: '', expected-canton: 3.7.N, gating: true}`.
 `order` sets the row order in the results table; an empty `image-tag` keeps the release's own
 Splice images.
 

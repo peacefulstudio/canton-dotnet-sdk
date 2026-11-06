@@ -14,9 +14,9 @@ namespace Daml.Codegen.Testing.Conformance.Tests;
 
 public class GeneratedTypeRegistryCorpusTests
 {
-    private const string RichTypesPackageId = "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
+    private const string RichTypesPackageId = "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c";
 
-    private const string ContractKeysPackageId = "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2";
+    private const string ContractKeysPackageId = "111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337";
 
     private static RegistryLookup<TValue>.Resolved ResolvedOf<TValue>(RegistryLookup<TValue> lookup) =>
         lookup.Should().BeOfType<RegistryLookup<TValue>.Resolved>().Subject;
@@ -84,7 +84,7 @@ public class GeneratedTypeRegistryCorpusTests
         var lookup = GeneratedTypeReaders.FindChoice(
             new Identifier("unknown-package-id", "RichTypes", "Asset"),
             new ChoiceName("Archive"),
-            "richtypes-h25b56c547fd1");
+            "richtypes-h07285b495f9e");
 
         ResolvedOf(lookup).Value.ResultType.Should().Be<DamlUnit>();
     }

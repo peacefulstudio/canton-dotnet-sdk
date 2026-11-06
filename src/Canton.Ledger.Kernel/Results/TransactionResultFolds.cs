@@ -30,7 +30,7 @@ internal static class TransactionResultFolds
             _ => throw new InvalidOperationException($"Unhandled outcome: {outcome.GetType().Name}"),
         };
 
-        return projected.WithCommandId(outcome.CommandId);
+        return projected.WithOriginOf(outcome);
     }
 
     internal static ExerciseOutcome<ContractId<TMarker>> ToCreatedContractId<TMarker>(

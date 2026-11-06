@@ -300,7 +300,8 @@ public static class DalfReader
             Name = moduleName,
             DataTypes = dataTypes,
             Templates = templates,
-            Interfaces = interfaces
+            Interfaces = interfaces,
+            Constants = LiteralConstantReader.Read(module, ctx)
         };
     }
 

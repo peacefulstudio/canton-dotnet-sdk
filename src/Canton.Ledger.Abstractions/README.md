@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Abstractions --version 0.7.1
+dotnet add package Canton.Ledger.Abstractions --version 0.8.0
 ```
 
 ## Key Types
@@ -14,6 +14,7 @@ dotnet add package Canton.Ledger.Abstractions --version 0.7.1
 |------|---------|
 | `ICantonLedgerClient` | The Canton participant client surface — everything on `ILedgerClient` plus the Canton-only operations (fire-and-forget submit, the command completion stream, connected-synchronizer and Ledger API version discovery, offset/id point reads, by-id disclosure reads through `GetDisclosureAsync<T>`, tree-shaped submission, traffic-cost estimation) |
 | `CompletionStreamEvent` | A command-completion stream event — `CommandAccepted`/`CommandRejected`/`Checkpoint`/`StreamError`, with the verdict modelled as the event type |
+| `RecoveryOutcome` | The verdict `RecoverAsync` reaches for a write that failed with `CommitState.Unknown` — `Committed`, `Rejected` or `Lost` |
 | `Completion` | The transport-neutral command-completion payload (command id, offset, act-as parties, synchronizer time, submission/user ids, deduplication period) |
 | `CompletionStatus` | The `google.rpc.Code` verdict of a rejected command (`Code`, `Message`) plus the structured rejection detail decoded from `google.rpc.Status.details` (`ErrorId`, `Metadata`) |
 | `SynchronizerTime` | The synchronizer id and record time a completion was sequenced at |

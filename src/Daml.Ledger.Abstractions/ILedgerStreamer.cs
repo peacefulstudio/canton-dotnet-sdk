@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Daml.Runtime;
@@ -14,6 +15,13 @@ namespace Daml.Ledger.Abstractions;
 /// <summary>The streaming capability: subscribe to contract events and ACS snapshots.</summary>
 public interface ILedgerStreamer
 {
+    /// <summary>
+    /// The clock the client measures its own timeouts on, such as the <c>timeout</c> of
+    /// <see cref="Extensions.StreamerSnapshot"/>'s snapshot reads. Defaults to
+    /// <see cref="TimeProvider.System"/>; a client built with its own time source reports it.
+    /// </summary>
+    TimeProvider TimeProvider => TimeProvider.System;
+
     /// <summary>
     /// Streams active-contract-set delta events for <typeparamref name="T"/> over the
     /// half-open offset window <c>(fromOffset, toOffset]</c> — lower bound exclusive,
@@ -141,6 +149,15 @@ public interface ILedgerStreamer
     /// contract as <see cref="SubscribeAsync{T}(SubmitterInfo, LedgerOffset?, LedgerOffset?, CancellationToken)"/>.
     /// An active contract arrives as an <see cref="AcsSnapshotEntry{T}.Created"/> row
     /// carrying its create-arguments already decoded into <typeparamref name="T"/>.
+    /// <para>
+    /// The snapshot includes incomplete reassignments: a contract that has been unassigned from its
+    /// source synchronizer and not yet assigned to its target arrives as a
+    /// <see cref="AcsSnapshotEntry{T}.Created"/> row on the source synchronizer followed by an
+    /// <see cref="AcsSnapshotEntry{T}.Unclassified"/> row with
+    /// <see cref="UnclassifiedKind.UnassignedEvent"/>. Canton 3.7 excludes incomplete reassignments from a
+    /// snapshot by default; the Canton clients ask for them on every snapshot request, and offer no
+    /// option to leave them out.
+    /// </para>
     /// See <see href="https://docs.canton.network/reference/json-api-asyncapi-reference/operations/v2-state-active-contracts/details">Canton
     /// Ledger API — active contracts snapshot and its active-at offset</see> for the snapshot→stream
     /// handover this mirrors.
@@ -371,7 +388,9 @@ public interface ILedgerStreamer
     /// participant-computed interface view decoded into <typeparamref name="TView"/>; a row
     /// delivered without a view is surfaced as
     /// <see cref="InterfaceAcsSnapshotEntry{TInterface, TView}.Unclassified"/> with
-    /// <see cref="UnclassifiedKind.InterfaceViewUnavailable"/>.
+    /// <see cref="UnclassifiedKind.InterfaceViewUnavailable"/>. Like the template snapshot, it includes
+    /// incomplete reassignments, even though Canton 3.7 excludes them by default; see
+    /// <see cref="SubscribeActiveAsync{T}"/> for how they arrive.
     /// </remarks>
     /// <typeparam name="TInterface">The Daml interface marker the snapshot is filtered to.</typeparam>
     /// <typeparam name="TView">The interface's view record type.</typeparam>

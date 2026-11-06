@@ -19,7 +19,7 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
     <EnablePackageValidation Condition="$(MSBuildProjectName.StartsWith('Canton.Ledger.')) Or $([System.Text.RegularExpressions.Regex]::IsMatch('$(MSBuildProjectName)', '^Daml\.(Runtime|Ledger\.Abstractions|Ledger\.Abstractions\.Testing\.Conformance|Codegen\.CSharp|Codegen\.Intermediate|Codegen\.Testing\.Conformance)$'))">true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.7.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.7.1</PackageValidationBaselineVersion>
 
     <!-- Package metadata -->
     <Authors>Peaceful Studio OÜ</Authors>
@@ -31,9 +31,9 @@
     <RepositoryType>git</RepositoryType>
     <PackageIcon>icon.png</PackageIcon>
 
-    <CantonVersion>3.6.1</CantonVersion>
+    <CantonVersion>3.7.1</CantonVersion>
 
-    <Version>0.7.1</Version>
+    <Version>0.8.0</Version>
     <VersionReleasePrefix>$(Version)</VersionReleasePrefix>
     <VersionReleasePrefix Condition="$(VersionReleasePrefix.Contains('-'))">$(VersionReleasePrefix.Substring(0, $(VersionReleasePrefix.IndexOf('-'))))</VersionReleasePrefix>
     <VersionReleasePrefix Condition="$(VersionReleasePrefix.Contains('+'))">$(VersionReleasePrefix.Substring(0, $(VersionReleasePrefix.IndexOf('+'))))</VersionReleasePrefix>

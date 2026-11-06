@@ -1,0 +1,12 @@
+# Copyright 2026 Peaceful Studio OÜ
+# SPDX-License-Identifier: Apache-2.0
+sdk-version: 3.7.1
+name: conformanceprobe-h74a1aeb080e1
+source: .
+version: 0.1.0
+dependencies:
+  - daml-prim
+  - daml-stdlib
+  - ../conformancekit/conformancekit.dar
+build-options:
+  - --target=2.1

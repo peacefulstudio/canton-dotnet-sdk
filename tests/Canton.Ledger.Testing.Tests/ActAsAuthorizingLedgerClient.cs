@@ -28,7 +28,7 @@ internal sealed class ActAsAuthorizingLedgerClient(FakeLedgerClient fake, Party 
             ? result
             : throw new LedgerOperationException(
                 $"party {authorized.Value} did not authorize this submission",
-                DamlErrorCategory.AuthorizationChecksFailed, "UNAUTHORIZED", new Dictionary<string, string>());
+                DamlErrorCategory.InsufficientPermission, "UNAUTHORIZED", new Dictionary<string, string>());
     }
 
     public override async Task<ExerciseOutcome<TransactionResult>> TrySubmitAndWaitForTransactionAsync(
@@ -39,7 +39,7 @@ internal sealed class ActAsAuthorizingLedgerClient(FakeLedgerClient fake, Party 
         return ActedAsAuthorized()
             ? outcome
             : new ExerciseOutcome<TransactionResult>.DamlError(
-                DamlErrorCategory.AuthorizationChecksFailed, "UNAUTHORIZED",
+                DamlErrorCategory.InsufficientPermission, "UNAUTHORIZED",
                 $"party {authorized.Value} did not authorize this submission", new Dictionary<string, string>());
     }
 

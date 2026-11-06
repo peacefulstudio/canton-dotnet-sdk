@@ -88,11 +88,13 @@ public sealed class ConformancePackageIdentityDriftTests
     private static readonly IReadOnlyDictionary<string, string> PinnedMainPackageIds =
         new Dictionary<string, string>
         {
-            ["contractkeys/contractkeys.dar"] = "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2",
-            ["crossmodulecollision/crossmodulecollision.dar"] = "3dd99d252736a4342a35f264ecc67c45d2f5f90a4a6d1fa63c094ef6245f7ae4",
-            ["defaulttarget/defaulttarget.dar"] = "7897bdaaa6fd92d791907246106dad01515e99cd3be473e404c455b47373eb21",
-            ["nonserializable/nonserializable.dar"] = "9335f002ce4daef5836dd88ff655503429e9cfff718ec8c9f3a1082494cbd966",
-            ["richtypes/richtypes.dar"] = "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4",
+            ["conformancekit/conformancekit.dar"] = "40acda968038dce8336b3272860ef8687a1e925349b5d89a662ceac0a77e72d4",
+            ["conformanceprobe/conformanceprobe.dar"] = "c67fc7fa73ef2a2c7568e49b2b6080502f90cb04b81d1e5131a604f7290c0624",
+            ["contractkeys/contractkeys.dar"] = "111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337",
+            ["crossmodulecollision/crossmodulecollision.dar"] = "674d886bc72e1fe8d4b9eb85203eb56ca29116dfc769eeeafc977c0e1a887c74",
+            ["defaulttarget/defaulttarget.dar"] = "b4407177424383cbb474e2b574411c43024435e8007bdf90445a30da9add2251",
+            ["nonserializable/nonserializable.dar"] = "9945469c2677bb8ba341678233b394f3222cc1cf72687301cbff3a3aa5ad912b",
+            ["richtypes/richtypes.dar"] = "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c",
         };
 
     public static TheoryData<string, string> PinnedDars()

@@ -38,7 +38,6 @@ public class ServedInt64SiteCoverageTests
     [InlineData("GetUpdatesRequest.endInclusive")]
     [InlineData("DeduplicationOffset1.value")]
     [InlineData("Duration.seconds")]
-    [InlineData("JsTransactionTree.offset")]
     public void SitesNeitherReshapedNorExempt_is_silent_about_a_site_an_exemption_set_states_a_reason_for(
         string servedSite)
         => ServedInt64SiteCoverage.SitesNeitherReshapedNorExempt([servedSite]).Should().BeEmpty();
@@ -51,7 +50,6 @@ public class ServedInt64SiteCoverageTests
             "GetActiveContractsPageRequest.activeAtOffset",
             "GetActiveContractsRequest.activeAtOffset",
             "GetCompletionsRequest.beginExclusive",
-            "GetTransactionByOffsetRequest.offset",
             "GetUpdateByOffsetRequest.offset",
             "GetUpdatesPageRequest.beginOffsetExclusive",
             "GetUpdatesPageRequest.endOffsetInclusive",
@@ -61,6 +59,5 @@ public class ServedInt64SiteCoverageTests
             "DeduplicationOffset1.value",
             "DeduplicationOffset2.value",
             "Duration.seconds",
-            "JsTransactionTree.offset",
         ]);
 }

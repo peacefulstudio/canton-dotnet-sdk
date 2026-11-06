@@ -25,7 +25,7 @@ namespace Splice.Ans;
 public sealed partial record AnsRules(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("dso")] global::Daml.Runtime.Data.Party Dso,
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("config")] global::Splice.Ans.AnsRulesConfig Config
-) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<AnsRules>, global::Daml.Runtime.Data.IDamlRecord<AnsRules>
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<AnsRules>, global::Daml.Runtime.Contracts.IArchivable<AnsRules>, global::Daml.Runtime.Data.IDamlRecord<AnsRules>
 {
     /// <inheritdoc />
     public override int GetHashCode()
@@ -173,11 +173,17 @@ public static class AnsRulesSubmissionExtensions
     /// </summary>
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
-    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-template default would bucket every create of the same template under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<AnsRules>>> TryCreateAsync(
         this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         AnsRules payload,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
         global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
         global::System.Threading.CancellationToken cancellationToken = default)
     {
@@ -186,7 +192,7 @@ public static class AnsRulesSubmissionExtensions
 
         global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Dso;
 
-        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<AnsRules>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<AnsRules>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);
     }
 }
 
@@ -418,7 +424,7 @@ public static class AnsRulesNonContractExtensions
         return new global::Daml.Runtime.Commands.ExerciseCommand(
             global::Splice.Ans.AnsRules.TemplateId,
             contractId,
-            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Splice.Ans.AnsRules.ChoiceArchive.Name,
             global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Splice.Ans.AnsRules.PackageName };
     }
 

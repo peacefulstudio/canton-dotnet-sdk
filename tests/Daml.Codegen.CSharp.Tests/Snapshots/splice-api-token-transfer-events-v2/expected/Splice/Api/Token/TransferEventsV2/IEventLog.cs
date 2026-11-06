@@ -29,7 +29,7 @@ namespace Splice.Api.Token.TransferEventsV2;
 /// materialize as concrete <see cref="global::Splice.Api.Token.TransferEventsV2.EventLogView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IEventLog : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferEventsV2.EventLogView>, global::Daml.Runtime.Contracts.IHasChoices<IEventLog>
+public interface IEventLog : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferEventsV2.EventLogView>, global::Daml.Runtime.Contracts.IHasChoices<IEventLog>, global::Daml.Runtime.Contracts.IArchivable<IEventLog>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
@@ -62,7 +62,7 @@ public interface IEventLog : global::Daml.Runtime.Contracts.IDamlInterface, glob
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<IEventLog, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<IEventLog, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -93,6 +93,9 @@ public interface IEventLog : global::Daml.Runtime.Contracts.IDamlInterface, glob
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IEventLog>.Choices { get; } = [ChoiceArchive, ChoiceEventLog_HoldingsChange];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<IEventLog, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<IEventLog>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -120,7 +123,7 @@ public static class IEventLogExtensions
         this global::Daml.Runtime.Contracts.ContractId<IEventLog> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<IEventLog>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IEventLog>(contractId, IEventLog.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

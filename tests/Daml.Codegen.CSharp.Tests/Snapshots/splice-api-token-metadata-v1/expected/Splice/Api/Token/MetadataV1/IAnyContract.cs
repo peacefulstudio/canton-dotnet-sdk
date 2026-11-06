@@ -29,7 +29,7 @@ namespace Splice.Api.Token.MetadataV1;
 /// materialize as concrete <see cref="global::Splice.Api.Token.MetadataV1.AnyContractView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IAnyContract : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.MetadataV1.AnyContractView>, global::Daml.Runtime.Contracts.IHasChoices<IAnyContract>
+public interface IAnyContract : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.MetadataV1.AnyContractView>, global::Daml.Runtime.Contracts.IHasChoices<IAnyContract>, global::Daml.Runtime.Contracts.IArchivable<IAnyContract>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
@@ -56,7 +56,7 @@ public interface IAnyContract : global::Daml.Runtime.Contracts.IDamlInterface, g
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<IAnyContract, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<IAnyContract, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -73,6 +73,9 @@ public interface IAnyContract : global::Daml.Runtime.Contracts.IDamlInterface, g
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IAnyContract>.Choices { get; } = [ChoiceArchive];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<IAnyContract, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<IAnyContract>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -100,7 +103,7 @@ public static class IAnyContractExtensions
         this global::Daml.Runtime.Contracts.ContractId<IAnyContract> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAnyContract>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAnyContract>(contractId, IAnyContract.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

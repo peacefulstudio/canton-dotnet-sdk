@@ -22,6 +22,11 @@ compiles through sbt-protoc — and reassembles whenever that hash differs from
 the one stamped beside the JAR by the last successful assembly. An up-to-date
 JAR costs a few file hashes and never starts sbt.
 
+The assembled JAR reports the repo's release-train version from --version. That is
+DAML_DAR_TO_PROTO_VERSION when set, else the <Version> in Directory.Build.props
+(the single version of the train); the value joins the input hash, and a fresh
+assembly fails when the JAR reports anything else.
+
 Assembly output is written to stderr so stdout carries only the JAR path.
 
 Options:
@@ -62,6 +67,10 @@ sha256_stream() {
   fi
 }
 
+train_version() {
+  sed -nE 's|.*<Version>([^<]+)</Version>.*|\1|p' "$PROJECT_ROOT/Directory.Build.props" | head -1
+}
+
 assembly_input_hash() {
   cd "$PROJECT_ROOT"
   {
@@ -70,7 +79,7 @@ assembly_input_hash() {
       | while IFS= read -r path; do
           printf '%s  %s\n' "$(sha256_stream < "$path" | awk '{print $1}')" "$path"
         done
-    printf 'env:DAML_DAR_TO_PROTO_VERSION=%s\n' "${DAML_DAR_TO_PROTO_VERSION:-}"
+    printf 'env:DAML_DAR_TO_PROTO_VERSION=%s\n' "$DAML_DAR_TO_PROTO_VERSION"
   } | sha256_stream | awk '{print $1}'
 }
 
@@ -81,6 +90,16 @@ for input in "${ASSEMBLY_INPUTS[@]}"; do
     exit 1
   }
 done
+
+if [[ -z "${DAML_DAR_TO_PROTO_VERSION:-}" ]]; then
+  DAML_DAR_TO_PROTO_VERSION="$(train_version)"
+fi
+[[ -n "$DAML_DAR_TO_PROTO_VERSION" ]] || {
+  echo "ensure-jvm-helper-jar.sh: no <Version> in Directory.Build.props and DAML_DAR_TO_PROTO_VERSION is unset;" >&2
+  echo "the JAR would report 0.0.0-dev, which carries no contract version. Refusing to assemble it." >&2
+  exit 1
+}
+export DAML_DAR_TO_PROTO_VERSION
 
 EXPECTED_SOURCES="$(assembly_input_hash)"
 
@@ -123,6 +142,12 @@ rm -f "$SOURCE_STAMP"
 
 [[ -f "$HELPER_JAR" ]] || {
   echo "ensure-jvm-helper-jar.sh: 'sbt assembly' reported success but produced no JAR at $HELPER_JAR" >&2
+  exit 1
+}
+
+REPORTED_VERSION="$(java -jar "$HELPER_JAR" --version)"
+[[ "$REPORTED_VERSION" == "$DAML_DAR_TO_PROTO_VERSION" ]] || {
+  echo "ensure-jvm-helper-jar.sh: $HELPER_JAR reports version $REPORTED_VERSION, expected $DAML_DAR_TO_PROTO_VERSION" >&2
   exit 1
 }
 

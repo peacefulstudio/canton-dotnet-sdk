@@ -3,6 +3,7 @@
 
 using System.Text.Json.Serialization;
 using Daml.Runtime;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
 
 namespace Canton.Ledger.Abstractions;
@@ -72,7 +73,12 @@ public abstract record CompletionStreamEvent
     /// <param name="Offset">The participant's current ledger offset — persist
     /// it as the resume offset (exclusive) for a subsequent
     /// <see cref="ICantonLedgerClient.CompletionStreamAsync"/> call.</param>
-    public sealed record Checkpoint(LedgerOffset Offset) : CompletionStreamEvent;
+    /// <param name="SynchronizerTimes">The record time of each synchronizer at
+    /// <paramref name="Offset"/>. A command whose maximum record time is below a synchronizer's
+    /// record time here, and whose completion has not arrived before this checkpoint, is lost on
+    /// that synchronizer. Empty when the participant reported none.</param>
+    public sealed record Checkpoint(LedgerOffset Offset, EquatableArray<SynchronizerTime> SynchronizerTimes)
+        : CompletionStreamEvent;
 
     /// <summary>
     /// The completion stream failed mid-flight. Surfaced in-band as a terminal

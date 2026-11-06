@@ -91,6 +91,47 @@ public class DamlLfJsonReaderLimitsTests
     }
 
     [Fact]
+    public void Read_should_reject_arrays_wider_than_the_configured_limit_from_a_parsed_element()
+    {
+        using var document = JsonDocument.Parse(ThreeOwnersJson);
+        var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 2);
+
+        var act = () => DamlLfJsonReader.Read<OwnerListHolder>(document.RootElement, limits);
+
+        act.Should().Throw<JsonException>().WithMessage("*maximum supported JSON array length*");
+    }
+
+    [Fact]
+    public void Read_should_reject_arrays_wider_than_the_configured_limit_from_json_text()
+    {
+        var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 2);
+
+        var act = () => DamlLfJsonReader.Read<OwnerListHolder>(ThreeOwnersJson, limits);
+
+        act.Should().Throw<JsonException>().WithMessage("*maximum supported JSON array length*");
+    }
+
+    [Fact]
+    public void Read_should_decode_an_array_exactly_at_the_configured_limit()
+    {
+        var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 3);
+
+        var holder = DamlLfJsonReader.Read<OwnerListHolder>(ThreeOwnersJson, limits);
+
+        holder.Owners.Select(owner => owner.Value).Should().Equal("a::1220ab", "b::1220cd", "c::1220ef");
+    }
+
+    [Fact]
+    public void Read_should_reject_json_text_larger_than_the_configured_limit()
+    {
+        var limits = new DamlJsonDeserializationLimits(MaxInputCharacters: ThreeOwnersJson.Length - 1);
+
+        var act = () => DamlLfJsonReader.Read<OwnerListHolder>(ThreeOwnersJson, limits);
+
+        act.Should().Throw<JsonException>().WithMessage("*maximum supported JSON input size*");
+    }
+
+    [Fact]
     public void ReadRecord_should_decode_an_array_exactly_at_the_configured_limit()
     {
         var limits = new DamlJsonDeserializationLimits(MaxArrayElements: 3);

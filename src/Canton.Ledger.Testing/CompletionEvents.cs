@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Daml.Runtime;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
 
 namespace Canton.Ledger.Testing;
@@ -31,9 +32,11 @@ public static class CompletionEvents
 
     /// <summary>Builds a <see cref="CompletionStreamEvent.Checkpoint"/> event.</summary>
     /// <param name="offset">The participant's current ledger offset.</param>
+    /// <param name="synchronizerTimes">The record time of each synchronizer at <paramref name="offset"/>;
+    /// none stages a checkpoint the participant reported no record times for.</param>
     /// <returns>The checkpoint event.</returns>
-    public static CompletionStreamEvent Checkpoint(LedgerOffset offset) =>
-        new CompletionStreamEvent.Checkpoint(offset);
+    public static CompletionStreamEvent Checkpoint(LedgerOffset offset, params SynchronizerTime[] synchronizerTimes) =>
+        new CompletionStreamEvent.Checkpoint(offset, EquatableArray.Create(synchronizerTimes));
 
     /// <summary>Builds an in-band <see cref="CompletionStreamEvent.StreamError"/> event.</summary>
     /// <param name="status">What the transport reported for the fault.</param>

@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --version 0.7.1
+dotnet add package Daml.Runtime --version 0.8.0
 ```
 
 ## Usage
@@ -208,10 +208,10 @@ using IouContract = Iou.Iou;
 
 // json is a JSON rendering of an Iou.
 
-var iou = IouContract.FromRecord(DamlLfJsonReader.ReadRecord<IouContract>(json));
+var iou = DamlLfJsonReader.Read<IouContract>(json);
 ```
 
-The record `ReadRecord<T>` returns holds only the fields the payload sent. Both transports leave
+`ReadRecord<T>` is the same decode without the final `FromRecord`. The `DamlRecord` it returns holds only the fields the payload sent. Both transports leave
 out a record's trailing `None` fields: gRPC every one, the JSON Ledger API those of a flat
 `Optional` (it still sends a nested `Optional`'s `None` as `[]`), so an untyped `DamlRecord` can
 lack an `Optional` field its type declares. Read an `Optional` field of an untyped record with
@@ -254,7 +254,7 @@ using IouContract = Iou.Iou;
 
 // pqsRowJson is the contract payload of a PQS row.
 
-var iou = IouContract.FromRecord(DamlLfJsonReader.ReadRecord<IouContract>(pqsRowJson));
+var iou = DamlLfJsonReader.Read<IouContract>(pqsRowJson);
 ```
 
 The unions that carry a stream or call result round-trip too: `AcsSnapshotEntry<T>`,

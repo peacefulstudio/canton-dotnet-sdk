@@ -418,6 +418,36 @@ public class RestTransactionResultProjectorTests
     }
 
     [Fact]
+    public void Project_carries_the_node_id_of_a_created_event()
+    {
+        var transaction = TransactionFrom(
+            """
+            {
+              "transaction": {
+                "updateId": "upd-1",
+                "offset": "1",
+                "events": [
+                  {
+                    "CreatedEvent": {
+                      "offset": "1",
+                      "nodeId": 4,
+                      "contractId": "00created",
+                      "packageName": "token-impl",
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
+                      "createArgument": {"owner": "alice::ns1"}
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+
+        var result = RestTransactionResultProjector.Project(transaction);
+
+        result.CreatedContracts.Should().ContainSingle().Which.NodeId.Should().Be(4);
+    }
+
+    [Fact]
     public void Project_refuses_a_created_event_that_carries_no_nodeId()
     {
         var transaction = TransactionFrom(
@@ -487,6 +517,44 @@ public class RestTransactionResultProjectorTests
         exercised.ActingParties.Should().ContainSingle().Which.Should().Be((Party)"alice::ns1");
         exercised.ChoiceArgument.Should().Be(DamlUnit.Instance);
         exercised.ExerciseResult.Should().Be(DamlUnit.Instance);
+    }
+
+    [Fact]
+    public void Project_carries_the_node_id_and_last_descendant_node_id_of_an_exercised_event()
+    {
+        var transaction = TransactionFrom(
+            """
+            {
+              "transaction": {
+                "updateId": "upd-1",
+                "offset": "1",
+                "events": [
+                  {
+                    "ExercisedEvent": {
+                      "offset": "1",
+                      "nodeId": 3,
+                      "lastDescendantNodeId": 7,
+                      "contractId": "00holding",
+                      "packageName": "token-impl",
+                      "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
+                      "choice": "Archive",
+                      "choiceArgument": {},
+                      "actingParties": ["alice::ns1"],
+                      "consuming": true,
+                      "witnessParties": ["alice::ns1"],
+                      "exerciseResult": {}
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+
+        var result = RestTransactionResultProjector.Project(transaction);
+
+        var exercised = result.ExercisedEvents.Should().ContainSingle().Subject;
+        exercised.NodeId.Should().Be(3);
+        exercised.LastDescendantNodeId.Should().Be(7);
     }
 
     [Fact]

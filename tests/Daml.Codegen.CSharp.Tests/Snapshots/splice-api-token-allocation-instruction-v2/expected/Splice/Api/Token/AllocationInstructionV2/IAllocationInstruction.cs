@@ -30,7 +30,7 @@ namespace Splice.Api.Token.AllocationInstructionV2;
 /// materialize as concrete <see cref="global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IAllocationInstruction : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView>, global::Daml.Runtime.Contracts.IHasChoices<IAllocationInstruction>
+public interface IAllocationInstruction : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.AllocationInstructionV2.AllocationInstructionView>, global::Daml.Runtime.Contracts.IHasChoices<IAllocationInstruction>, global::Daml.Runtime.Contracts.IArchivable<IAllocationInstruction>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
@@ -109,7 +109,7 @@ public interface IAllocationInstruction : global::Daml.Runtime.Contracts.IDamlIn
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<IAllocationInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<IAllocationInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -126,6 +126,9 @@ public interface IAllocationInstruction : global::Daml.Runtime.Contracts.IDamlIn
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IAllocationInstruction>.Choices { get; } = [ChoiceAllocationInstruction_Accept, ChoiceAllocationInstruction_Withdraw, ChoiceArchive];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<IAllocationInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<IAllocationInstruction>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -255,7 +258,7 @@ public static class IAllocationInstructionExtensions
         this global::Daml.Runtime.Contracts.ContractId<IAllocationInstruction> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAllocationInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAllocationInstruction>(contractId, IAllocationInstruction.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

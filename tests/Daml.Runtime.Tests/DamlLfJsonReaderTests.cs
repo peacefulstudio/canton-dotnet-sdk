@@ -84,4 +84,77 @@ public class DamlLfJsonReaderTests
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("json");
     }
+
+    [Fact]
+    public void Read_should_return_the_generated_record_when_given_json_text()
+    {
+        var holder = DamlLfJsonReader.Read<PartyHolder>(OwnerJson);
+
+        holder.Should().Be(new PartyHolder(new Party(OwnerParty)));
+    }
+
+    [Fact]
+    public void Read_should_return_the_generated_record_when_given_a_parsed_element()
+    {
+        using var document = JsonDocument.Parse(OwnerJson);
+
+        var holder = DamlLfJsonReader.Read<PartyHolder>(document.RootElement);
+
+        holder.Should().Be(new PartyHolder(new Party(OwnerParty)));
+    }
+
+    [Fact]
+    public void Read_should_return_a_nested_generated_record()
+    {
+        var envelope = DamlLfJsonReader.Read<PartyHolderEnvelope>("""{"holder":{"owner":"alice::1220ab"}}""");
+
+        envelope.Should().Be(new PartyHolderEnvelope(new PartyHolder(new Party(OwnerParty))));
+    }
+
+    [Fact]
+    public void Read_should_round_trip_a_record_through_its_serialized_form()
+    {
+        var original = new PartyHolder(new Party("bob::1220cd"));
+
+        var decoded = DamlLfJsonReader.Read<PartyHolder>(DamlJsonSerializer.Serialize(original.ToRecord()));
+
+        decoded.Should().Be(original);
+    }
+
+    [Fact]
+    public void Read_should_throw_the_same_JsonException_as_ReadRecord_for_a_missing_field_in_json_text()
+    {
+        var readRecord = () => DamlLfJsonReader.ReadRecord<PartyHolder>("{}");
+        var read = () => DamlLfJsonReader.Read<PartyHolder>("{}");
+
+        var expected = readRecord.Should().Throw<JsonException>().Which;
+        read.Should().Throw<JsonException>().WithMessage(expected.Message);
+    }
+
+    [Fact]
+    public void Read_should_throw_the_same_JsonException_as_ReadRecord_for_a_non_object_element()
+    {
+        using var document = JsonDocument.Parse("[]");
+        var readRecord = () => DamlLfJsonReader.ReadRecord<PartyHolder>(document.RootElement);
+        var read = () => DamlLfJsonReader.Read<PartyHolder>(document.RootElement);
+
+        var expected = readRecord.Should().Throw<JsonException>().Which;
+        read.Should().Throw<JsonException>().WithMessage(expected.Message);
+    }
+
+    [Fact]
+    public void Read_should_throw_JsonException_for_malformed_json_text()
+    {
+        var act = () => DamlLfJsonReader.Read<PartyHolder>("""{"owner":""");
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Read_should_throw_ArgumentNullException_for_null_json_text()
+    {
+        var act = () => DamlLfJsonReader.Read<PartyHolder>((string)null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("json");
+    }
 }

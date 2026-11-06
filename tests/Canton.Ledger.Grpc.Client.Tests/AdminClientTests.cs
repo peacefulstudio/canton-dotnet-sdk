@@ -1498,7 +1498,7 @@ public sealed class AdminClientTests : IDisposable
 
     [Theory]
     [InlineData(StatusCode.Unauthenticated, GrpcStatusCode.Unauthenticated, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(StatusCode.PermissionDenied, GrpcStatusCode.PermissionDenied, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(StatusCode.PermissionDenied, GrpcStatusCode.PermissionDenied, DamlErrorCategory.InsufficientPermission)]
     public async Task GetParticipantId_throws_LedgerOperationException_classifying_a_redacted_security_rejection(
         StatusCode redactedStatus, GrpcStatusCode expectedStatus, DamlErrorCategory expectedCategory)
     {

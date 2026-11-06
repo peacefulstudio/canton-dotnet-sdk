@@ -49,6 +49,26 @@ public sealed partial class FakeLedgerClientBuilder
     }
 
     /// <summary>
+    /// Stages the creation and archival
+    /// <see cref="FakeLedgerClient.GetEventsByContractIdAsync{TInterface, TView}"/> returns for
+    /// <paramref name="contractId"/>, read through <typeparamref name="TInterface"/>.
+    /// </summary>
+    /// <typeparam name="TInterface">The Daml interface marker the contract is read through.</typeparam>
+    /// <typeparam name="TView">The interface's view record.</typeparam>
+    /// <param name="contractId">The interface-typed contract the events belong to.</param>
+    /// <param name="lifecycle">The events to reply with.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithInterfaceContractLifecycle<TInterface, TView>(
+        ContractId<TInterface> contractId, InterfaceContractLifecycle<TInterface, TView> lifecycle)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        ArgumentNullException.ThrowIfNull(lifecycle);
+        _contractLifecycles[(typeof(TInterface), contractId.Value)] = lifecycle;
+        return this;
+    }
+
+    /// <summary>
     /// Stages the disclosure <see cref="FakeLedgerClient.GetDisclosureAsync{T}"/> returns for
     /// <paramref name="contractId"/>, whether the id is typed as a template or an interface. A contract with
     /// no staged disclosure reads as not visible or archived, and the call returns <see langword="null"/>.

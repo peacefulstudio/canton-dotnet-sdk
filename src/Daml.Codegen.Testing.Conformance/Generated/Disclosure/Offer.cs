@@ -25,7 +25,7 @@ namespace Daml.Codegen.Testing.Conformance.Disclosure;
 public sealed partial record Offer(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("issuer")] global::Daml.Runtime.Data.Party Issuer,
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("price")] long Price
-) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Offer>, global::Daml.Runtime.Data.IDamlRecord<Offer>
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Offer>, global::Daml.Runtime.Contracts.IArchivable<Offer>, global::Daml.Runtime.Data.IDamlRecord<Offer>
 {
     /// <inheritdoc />
     public override int GetHashCode()
@@ -37,13 +37,13 @@ public sealed partial record Offer(
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2", "Disclosure", "Offer");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337", "Disclosure", "Offer");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2";
+    public static string PackageId => "111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "contractkeys-hcc6e8a4f16d9";
+    public static string PackageName => "contractkeys-h5e25b75e405b";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -131,11 +131,17 @@ public static class OfferSubmissionExtensions
     /// </summary>
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
-    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-template default would bucket every create of the same template under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Offer>>> TryCreateAsync(
         this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         Offer payload,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
         global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
         global::System.Threading.CancellationToken cancellationToken = default)
     {
@@ -144,7 +150,7 @@ public static class OfferSubmissionExtensions
 
         global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Issuer;
 
-        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Offer>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Offer>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);
     }
 }
 
@@ -168,7 +174,7 @@ public static class OfferNonContractExtensions
         return new global::Daml.Runtime.Commands.ExerciseCommand(
             global::Daml.Codegen.Testing.Conformance.Disclosure.Offer.TemplateId,
             contractId,
-            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Codegen.Testing.Conformance.Disclosure.Offer.ChoiceArchive.Name,
             global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Daml.Codegen.Testing.Conformance.Disclosure.Offer.PackageName };
     }
 

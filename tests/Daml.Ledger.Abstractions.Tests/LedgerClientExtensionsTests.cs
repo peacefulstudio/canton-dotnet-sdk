@@ -489,7 +489,11 @@ public class LedgerClientExtensionsTests
             SampleCommand, new Party("alice"), commandId: new CommandId("cmd-1"), cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Should().Be(
-            new ExerciseOutcome<EquatableArray<ContractId<SampleTemplate>>>.One([new("cid-1"), new("cid-2")]) { CommandId = "cmd-1" },
+            new ExerciseOutcome<EquatableArray<ContractId<SampleTemplate>>>.One([new("cid-1"), new("cid-2")])
+            {
+                CommandId = "cmd-1",
+                Operation = new LedgerOperation.Command(new Identifier("pkg", "Module", "Template"), "DoIt"),
+            },
             "the One arm carries the value-comparing array All<T>() projected, so two outcomes over the "
             + "same created contracts are equal; boxing that array back into an IReadOnlyList changes the "
             + "outcome's closed type and moves == on the payload off the surface the projection handed over");

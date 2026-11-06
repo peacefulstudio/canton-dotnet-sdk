@@ -1,8 +1,8 @@
 # Vendored Daml stable packages
 
-The `.dalf` files under `lf-v2/` are the stable packages of the Daml SDK 3.6.0 (damlc component 3.6.2)
+The `.dalf` files under `lf-v2/` are the stable packages of the Daml SDK 3.7.1 (damlc component 3.7.0)
 (`daml-prim` and `daml-stdlib`), copied unmodified from
-`~/.dpm/cache/components/damlc/3.6.2/damlc-dist-dpm/resources/stable-packages/lf-v2/`.
+`~/.dpm/cache/components/damlc/3.7.0/damlc-dist-dpm/resources/stable-packages/lf-v2/`.
 
 They feed `scripts/regenerate.sh write --only runtime-stdlib`, which generates
 `src/Daml.Runtime/Stdlib/Generated`, and the inventory guard in

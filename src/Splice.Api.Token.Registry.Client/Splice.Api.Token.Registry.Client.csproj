@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Splice.Api.Token.Registry.Client</PackageId>
+    <Description>Typed HTTP client for the Splice Token Standard registry off-ledger API (token metadata, transfer instruction, allocation and allocation instruction, V1 and V2), generated with Refitter from the OpenAPI specs the Splice release publishes.</Description>
+    <PackageTags>canton;splice;token-standard;registry;openapi;refit;client</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <IsPackable Condition="'$(SpliceRegistryClientVersion)' != ''">true</IsPackable>
+    <PackageVersion Condition="'$(SpliceRegistryClientVersion)' != ''">$(SpliceRegistryClientVersion)</PackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Refit" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Daml.Runtime\Daml.Runtime.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

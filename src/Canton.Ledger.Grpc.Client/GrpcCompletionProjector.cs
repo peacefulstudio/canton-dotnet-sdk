@@ -33,7 +33,9 @@ internal static class GrpcCompletionProjector
     {
         ArgumentNullException.ThrowIfNull(checkpoint);
 
-        return new CompletionStreamEvent.Checkpoint(LedgerWireConversions.ToLedgerOffset(checkpoint.Offset));
+        return new CompletionStreamEvent.Checkpoint(
+            LedgerWireConversions.ToLedgerOffset(checkpoint.Offset),
+            [.. checkpoint.SynchronizerTimes.Select(ToSynchronizerTime)]);
     }
 
     private static Completion ToCompletion(ProtoCompletion completion) => new(

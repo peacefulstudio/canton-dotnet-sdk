@@ -4,7 +4,7 @@
 openapi: 3.0.3
 info:
     title: Canton Ledger API (proto-derived)
-    version: 3.6.1
+    version: 3.7.1
 paths:
     /v2/commands/async/submit:
         post:
@@ -495,79 +495,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
-    /v2/interactive-submission/preferred-package-version:
-        get:
-            tags:
-                - InteractiveSubmissionService
-            description: |-
-                A preferred package is the highest-versioned package for a provided package-name
-                 that is vetted by all the participants hosting the provided parties.
-
-                 Ledger API clients should use this endpoint for constructing command submissions
-                 that are compatible with the provided preferred package, by making informed decisions on:
-                 - which are the compatible packages that can be used to create contracts
-                 - which contract or exercise choice argument version can be used in the command
-                 - which choices can be executed on a template or interface of a contract
-
-                 Can be accessed by any Ledger API client with a valid token when Ledger API authorization is enabled.
-
-                 Deprecated since Canton 3.4: disabled by default since Canton 3.6 (re-enable temporarily with
-                 `canton.participants.<participant>.features.deprecated.enable-deprecated-endpoints-34 = true`)
-                 and will be removed in Canton 3.7.
-                 Use GetPreferredPackages instead.
-            operationId: InteractiveSubmissionService_GetPreferredPackageVersion
-            parameters:
-                - name: parties
-                  in: query
-                  description: |-
-                    The parties whose participants' vetting state should be considered when resolving the preferred package.
-
-                     Required: must be non-empty
-                  schema:
-                    type: array
-                    items:
-                        type: string
-                - name: packageName
-                  in: query
-                  description: |-
-                    The package-name for which the preferred package should be resolved.
-
-                     Required
-                  schema:
-                    type: string
-                - name: synchronizerId
-                  in: query
-                  description: |-
-                    The synchronizer whose vetting state should be used for resolving this query.
-                     If not specified, the vetting states of all synchronizers to which the participant is connected are used.
-
-                     Optional
-                  schema:
-                    type: string
-                - name: vettingValidAt
-                  in: query
-                  description: |-
-                    The timestamp at which the package vetting validity should be computed
-                     on the latest topology snapshot as seen by the participant.
-                     If not provided, the participant's current clock time is used.
-
-                     Optional
-                  schema:
-                    type: string
-                    format: date-time
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/GetPreferredPackageVersionResponse'
-                default:
-                    description: Default error response
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Status'
     /v2/interactive-submission/preferred-packages:
         post:
             tags:
@@ -1051,6 +978,10 @@ paths:
                  the client SHOULD begin streaming updates from the update service,
                  starting at the GetActiveContractsRequest.active_at_offset specified in this request.
                  Clients SHOULD NOT assume that the set of active contracts they receive reflects the state at the ledger end.
+                 If the given offset is different than the ledger end, and there are (un)assignments in-flight at the given offset,
+                 the snapshot may fail with "FAILED_PRECONDITION/PARTICIPANT_PRUNED_DATA_ACCESSED".
+                 Note that it is ok to request acs snapshots for party migration with offsets other than ledger end, because party
+                 migration is not concerned with incomplete (un)assignments.
             operationId: StateService_GetActiveContracts
             requestBody:
                 content:
@@ -1144,6 +1075,50 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GetConnectedSynchronizersResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v2/state/convert-record-time-to-offset:
+        get:
+            tags:
+                - StateService
+            description: |-
+                Translate syncrhonizer record time to an offset
+                 If the requested record time is earlier that the earliest record time known for the given synchronizer
+                 (either because is is before the connection to the synchronizer was established or because it was already pruned),
+                 the request fails with RECORD_TIME_NOT_FOUND error.
+                 If the requested record time is after the latest record time observed for this synchronizer, the request fails with
+                 RECORD_TIME_NOT_OBSERVED_YET error code. This may be transitional condition until participant node catches up with most recent synchronizer updates.
+                 In such case the caller may retry this request.
+            operationId: StateService_ConvertRecordTimeToOffset
+            parameters:
+                - name: record-time
+                  in: query
+                  description: |-
+                    The record time to be converted to an offset
+                     Required
+                  schema:
+                    type: string
+                    format: date-time
+                - name: synchronizer-id
+                  in: query
+                  description: |-
+                    The ID of the synchronizer
+                     Must be a synchronizer from which the participant had received at least one update ever.
+
+                     Required
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConvertRecordTimeToOffsetResponse'
                 default:
                     description: Default error response
                     content:
@@ -2380,6 +2355,16 @@ components:
                          Included iff the assigned event was before or at the active_at_offset, but there was no corresponding
                          unassigned event before or at the active_at_offset.
             description: Selects which view of a contract a ``GetActiveContractsResponse`` carries.
+        ConvertRecordTimeToOffsetResponse:
+            type: object
+            properties:
+                offset:
+                    type: string
+                    description: |-
+                        The participant's offset, the details of the offset field are described in ``community/ledger-api/README.md``.
+                         Must be a valid absolute offset (positive integer).
+
+                         Required
         CostEstimation:
             type: object
             properties:
@@ -2410,6 +2395,14 @@ components:
                         Sum of the fields above
 
                          Required
+                reassignmentCosts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ReassignmentCost'
+                    description: |-
+                        Estimated cost of re-assigning contracts if necessary
+
+                         Optional: can be empty
             description: |-
                 Estimation of the cost of submitting the prepared transaction
                  The estimation is done against the synchronizer chosen during preparation of the transaction
@@ -3790,6 +3783,17 @@ components:
                         Other observing participant ids for this party
 
                          Optional: can be empty
+                protocolVersion:
+                    type: integer
+                    description: |-
+                        The protocol version to create the topology transactions for, so that clients that only read topology
+                         transactions of an older protocol version can read them, e.g. 36 on a synchronizer with protocol version 37.
+                         Must be the synchronizer's protocol version or a lower one whose topology transactions the synchronizer admits:
+                         from protocol version 37 on, a synchronizer admits those of protocol version 36.
+                         Defaults to the synchronizer's protocol version.
+
+                         Optional
+                    format: uint32
         GenerateExternalPartyTopologyResponse:
             type: object
             properties:
@@ -3813,8 +3817,8 @@ components:
                     description: |-
                         The serialized topology transactions which need to be signed and submitted as part of the allocate party process
                          Note that the serialization includes the versioning information. Therefore, the transaction here is serialized
-                         as an `UntypedVersionedMessage` which in turn contains the serialized `TopologyTransaction` in the version
-                         supported by the synchronizer.
+                         as an `UntypedVersionedMessage` which in turn contains the serialized `TopologyTransaction` for the requested
+                         protocol version, or for the synchronizer's protocol version if none is requested.
 
                          Required: must be non-empty
                 multiHash:
@@ -3864,13 +3868,21 @@ components:
                          The page token only works if subsequent requests:
 
                          - are executed on the same participant,
-                         - use the same active_at_offset and event_format,
+                         - use the same active_at_offset, event_format and include_incomplete_reassignments,
                          - and the participant's store was not pruned to after the active_at_offset.
 
                          If not specified, the first page of the active contracts snapshot will be returned.
 
                          Optional: can be empty
                     format: bytes
+                includeIncompleteReassignments:
+                    type: boolean
+                    description: |-
+                        If this flag is true, the IncompleteAssigned and IncompleteUnassigned events will be included in the stream
+                         based on the specified event_format.
+                         If this flag is set to false, Incomplete Reassignments will be omitted.
+
+                         Optional
         GetActiveContractsPageResponse:
             type: object
             properties:
@@ -3927,18 +3939,22 @@ components:
 
                          - subsequent request must be executed on the same participant with the same version of canton,
                          - subsequent request must have the same active_at_offset,
-                         - subsequent request must have the same event_format
+                         - subsequent request must have the same event_format,
+                         - subsequent request must have the same include_incomplete_reassignments
                          - and the participant must not have been pruned after the active_at_offset.
 
                          If not specified, the whole active contracts snapshot will be returned.
 
                          Optional: can be empty
                     format: bytes
-            description: |-
-                If the given offset is different than the ledger end, and there are (un)assignments in-flight at the given offset,
-                 the snapshot may fail with "FAILED_PRECONDITION/PARTICIPANT_PRUNED_DATA_ACCESSED".
-                 Note that it is ok to request acs snapshots for party migration with offsets other than ledger end, because party
-                 migration is not concerned with incomplete (un)assignments.
+                includeIncompleteReassignments:
+                    type: boolean
+                    description: |-
+                        If this flag is true, the IncompleteAssigned and IncompleteUnassigned events will be included in the stream
+                         based on the specified event_format.
+                         If this flag is set to false, Incomplete Reassignments will be omitted.
+
+                         Optional
         GetActiveContractsResponse:
             type: object
             properties:
@@ -4216,16 +4232,6 @@ components:
                          The party details may not be in the same order as requested.
 
                          Required: must be non-empty
-        GetPreferredPackageVersionResponse:
-            type: object
-            properties:
-                packagePreference:
-                    allOf:
-                        - $ref: '#/components/schemas/PackagePreference'
-                    description: |-
-                        Not populated when no preferred package is found
-
-                         Optional
         GetPreferredPackagesRequest:
             type: object
             properties:
@@ -4697,8 +4703,8 @@ components:
                         The interface that a matching contract must implement.
                          The ``interface_id`` needs to be valid: corresponding interface should be defined in
                          one of the available packages at the time of the query.
-                         Both package-name and package-id reference formats for the identifier are supported.
-                         Note: The package-id reference identifier format is deprecated. We plan to end support for this format in version 3.4.
+                         Only package-name reference format for the identifier is supported.
+                         Note: The package-id reference identifier format was removed in version 3.5.
 
                          Required
                 includeInterfaceView:
@@ -5178,23 +5184,6 @@ components:
 
                  Non-empty fields specify candidate values of which at least one must match.
                  If both fields are set, then a candidate is returned if it matches one of the fields.
-        PackagePreference:
-            type: object
-            properties:
-                packageReference:
-                    allOf:
-                        - $ref: '#/components/schemas/PackageReference'
-                    description: |-
-                        The package reference of the preferred package.
-
-                         Required
-                synchronizerId:
-                    type: string
-                    description: |-
-                        The synchronizer for which the preferred package was computed.
-                         If the synchronizer_id was specified in the request, then it matches the request synchronizer_id.
-
-                         Required
         PackageReference:
             type: object
             properties:
@@ -5833,6 +5822,64 @@ components:
                         Individual elements of this reassignment. Must be non-empty.
 
                          Required: must be non-empty
+        ReassignmentCost:
+            type: object
+            properties:
+                sourceSynchronizerId:
+                    type: string
+                    description: |-
+                        The synchronizer the contracts are currently assigned to, and against whose traffic balance
+                         the unassignment cost is charged
+
+                         Required
+                targetSynchronizerId:
+                    type: string
+                    description: |-
+                        The synchronizer the contracts will be re-assigned to, and against whose traffic balance
+                         the assignment cost is charged
+
+                         Required
+                contractIds:
+                    type: array
+                    items:
+                        type: string
+                    description: |-
+                        The contracts that will be unassigned together in this single unassignment request
+
+                         Required: must be non-empty
+                unassignmentRequestTrafficCostEstimation:
+                    type: string
+                    description: |-
+                        Estimated traffic cost of the unassignment confirmation request
+
+                         Required
+                unassignmentResponseTrafficCostEstimation:
+                    type: string
+                    description: |-
+                        Estimated traffic cost of the unassignment confirmation response
+
+                         Required
+                assignmentRequestTrafficCostEstimation:
+                    type: string
+                    description: |-
+                        Estimated traffic cost of the assignment confirmation request
+
+                         Required
+                assignmentResponseTrafficCostEstimation:
+                    type: string
+                    description: |-
+                        Estimated traffic cost of the assignment confirmation response
+
+                         Required
+                totalReassignmentCostEstimation:
+                    type: string
+                    description: |-
+                        Sum of the fields above
+
+                         Required
+            description: |-
+                Estimation of re-assignment costs
+                 This is the cost of re-assigning contracts from another synchronizer if necessary.
         ReassignmentEvent:
             type: object
             properties:
@@ -6255,8 +6302,8 @@ components:
                         A template for which the payload should be included in the response.
                          The ``template_id`` needs to be valid: corresponding template should be defined in
                          one of the available packages at the time of the query.
-                         Both package-name and package-id reference formats for the identifier are supported.
-                         Note: The package-id reference identifier format is deprecated. We plan to end support for this format in version 3.4.
+                         Only package-name reference format for the identifier is supported.
+                         Note: The package-id reference identifier format was removed in version 3.5.
 
                          Required
                 includeCreatedEventBlob:
@@ -6580,6 +6627,19 @@ components:
                          Must be a valid synchronizer id
 
                          Required
+                overrideSourceValidationPackageId:
+                    type: string
+                    description: |-
+                        The package id used to validate the contract on the source synchronizer.
+
+                         Optional
+                overrideTargetValidationPackageId:
+                    type: string
+                    description: |-
+                        The package id used to validate the contract on the target synchronizer. This
+                         package id will also become the representative package id used in the created event.
+
+                         Optional
             description: Unassign a contract
         UnassignedEvent:
             type: object
@@ -6642,7 +6702,8 @@ components:
                     description: |-
                         Assignment exclusivity
                          Before this time (measured on the target synchronizer), only the submitter of the unassignment can initiate the assignment
-                         Defined for reassigning participants.
+                         Defined for reassigning participants, up to protocol version 36.
+                         Starting with protocol version 37, it is not set: any stakeholder can submit the assignment as soon as the unassignment is completed.
 
                          Optional
                     format: date-time

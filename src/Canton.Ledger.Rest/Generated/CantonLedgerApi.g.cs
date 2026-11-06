@@ -363,53 +363,6 @@ namespace Canton.Ledger.Rest.Client.Raw
         Task<ExecuteSubmissionAndWaitForTransactionResponse> ExecuteSubmissionAndWaitForTransaction([Body] ExecuteSubmissionAndWaitForTransactionRequest body, CancellationToken cancellationToken = default);
 
         /// <remarks>
-        /// A preferred package is the highest-versioned package for a provided package-name
-        /// that is vetted by all the participants hosting the provided parties.
-        /// 
-        /// Ledger API clients should use this endpoint for constructing command submissions
-        /// that are compatible with the provided preferred package, by making informed decisions on:
-        /// - which are the compatible packages that can be used to create contracts
-        /// - which contract or exercise choice argument version can be used in the command
-        /// - which choices can be executed on a template or interface of a contract
-        /// 
-        /// Can be accessed by any Ledger API client with a valid token when Ledger API authorization is enabled.
-        /// 
-        /// Deprecated since Canton 3.4: disabled by default since Canton 3.6 (re-enable temporarily with
-        /// `canton.participants.&lt;participant&gt;.features.deprecated.enable-deprecated-endpoints-34 = true`)
-        /// and will be removed in Canton 3.7.
-        /// Use GetPreferredPackages instead.
-        /// </remarks>
-        /// <param name="parties">
-        /// The parties whose participants' vetting state should be considered when resolving the preferred package.
-        /// 
-        /// Required: must be non-empty
-        /// </param>
-        /// <param name="packageName">
-        /// The package-name for which the preferred package should be resolved.
-        /// 
-        /// Required
-        /// </param>
-        /// <param name="synchronizerId">
-        /// The synchronizer whose vetting state should be used for resolving this query.
-        /// If not specified, the vetting states of all synchronizers to which the participant is connected are used.
-        /// 
-        /// Optional
-        /// </param>
-        /// <param name="vettingValidAt">
-        /// The timestamp at which the package vetting validity should be computed
-        /// on the latest topology snapshot as seen by the participant.
-        /// If not provided, the participant's current clock time is used.
-        /// 
-        /// Optional
-        /// </param>
-        /// <param name="cancellationToken">The cancellation token to cancel the request.</param>
-        /// <returns>OK</returns>
-        /// <exception cref="ApiException">Thrown when the request returns a non-success status code.</exception>
-        [Headers("Accept: application/json")]
-        [Get("/v2/interactive-submission/preferred-package-version")]
-        Task<GetPreferredPackageVersionResponse> GetPreferredPackageVersion([Query(CollectionFormat.Multi)] IEnumerable<string>? parties = default, [Query] string? packageName = default, [Query] string? synchronizerId = default, [Query] System.DateTimeOffset? vettingValidAt = default, CancellationToken cancellationToken = default);
-
-        /// <remarks>
         /// Compute the preferred packages for the vetting requirements in the request.
         /// A preferred package is the highest-versioned package for a provided package-name
         /// that is vetted by all the participants hosting the provided parties.
@@ -698,6 +651,10 @@ namespace Canton.Ledger.Rest.Client.Raw
         /// the client SHOULD begin streaming updates from the update service,
         /// starting at the GetActiveContractsRequest.active_at_offset specified in this request.
         /// Clients SHOULD NOT assume that the set of active contracts they receive reflects the state at the ledger end.
+        /// If the given offset is different than the ledger end, and there are (un)assignments in-flight at the given offset,
+        /// the snapshot may fail with "FAILED_PRECONDITION/PARTICIPANT_PRUNED_DATA_ACCESSED".
+        /// Note that it is ok to request acs snapshots for party migration with offsets other than ledger end, because party
+        /// migration is not concerned with incomplete (un)assignments.
         /// </remarks>
         /// <param name="body">body parameter</param>
         /// <param name="cancellationToken">The cancellation token to cancel the request.</param>
@@ -749,6 +706,32 @@ namespace Canton.Ledger.Rest.Client.Raw
         [Headers("Accept: application/json")]
         [Get("/v2/state/connected-synchronizers")]
         Task<GetConnectedSynchronizersResponse> GetConnectedSynchronizers([Query] string? party = default, [Query] string? participantId = default, [Query] string? identityProviderId = default, CancellationToken cancellationToken = default);
+
+        /// <remarks>
+        /// Translate syncrhonizer record time to an offset
+        /// If the requested record time is earlier that the earliest record time known for the given synchronizer
+        /// (either because is is before the connection to the synchronizer was established or because it was already pruned),
+        /// the request fails with RECORD_TIME_NOT_FOUND error.
+        /// If the requested record time is after the latest record time observed for this synchronizer, the request fails with
+        /// RECORD_TIME_NOT_OBSERVED_YET error code. This may be transitional condition until participant node catches up with most recent synchronizer updates.
+        /// In such case the caller may retry this request.
+        /// </remarks>
+        /// <param name="record_time">
+        /// The record time to be converted to an offset
+        /// Required
+        /// </param>
+        /// <param name="synchronizer_id">
+        /// The ID of the synchronizer
+        /// Must be a synchronizer from which the participant had received at least one update ever.
+        /// 
+        /// Required
+        /// </param>
+        /// <param name="cancellationToken">The cancellation token to cancel the request.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">Thrown when the request returns a non-success status code.</exception>
+        [Headers("Accept: application/json")]
+        [Get("/v2/state/convert-record-time-to-offset")]
+        Task<ConvertRecordTimeToOffsetResponse> ConvertRecordTimeToOffset([Query, AliasAs("record-time")] System.DateTimeOffset? record_time = default, [Query, AliasAs("synchronizer-id")] string? synchronizer_id = default, CancellationToken cancellationToken = default);
 
         /// <remarks>Get the latest successfully pruned ledger offsets</remarks>
         /// <param name="cancellationToken">The cancellation token to cancel the request.</param>
@@ -2123,6 +2106,30 @@ namespace Canton.Ledger.Rest.Client.Raw
 
     }
 
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ConvertRecordTimeToOffsetResponse
+    {
+
+        /// <summary>
+        /// The participant's offset, the details of the offset field are described in ``community/ledger-api/README.md``.
+        /// <br/> Must be a valid absolute offset (positive integer).
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("offset")]
+        public string Offset { get; set; }
+
+        private IDictionary<string, object> _additionalProperties;
+
+        [JsonExtensionData]
+        public IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
     /// <summary>
     /// Estimation of the cost of submitting the prepared transaction
     /// <br/> The estimation is done against the synchronizer chosen during preparation of the transaction
@@ -2166,6 +2173,14 @@ namespace Canton.Ledger.Rest.Client.Raw
         /// </summary>
         [JsonPropertyName("totalTrafficCostEstimation")]
         public string TotalTrafficCostEstimation { get; set; }
+
+        /// <summary>
+        /// Estimated cost of re-assigning contracts if necessary
+        /// <br/>
+        /// <br/> Optional: can be empty
+        /// </summary>
+        [JsonPropertyName("reassignmentCosts")]
+        public ICollection<ReassignmentCost> ReassignmentCosts { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -4275,6 +4290,18 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         [JsonPropertyName("observingParticipantUids")]
         public ICollection<string> ObservingParticipantUids { get; set; }
 
+        /// <summary>
+        /// The protocol version to create the topology transactions for, so that clients that only read topology
+        /// <br/> transactions of an older protocol version can read them, e.g. 36 on a synchronizer with protocol version 37.
+        /// <br/> Must be the synchronizer's protocol version or a lower one whose topology transactions the synchronizer admits:
+        /// <br/> from protocol version 37 on, a synchronizer admits those of protocol version 36.
+        /// <br/> Defaults to the synchronizer's protocol version.
+        /// <br/>
+        /// <br/> Optional
+        /// </summary>
+        [JsonPropertyName("protocolVersion")]
+        public int? ProtocolVersion { get; set; }
+
         private IDictionary<string, object> _additionalProperties;
 
         [JsonExtensionData]
@@ -4312,8 +4339,8 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// <summary>
         /// The serialized topology transactions which need to be signed and submitted as part of the allocate party process
         /// <br/> Note that the serialization includes the versioning information. Therefore, the transaction here is serialized
-        /// <br/> as an `UntypedVersionedMessage` which in turn contains the serialized `TopologyTransaction` in the version
-        /// <br/> supported by the synchronizer.
+        /// <br/> as an `UntypedVersionedMessage` which in turn contains the serialized `TopologyTransaction` for the requested
+        /// <br/> protocol version, or for the synchronizer's protocol version if none is requested.
         /// <br/>
         /// <br/> Required: must be non-empty
         /// </summary>
@@ -4381,7 +4408,7 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// <br/> The page token only works if subsequent requests:
         /// <br/>
         /// <br/> - are executed on the same participant,
-        /// <br/> - use the same active_at_offset and event_format,
+        /// <br/> - use the same active_at_offset, event_format and include_incomplete_reassignments,
         /// <br/> - and the participant's store was not pruned to after the active_at_offset.
         /// <br/>
         /// <br/> If not specified, the first page of the active contracts snapshot will be returned.
@@ -4390,6 +4417,16 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// </summary>
         [JsonPropertyName("pageToken")]
         public string PageToken { get; set; }
+
+        /// <summary>
+        /// If this flag is true, the IncompleteAssigned and IncompleteUnassigned events will be included in the stream
+        /// <br/> based on the specified event_format.
+        /// <br/> If this flag is set to false, Incomplete Reassignments will be omitted.
+        /// <br/>
+        /// <br/> Optional
+        /// </summary>
+        [JsonPropertyName("includeIncompleteReassignments")]
+        public bool? IncludeIncompleteReassignments { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -4442,12 +4479,6 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
 
     }
 
-    /// <summary>
-    /// If the given offset is different than the ledger end, and there are (un)assignments in-flight at the given offset,
-    /// <br/> the snapshot may fail with "FAILED_PRECONDITION/PARTICIPANT_PRUNED_DATA_ACCESSED".
-    /// <br/> Note that it is ok to request acs snapshots for party migration with offsets other than ledger end, because party
-    /// <br/> migration is not concerned with incomplete (un)assignments.
-    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class GetActiveContractsRequest
     {
@@ -4481,7 +4512,8 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// <br/>
         /// <br/> - subsequent request must be executed on the same participant with the same version of canton,
         /// <br/> - subsequent request must have the same active_at_offset,
-        /// <br/> - subsequent request must have the same event_format
+        /// <br/> - subsequent request must have the same event_format,
+        /// <br/> - subsequent request must have the same include_incomplete_reassignments
         /// <br/> - and the participant must not have been pruned after the active_at_offset.
         /// <br/>
         /// <br/> If not specified, the whole active contracts snapshot will be returned.
@@ -4490,6 +4522,16 @@ public ExecuteSubmissionRequestHashingSchemeVersion? HashingSchemeVersion { get;
         /// </summary>
         [JsonPropertyName("streamContinuationToken")]
         public string StreamContinuationToken { get; set; }
+
+        /// <summary>
+        /// If this flag is true, the IncompleteAssigned and IncompleteUnassigned events will be included in the stream
+        /// <br/> based on the specified event_format.
+        /// <br/> If this flag is set to false, Incomplete Reassignments will be omitted.
+        /// <br/>
+        /// <br/> Optional
+        /// </summary>
+        [JsonPropertyName("includeIncompleteReassignments")]
+        public bool? IncludeIncompleteReassignments { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -4973,29 +5015,6 @@ public GetPackageStatusResponsePackageStatus? PackageStatus { get; set; }
         /// </summary>
         [JsonPropertyName("partyDetails")]
         public ICollection<PartyDetails> PartyDetails { get; set; }
-
-        private IDictionary<string, object> _additionalProperties;
-
-        [JsonExtensionData]
-        public IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class GetPreferredPackageVersionResponse
-    {
-
-        /// <summary>
-        /// Not populated when no preferred package is found
-        /// <br/>
-        /// <br/> Optional
-        /// </summary>
-        [JsonPropertyName("packagePreference")]
-        public PackagePreference PackagePreference { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -5802,8 +5821,8 @@ public GetPackageStatusResponsePackageStatus? PackageStatus { get; set; }
         /// The interface that a matching contract must implement.
         /// <br/> The ``interface_id`` needs to be valid: corresponding interface should be defined in
         /// <br/> one of the available packages at the time of the query.
-        /// <br/> Both package-name and package-id reference formats for the identifier are supported.
-        /// <br/> Note: The package-id reference identifier format is deprecated. We plan to end support for this format in version 3.4.
+        /// <br/> Only package-name reference format for the identifier is supported.
+        /// <br/> Note: The package-id reference identifier format was removed in version 3.5.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -6621,38 +6640,6 @@ public GetPackageStatusResponsePackageStatus? PackageStatus { get; set; }
         /// </summary>
         [JsonPropertyName("packageNamePrefixes")]
         public ICollection<string> PackageNamePrefixes { get; set; }
-
-        private IDictionary<string, object> _additionalProperties;
-
-        [JsonExtensionData]
-        public IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PackagePreference
-    {
-
-        /// <summary>
-        /// The package reference of the preferred package.
-        /// <br/>
-        /// <br/> Required
-        /// </summary>
-        [JsonPropertyName("packageReference")]
-        public PackageReference PackageReference { get; set; }
-
-        /// <summary>
-        /// The synchronizer for which the preferred package was computed.
-        /// <br/> If the synchronizer_id was specified in the request, then it matches the request synchronizer_id.
-        /// <br/>
-        /// <br/> Required
-        /// </summary>
-        [JsonPropertyName("synchronizerId")]
-        public string SynchronizerId { get; set; }
 
         private IDictionary<string, object> _additionalProperties;
 
@@ -7677,6 +7664,91 @@ public PrepareSubmissionResponseHashingSchemeVersion? HashingSchemeVersion { get
 
     }
 
+    /// <summary>
+    /// Estimation of re-assignment costs
+    /// <br/> This is the cost of re-assigning contracts from another synchronizer if necessary.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReassignmentCost
+    {
+
+        /// <summary>
+        /// The synchronizer the contracts are currently assigned to, and against whose traffic balance
+        /// <br/> the unassignment cost is charged
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("sourceSynchronizerId")]
+        public string SourceSynchronizerId { get; set; }
+
+        /// <summary>
+        /// The synchronizer the contracts will be re-assigned to, and against whose traffic balance
+        /// <br/> the assignment cost is charged
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("targetSynchronizerId")]
+        public string TargetSynchronizerId { get; set; }
+
+        /// <summary>
+        /// The contracts that will be unassigned together in this single unassignment request
+        /// <br/>
+        /// <br/> Required: must be non-empty
+        /// </summary>
+        [JsonPropertyName("contractIds")]
+        public ICollection<string> ContractIds { get; set; }
+
+        /// <summary>
+        /// Estimated traffic cost of the unassignment confirmation request
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("unassignmentRequestTrafficCostEstimation")]
+        public string UnassignmentRequestTrafficCostEstimation { get; set; }
+
+        /// <summary>
+        /// Estimated traffic cost of the unassignment confirmation response
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("unassignmentResponseTrafficCostEstimation")]
+        public string UnassignmentResponseTrafficCostEstimation { get; set; }
+
+        /// <summary>
+        /// Estimated traffic cost of the assignment confirmation request
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("assignmentRequestTrafficCostEstimation")]
+        public string AssignmentRequestTrafficCostEstimation { get; set; }
+
+        /// <summary>
+        /// Estimated traffic cost of the assignment confirmation response
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("assignmentResponseTrafficCostEstimation")]
+        public string AssignmentResponseTrafficCostEstimation { get; set; }
+
+        /// <summary>
+        /// Sum of the fields above
+        /// <br/>
+        /// <br/> Required
+        /// </summary>
+        [JsonPropertyName("totalReassignmentCostEstimation")]
+        public string TotalReassignmentCostEstimation { get; set; }
+
+        private IDictionary<string, object> _additionalProperties;
+
+        [JsonExtensionData]
+        public IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ReassignmentEvent
     {
@@ -8516,8 +8588,8 @@ public SigningPublicKeyKeySpec? KeySpec { get; set; }
         /// A template for which the payload should be included in the response.
         /// <br/> The ``template_id`` needs to be valid: corresponding template should be defined in
         /// <br/> one of the available packages at the time of the query.
-        /// <br/> Both package-name and package-id reference formats for the identifier are supported.
-        /// <br/> Note: The package-id reference identifier format is deprecated. We plan to end support for this format in version 3.4.
+        /// <br/> Only package-name reference format for the identifier is supported.
+        /// <br/> Note: The package-id reference identifier format was removed in version 3.5.
         /// <br/>
         /// <br/> Required
         /// </summary>
@@ -9032,6 +9104,23 @@ public TransactionFormatTransactionShape? TransactionShape { get; set; }
         [JsonPropertyName("target")]
         public string Target { get; set; }
 
+        /// <summary>
+        /// The package id used to validate the contract on the source synchronizer.
+        /// <br/>
+        /// <br/> Optional
+        /// </summary>
+        [JsonPropertyName("overrideSourceValidationPackageId")]
+        public string OverrideSourceValidationPackageId { get; set; }
+
+        /// <summary>
+        /// The package id used to validate the contract on the target synchronizer. This
+        /// <br/> package id will also become the representative package id used in the created event.
+        /// <br/>
+        /// <br/> Optional
+        /// </summary>
+        [JsonPropertyName("overrideTargetValidationPackageId")]
+        public string OverrideTargetValidationPackageId { get; set; }
+
         private IDictionary<string, object> _additionalProperties;
 
         [JsonExtensionData]
@@ -9119,7 +9208,8 @@ public TransactionFormatTransactionShape? TransactionShape { get; set; }
         /// <summary>
         /// Assignment exclusivity
         /// <br/> Before this time (measured on the target synchronizer), only the submitter of the unassignment can initiate the assignment
-        /// <br/> Defined for reassigning participants.
+        /// <br/> Defined for reassigning participants, up to protocol version 36.
+        /// <br/> Starting with protocol version 37, it is not set: any stakeholder can submit the assignment as soon as the unassignment is completed.
         /// <br/>
         /// <br/> Optional
         /// </summary>

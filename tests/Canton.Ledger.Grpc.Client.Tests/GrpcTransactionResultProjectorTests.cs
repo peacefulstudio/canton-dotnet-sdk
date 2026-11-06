@@ -364,6 +364,37 @@ public class GrpcTransactionResultProjectorTests
         result.ArchivedContractIds.Should().Equal("00first", "00second");
     }
 
+    [Fact]
+    public void Project_carries_the_node_id_and_last_descendant_node_id_of_an_exercised_event()
+    {
+        var exercised = ExercisedWithUnitPayloads();
+        exercised.NodeId = 3;
+        exercised.LastDescendantNodeId = 7;
+
+        var result = GrpcTransactionResultProjector.Project(TransactionWith(exercised));
+
+        var projected = result.ExercisedEvents.Should().ContainSingle().Subject;
+        projected.NodeId.Should().Be(3);
+        projected.LastDescendantNodeId.Should().Be(7);
+    }
+
+    [Fact]
+    public void Project_carries_the_node_id_of_a_created_event()
+    {
+        var created = new ProtoCreatedEvent
+        {
+            NodeId = 4,
+            ContractId = "00created",
+            PackageName = "token-impl",
+            TemplateId = new ProtoIdentifier { PackageId = "impl-pkg", ModuleName = "Token.Holding", EntityName = "Holding" },
+            CreateArguments = new ProtoRecord(),
+        };
+
+        var result = GrpcTransactionResultProjector.Project(ResponseWith(created));
+
+        result.CreatedContracts.Should().ContainSingle().Which.NodeId.Should().Be(4);
+    }
+
     private static ProtoExercisedEvent ExercisedWithUnitPayloads() => new()
     {
         ContractId = "00holding",

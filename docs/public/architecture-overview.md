@@ -10,7 +10,7 @@ The SDK lives in one repository, `canton-dotnet-sdk`, and every NuGet package in
 |---|---|
 | Codegen | `dpm codegen-cs` (the pipeline, distributed as an OCI bundle), `Daml.Codegen.CSharp` (emitter library), `Daml.Codegen.Intermediate` (the Intermediate DAR model), `Daml.Codegen.Testing.Conformance` (conformance corpus) |
 | Runtime | `Daml.Runtime` (value, command and contract vocabulary), `Daml.Ledger.Abstractions` (`ILedgerClient` and its parts) |
-| Ledger client | `Canton.Ledger.Abstractions` (neutral contract layer), `Canton.Ledger.Kernel` (authentication, telemetry, retry, TLS), `Canton.Ledger.Grpc` and `Canton.Ledger.Grpc.Client` (gRPC), `Canton.Ledger.Rest` and `Canton.Ledger.Rest.Client` (JSON Ledger API), `Canton.Ledger.Pqs.Client` (PQS) |
+| Ledger client | `Canton.Ledger.Abstractions` (neutral contract layer), `Canton.Ledger.Kernel` (authentication, telemetry, retry, TLS), `Canton.Ledger.Grpc` and `Canton.Ledger.Grpc.Client` (gRPC), `Canton.Ledger.Rest` and `Canton.Ledger.Rest.Client` (JSON Ledger API), `Canton.Ledger.Pqs.Client` (PQS), `Canton.Ledger.AspNetCore` (ProblemDetails for failed ledger commands in ASP.NET Core hosts) |
 | Observability and testing | `Canton.Ledger.OpenTelemetry`, `Canton.Ledger.Testing` (in-memory fakes), `Daml.Ledger.Abstractions.Testing.Conformance` (behavioural test kit for `ILedgerClient` implementations) |
 
 ```mermaid
@@ -206,5 +206,5 @@ The read paths mirror it:
 ## Versioning and dependencies
 
 - **One version line.** Every published package in the repository carries the same version (`<Version>` in `Directory.Build.props`) and is released from one tag.
-- **Canton protos** are pinned by `CantonVersion` in `Directory.Build.props` — currently `3.6.1`; bumping it re-targets the whole stub layer at the next build. The same pin drives the vendored JSON Ledger API spec behind `Canton.Ledger.Rest`, so both transports track one Canton version, and that version is a Canton 3.6 release: the library supports Canton 3.6 only. See the [cross-version matrix](cross-version-matrix.md) for the Canton releases the clients are exercised against.
+- **Canton protos** are pinned by `CantonVersion` in `Directory.Build.props`, currently `3.7.1`; bumping it re-targets the whole stub layer at the next build. The same pin drives the vendored JSON Ledger API spec behind `Canton.Ledger.Rest`, so both transports track one Canton version, and that version is a Canton 3.7 release: the library supports Canton 3.7 only. See the [cross-version matrix](cross-version-matrix.md) for the Canton releases the clients are exercised against.
 - All third-party package versions are managed centrally (NuGet central package management); see `Directory.Packages.props` for the authoritative list.

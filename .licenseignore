@@ -6,4 +6,5 @@
 
 src/Daml.Codegen.DarParser/Proto/
 src/Canton.Ledger.Kernel/Topology/Proto/
+src/Canton.Ledger.Kernel/Wire/Proto/
 src/Canton.Ledger.Rest/spec/openapi.yaml

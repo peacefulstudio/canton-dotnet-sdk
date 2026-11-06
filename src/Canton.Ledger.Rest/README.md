@@ -9,7 +9,7 @@ Reach for this package only when you need an endpoint the adapter does not surfa
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Rest --version 0.7.1
+dotnet add package Canton.Ledger.Rest --version 0.8.0
 ```
 
 ## Related Packages
@@ -50,8 +50,8 @@ extracted Maven protos against the upstream tree before exporting patches.
 Exactly the artifacts `src/Canton.Ledger.Grpc/DownloadProtos.targets` already fetches,
 SHA-256-pinned there:
 
-- `com.daml:ledger-api-proto:3.6.1` (`$(CantonVersion)`)
-- `com.daml:ledger-api-value-proto:3.6.1`
+- `com.daml:ledger-api-proto:3.7.1` (`$(CantonVersion)`)
+- `com.daml:ledger-api-value-proto:3.7.1`
 - `com.google.api.grpc:proto-google-common-protos:2.78.0`
 
 ### Patch set
@@ -74,10 +74,12 @@ that message in a single field. That adds ten wrapper messages — `CompletionRe
 affected key to the served spelling. No arm is added, removed or retyped — the wrapper messages
 exist only to carry the nesting level the served document has and the protos do not.
 
-**Query-parameter names.** One `json_name` pins a query parameter rather than a body key:
-`GetLedgerEndRequest.synchronizer_id`, so `GET /v2/state/ledger-end` sends `synchronizer_id`, the
-name the participant reads. Without it the derived name is `synchronizerId`, which the participant
-does not read.
+**Query-parameter names.** Three `json_name` options pin a query parameter rather than a body key,
+each to the name the participant reads: `GetLedgerEndRequest.synchronizer_id`, so
+`GET /v2/state/ledger-end` sends `synchronizer_id`, and `ConvertRecordTimeToOffsetRequest.record_time`
+and `.synchronizer_id`, so `GET /v2/state/convert-record-time-to-offset` sends `record-time` and
+`synchronizer-id`. Without them the derived names are `synchronizerId` and `recordTime`, which the
+participant does not read.
 
 Routes match the JSON Ledger API's own with **exactly one known verb deviation**:
 `StateService.GetActiveContractsPage` is annotated `POST /v2/state/active-contracts-page`,
@@ -147,10 +149,10 @@ That correspondence is pinned **by name, not by count**, in
 `tests/Canton.Ledger.Rest.Client.Tests/RestEndpointCoverageTests.cs`, whose
 `PinnedSpecOperations` maps all 52 `operationId`s to their `VERB route` and asserts that
 `spec/openapi.yaml` declares exactly those and that the raw Refit surface routes every one of
-them plus the thirteen hand-authored off-spec endpoints in `PinnedOffSpecEndpoints`. The raw
+them plus the twelve hand-authored off-spec endpoints in `PinnedOffSpecEndpoints`. The raw
 surface is compared per declaring interface **and method** —
 `IPackageManagementServiceApi.UploadDarFile: POST /v2/dars`, not `POST /v2/dars` — because
-`IDarApi`, `IPackageApi`, `IInteractiveSubmissionApi`, `IPartyManagementApi` and
+`IDarApi`, `IPackageApi`, `IPartyManagementApi` and
 `IUserManagementApi` re-declare off-spec routes the generated
 surface also carries and an unqualified route set would let them stand in for a regeneration that
 dropped them, and because two methods sharing one route on one

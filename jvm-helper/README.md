@@ -4,7 +4,7 @@ Scala/JVM binary that wraps [`daml-lf-archive`](https://search.maven.org/artifac
 to decode a `.dar` archive and emit an [`IntermediateDar`](../proto/intermediate_dar.proto)
 protobuf message to disk.
 
-See `JVM helper` and `AstToIntermediate translator` in [CONTEXT.md](../CONTEXT.md)
+See `JVM helper` and `AstToIntermediate translator` in [GLOSSARY.md](../GLOSSARY.md)
 for the domain terms. This component is invoked as a child process by the
 `dpm codegen-cs` launcher.
 

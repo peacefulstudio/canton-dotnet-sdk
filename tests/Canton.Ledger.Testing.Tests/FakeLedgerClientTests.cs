@@ -126,7 +126,7 @@ public class FakeLedgerClientTests
             commandId: (CommandId)"cmd-3",
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().Be(new ExerciseOutcome<string>.One("choice-result") { CommandId = "cmd-3" });
+        result.Should().Be(new ExerciseOutcome<string>.One("choice-result") { CommandId = "cmd-3", Operation = LedgerOperation.Of(DemoExercise()) });
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class FakeLedgerClientTests
             commandId: (CommandId)"cmd-9",
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().Be(new ExerciseOutcome<string>.One("choice-result") { CommandId = "cmd-9" });
+        result.Should().Be(new ExerciseOutcome<string>.One("choice-result") { CommandId = "cmd-9", Operation = LedgerOperation.Of(DemoExercise()) });
     }
 
     [Fact]
@@ -171,6 +171,33 @@ public class FakeLedgerClientTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         result.CommandId.Should().Be("cmd-9");
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_stamps_the_create_operation_on_the_staged_outcome()
+    {
+        var client = FakeLedgerClient.Create()
+            .WithCreateResult(LedgerOutcomes.One(new ContractId<DemoAsset>("cid1")))
+            .Build();
+
+        var result = await client.TryCreateAsync(
+            new DemoAsset(Alice, Alice, "GOLD", 1m), Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Operation.Should().Be(new LedgerOperation.Command(DemoAsset.TemplateId, "Create"));
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_stamps_the_exercised_choice_on_the_staged_outcome()
+    {
+        var client = FakeLedgerClient.Create()
+            .WithExerciseResult(LedgerOutcomes.One(DamlUnit.Instance))
+            .Build();
+        var command = ExerciseCommand.For(new ContractId<DemoAsset>("cid1"), (ChoiceName)"Archive", DamlRecord.Create());
+
+        var result = await client.TryExerciseAsync<DamlUnit>(
+            command, Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Operation.Should().Be(new LedgerOperation.Command(DemoAsset.TemplateId, "Archive"));
     }
 
     [Fact]
@@ -225,7 +252,7 @@ public class FakeLedgerClientTests
             commandId: (CommandId)"cmd-3",
             cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().Be(new ExerciseOutcome<ContractId<DemoAsset>>.One(new ContractId<DemoAsset>("cid1")) { CommandId = "cmd-3" });
+        result.Should().Be(new ExerciseOutcome<ContractId<DemoAsset>>.One(new ContractId<DemoAsset>("cid1")) { CommandId = "cmd-3", Operation = LedgerOperation.Creating(DemoAsset.TemplateId) });
     }
 
     public static TheoryData<ExerciseOutcome<TransactionResult>> SubmissionOutcomes => new()

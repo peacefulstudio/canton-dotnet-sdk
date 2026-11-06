@@ -7,6 +7,7 @@ using Canton.Ledger.Kernel.Authentication;
 using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Ledger.Abstractions;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using AwesomeAssertions;
@@ -86,6 +87,45 @@ public sealed class LedgerClientAsyncSubmitTests : IDisposable
         captured.Should().NotBeNull();
         captured!.Commands.Commands_.Should().ContainSingle();
         captured.Commands.CommandId.Should().Be("fire-cmd");
+    }
+
+    [Fact]
+    public async Task Submit_tags_the_daml_template_id_of_the_command()
+    {
+        StubSubmit();
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+        var client = CreateClient();
+        _ = await client.SubmitAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        capture.Activities.Should().ContainSingle().Subject
+            .GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Submit_tags_the_exercised_contract_id_only_when_opted_in(bool optedIn)
+    {
+        _options.EmitPartyAndContractSpanTags = optedIn;
+        StubSubmit();
+        var submission = RuntimeCommands.CommandsSubmission
+            .Single(new RuntimeCommands.ExerciseCommand(
+                new RuntimeIdentifier("pkg", "Module", "Template"),
+                new ContractId<LedgerClientTests.TestTemplate>("00abc"),
+                new RuntimeCommands.ChoiceName("Archive"),
+                DamlUnit.Instance))
+            .WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+        var client = CreateClient();
+        _ = await client.SubmitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+        activity.TagObjects.Where(tag => tag.Key == "daml.contract_id").Select(tag => (string)tag.Value!)
+            .Should().Equal(optedIn ? ["00abc"] : []);
     }
 
     [Fact]

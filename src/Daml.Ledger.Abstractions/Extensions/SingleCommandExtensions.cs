@@ -87,12 +87,13 @@ public static class SingleCommandExtensions
             .WithCommandId(commandId ?? IdMinting.MintCommandId())
             .WithOptionalWorkflowId(workflowId);
 
-        return SubmitAsync(writer, ApplyConfigure(submission, command, configure), submitter, timeout, cancellationToken);
+        return SubmitAsync(writer, ApplyConfigure(submission, command, configure), LedgerOperation.Of(command), submitter, timeout, cancellationToken);
     }
 
     private static async Task<ExerciseOutcome<TransactionResult>> SubmitAsync(
         ILedgerWriter writer,
         CommandsSubmission submission,
+        LedgerOperation? operation,
         SubmitterInfo submitter,
         TimeSpan? timeout,
         CancellationToken cancellationToken)
@@ -100,14 +101,14 @@ public static class SingleCommandExtensions
         var outcome = await writer
             .TrySubmitAndWaitForTransactionAsync(submission, submitter, timeout, cancellationToken)
             .ConfigureAwait(false);
-        return outcome.WithCommandId(submission.CommandId?.Value);
+        return outcome.WithCommandId(submission.CommandId?.Value).WithOperation(operation);
     }
 
     /// <summary>
     /// Creates a <typeparamref name="TTemplate"/> contract from <paramref name="payload"/>, letting
     /// <paramref name="configure"/> adjust the submission first. Without a hook this is
     /// <see cref="ILedgerWriter.TryCreateAsync{TTemplate}(TTemplate, SubmitterInfo, string?, CommandId?, TimeSpan?, CancellationToken)"/>
-    /// unchanged. With one, the create command is submitted through
+    /// with the outcome's <see cref="ExerciseOutcome{T}.Operation"/> stamped. With one, the create command is submitted through
     /// <see cref="TrySubmitSingleAsync(ILedgerWriter, ICommand, SubmitterInfo, string?, CommandId?, TimeSpan?, Func{CommandsSubmission, CommandsSubmission}?, CancellationToken)"/>
     /// and the created contracts are projected onto <see cref="ContractId{T}"/> the way
     /// <see cref="CreateByExercise.TryCreateOneByExerciseAsync{TTemplate}(ILedgerWriter, ExerciseCommand, SubmitterInfo, string?, CommandId?, TimeSpan?, Func{CommandsSubmission, CommandsSubmission}?, CancellationToken)"/>
@@ -172,8 +173,25 @@ public static class SingleCommandExtensions
         ArgumentNullException.ThrowIfNull(payload);
 
         return configure is null
-            ? writer.TryCreateAsync(payload, submitter, workflowId, commandId, timeout, cancellationToken)
+            ? TryCreateUnconfiguredAsync(writer, payload, submitter, workflowId, commandId, timeout, cancellationToken)
             : TryCreateConfiguredAsync(writer, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);
+    }
+
+    private static async Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateUnconfiguredAsync<TTemplate>(
+        ILedgerWriter writer,
+        TTemplate payload,
+        SubmitterInfo submitter,
+        string? workflowId,
+        CommandId? commandId,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
+        where TTemplate : ITemplate
+    {
+        var outcome = await writer
+            .TryCreateAsync(payload, submitter, workflowId, commandId, timeout, cancellationToken)
+            .ConfigureAwait(false);
+
+        return outcome.WithOperation(LedgerOperation.Creating(TTemplate.TemplateId));
     }
 
     private static async Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateConfiguredAsync<TTemplate>(

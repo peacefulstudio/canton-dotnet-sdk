@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Integration.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Integration.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Remove="xunit.v3.mtp-v2" />
     <PackageReference Remove="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
@@ -15,6 +22,7 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3.extensibility.core" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Grpc.Net.Client" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Rest.Client.Raw;
+using Refit;
 using Xunit;
 
 #pragma warning disable CANTONREST001
@@ -14,8 +15,16 @@ public static partial class LedgerApiVersionSkewGuard
         IVersionServiceApi versionApi,
         CancellationToken cancellationToken)
     {
-        var response = await versionApi.GetLedgerApiVersion(cancellationToken);
-        var reportedVersion = response.Version;
+        string? reportedVersion;
+        try
+        {
+            reportedVersion = (await versionApi.GetLedgerApiVersion(cancellationToken)).Version;
+        }
+        catch (ApiException failure)
+        {
+            Assert.Fail(VersionProbeFailureMessage(failure.StatusCode, failure.Content));
+            return;
+        }
 
         switch (Classify(reportedVersion))
         {

@@ -36,7 +36,7 @@ public sealed partial class FakeLedgerClientBuilder
     private IReadOnlyList<CompletionStreamEvent>? _completionEvents;
     private IReadOnlyList<ConnectedSynchronizer>? _connectedSynchronizers;
     private string? _ledgerApiVersion;
-    private ExerciseOutcome<TransactionResult>? _submissionOutcome;
+    private IReadOnlyList<ExerciseOutcome<TransactionResult>> _submissionOutcomes = [];
     private SubmitAndWaitResult? _submitAndWaitResult;
     private ExerciseOutcome<TransactionTree>? _transactionTreeOutcome;
     private StagedTrafficCostEstimate? _trafficCostEstimate;
@@ -44,7 +44,23 @@ public sealed partial class FakeLedgerClientBuilder
     private ExecutedSubmission? _executedSubmission;
     private TransactionResult? _executedTransaction;
     private PreferredPackages? _preferredPackages;
-    private LedgerOperationException? _throwingCallFailure;
+    private Exception? _throwingCallFailure;
+    private bool _throwingCallFailureAlsoFromTryMembers;
+    private TimeProvider _timeProvider = TimeProvider.System;
+
+    /// <summary>
+    /// Stages the clock the fake reports as <see cref="FakeLedgerClient.TimeProvider"/>, the one a
+    /// <c>timeout</c> argument is measured on. Pass a <c>FakeTimeProvider</c> to expire a timeout
+    /// deterministically.
+    /// </summary>
+    /// <param name="timeProvider">The clock the fake's timeouts run on.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public FakeLedgerClientBuilder WithTimeProvider(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        _timeProvider = timeProvider;
+        return this;
+    }
 
     /// <summary>
     /// Stages the offset <see cref="FakeLedgerClient.GetLedgerEndAsync"/> starts from. The end
@@ -253,14 +269,23 @@ public sealed partial class FakeLedgerClientBuilder
     /// <summary>
     /// Stages the outcome that
     /// <see cref="FakeLedgerClient.TrySubmitAndWaitForTransactionAsync(CommandsSubmission, TimeSpan?, CancellationToken)"/>
-    /// (and its <see cref="SubmitterInfo"/>-carrying overload) returns for every submission.
+    /// (and its <see cref="SubmitterInfo"/>-carrying overload) returns. Staging one outcome answers
+    /// every submission with it; staging several answers the first submission with the first, the
+    /// second with the second, and so on, and every submission after the last with the last one — a
+    /// stale-context rejection followed by a success, say. Staging again replaces the sequence.
     /// </summary>
-    /// <param name="outcome">The outcome to reply with.</param>
+    /// <param name="outcomes">The outcomes to reply with, in submission order; at least one.</param>
     /// <returns>The same builder, for chaining.</returns>
-    public FakeLedgerClientBuilder WithSubmissionOutcome(ExerciseOutcome<TransactionResult> outcome)
+    /// <exception cref="ArgumentException"><paramref name="outcomes"/> is empty or holds a null outcome.</exception>
+    public FakeLedgerClientBuilder WithSubmissionOutcome(params ExerciseOutcome<TransactionResult>[] outcomes)
     {
-        ArgumentNullException.ThrowIfNull(outcome);
-        _submissionOutcome = outcome;
+        ArgumentNullException.ThrowIfNull(outcomes);
+        if (outcomes.Length == 0 || Array.Exists(outcomes, outcome => outcome is null))
+        {
+            throw new ArgumentException("Stage at least one outcome, and no null outcome.", nameof(outcomes));
+        }
+
+        _submissionOutcomes = [.. outcomes];
         return this;
     }
 
@@ -474,11 +499,12 @@ public sealed partial class FakeLedgerClientBuilder
     /// interactive-submission members.
     /// </summary>
     /// <remarks>
-    /// This covers the throwing members only. The <c>Try*</c> members keep returning the
+    /// By default this covers the throwing members only. The <c>Try*</c> members keep returning the
     /// <see cref="ExerciseOutcome{T}"/> staged for them and the streams keep yielding their staged
-    /// events, because a real transport does not throw from those either. A null argument still throws
-    /// synchronously ahead of the staged failure, and a member with neither an answer nor a failure
-    /// staged still throws its <see cref="NotSupportedException"/>.
+    /// events, because a real transport does not throw from those either; pass
+    /// <c>alsoFromTryMembers: true</c> to make the <c>Try*</c> members raise the failure as well.
+    /// A null argument still throws synchronously ahead of the staged failure, and a member with
+    /// neither an answer nor a failure staged still throws its <see cref="NotSupportedException"/>.
     /// The fake raises the instance exactly as staged and does not derive its
     /// <see cref="LedgerOperationException.CommitState"/> from the member called, so stage a failure whose
     /// commit state suits the members under test: under the failure contract a failed read reports
@@ -489,11 +515,21 @@ public sealed partial class FakeLedgerClientBuilder
     /// followed by a <see cref="CommitState"/>.
     /// </remarks>
     /// <param name="failure">The exception every throwing member raises.</param>
+    /// <param name="alsoFromTryMembers">
+    /// <see langword="true"/> to raise <paramref name="failure"/> from the <c>Try*</c> members too, so a
+    /// test can pin how an exception such as <see cref="OperationCanceledException"/> propagates out of
+    /// a <c>Try*</c> call: <c>TryCreateAsync</c>, <c>TryExerciseAsync</c>, both
+    /// <c>TrySubmitAndWaitForTransactionAsync</c> overloads, <c>TrySubmitAndWaitForTransactionTreeAsync</c>
+    /// and <c>TrySubmitAndWaitForReassignmentAsync</c>. Each records its submission first and then raises
+    /// the failure without advancing the ledger end. The default, <see langword="false"/>, leaves them
+    /// returning their staged outcome.
+    /// </param>
     /// <returns>The same builder, for chaining.</returns>
-    public FakeLedgerClientBuilder WithThrowingCallFailure(LedgerOperationException failure)
+    public FakeLedgerClientBuilder WithThrowingCallFailure(Exception failure, bool alsoFromTryMembers = false)
     {
         ArgumentNullException.ThrowIfNull(failure);
         _throwingCallFailure = failure;
+        _throwingCallFailureAlsoFromTryMembers = alsoFromTryMembers;
         return this;
     }
 
@@ -508,7 +544,7 @@ public sealed partial class FakeLedgerClientBuilder
         new Dictionary<Type, object>(_ledgerEffects),
         new Dictionary<Type, object>(_exerciseResults),
         new Dictionary<Type, object>(_createResults),
-        _submissionOutcome,
+        _submissionOutcomes,
         _submitAndWaitResult,
         _ledgerEnd,
         new FakeCantonSurface(
@@ -533,5 +569,7 @@ public sealed partial class FakeLedgerClientBuilder
     {
         TypedReads = SnapshotTypedReads(),
         ThrowingCallFailure = _throwingCallFailure,
+        TimeProvider = _timeProvider,
+        ThrowingCallFailureAlsoFromTryMembers = _throwingCallFailureAlsoFromTryMembers,
     };
 }

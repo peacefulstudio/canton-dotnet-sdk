@@ -87,7 +87,13 @@ internal sealed class PackageContext
     /// outside the interned dotted-name table, or a segment outside the interned-string
     /// table, fails with <see cref="InvalidDataException"/> like <see cref="GetString"/>.
     /// </summary>
-    public string GetDottedName(int index)
+    public string GetDottedName(int index) => string.Join(".", GetDottedNameSegments(index));
+
+    /// <summary>
+    /// Resolves an interned dotted-name index to its segments. Fails on the same malformed
+    /// indexes as <see cref="GetDottedName"/>.
+    /// </summary>
+    public IReadOnlyList<string> GetDottedNameSegments(int index)
     {
         if (index < 0 || index >= _package.InternedDottedNames.Count)
         {
@@ -95,8 +101,7 @@ internal sealed class PackageContext
                 $"Daml-LF interned dotted-name index {index} is out of range of the interned dotted-name table of size {_package.InternedDottedNames.Count}. The archive is malformed.");
         }
 
-        var dottedName = _package.InternedDottedNames[index];
-        return string.Join(".", dottedName.SegmentsInternedStr.Select(GetString));
+        return _package.InternedDottedNames[index].SegmentsInternedStr.Select(GetString).ToList();
     }
 
     /// <summary>

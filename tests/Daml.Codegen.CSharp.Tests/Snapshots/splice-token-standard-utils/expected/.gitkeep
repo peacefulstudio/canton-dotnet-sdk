@@ -1,4 +1,0 @@
-This package emits no C# types, so its pinned snapshot tree is empty. The
-directory itself is the fixture: both the in-process drift test and the
-publish-time drift guard require it to exist, and git does not track an empty
-directory without a file in it.

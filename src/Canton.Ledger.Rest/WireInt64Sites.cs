@@ -27,6 +27,7 @@ internal static class WireInt64Sites
             [typeof(ArchivedEvent)] = ["offset"],
             [typeof(AssignedEvent)] = ["reassignmentCounter"],
             [typeof(Completion)] = ["offset", "paidTrafficCost"],
+            [typeof(ConvertRecordTimeToOffsetResponse)] = ["offset"],
             [typeof(CostEstimation)] =
             [
                 "confirmationRequestTrafficCostEstimation",
@@ -43,6 +44,14 @@ internal static class WireInt64Sites
             [typeof(GetUpdatesPageResponse)] = ["lowestPageOffsetExclusive", "highestPageOffsetInclusive"],
             [typeof(OffsetCheckpoint)] = ["offset"],
             [typeof(Reassignment)] = ["offset", "paidTrafficCost"],
+            [typeof(ReassignmentCost)] =
+            [
+                "assignmentRequestTrafficCostEstimation",
+                "assignmentResponseTrafficCostEstimation",
+                "totalReassignmentCostEstimation",
+                "unassignmentRequestTrafficCostEstimation",
+                "unassignmentResponseTrafficCostEstimation",
+            ],
             [typeof(SubmitAndWaitResponse)] = ["completionOffset"],
             [typeof(TopologyTransaction)] = ["offset"],
             [typeof(Transaction)] = ["offset", "paidTrafficCost"],

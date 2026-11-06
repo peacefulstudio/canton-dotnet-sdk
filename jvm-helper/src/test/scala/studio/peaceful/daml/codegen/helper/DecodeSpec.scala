@@ -261,7 +261,7 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
       }
     }
 
-    "default and --schema-only decode produce identical non-party content on the fixture DAR" in {
+    "default and --schema-only decode produce identical content outside party analyses and literal constants on the fixture DAR" in {
       Files.exists(FixtureDar) shouldBe true
       val fullOut   = Files.createTempFile("intermediate-dar-full-", ".binpb")
       val schemaOut = Files.createTempFile("intermediate-dar-schema-", ".binpb")
@@ -270,9 +270,33 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
         Decode.run(Decode.ParsedArgs(FixtureDar, schemaOut, schemaOnly = true)) shouldBe Right(())
         val full   = IntermediateDar.parseFrom(Files.readAllBytes(fullOut))
         val schema = IntermediateDar.parseFrom(Files.readAllBytes(schemaOut))
-        val fullStripped   = stripPartyAnalyses(full)
-        val schemaStripped = stripPartyAnalyses(schema)
+        val fullStripped   = stripBodyDerivedContent(full)
+        val schemaStripped = stripBodyDerivedContent(schema)
         fullStripped.toByteArray.toSeq shouldBe schemaStripped.toByteArray.toSeq
+      } finally {
+        Files.deleteIfExists(fullOut)
+        Files.deleteIfExists(schemaOut)
+      }
+    }
+
+    "default decode carries the single-literal values of the conformance DAR and --schema-only decode carries none" in {
+      val conformanceDar = Paths.get("../conformance/defaulttarget/defaulttarget.dar")
+      val fullOut        = Files.createTempFile("intermediate-dar-constants-full-", ".binpb")
+      val schemaOut      = Files.createTempFile("intermediate-dar-constants-schema-", ".binpb")
+      try {
+        Decode.run(Decode.ParsedArgs(conformanceDar, fullOut, schemaOnly = false))   shouldBe Right(())
+        Decode.run(Decode.ParsedArgs(conformanceDar, schemaOut, schemaOnly = true)) shouldBe Right(())
+        val full   = IntermediateDar.parseFrom(Files.readAllBytes(fullOut))
+        val schema = IntermediateDar.parseFrom(Files.readAllBytes(schemaOut))
+
+        full.main.value.modules.map(_.constants.map(c => c.name)) shouldBe Seq(
+          Seq(
+            "disabled", "feeRate", "greeting", "legacyDecimal", "maintenanceMode",
+            "name$u0027", "negativeLimit", "retryLimit", "tinyRate",
+          )
+        )
+        full.main.value.modules.flatMap(_.constants).find(_.name == "feeRate").value.getNumericValue shouldBe "0.0025000000"
+        schema.main.value.modules.flatMap(_.constants) shouldBe empty
       } finally {
         Files.deleteIfExists(fullOut)
         Files.deleteIfExists(schemaOut)
@@ -444,10 +468,10 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
     }
   }
 
-  private def stripPartyAnalyses(dar: IntermediateDar): IntermediateDar = {
+  private def stripBodyDerivedContent(dar: IntermediateDar): IntermediateDar = {
     def stripPkg(pkg: IntermediatePackage): IntermediatePackage =
       pkg.copy(modules = pkg.modules.map { m =>
-        m.copy(templates = m.templates.map { t =>
+        m.copy(constants = Nil, templates = m.templates.map { t =>
           t.copy(
             signatories = None,
             observers = None,

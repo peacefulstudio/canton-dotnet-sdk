@@ -59,6 +59,6 @@ public static class RestRefitSettings
     public static RefitSettings Create() => new()
     {
         ContentSerializer = new SystemTextJsonContentSerializer(SerializerOptions),
-        UrlParameterFormatter = new JsonBooleanUrlParameterFormatter(),
+        UrlParameterFormatter = new JsonUrlParameterFormatter(),
     };
 }

@@ -16,7 +16,7 @@ Maintained by [Peaceful Studio](https://peaceful.studio), which also offers
 
 ## NuGet Packages
 
-All 16 packages share one version and publish together from one `v*` tag, alongside the
+All 17 packages share one version and publish together from one `v*` tag, alongside the
 `dpm codegen-cs` component of the same version. Upgrade them together.
 
 | Package | Use it for |
@@ -30,6 +30,7 @@ All 16 packages share one version and publish together from one `v*` tag, alongs
 | [`Canton.Ledger.Pqs.Client`](https://www.nuget.org/packages/Canton.Ledger.Pqs.Client/) | Typed, SQL-injection-safe queries over active contracts in the Participant Query Store. |
 | [`Daml.Ledger.Abstractions`](https://www.nuget.org/packages/Daml.Ledger.Abstractions/) | The transport-agnostic `ILedgerClient` that generated code submits through. |
 | [`Canton.Ledger.Abstractions`](https://www.nuget.org/packages/Canton.Ledger.Abstractions/) | The transport-neutral Canton contract layer: `ICantonLedgerClient`, `IAdminClient`, `ITokenProvider`, `IPqsClient`. |
+| [`Canton.Ledger.AspNetCore`](https://www.nuget.org/packages/Canton.Ledger.AspNetCore/) | ASP.NET Core hosting: an `IExceptionHandler` that answers a failed ledger command as ProblemDetails (`202` committed, `409`, `404`), plus OpenAPI metadata for minimal APIs and MVC controllers. |
 | [`Canton.Ledger.Kernel`](https://www.nuget.org/packages/Canton.Ledger.Kernel/) | Shared client plumbing: OAuth2 and static token providers, telemetry naming, opt-in retry pipeline. |
 | [`Canton.Ledger.OpenTelemetry`](https://www.nuget.org/packages/Canton.Ledger.OpenTelemetry/) | One `AddCantonLedgerInstrumentation()` call registers every Canton client `ActivitySource`. |
 | [`Canton.Ledger.Grpc`](https://www.nuget.org/packages/Canton.Ledger.Grpc/) | Raw gRPC stubs generated from the Canton Ledger API protos. |
@@ -53,16 +54,16 @@ Daml source to generated C# bindings. Neither step needs a ledger.
 |---|---|---|
 | [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.100 or later (`dotnet --version`) | building the generated C# into your app |
 | JDK | 17 or later on `PATH` (`java -version`) | `dpm codegen-cs`, which decodes the DAR with a bundled JVM helper |
-| dpm and Daml SDK 3.6.0 | dpm 1.0.20 or later | `dpm build` and `dpm codegen-cs` |
+| dpm and Daml SDK 3.7.1 | dpm 1.0.20 or later | `dpm build` and `dpm codegen-cs` |
 
 The dpm installer takes the Daml SDK version as its argument and installs that SDK with it:
 
 ```bash
-curl -sSL https://get.digitalasset.com/install/install.sh | sh -s -- 3.6.0
+curl -sSL https://get.digitalasset.com/install/install.sh | sh -s -- 3.7.1
 export PATH="$HOME/.dpm/bin:$PATH"
 ```
 
-With dpm already installed, `dpm install 3.6.0` fetches the same SDK. JDK 24 and later print a few
+With dpm already installed, `dpm install 3.7.1` fetches the same SDK. JDK 24 and later print a few
 `sun.misc.Unsafe` deprecation warnings during `dpm codegen-cs`; they are harmless.
 
 ### 1. Lay out two dpm projects
@@ -85,7 +86,7 @@ quickstart/
 next to it:
 
 ```yaml
-sdk-version: 3.6.0
+sdk-version: 3.7.1
 name: quickstart
 source: .
 version: 0.0.1
@@ -101,7 +102,7 @@ SDK's NuGet packages share one version, so pin them together:
 name: quickstart-codegen
 version: 0.0.1
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.7.1
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.8.0
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -161,7 +162,7 @@ Each package also has its own README under [`src/`](src/), such as
 
 Active and pre-1.0: under SemVer 0.x, any release may change the public API without a major-version
 bump (see the [CHANGELOG](CHANGELOG.md)). CI builds and tests on Ubuntu, Windows and macOS, on amd64
-and arm64, against Canton 3.6.x; see [status and roadmap](docs/public/status-and-roadmap.md) and
+and arm64, against Canton 3.7.x; see [status and roadmap](docs/public/status-and-roadmap.md) and
 [Canton versions](docs/public/cross-version-matrix.md).
 
 ## Contributing

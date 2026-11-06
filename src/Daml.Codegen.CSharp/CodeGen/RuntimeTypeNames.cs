@@ -38,6 +38,7 @@ internal static class RuntimeTypeNames
     public const string ITemplate = nameof(Daml.Runtime.Contracts.ITemplate);
     public const string IHasKey = nameof(Daml.Runtime.Contracts.IHasKey<,>);
     public const string IHasChoices = nameof(Daml.Runtime.Contracts.IHasChoices<>);
+    public const string IArchivable = nameof(Daml.Runtime.Contracts.IArchivable<>);
     public const string IUpgradeable = nameof(Daml.Runtime.Contracts.IUpgradeable);
     public const string TransactionResult = nameof(Daml.Runtime.Contracts.TransactionResult);
     public const string CreatedContract = nameof(Daml.Runtime.Contracts.CreatedContract);
@@ -60,6 +61,7 @@ internal static class RuntimeTypeNames
     public const string IChoice = nameof(Daml.Runtime.Commands.IChoice);
 
     public const string ExerciseOutcome = nameof(Daml.Runtime.Outcomes.ExerciseOutcome<object>);
+    public const string ByKeyExercise = nameof(Daml.Runtime.Outcomes.ByKeyExercise<,>);
 
     public const string Tuple2 = nameof(Daml.Runtime.Stdlib.Tuple2<object, object>);
     public const string Tuple3 = nameof(Daml.Runtime.Stdlib.Tuple3<object, object, object>);

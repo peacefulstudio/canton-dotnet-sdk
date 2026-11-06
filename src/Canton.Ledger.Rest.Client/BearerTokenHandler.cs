@@ -50,7 +50,7 @@ internal sealed partial class BearerTokenHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var callerCancellation = request.Options.TryGetValue(CallerCancellation, out var recorded) ? recorded : cancellationToken;
+        var callerCancellation = CallerCancellationOf(request, cancellationToken);
         var token = await _tokenProvider.ResolveBearerTokenAsync(cancellationToken, callerCancellation).ConfigureAwait(false);
         if (token is not null)
         {
@@ -60,6 +60,9 @@ internal sealed partial class BearerTokenHandler : DelegatingHandler
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
+
+    internal static CancellationToken CallerCancellationOf(HttpRequestMessage request, CancellationToken fallback) =>
+        request.Options.TryGetValue(CallerCancellation, out var recorded) ? recorded : fallback;
 
     internal static void RecordCallerCancellation(HttpRequestMessage request, CancellationToken callerCancellation) =>
         request.Options.Set(CallerCancellation, callerCancellation);

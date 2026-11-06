@@ -5,6 +5,7 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Rest.Client.Raw;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -47,10 +48,12 @@ internal sealed class RestReassignmentHarness
 
     internal const string ReassignmentFeatureDisabledSkipMessage =
         "Skipping: the participant rejected the reassignment with \"Multi-synchronizer feature flag "
-        + "is not enabled\". The multi-sync LocalNet connects the validator to two synchronizers but "
-        + "does not set the EnableMultiSynchronizer participant topology feature flag, so "
-        + "cross-synchronizer reassignment is disabled at submission. Baking that flag into the "
-        + "LocalNet bootstrap is a known follow-up.";
+        + "is not enabled\". Only a protocol version 36 synchronizer answers that way: there, "
+        + "cross-synchronizer reassignment needs the EnableMultiSynchronizer participant topology "
+        + "feature flag on the validator's synchronizer trust certificates for both synchronizers (the "
+        + "LocalNet app-synchronizer.sc bootstrap sets it). Protocol version 37 has no such "
+        + "prerequisite, so on a protocol version 37 synchronizer look elsewhere for the cause of the "
+        + "rejection.";
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
 
@@ -269,6 +272,46 @@ internal sealed class RestReassignmentHarness
             submission, cancellationToken: cancellationToken);
         return RequireVariant<ContractStreamEvent<Asset>.Assigned>(outcome);
     }
+
+    internal async Task<IReadOnlyList<AcsSnapshotEntry<Asset>>> SubscribeActiveSnapshotAsync(
+        Party reader, CancellationToken cancellationToken)
+    {
+        var entries = new List<AcsSnapshotEntry<Asset>>();
+
+        using var streamHold = await _lane.HoldStreamAsync(cancellationToken);
+        await foreach (var entry in _lane.LedgerClient.SubscribeActiveAsync<Asset>(
+            ReaderOf(reader), cancellationToken: cancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        return entries;
+    }
+
+    internal async Task<ActiveSnapshot<ActiveContract<Contract<Asset>>>> SnapshotActiveAssetsAsync(
+        Party reader, CancellationToken cancellationToken)
+    {
+        using var streamHold = await _lane.HoldStreamAsync(cancellationToken);
+        return await _lane.LedgerClient.SnapshotActiveAsync<Asset>(
+            ReaderOf(reader), cancellationToken: cancellationToken);
+    }
+
+    internal async Task<ActiveSnapshot<ActiveContract<InterfaceContract<IHolding, HoldingView>>>> QueryActiveHoldingsAsync(
+        Party reader, CancellationToken cancellationToken)
+    {
+        using var streamHold = await _lane.HoldStreamAsync(cancellationToken);
+        ICantonLedgerClient client = _lane.LedgerClient;
+        return await client.QueryActiveAsync<IHolding, HoldingView>(
+            ReaderOf(reader), cancellationToken: cancellationToken);
+    }
+
+    internal async Task<IReadOnlyList<AcsSnapshotEntry<Asset>>> ActiveContractsPageSnapshotAsync(
+        Party reader, CancellationToken cancellationToken) =>
+        (await _lane.LedgerClient.GetActiveContractsPageAsync<Asset>(
+            ReaderOf(reader), cancellationToken: cancellationToken)).Entries;
+
+    private static RuntimeCommands.SubmitterInfo ReaderOf(Party reader) =>
+        new(new HashSet<Party> { reader }, new HashSet<Party>());
 
     private async Task<TVariant?> ObserveAsync<TVariant>(
         Party issuer,

@@ -15,9 +15,9 @@ public class ParsedLedgerErrorTests
     [InlineData("2", DamlErrorCategory.ContentionOnSharedResources)]
     [InlineData("3", DamlErrorCategory.DeadlineExceededRequestStateUnknown)]
     [InlineData("4", DamlErrorCategory.SystemInternalAssumptionViolated)]
-    [InlineData("5", DamlErrorCategory.MaliciousOrFaultyBehaviour)]
+    [InlineData("5", DamlErrorCategory.SecurityAlert)]
     [InlineData("6", DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData("7", DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData("7", DamlErrorCategory.InsufficientPermission)]
     [InlineData("8", DamlErrorCategory.InvalidIndependentOfSystemState)]
     [InlineData("9", DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
     [InlineData("10", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
@@ -128,6 +128,25 @@ public class ParsedLedgerErrorTests
     }
 
     [Theory]
+    [InlineData("SecurityAlert", 5)]
+    [InlineData("InsufficientPermission", 7)]
+    public void MapCategory_accepts_the_Canton_names_of_categories_5_and_7(string raw, int expectedId)
+    {
+        var category = ParsedLedgerError.MapCategory(raw);
+
+        ((int)category).Should().Be(expectedId);
+        category.ToString().Should().Be(raw);
+    }
+
+    [Theory]
+    [InlineData("MaliciousOrFaultyBehaviour")]
+    [InlineData("AuthorizationChecksFailed")]
+    public void MapCategory_returns_Unknown_for_the_retired_names_of_categories_5_and_7(string raw)
+    {
+        ParsedLedgerError.MapCategory(raw).Should().Be(DamlErrorCategory.Unknown);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
@@ -142,8 +161,8 @@ public class ParsedLedgerErrorTests
     [InlineData("SystemInternalAssumptionViolated,TransientServerFailure")]
     [InlineData("systeminternalassumptionviolated,transientserverfailure")]
     [InlineData("InvalidIndependentOfSystemState,TransientServerFailure")]
-    [InlineData("AuthorizationChecksFailed,TransientServerFailure")]
-    [InlineData("Unknown,MaliciousOrFaultyBehaviour")]
+    [InlineData("InsufficientPermission,TransientServerFailure")]
+    [InlineData("Unknown,SecurityAlert")]
     [InlineData("ContentionOnSharedResources, TransientServerFailure")]
     [InlineData("9,9")]
     [InlineData("8,")]

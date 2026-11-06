@@ -298,7 +298,6 @@ public static class ServiceCollectionExtensions
         AddApi<IAuthenticatedUserApi>(services);
         AddApi<IDarApi>(services);
         AddApi<IHealthApi>(services);
-        AddApi<IInteractiveSubmissionApi>(services);
         AddApi<IPackageApi>(services);
         AddApi<IPartyManagementApi>(services);
         AddApi<IUserManagementApi>(services);

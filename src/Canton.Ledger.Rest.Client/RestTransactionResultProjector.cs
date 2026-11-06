@@ -125,6 +125,7 @@ internal static class RestTransactionResultProjector
             InterfaceIds = ToInterfaceIds(created),
             UndecodedPayload = payload.Undecoded,
             PackageName = created.PackageName,
+            NodeId = nodeId,
         };
     }
 
@@ -167,6 +168,8 @@ internal static class RestTransactionResultProjector
             RestWireConversions.ToPartyList(exercised.WitnessParties))
         {
             PackageName = exercised.PackageName,
+            NodeId = exercised.NodeId,
+            LastDescendantNodeId = exercised.LastDescendantNodeId,
         };
     }
 

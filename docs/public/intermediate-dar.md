@@ -13,7 +13,9 @@ for you.
 Daml package set: modules, data types (records, variants, enums), templates with their
 choices, keys, signatories and observers, and interfaces with their methods and view
 types. It is a snapshot of a DAR's *type* surface, not its logic: choice and update
-bodies are erased. Produced with `--schema-only` (the `shape` tier, see
+bodies are erased. The one exception is a module's `constants`: the top-level values whose
+whole body is one `Text`, `Int64`, `Bool` or `Numeric` literal, sorted by name, with a
+`Numeric` written in plain decimal notation at its declared scale. Produced with `--schema-only` (the `shape` tier, see
 [Choosing a tier](#choosing-a-tier)), the message does not depend on the Daml-LF patch
 version of the DAR.
 
@@ -157,10 +159,11 @@ The fixtures and the Action below come in two tiers.
 - **`full`** is the plain decode, with every field. That includes the static
   party-expression analysis, which annotates each template and choice with a
   `Static`/`Dynamic` verdict on its signatories, observers and controllers. It is the
-  oracle check proper: only this tier can catch a wrong verdict.
+  oracle check proper: only this tier can catch a wrong verdict. It also carries each
+  module's `constants`.
 - **`shape`** is the `--schema-only` decode. It skips the party-expression analysis and
   sets every verdict to `Dynamic`, so it does not depend on the Daml-LF patch version of the
-  DAR. It is an entry tier for an SDK that only decodes types.
+  DAR. It carries no `constants`, because it erases every value body. It is an entry tier for an SDK that only decodes types.
 
 ## Oracle check Action
 

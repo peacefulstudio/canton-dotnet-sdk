@@ -135,7 +135,7 @@ internal sealed partial class RestCallEnvelope(
         var afterRetry = false;
         try
         {
-            using var request = CreateRequest(call, attemptTimeout);
+            using var request = CreateRequest(call, attemptTimeout, BodyWindowOf(client, attemptTimeout));
             BearerTokenHandler.RecordCallerCancellation(request, cancellationToken);
             response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
@@ -148,7 +148,7 @@ internal sealed partial class RestCallEnvelope(
 
         using (response)
         {
-            using var bodyTimeoutSource = CreateBodyTimeoutSource(client, attemptTimeout, cancellationToken);
+            using var bodyTimeoutSource = CreateBodyTimeoutSource(BodyWindowOf(client, attemptTimeout), cancellationToken);
             var bodyToken = bodyTimeoutSource?.Token ?? cancellationToken;
 
             if (!response.IsSuccessStatusCode)
@@ -192,7 +192,7 @@ internal sealed partial class RestCallEnvelope(
         }
     }
 
-    private static HttpRequestMessage CreateRequest(RestCall call, TimeSpan? attemptTimeout)
+    private static HttpRequestMessage CreateRequest(RestCall call, TimeSpan? attemptTimeout, TimeSpan? bodyWindow)
     {
         var request = new HttpRequestMessage(call.Method, call.Path);
         if (attemptTimeout is { } timeout)
@@ -202,6 +202,10 @@ internal sealed partial class RestCallEnvelope(
         if (call.PathTemplate is { } pathTemplate)
         {
             request.Options.Set(RestActivityHandler.PathTemplateOption, pathTemplate);
+        }
+        if (call.CommandSpan is { } commandSpan)
+        {
+            request.Options.Set(RestActivityHandler.CommandSpanOption, commandSpan with { BodyWindow = bodyWindow });
         }
         if (call.Replayable)
         {
@@ -294,10 +298,15 @@ internal sealed partial class RestCallEnvelope(
     private static string DescribeDeadline(TimeSpan? timeout) =>
         timeout is { } window ? window.ToString() : "HttpClient default";
 
+    internal static TimeSpan? BodyWindowOf(HttpClient client, TimeSpan? timeout) =>
+        timeout ?? (client.Timeout != Timeout.InfiniteTimeSpan ? client.Timeout : null);
+
     internal static CancellationTokenSource? CreateBodyTimeoutSource(
-        HttpClient client, TimeSpan? timeout, CancellationToken cancellationToken)
+        HttpClient client, TimeSpan? timeout, CancellationToken cancellationToken) =>
+        CreateBodyTimeoutSource(BodyWindowOf(client, timeout), cancellationToken);
+
+    internal static CancellationTokenSource? CreateBodyTimeoutSource(TimeSpan? window, CancellationToken cancellationToken)
     {
-        var window = timeout ?? (client.Timeout != Timeout.InfiniteTimeSpan ? client.Timeout : null);
         if (window is not { } bodyWindow)
             return null;
 

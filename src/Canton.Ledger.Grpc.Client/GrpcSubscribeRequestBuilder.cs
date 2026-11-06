@@ -75,6 +75,7 @@ internal static class GrpcSubscribeRequestBuilder
         {
             ActiveAtOffset = activeAtOffset,
             EventFormat = BuildEventFormat(submitter, filterId, isInterface, includeDisclosure),
+            IncludeIncompleteReassignments = true,
         };
     }
 

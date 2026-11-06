@@ -356,4 +356,114 @@ public class EmittedTemplateKeyAndChoiceWrapperCompilesTests
             "the typed-submitter surface must compile without the namespace the exercisers require, but got: {0}",
             string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
     }
+
+    [Fact]
+    public void Emitted_by_key_exercisers_compile_for_named_controllers_arguments_and_tuple_keys()
+    {
+        var errors = CompileEmittedFiles(GenerateTupleKeyedTemplateWithStaticControllers())
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToList();
+
+        errors.Should().BeEmpty(
+            "the Try<Choice>ByKeyAsync exercisers of a tuple-keyed template with static controllers must compile, but got: {0}",
+            string.Join("\n", errors.Select(e => e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
+    }
+
+    [Fact]
+    public void Emitted_by_key_exercisers_have_no_doc_diagnostics()
+    {
+        var docDiagnostics = CompileEmittedFilesWithDocDiagnostics(GenerateTupleKeyedTemplateWithStaticControllers())
+            .Where(d => d.Id is "CS1570" or "CS1572" or "CS1573" or "CS1574" or "CS1580" or "CS1584" or "CS1658")
+            .ToList();
+
+        docDiagnostics.Should().BeEmpty(
+            "the by-key exercisers carry crefs, a remarks block and param docs that a consumer building with GenerateDocumentationFile compiles, but got: {0}",
+            string.Join("\n", docDiagnostics.Select(e => e.Id + " " + e.GetMessage(CultureInfo.InvariantCulture) + " @ " + e.Location)));
+    }
+
+    [Fact]
+    public void Emitted_by_key_exercisers_emit_one_named_overload_per_static_controller_choice_beside_the_submitter_overload()
+    {
+        var files = GenerateTupleKeyedTemplateWithStaticControllers();
+
+        var vault = files.Should().ContainSingle(f => f.RelativePath.EndsWith("Vault.cs", StringComparison.Ordinal)).Subject;
+
+        vault.Content.Split("> TryDepositByKeyAsync(").Length.Should().Be(3, "Deposit has a static controller, so it gets a named-Party and a SubmitterInfo overload");
+        vault.Content.Split("> TryAuditByKeyAsync(").Length.Should().Be(2, "Audit has a dynamic controller, so it gets only the SubmitterInfo overload");
+    }
+
+    private static IReadOnlyList<GeneratedFile> GenerateTupleKeyedTemplateWithStaticControllers()
+    {
+        var partyType = new DamlPrimitiveType(DamlPrimitive.Party);
+        var module = new DamlModule
+        {
+            Name = "Test.Module",
+            Templates =
+            [
+                new DamlTemplate
+                {
+                    Name = "Vault",
+                    Choices =
+                    [
+                        new DamlChoice
+                        {
+                            Name = "Deposit",
+                            Consuming = false,
+                            ArgumentType = new DamlTypeRef("", "Test.Module", "DepositArg"),
+                            ReturnType = new DamlPrimitiveType(DamlPrimitive.Int64),
+                            Controllers = DamlPartyAnalysis.Static([new DamlPartyPayloadField("owner"), new DamlPartyPayloadField("agent")]),
+                        },
+                        new DamlChoice
+                        {
+                            Name = "Audit",
+                            Consuming = false,
+                            ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                            ReturnType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                            Controllers = DamlPartyAnalysis.Dynamic,
+                        },
+                        new DamlChoice
+                        {
+                            Name = "Rotate",
+                            Consuming = true,
+                            ArgumentType = new DamlPrimitiveType(DamlPrimitive.Unit),
+                            ReturnType = ContractIdOf("Vault"),
+                            Controllers = DamlPartyAnalysis.Static([new DamlPartyPayloadField("owner")]),
+                        },
+                    ],
+                    Key = TupleType(partyType, new DamlPrimitiveType(DamlPrimitive.Text)),
+                },
+            ],
+            DataTypes =
+            [
+                new DamlDataType
+                {
+                    Name = "DepositArg",
+                    Definition = new DamlRecordDefinition([new DamlFieldDefinition("amount", new DamlPrimitiveType(DamlPrimitive.Int64))]),
+                },
+                new DamlDataType
+                {
+                    Name = "Vault",
+                    Definition = new DamlRecordDefinition(
+                    [
+                        new DamlFieldDefinition("owner", partyType),
+                        new DamlFieldDefinition("agent", partyType),
+                    ]),
+                },
+            ],
+            Interfaces = [],
+        };
+
+        var package = new DamlPackage
+        {
+            PackageId = "test-package-id",
+            Name = "test-package",
+            Version = new Version(1, 0, 0),
+            LfVersion = "2.1",
+            Modules = [module],
+            DependencyReferences = [],
+        };
+
+        var options = new CodeGenOptions { EnableNullableReferenceTypes = true, UseFileScopedNamespaces = true };
+        return CreateGenerator(options).Generate(new DarModel { MainPackage = package, Dependencies = [Daml.Codegen.CSharp.Tests.TestHelpers.TestPackages.DamlPrim()] });
+    }
 }

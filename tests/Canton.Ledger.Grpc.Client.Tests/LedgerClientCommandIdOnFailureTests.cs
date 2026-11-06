@@ -7,6 +7,8 @@ using Canton.Ledger.Kernel.Authentication;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Ledger.Abstractions;
 using Daml.Ledger.Abstractions.Extensions;
+using Daml.Codegen.Testing.Conformance.RichTypes;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -101,11 +103,36 @@ public sealed class LedgerClientCommandIdOnFailureTests : IDisposable
 
         var act = () => CreateClient()
             .TrySubmitSingleAsync(command, Alice, cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync("Create");
+            .OneOrThrowAsync();
 
         var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
+        thrown.Operation.Should().Be("Template.Create");
         sentCommandId.Should().NotBeNullOrEmpty();
         thrown.CommandId.Should().Be(new RuntimeCommands.CommandId(sentCommandId!));
+    }
+
+    [Fact]
+    public async Task OneOrThrowAsync_after_TryExerciseAsync_reports_the_exercised_operation()
+    {
+        _commandService
+            .SubmitAndWaitForTransactionAsync(
+                Arg.Any<SubmitAndWaitForTransactionRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Faulted<SubmitAndWaitForTransactionResponse>(Rejection()));
+        var command = new RuntimeCommands.ExerciseCommand(
+            new RuntimeIdentifier("pkg", "Module", "Template"),
+            new ContractId<OptionalTails>("00cid"),
+            new RuntimeCommands.ChoiceName("Archive"),
+            DamlUnit.Instance);
+
+        var act = () => CreateClient()
+            .TryExerciseAsync<DamlUnit>(command, Alice, cancellationToken: TestContext.Current.CancellationToken)
+            .OneOrThrowAsync();
+
+        (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which.Operation
+            .Should().Be("Template.Archive");
     }
 
     [Fact]

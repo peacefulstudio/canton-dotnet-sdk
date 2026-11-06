@@ -1,0 +1,12 @@
+// Copyright 2026 Peaceful Studio OÜ
+// SPDX-License-Identifier: Apache-2.0
+
+namespace Canton.Ledger.Kernel.Tests.Wire;
+
+internal static class MurmuresLocalNetBlobs
+{
+    private const string ExternalPartyAmuletRulesBase64 =
+        "CgMyLjESqQMKRQDNArUzUYfagoQy+E4VzjCjcWXEPHc6R7VKlDrXniQd98oSEiB8yKZKr/sNYYqQGabrfX76WU2Vdr4FqA8T27E03Z1eohINc3BsaWNlLWFtdWxldBp+CkAxN2I2ZjdjMThlZmVjOTAyMmRkZTM5YTE5MDM5NzgzYzY4NDkwYTcyMmU4YTUwODhiMjJlZTAzNDY3ODE3MWEyEgZTcGxpY2USGEV4dGVybmFsUGFydHlBbXVsZXRSdWxlcxoYRXh0ZXJuYWxQYXJ0eUFtdWxldFJ1bGVzIlFqTwpNCks6SURTTzo6MTIyMGI1NzhmNWYxMzYxZDg1NWQxYzM0MjY0NjZlMjNmN2NjZmU4YTQ2YmRjYjE1Zjg4ZTJkOThiMjhkMWJlN2VlMzQqSURTTzo6MTIyMGI1NzhmNWYxMzYxZDg1NWQxYzM0MjY0NjZlMjNmN2NjZmU4YTQ2YmRjYjE1Zjg4ZTJkOThiMjhkMWJlN2VlMzQ5LraLWlteBgBCKgomCiQIARIghZG+iTmpWFE0bP22Saxf75JvVhuTjczJHn5jz4oNJUIQHg==";
+
+    internal static byte[] ExternalPartyAmuletRules() => Convert.FromBase64String(ExternalPartyAmuletRulesBase64);
+}

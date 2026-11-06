@@ -72,6 +72,55 @@ public class FakeLedgerClientTypedReadsTests
     }
 
     [Fact]
+    public async Task GetEventsByContractIdAsync_returns_the_staged_interface_lifecycle()
+    {
+        var contractId = new ContractId<IDemoHoldingView>("cid1");
+        var lifecycle = new InterfaceContractLifecycle<IDemoHoldingView, DemoHoldingView>(
+            new InterfaceStreamEvent<IDemoHoldingView, DemoHoldingView>.Created(
+                contractId, new DemoHoldingView(42.5m), null, LedgerOffset.At(5), Sync, [Alice]),
+            new InterfaceStreamEvent<IDemoHoldingView, DemoHoldingView>.Archived(contractId, LedgerOffset.At(9), Sync, [Alice]));
+        ICantonLedgerClient client = FakeLedgerClient.Create().WithInterfaceContractLifecycle(contractId, lifecycle).Build();
+
+        var result = await client.GetEventsByContractIdAsync<IDemoHoldingView, DemoHoldingView>(
+            contractId, (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().Be(lifecycle);
+    }
+
+    [Fact]
+    public async Task GetEventsByContractIdAsync_interface_unstaged_throws_descriptive_NotSupportedException()
+    {
+        ICantonLedgerClient client = FakeLedgerClient.Create().Build();
+
+        var act = () => client.GetEventsByContractIdAsync<IDemoHoldingView, DemoHoldingView>(
+            new ContractId<IDemoHoldingView>("cid1"), (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<NotSupportedException>())
+            .Which.Message.Should().Contain("WithInterfaceContractLifecycle<IDemoHoldingView, DemoHoldingView>");
+    }
+
+    [Fact]
+    public async Task GetEventsByContractIdAsync_keeps_template_and_interface_lifecycles_apart_for_the_same_id()
+    {
+        var templateLifecycle = new ContractLifecycle<DemoAsset>(
+            new ContractStreamEvent<DemoAsset>.Created(new ContractId<DemoAsset>("cid1"), Payload, null, LedgerOffset.At(5), Sync, [Alice]),
+            null);
+        var interfaceLifecycle = new InterfaceContractLifecycle<IDemoHoldingView, DemoHoldingView>(null, null);
+        ICantonLedgerClient client = FakeLedgerClient.Create()
+            .WithContractLifecycle(new ContractId<DemoAsset>("cid1"), templateLifecycle)
+            .WithInterfaceContractLifecycle(new ContractId<IDemoHoldingView>("cid1"), interfaceLifecycle)
+            .Build();
+
+        var template = await client.GetEventsByContractIdAsync(
+            new ContractId<DemoAsset>("cid1"), (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+        var viewed = await client.GetEventsByContractIdAsync<IDemoHoldingView, DemoHoldingView>(
+            new ContractId<IDemoHoldingView>("cid1"), (SubmitterInfo)Alice, cancellationToken: TestContext.Current.CancellationToken);
+
+        template.Should().Be(templateLifecycle);
+        viewed.Should().Be(interfaceLifecycle);
+    }
+
+    [Fact]
     public async Task GetDisclosureAsync_returns_the_staged_disclosure()
     {
         var disclosure = new DisclosedContract("cid1", new Identifier("pkg", "Module", "DemoAsset"), new byte[] { 1, 2, 3 }) { SynchronizerId = Sync };
@@ -216,7 +265,7 @@ public class FakeLedgerClientTypedReadsTests
     public async Task GetCompletionsAsync_replays_the_staged_completions_after_the_offset()
     {
         var accepted = new CompletionStreamEvent.CommandAccepted(CompletionAt("cmd-1", 7), "update-1");
-        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8));
+        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(8), []);
         var client = FakeLedgerClient.Create().WithCompletionEvents(accepted, checkpoint).Build();
 
         var events = new List<CompletionStreamEvent>();

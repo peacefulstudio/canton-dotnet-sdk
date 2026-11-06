@@ -74,6 +74,52 @@ public class ExerciseOutcomeProjectionTests
         result.Should().Be(new ExerciseOutcome<int>.CommittedUndecodable("u1", "bad") { CommandId = "cmd-9" });
     }
 
+    private static readonly LedgerOperation Accepting =
+        new LedgerOperation.Command(new Daml.Runtime.Data.Identifier("pkg-1", "Connections.ConnectionRequest", "ConnectionRequest"), "Accept");
+
+    public static TheoryData<string, ExerciseOutcome<TransactionResult>> OutcomesCarryingAnOperation() => new()
+    {
+        { "One", new ExerciseOutcome<TransactionResult>.One(SampleTransaction) { Operation = Accepting } },
+        { "None", new ExerciseOutcome<TransactionResult>.None { Operation = Accepting } },
+        { "Many", new ExerciseOutcome<TransactionResult>.Many(EquatableArray.Create(["00a", "00b"])) { Operation = Accepting } },
+        {
+            "DamlError",
+            new ExerciseOutcome<TransactionResult>.DamlError(
+                DamlErrorCategory.ContentionOnSharedResources, "CONTRACT_NOT_FOUND", "gone", new Dictionary<string, string>())
+            {
+                Operation = Accepting,
+            }
+        },
+        {
+            "InfraError",
+            new ExerciseOutcome<TransactionResult>.InfraError(new TransportStatus.NoResponse(), "reset") { Operation = Accepting }
+        },
+        {
+            "CommittedUndecodable",
+            new ExerciseOutcome<TransactionResult>.CommittedUndecodable("u1", "bad") { Operation = Accepting }
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(OutcomesCarryingAnOperation))]
+    public void ProjectCommitted_keeps_the_operation_of_the_outcome_it_projects(
+        string arm, ExerciseOutcome<TransactionResult> outcome)
+    {
+        var result = outcome.ProjectCommitted<int>(_ => new ExerciseOutcome<int>.One(7));
+
+        result.Operation.Should().Be(Accepting, because: arm);
+    }
+
+    [Fact]
+    public void ProjectCommitted_stamps_the_operation_on_a_projector_result_that_has_none()
+    {
+        var outcome = new ExerciseOutcome<TransactionResult>.One(SampleTransaction) { Operation = Accepting };
+
+        var result = outcome.ProjectCommitted<int>(_ => new ExerciseOutcome<int>.CommittedUndecodable("u1", "bad"));
+
+        result.Should().Be(new ExerciseOutcome<int>.CommittedUndecodable("u1", "bad") { Operation = Accepting });
+    }
+
     [Fact]
     public void ProjectCommitted_passes_through_a_projector_None_result()
     {

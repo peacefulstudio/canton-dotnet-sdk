@@ -18,7 +18,7 @@ required.
 ## Installation
 
 ```bash
-dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.7.1
+dotnet add package Daml.Ledger.Abstractions.Testing.Conformance --version 0.8.0
 ```
 
 A transport package subclasses it, supplying a client factory and the
@@ -52,8 +52,9 @@ An `ILedgerStreamer` reads each contract two ways: by its template, and through 
 interface it implements, where the participant computes a view of the contract. The kit owns
 one interface for the second, `IConformanceProbe`, with the view `ConformanceProbeView`
 (one `Numeric` field, `amount`). Its Daml identity is module `Conformance.Kit`, entity
-`ConformanceProbe`, package name `ledger-conformance-kit`, package id
-`ledger-conformance-kit-pkg`, version `0.1.0`.
+`ConformanceProbe`, package name `conformancekit-hddd04e2d0e6f`, package id
+`40acda968038dce8336b3272860ef8687a1e925349b5d89a662ceac0a77e72d4`, version `0.1.0`: the identity of the
+DAR that `ConformanceKitDar.Open()` returns.
 
 Every stream check runs once per family. Each interface check carries the name of its
 template check with an `Interface_` prefix (`Interface_active_snapshot_ends_with_a_terminal_Checkpoint`,
@@ -188,10 +189,9 @@ A wire-level double builds the interface's wire identity, on the view and in the
 interfaces of the archived and exercised events, from `IConformanceProbe.InterfaceId` rather than
 from copied strings, so a later change of the interface's package id reaches the double without an edit.
 
-The interface identity is fixed by the kit for test doubles: it carries the names a future live
-Daml interface would, but no uploaded Daml package declares it yet, so the interface checks run
-against doubles only. Running them against a live participant needs a published Daml interface
-and is not supported yet.
+The interface identity is that of the embedded DAR, so a wire-level double and a live
+participant answer to the same id. To run the kit against a live participant, see
+[Running the kit against a live participant](#running-the-kit-against-a-live-participant).
 
 To also cover submitter authority, override `CreateWriteFixture()` to return a
 `WriteConformanceFixture`: a fresh client plus a submission it accepts from an
@@ -205,6 +205,31 @@ verbatim, `null` included), and a read-back of the `command_id` the participant 
 for the submission just dispatched — as a raw string, so an unset id reads back as `null`
 rather than being smuggled past the check by a `default(CommandId)`. Leaving it at its
 `null` default skips only the command-id checks.
+
+## Running the kit against a live participant
+
+The kit ships the Daml interface behind `IConformanceProbe` as a DAR. To run the checks
+against a real participant:
+
+1. Upload `ConformanceKitDar.Open()` to the participant.
+2. Declare your probe template an `interface instance` of `Conformance.Kit:ConformanceProbe`,
+   with a view whose `amount` is `42.5`, in a Daml package that depends on that DAR, and upload
+   that package too.
+3. Seed the canonical scenario (see "Seeding requirement") with a party of your own: active
+   probe contracts, one contract the transport cannot classify, and one archived probe. Take
+   `EmptySnapshotOffset` from the ledger end before you seed.
+4. Override `CreateClient()` to return a client over that state. For the opt-in families,
+   override `CreateWriteFixture()` and `CreateCommandIdFixture()` to submit as a party other than
+   `Reader`, so their writes leave the reader's snapshot alone, and `CreateFaultingSnapshotClient()`
+   to wrap your transport so a snapshot ends in one `StreamError` and no `Checkpoint`.
+
+```csharp
+await using var dar = ConformanceKitDar.Open();
+await participant.UploadDarAsync(dar);
+```
+
+Requests go out by package name (`#conformancekit-hddd04e2d0e6f:Conformance.Kit:ConformanceProbe`);
+responses carry the package id, which the kit compares against `IConformanceProbe.InterfaceId`.
 
 ## Writing those fixtures
 

@@ -213,7 +213,7 @@ public class LedgerErrorClassificationParityTests
             ["a redacted authorization failure"] = new(
                 () => RedactedFailure(StatusCode.PermissionDenied),
                 () => JsonResponse(HttpStatusCode.Forbidden, RedactedBody(grpcCodeValue: 7)),
-                DamlErrorCategory.AuthorizationChecksFailed),
+                DamlErrorCategory.InsufficientPermission),
 
             ["an authentication failure with no error detail from a proxy"] = new(
                 () => new RpcException(new GrpcCallStatus(StatusCode.Unauthenticated, "unauthenticated")),
@@ -223,7 +223,7 @@ public class LedgerErrorClassificationParityTests
             ["an authorization failure with no error detail from a proxy"] = new(
                 () => new RpcException(new GrpcCallStatus(StatusCode.PermissionDenied, "forbidden")),
                 () => JsonResponse(HttpStatusCode.Forbidden, string.Empty),
-                DamlErrorCategory.AuthorizationChecksFailed),
+                DamlErrorCategory.InsufficientPermission),
         };
 
     private static string RedactedBody(int grpcCodeValue) =>

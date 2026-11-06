@@ -279,6 +279,17 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
     }
 
     [Fact]
+    public async Task GetEventsByContractIdAsync_tags_the_daml_template_id_not_the_clr_type_name()
+    {
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        await ReadContract("GetEventsByContractId");
+
+        capture.Activities.Should().ContainSingle().Subject
+            .GetTagItem(LedgerActivityTagNames.DamlTemplateId).Should().Be("test-pkg:Sample.Foo:FooBar");
+    }
+
+    [Fact]
     public async Task GetDisclosureAsync_asks_for_the_created_event_blob_through_a_wildcard_filter_for_every_submitter_party()
     {
         GetEventsByContractIdRequest? captured = null;
@@ -519,6 +530,20 @@ public sealed class LedgerClientTypedReadsTests : IDisposable
         page.NextPageToken!.Value.Should().Be("AQID");
         page.Entries.Should().ContainSingle().Which
             .Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>().Which.ContractId.Value.Should().Be("00abc");
+    }
+
+    [Fact]
+    public async Task GetActiveContractsPageAsync_asks_for_incomplete_reassignments()
+    {
+        GetActiveContractsPageRequest? captured = null;
+        _stateService
+            .GetActiveContractsPageAsync(Arg.Do<GetActiveContractsPageRequest>(r => captured = r), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(Unary(new GetActiveContractsPageResponse { ActiveAtOffset = 30L }));
+
+        await CreateClient().GetActiveContractsPageAsync<FooBar>(
+            Submitter, activeAtOffset: LedgerOffset.At(30), cancellationToken: TestContext.Current.CancellationToken);
+
+        captured!.IncludeIncompleteReassignments.Should().Be(true);
     }
 
     [Fact]

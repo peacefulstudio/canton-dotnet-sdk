@@ -113,8 +113,9 @@ object Decode {
     FullDecoder
       .readDar(args.darPath.toFile)
       .map { fullDar =>
-        val analyses = PartyAnalyses.compute(fullDar)
-        AstToIntermediate.translate(SignatureErasure.eraseDar(fullDar), analyses)
+        val analyses  = PartyAnalyses.compute(fullDar)
+        val constants = LiteralConstants.compute(fullDar)
+        AstToIntermediate.translate(SignatureErasure.eraseDar(fullDar), analyses, constants)
       }
 
   private def writeProto(out: Path, proto: IntermediateDar): Either[String, Unit] = {

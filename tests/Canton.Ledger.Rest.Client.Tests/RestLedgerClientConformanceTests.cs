@@ -25,6 +25,10 @@ public class RestLedgerClientConformanceTests : LedgerClientConformanceTests<Res
     protected override ILedgerClient CreateClient() =>
         new RestLedgerClient(new ParticipantHttpClientFactory(new ConformanceParticipantHandler()));
 
+    protected override ILedgerClient CreateFaultingSnapshotClient() =>
+        new RestLedgerClient(new ParticipantHttpClientFactory(
+            new TruncatedActiveContractsPageHandler(rowsKept: 1) { InnerHandler = new ConformanceParticipantHandler() }));
+
     protected override CommandIdConformanceFixture? CreateCommandIdFixture()
     {
         var participant = new RecordingSubmissionHandler();

@@ -17,6 +17,7 @@ using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using RuntimeCommands = Daml.Runtime.Commands;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
@@ -58,6 +59,12 @@ public sealed class RestLedgerClientCantonTests : IDisposable
             HttpAddress = "http://localhost:7575",
             UserId = userId,
         }));
+
+    private RestLedgerClient ClientWith(RecordingHttpHandler transport, TimeProvider timeProvider) =>
+        new(
+            TrackedFactory(transport),
+            Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575" }),
+            timeProvider: timeProvider);
 
     private RestLedgerClient ClientLogging(RecordingHttpHandler transport, CapturingLoggerFactory logs, bool emitPartyAndContractSpanTags) =>
         new(
@@ -117,6 +124,39 @@ public sealed class RestLedgerClientCantonTests : IDisposable
     }
 
     [Fact]
+    public void TimeProvider_is_the_clock_the_client_was_built_with()
+    {
+        var clock = new FakeTimeProvider();
+
+        ILedgerStreamer client = ClientWith(SnapshotTransport(OkViewEntryJson), clock);
+
+        client.TimeProvider.Should().BeSameAs(clock);
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_with_a_zero_timeout_reports_the_deadline_failure()
+    {
+        ICantonLedgerClient client = ClientWith(SnapshotTransport(OkViewEntryJson), new FakeTimeProvider());
+
+        var querying = async () => await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, timeout: TimeSpan.Zero, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await querying.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Category.Should().Be(DamlErrorCategory.DeadlineExceededRequestStateUnknown);
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+    }
+
+    private const string OkViewEntryJson =
+        $$"""
+        {
+          "interfaceId": {{ViewedInterfaceIdJson}},
+          "viewStatus": {"code": 0, "message": ""},
+          "viewValue": {"amount": "42.5"}
+        }
+        """;
+
+    [Fact]
     public async Task QueryActiveAsync_decodes_the_participant_computed_interface_view_into_the_view_record()
     {
         ICantonLedgerClient client = ClientWith(SnapshotTransport(
@@ -136,6 +176,83 @@ public sealed class RestLedgerClientCantonTests : IDisposable
         holdings[0].Contract.View.Amount.Should().Be(42.5m);
         holdings[0].LastUpdateOffset.Should().Be(LedgerOffset.At(9));
         holdings[0].SynchronizerId.Should().Be((SynchronizerId)"sync-1");
+    }
+
+    private static RecordingHttpHandler SnapshotTransportOf(string contractEntryJson) =>
+        new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseForPath(
+                "/v2/state/active-contracts-page",
+                HttpStatusCode.OK,
+                $$"""{"activeContracts": [{{contractEntryJson}}]}""");
+
+    private const string MovingHoldingCreatedEventJson =
+        $$"""
+        {
+          "offset": "9",
+          "contractId": "00moving",
+          "packageName": "pkg-name",
+          "templateId": {"packageId": "impl-pkg", "moduleName": "Token.Impl", "entityName": "Asset"},
+          "createArgument": {"amount": "999"},
+          "interfaceViews": [{{OkViewJson}}],
+          "witnessParties": ["party::alice"]
+        }
+        """;
+
+    [Theory]
+    [InlineData(UnreadableRows.Fail)]
+    [InlineData(UnreadableRows.Return)]
+    public async Task QueryActiveAsync_returns_a_holding_whose_reassignment_is_in_flight_on_its_source_synchronizer(
+        UnreadableRows policy)
+    {
+        ICantonLedgerClient client = ClientWith(SnapshotTransportOf(
+            $$$$"""
+            {"contractEntry": {"JsIncompleteUnassigned": {
+              "createdEvent": {{{{MovingHoldingCreatedEventJson}}}},
+              "unassignedEvent": {"contractId": "00moving", "source": "sync-a", "target": "sync-b", "offset": "20", "reassignmentId": "reassignment-1", "reassignmentCounter": "1", "witnessParties": ["party::alice"]}
+            }}}
+            """));
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, unreadableRows: policy, cancellationToken: TestContext.Current.CancellationToken);
+
+        var moving = holdings.Should().ContainSingle().Subject;
+        moving.Contract.Id.Value.Should().Be("00moving");
+        moving.Contract.View.Amount.Should().Be(42.5m);
+        moving.SynchronizerId.Should().Be((SynchronizerId)"sync-a");
+        holdings.Unreadable.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returns_a_holding_whose_assignment_is_in_flight_on_its_target_synchronizer()
+    {
+        ICantonLedgerClient client = ClientWith(SnapshotTransportOf(
+            $$$$"""
+            {"contractEntry": {"JsIncompleteAssigned": {
+              "assignedEvent": {"source": "sync-a", "target": "sync-b", "reassignmentId": "reassignment-1", "reassignmentCounter": "1", "createdEvent": {{{{MovingHoldingCreatedEventJson}}}}}
+            }}}
+            """));
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var arriving = holdings.Should().ContainSingle().Subject;
+        arriving.Contract.Id.Value.Should().Be("00moving");
+        arriving.SynchronizerId.Should().Be((SynchronizerId)"sync-b");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returns_an_empty_list_at_ledger_end_zero_without_posting_active_contracts_page()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 0}""");
+        ICantonLedgerClient client = ClientWith(transport);
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Should().BeEmpty();
+        transport.Requests.Select(request => request.PathAndQuery).Should().Equal("/v2/state/ledger-end");
     }
 
     [Fact]
@@ -238,6 +355,28 @@ public sealed class RestLedgerClientCantonTests : IDisposable
 
         (await querying.Should().ThrowAsync<LedgerOperationException>())
             .Which.Message.Should().Contain(nameof(UnclassifiedKind.InterfaceViewUnavailable));
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returning_unreadable_rows_lists_a_view_the_participant_did_not_compute_beside_the_readable_rows()
+    {
+        const string failedViewJson =
+            $$$"""
+            {"interfaceId": {{{ViewedInterfaceIdJson}}}, "viewStatus": {"code": 2, "message": "view computation failed"}}
+            """;
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 9}""")
+            .WithResponseSequence(
+                (HttpStatusCode.OK, ViewedActiveContractsPage("00impl-1", OkViewJson, nextPageToken: "page-2")),
+                (HttpStatusCode.OK, ViewedActiveContractsPage("00impl-2", failedViewJson, nextPageToken: null)));
+        ICantonLedgerClient client = ClientWith(transport);
+
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            AliceSubmitter, unreadableRows: UnreadableRows.Return, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Select(holding => holding.Contract.Id.Value).Should().Equal("00impl-1");
+        holdings.Unreadable.Should().Equal(
+            new UnreadableRow(UnclassifiedKind.InterfaceViewUnavailable, null, LedgerOffset.At(9)));
     }
 
     [Fact]

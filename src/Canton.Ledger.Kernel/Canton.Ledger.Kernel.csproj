@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Canton.Ledger.Kernel</PackageId>
-    <Description>Transport-neutral client kernel for Canton participant nodes: OAuth2 client-credentials and static token providers implementing Canton.Ledger.Abstractions.ITokenProvider, the OpenTelemetry ActivitySource naming convention, an opt-in Polly retry pipeline, and the shared transaction-tree assembler, exercise-outcome folds and malformed-response vocabulary, consumed as peers by both the gRPC and HTTP clients.</Description>
+    <Description>Transport-neutral client kernel for Canton participant nodes: OAuth2 client-credentials and static token providers implementing Canton.Ledger.Abstractions.ITokenProvider, the OpenTelemetry ActivitySource naming convention, an opt-in Polly retry pipeline, and the shared transaction-tree assembler, exercise-outcome folds and malformed-response vocabulary, the decoder for a disclosed contract's createdEventBlob, consumed as peers by both the gRPC and HTTP clients.</Description>
     <PackageTags>canton;daml;auth;oauth2;token;client-credentials;opentelemetry;resilience;polly</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Http" />
@@ -46,6 +47,7 @@
 
   <ItemGroup>
     <Protobuf Include="Topology/Proto/**/*.proto" ProtoRoot="Topology/Proto" GrpcServices="None" Access="Internal" />
+    <Protobuf Include="Wire/Proto/**/*.proto" ProtoRoot="Wire/Proto" GrpcServices="None" Access="Internal" />
   </ItemGroup>
 
 </Project>

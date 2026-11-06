@@ -24,7 +24,7 @@ namespace CollisionA;
 /// </summary>
 public sealed partial record Agreement(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("operator")] global::Daml.Runtime.Data.Party Operator
-) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Agreement>, global::Daml.Runtime.Data.IDamlRecord<Agreement>
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Agreement>, global::Daml.Runtime.Contracts.IArchivable<Agreement>, global::Daml.Runtime.Data.IDamlRecord<Agreement>
 {
     /// <inheritdoc />
     public override int GetHashCode()
@@ -35,10 +35,10 @@ public sealed partial record Agreement(
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("3dd99d252736a4342a35f264ecc67c45d2f5f90a4a6d1fa63c094ef6245f7ae4", "CollisionA", "Agreement");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("674d886bc72e1fe8d4b9eb85203eb56ca29116dfc769eeeafc977c0e1a887c74", "CollisionA", "Agreement");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "3dd99d252736a4342a35f264ecc67c45d2f5f90a4a6d1fa63c094ef6245f7ae4";
+    public static string PackageId => "674d886bc72e1fe8d4b9eb85203eb56ca29116dfc769eeeafc977c0e1a887c74";
 
     /// <summary>Gets the package name.</summary>
     public static string PackageName => "crossmodulecollision";
@@ -314,11 +314,17 @@ public static class AgreementSubmissionExtensions
     /// </summary>
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
-    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-template default would bucket every create of the same template under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<Agreement>>> TryCreateAsync(
         this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         Agreement payload,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
         global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
         global::System.Threading.CancellationToken cancellationToken = default)
     {
@@ -327,7 +333,7 @@ public static class AgreementSubmissionExtensions
 
         global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Operator;
 
-        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Agreement>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Agreement>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);
     }
 }
 
@@ -351,7 +357,7 @@ public static class AgreementNonContractExtensions
         return new global::Daml.Runtime.Commands.ExerciseCommand(
             global::CollisionA.Agreement.TemplateId,
             contractId,
-            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::CollisionA.Agreement.ChoiceArchive.Name,
             global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::CollisionA.Agreement.PackageName };
     }
 

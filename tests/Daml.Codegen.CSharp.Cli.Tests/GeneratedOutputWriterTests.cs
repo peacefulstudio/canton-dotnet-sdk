@@ -24,8 +24,10 @@ public sealed class GeneratedOutputWriterTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private Task Write(params GeneratedFile[] files) =>
-        GeneratedOutputWriter.WriteAsync(files, _output, NullLogger.Instance, TestContext.Current.CancellationToken);
+    private Task Write(params GeneratedFile[] files) => WriteAs("richtypes", files);
+
+    private Task WriteAs(string packageName, params GeneratedFile[] files) =>
+        GeneratedOutputWriter.WriteAsync(files, packageName, _output, NullLogger.Instance, TestContext.Current.CancellationToken);
 
     private string InOutput(string relativePath) => Path.Combine(_output.FullName, relativePath);
 
@@ -36,7 +38,7 @@ public sealed class GeneratedOutputWriterTests : IDisposable
             GeneratedFile.Text("Pkg/Mod/Payload.cs", "payload"),
             GeneratedFile.Text("Pkg.csproj", "<Project/>"));
 
-        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("Pkg.csproj", "Pkg/Mod/Payload.cs");
+        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("# package: richtypes", "Pkg.csproj", "Pkg/Mod/Payload.cs");
     }
 
     [Fact]
@@ -50,7 +52,7 @@ public sealed class GeneratedOutputWriterTests : IDisposable
 
         File.Exists(InOutput("Pkg/Removed.cs")).Should().BeFalse();
         File.ReadAllText(InOutput("Pkg/Kept.cs")).Should().Be("kept again");
-        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("Pkg/Kept.cs");
+        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("# package: richtypes", "Pkg/Kept.cs");
     }
 
     [Fact]
@@ -115,7 +117,7 @@ public sealed class GeneratedOutputWriterTests : IDisposable
         await Write(GeneratedFile.Text("Pkg/New.cs", "new"));
 
         File.ReadAllText(victim).Should().Be("precious");
-        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("Pkg/New.cs");
+        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("# package: richtypes", "Pkg/New.cs");
     }
 
     [Fact]
@@ -143,10 +145,10 @@ public sealed class GeneratedOutputWriterTests : IDisposable
 
         await GeneratedOutputWriter.WriteAsync(
             [GeneratedFile.Text("Pkg/A.cs", "a"), GeneratedFile.Text("Pkg/B.cs", "b")],
-            output, NullLogger.Instance, TestContext.Current.CancellationToken);
+            "richtypes", output, NullLogger.Instance, TestContext.Current.CancellationToken);
         await GeneratedOutputWriter.WriteAsync(
             [GeneratedFile.Text("Pkg/A.cs", "a")],
-            output, NullLogger.Instance, TestContext.Current.CancellationToken);
+            "richtypes", output, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         File.Exists(Path.Combine(output.FullName, "Pkg/B.cs")).Should().BeFalse();
         File.Exists(Path.Combine(output.FullName, "Pkg/A.cs")).Should().BeTrue();
@@ -158,6 +160,58 @@ public sealed class GeneratedOutputWriterTests : IDisposable
         await Write(GeneratedFile.Binary("icon.png", [1, 2, 3]));
 
         File.ReadAllBytes(InOutput("icon.png")).Should().Equal(1, 2, 3);
-        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("icon.png");
+        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("# package: richtypes", "icon.png");
+    }
+
+    [Fact]
+    public async Task GeneratedOutputWriter_refuses_a_run_for_another_package_and_deletes_and_writes_nothing()
+    {
+        await WriteAs("richtypes", GeneratedFile.Text("Richtypes/Payload.cs", "payload"));
+        var manifestBefore = File.ReadAllText(InOutput(".codegen-manifest"));
+
+        var act = () => WriteAs("contractkeys", GeneratedFile.Text("Contractkeys/Keyed.cs", "keyed"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(
+            "The output directory '*' already holds the generated output of package 'richtypes', "
+            + "and this run generates package 'contractkeys'. Generating a second package into it would delete the first one's files. "
+            + "Give each DAR its own output directory. "
+            + "If this directory holds an earlier build of the same project, run 'dotnet clean' or delete the directory.");
+        File.ReadAllText(InOutput("Richtypes/Payload.cs")).Should().Be("payload");
+        File.Exists(InOutput("Contractkeys/Keyed.cs")).Should().BeFalse();
+        File.ReadAllText(InOutput(".codegen-manifest")).Should().Be(manifestBefore);
+    }
+
+    [Fact]
+    public async Task GeneratedOutputWriter_regenerates_the_same_package_after_its_package_id_changed()
+    {
+        await WriteAs("richtypes", GeneratedFile.Text("Pkg/Old.cs", "old"));
+
+        await WriteAs("richtypes", GeneratedFile.Text("Pkg/New.cs", "new"));
+
+        File.Exists(InOutput("Pkg/Old.cs")).Should().BeFalse();
+        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("# package: richtypes", "Pkg/New.cs");
+    }
+
+    [Fact]
+    public async Task GeneratedOutputWriter_cleans_up_a_legacy_manifest_without_an_owner_and_rewrites_it_with_the_owner()
+    {
+        await File.WriteAllTextAsync(InOutput("Pkg.cs"), "legacy", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(InOutput(".codegen-manifest"), "Pkg.cs\n", TestContext.Current.CancellationToken);
+
+        await WriteAs("contractkeys", GeneratedFile.Text("Pkg/New.cs", "new"));
+
+        File.Exists(InOutput("Pkg.cs")).Should().BeFalse();
+        File.ReadAllLines(InOutput(".codegen-manifest")).Should().Equal("# package: contractkeys", "Pkg/New.cs");
+    }
+
+    [Fact]
+    public async Task GeneratedOutputWriter_never_treats_the_owner_line_as_a_file_to_delete()
+    {
+        await File.WriteAllTextAsync(InOutput("# package: richtypes"), "mine", TestContext.Current.CancellationToken);
+        await Write(GeneratedFile.Text("Pkg/Old.cs", "old"));
+
+        await Write(GeneratedFile.Text("Pkg/New.cs", "new"));
+
+        File.ReadAllText(InOutput("# package: richtypes")).Should().Be("mine");
     }
 }

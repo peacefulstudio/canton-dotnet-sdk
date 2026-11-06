@@ -27,19 +27,31 @@ public abstract record RecordedSubmission
     /// <c>TryCreateAsync</c> and <c>TryExerciseAsync</c>, the workflow id the caller passed or the
     /// <c>create-&lt;template&gt;</c> / <c>exercise-&lt;choice&gt;</c> default the real clients substitute.
     /// </param>
-    public sealed record Commands(CommandsSubmission Submission) : RecordedSubmission;
+    /// <param name="Timeout">The per-call <c>timeout</c> the caller passed, or <see langword="null"/> when it passed none and the configured default applies.</param>
+    public sealed record Commands(CommandsSubmission Submission, TimeSpan? Timeout) : RecordedSubmission;
 
     /// <summary>
     /// A reassignment submitted through <c>SubmitReassignmentAsync</c> or
     /// <c>TrySubmitAndWaitForReassignmentAsync</c>.
     /// </summary>
     /// <param name="Submission">The submission with its effective command id.</param>
-    public sealed record Reassignment(ReassignmentSubmission Submission) : RecordedSubmission;
+    /// <param name="Timeout">The per-call <c>timeout</c> the caller passed, or <see langword="null"/> when it passed none and the configured default applies.</param>
+    public sealed record Reassignment(ReassignmentSubmission Submission, TimeSpan? Timeout) : RecordedSubmission;
 
     /// <summary>
     /// An interactive submission executed through <c>ExecuteSubmissionAsync</c>,
     /// <c>ExecuteSubmissionAndWaitAsync</c> or <c>ExecuteSubmissionAndWaitForTransactionAsync</c>.
     /// </summary>
     /// <param name="Submission">The prepared transaction and signatures the call was handed.</param>
-    public sealed record Execution(SignedSubmission Submission) : RecordedSubmission;
+    /// <param name="Timeout">The per-call <c>timeout</c> the caller passed, or <see langword="null"/> when it passed none and the configured default applies.</param>
+    public sealed record Execution(SignedSubmission Submission, TimeSpan? Timeout) : RecordedSubmission;
 }
+
+/// <summary>
+/// A traffic-cost estimate a <see cref="FakeLedgerClient"/> was asked for, as listed in
+/// <see cref="FakeLedgerClient.TrafficCostEstimates"/>. Estimating submits nothing, so it is recorded
+/// apart from <see cref="FakeLedgerClient.Submissions"/>.
+/// </summary>
+/// <param name="Submission">The submission the caller handed to <c>EstimateTrafficCostAsync</c>, as passed.</param>
+/// <param name="Timeout">The per-call <c>timeout</c> the caller passed, or <see langword="null"/> when it passed none and the configured default applies.</param>
+public sealed record RecordedTrafficCostEstimate(CommandsSubmission Submission, TimeSpan? Timeout);

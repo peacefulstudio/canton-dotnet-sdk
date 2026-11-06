@@ -14,6 +14,9 @@ public class LedgerActivityTagNamesTests
     [InlineData(LedgerActivityTagNames.DamlContractId, "daml.contract_id")]
     [InlineData(LedgerActivityTagNames.DamlTemplateId, "daml.template_id")]
     [InlineData(LedgerActivityTagNames.DamlPackageId, "daml.package_id")]
+    [InlineData(LedgerActivityTagNames.DamlErrorId, "daml.error_id")]
+    [InlineData(LedgerActivityTagNames.DamlErrorCategory, "daml.error_category")]
+    [InlineData(LedgerActivityTagNames.DamlErrorMetadataPrefix, "daml.error_metadata.")]
     [InlineData(LedgerActivityTagNames.CantonOffset, "canton.offset")]
     [InlineData(LedgerActivityTagNames.CantonFromOffset, "canton.from_offset")]
     [InlineData(LedgerActivityTagNames.CantonSubmitterActAs, "canton.submitter.act_as")]
@@ -36,6 +39,8 @@ public class LedgerActivityTagNamesTests
     [InlineData("daml.contract_id")]
     [InlineData("daml.template_id")]
     [InlineData("daml.package_id")]
+    [InlineData("daml.error_id")]
+    [InlineData("daml.error_category")]
     [InlineData("canton.offset")]
     [InlineData("canton.from_offset")]
     [InlineData("canton.submitter.act_as")]
@@ -54,8 +59,12 @@ public class LedgerActivityTagNamesTests
         LedgerActivityTagNames.All.Should().Contain(expectedName);
 
     [Fact]
-    public void All_carries_nothing_beyond_the_eighteen_attribute_names() =>
-        LedgerActivityTagNames.All.Should().HaveCount(18);
+    public void All_carries_nothing_beyond_the_twenty_attribute_names() =>
+        LedgerActivityTagNames.All.Should().HaveCount(20);
+
+    [Fact]
+    public void All_leaves_out_the_error_metadata_prefix_because_it_is_not_a_name_on_its_own() =>
+        LedgerActivityTagNames.All.Should().NotContain("daml.error_metadata.");
 
     [Fact]
     public void All_names_are_distinct() =>

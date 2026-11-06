@@ -125,7 +125,7 @@ public class ChoiceEmitterInterfaceDescriptorTests
 
         var output = EmitDescriptors(Interface("IArchivable", choice), "IArchivable", Package(), StdlibPackage());
 
-        output.Should().Contain("public static global::Daml.Runtime.Commands.Choice<IArchivable, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()");
+        output.Should().Contain("public static new global::Daml.Runtime.Commands.Choice<IArchivable, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()");
         output.Should().Contain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlRecord.Create(),");
         output.Should().NotContain("ArgumentEncoder = _ => global::Daml.Runtime.Data.DamlUnit.Instance,");
         output.Should().Contain("ArgumentDecoder = val => val is global::Daml.Runtime.Data.DamlRecord { Fields.Count: 0 } ? global::Daml.Runtime.Data.DamlUnit.Instance : throw new global::System.InvalidOperationException(\"Choice 'Archive' argument must decode to an empty record.\"),");

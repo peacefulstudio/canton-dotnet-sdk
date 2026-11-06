@@ -101,7 +101,7 @@ build_tree() {
     "$HOLDER" "$SPDX_LINE" >"$root/scripts/entrypoint"
   chmod +x "$root/scripts/entrypoint"
 
-  printf '# Fixture\n' >"$root/CONTEXT.md"
+  printf '# Fixture\n' >"$root/GLOSSARY.md"
   printf '/src/\n' >"$root/.gitpublic"
   printf '<Project />\n' >"$root/Directory.Build.props"
   printf '<Configuration />\n' >"$root/coverage.settings.xml"

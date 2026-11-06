@@ -71,7 +71,8 @@ internal sealed partial class SubmissionClient
 
                 LogChoiceExerciseOutcome(outcome, command);
 
-                return GrpcTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command);
+                return GrpcTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command)
+                    .WithOperation(LedgerOperation.Of(command));
             },
             RecordOutcome,
             cancellationToken);
@@ -95,7 +96,8 @@ internal sealed partial class SubmissionClient
                     response.UpdateId,
                     LedgerWireConversions.ToLedgerOffset(response.CompletionOffset));
             },
-            cancellationToken);
+            cancellationToken,
+            configureActivity: activity => activity.SetCommandTags(submission, _options.EmitPartyAndContractSpanTags));
 
     internal Task<RuntimeCommands.CommandId> SubmitAsync(
         RuntimeCommands.CommandsSubmission submission,
@@ -121,7 +123,8 @@ internal sealed partial class SubmissionClient
 
                 return (RuntimeCommands.CommandId)commands.CommandId;
             },
-            cancellationToken);
+            cancellationToken,
+            configureActivity: activity => activity.SetCommandTags(submission, _options.EmitPartyAndContractSpanTags));
 
     internal Task<RuntimeCommands.CommandId> SubmitReassignmentAsync(
         ReassignmentSubmission submission,
@@ -264,7 +267,8 @@ internal sealed partial class SubmissionClient
                     token);
             },
             RecordOutcome,
-            cancellationToken);
+            cancellationToken,
+            configureActivity: activity => activity.SetCommandTags(submission, _options.EmitPartyAndContractSpanTags));
 
     internal Task<ExerciseOutcome<TransactionTree>> TrySubmitAndWaitForTransactionTreeAsync(
         RuntimeCommands.CommandsSubmission submission,
@@ -291,7 +295,11 @@ internal sealed partial class SubmissionClient
             },
             RecordOutcome,
             cancellationToken,
-            configureActivity: activity => activity.SetSubmitterTags(submitter, _options));
+            configureActivity: activity =>
+            {
+                activity.SetCommandTags(submission, _options.EmitPartyAndContractSpanTags);
+                activity.SetSubmitterTags(submitter, _options);
+            });
 
     internal Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateAsync<TTemplate>(
         TTemplate payload,
@@ -314,13 +322,14 @@ internal sealed partial class SubmissionClient
                 LogCreatingContract(_logger, typeof(TTemplate).Name);
 
                 var outcome = await TrySubmitAndWaitForTransactionAsync(submission, timeout, token).ConfigureAwait(false);
-                return GrpcTransactionResultProjector.ProjectToContractId<TTemplate>(outcome);
+                return GrpcTransactionResultProjector.ProjectToContractId<TTemplate>(outcome)
+                    .WithOperation(LedgerOperation.Creating(TTemplate.TemplateId));
             },
             LedgerCallInvoker.RecordNothing,
             cancellationToken,
             configureActivity: activity =>
             {
-                activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(TTemplate).Name);
+                activity.SetDamlType<TTemplate>();
                 activity.SetSubmitterTags(submitter, _options);
             },
             activityKind: ActivityKind.Internal);
@@ -475,6 +484,8 @@ internal sealed partial class SubmissionClient
         {
             case ExerciseOutcome<T>.DamlError damlError:
                 activity.RecordDamlError(damlError.ErrorId);
+                activity.SetDamlErrorTags(
+                    damlError.ErrorId, damlError.Category, damlError.Metadata, _options.EmitPartyAndContractSpanTags);
                 break;
             case ExerciseOutcome<T>.InfraError infraError:
                 activity.RecordInfraError(infraError.Status, _options.StatusDescriptionOf(infraError.Status, infraError.Message));
@@ -575,8 +586,9 @@ internal sealed partial class SubmissionClient
         string? workflowId,
         RuntimeCommands.CommandId? commandId)
     {
-        activity?.SetTag(LedgerActivityTagNames.DamlChoice, command.Choice.Value);
-        activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, command.ContractId.Value);
+        var submission = NewSubmission(
+            command, submitter, workflowId ?? $"exercise-{command.Choice.Value.ToLowerInvariant()}", commandId);
+        activity.SetCommandTags(submission, _options.EmitPartyAndContractSpanTags);
         activity.SetSubmitterTags(submitter, _options);
         if (_options.EmitPartyAndContractSpanTags)
         {
@@ -587,8 +599,7 @@ internal sealed partial class SubmissionClient
             LogExercisingChoice(_logger, command.Choice);
         }
 
-        return NewSubmission(
-            command, submitter, workflowId ?? $"exercise-{command.Choice.Value.ToLowerInvariant()}", commandId);
+        return submission;
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Creating contract {TemplateType}")]

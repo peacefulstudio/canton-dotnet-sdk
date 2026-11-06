@@ -29,7 +29,7 @@ public sealed class FakeLedgerCompletionParityTests : LedgerCompletionParityTest
 
         var client = FakeLedgerClient.Create()
             .WithCompletionEvents(
-                new CompletionStreamEvent.Checkpoint(LedgerOffset.Begin),
+                new CompletionStreamEvent.Checkpoint(LedgerOffset.Begin, []),
                 new CompletionStreamEvent.CommandAccepted(completion, "fake-update-1"))
             .Build();
 

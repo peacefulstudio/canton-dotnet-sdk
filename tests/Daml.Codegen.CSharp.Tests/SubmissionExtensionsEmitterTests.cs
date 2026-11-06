@@ -15,6 +15,10 @@ public class SubmissionExtensionsEmitterTests
 {
     private sealed record UnknownPartyReference : DamlPartyReference;
 
+    private static readonly string SubmissionParametersPattern =
+        @"string\? workflowId = null,\s*global::Daml.Runtime.Commands.CommandId\? commandId = null,\s*global::System.TimeSpan\? timeout = null,\s*"
+        + Regex.Escape(ConfigureParameter);
+
     private readonly PartyAnalysis _party = new();
 
     private static DamlFieldDefinition PartyField(string name) =>
@@ -140,7 +144,7 @@ public class SubmissionExtensionsEmitterTests
         var output = Emit(template);
 
         output.Should().Contain("SubmitterInfo submitter,");
-        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
+        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);");
         output.Should().NotContain("= payload.");
     }
 
@@ -211,8 +215,8 @@ public class SubmissionExtensionsEmitterTests
 
         var output = Emit(template);
 
-        output.Should().MatchRegex(@"Asset payload,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
-        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Asset>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
+        output.Should().MatchRegex(@"Asset payload,\s*" + SubmissionParametersPattern + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
+        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Asset>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);");
     }
 
     [Fact]
@@ -225,8 +229,8 @@ public class SubmissionExtensionsEmitterTests
 
         var output = Emit(template);
 
-        output.Should().MatchRegex(@"SubmitterInfo submitter,\s*" + Regex.Escape(ConfigureParameter) + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
-        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
+        output.Should().MatchRegex(@"SubmitterInfo submitter,\s*" + SubmissionParametersPattern + @"\s*global::System.Threading.CancellationToken cancellationToken = default\)");
+        output.Should().Contain("return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<Keyed>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);");
     }
 
     [Fact]
@@ -241,5 +245,48 @@ public class SubmissionExtensionsEmitterTests
 
         output.Should().Contain("/// <param name=\"configure\">");
         output.Should().Contain("s => s.WithDisclosedContracts(holding.Disclosure!)");
+    }
+
+    [Fact]
+    public void SubmissionExtensionsEmitter_create_documents_workflow_id_command_id_and_timeout_with_the_exerciser_text()
+    {
+        var template = Template(
+            "Asset",
+            [PartyField("owner")],
+            signatories: StaticParties("owner"));
+
+        var output = Emit(template);
+
+        output.Should().Contain("/// <param name=\"workflowId\">Optional workflow id; passed through to the ledger when supplied. No default");
+        output.Should().Contain("/// <param name=\"commandId\">Optional command id for deduplication; a fresh id is minted only when omitted.");
+        output.Should().Contain("/// <param name=\"timeout\">Optional per-attempt deadline, applied best-effort by the transport;");
+        output.Should().Contain("It runs after <c>workflowId</c> and <c>commandId</c> are applied.");
+    }
+
+    [Fact]
+    public void SubmissionExtensionsEmitter_create_documents_why_workflow_id_has_no_per_template_default()
+    {
+        var template = Template(
+            "Asset",
+            [PartyField("owner")],
+            signatories: StaticParties("owner"));
+
+        var output = Emit(template);
+
+        output.Should().Contain("a per-template default would bucket every create of the same template under one ID.</param>");
+        output.Should().NotContain("per-choice default");
+    }
+
+    [Fact]
+    public void SubmissionExtensionsEmitter_create_orders_the_documented_parameters_as_the_signature_declares_them()
+    {
+        var template = Template(
+            "Keyed",
+            [PartyField("custodian")],
+            signatories: DamlPartyAnalysis.Dynamic);
+
+        var output = Emit(template);
+
+        output.Should().MatchRegex(@"param name=""submitter"".*\s*/// <param name=""workflowId"".*\s*/// <param name=""commandId"".*\s*/// <param name=""timeout"".*\s*/// <param name=""configure"".*\s*/// <param name=""cancellationToken""");
     }
 }

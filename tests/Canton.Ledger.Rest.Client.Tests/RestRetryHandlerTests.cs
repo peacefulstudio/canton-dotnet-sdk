@@ -43,8 +43,11 @@ public class RestRetryHandlerTests
 
     private sealed class CountingHandler(params Exception?[] outcomePerAttempt) : HttpMessageHandler
     {
+        private readonly TaskCompletionSource _firstAttemptFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public int Attempts { get; private set; }
         public List<string> ObservedBodies { get; } = [];
+        public Task FirstAttemptFinished => _firstAttemptFinished.Task;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -57,6 +60,7 @@ public class RestRetryHandlerTests
 
             var outcome = Attempts < outcomePerAttempt.Length ? outcomePerAttempt[Attempts] : null;
             Attempts++;
+            _firstAttemptFinished.TrySetResult();
             if (outcome is not null)
                 throw outcome;
 
@@ -161,12 +165,19 @@ public class RestRetryHandlerTests
         using var client = ClientOver(transport, retry, timeProvider: time);
 
         var request = client.GetAsync("/v2/state/ledger-end", TestContext.Current.CancellationToken);
-        await Task.Delay(50, TestContext.Current.CancellationToken);
+        await transport.FirstAttemptFinished.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         transport.Attempts.Should().Be(1);
         request.IsCompleted.Should().BeFalse();
 
-        time.Advance(TimeSpan.FromHours(24));
+        using var ceiling = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!request.IsCompleted)
+        {
+            ceiling.Token.ThrowIfCancellationRequested();
+            time.Advance(TimeSpan.FromHours(1));
+            await Task.Yield();
+        }
+
         var response = await request;
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);

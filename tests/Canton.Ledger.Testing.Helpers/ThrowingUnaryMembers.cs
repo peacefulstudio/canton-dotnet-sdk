@@ -14,7 +14,7 @@ public static class ThrowingUnaryMembers
     /// The throwing members that drain a stream rather than decode one unary response, so no unary
     /// response can be malformed for them.
     /// </summary>
-    public static IReadOnlyList<string> StreamDrained { get; } = ["QueryActiveAsync(4)"];
+    public static IReadOnlyList<string> StreamDrained { get; } = ["QueryActiveAsync(6)"];
 
     /// <summary>
     /// The keys of the throwing unary members of <paramref name="clientInterface"/> and the interfaces

@@ -50,7 +50,8 @@ internal static class ReservedMemberNames
     /// <summary>
     /// Members a template record with <paramref name="fieldCount"/> payload fields declares:
     /// everything a record does, the template identity statics, a <c>Choice&lt;C&gt;</c>
-    /// descriptor per choice and, on a keyed template, a <c>&lt;C&gt;ByKeyCommand</c> builder per choice.
+    /// descriptor per choice and, on a keyed template, a <c>&lt;C&gt;ByKeyCommand</c> builder and a
+    /// <c>Try&lt;C&gt;ByKeyAsync</c> exerciser per choice.
     /// </summary>
     internal static IReadOnlySet<string> OfTemplateType(DamlTemplate template, int fieldCount, bool hasUpgradedPackageId)
     {
@@ -85,6 +86,14 @@ internal static class ReservedMemberNames
             [CloneMember],
             template.Key is null ? [] : [KeyWitnessMember]);
 
+    /// <summary>
+    /// Names a constant of the emitted <c>Constants</c> static class may not take: the public and
+    /// protected members every class inherits from <see cref="object"/>, which a field of that name
+    /// would hide (CS0108).
+    /// </summary>
+    internal static IReadOnlySet<string> OfConstantsClass() =>
+        Set(["Equals", "GetHashCode", "GetType", "ToString", "ReferenceEquals", "MemberwiseClone", "Finalize"]);
+
     /// <summary>Property names a record's positional parameters may not take.</summary>
     internal static IReadOnlySet<string> OfRecordField() =>
         Set(SynthesizedRecordMembers, RecordSerializationMembers, ObjectMembersRejectedAsPositionalProperty, [DeconstructMember]);
@@ -92,7 +101,7 @@ internal static class ReservedMemberNames
     /// <summary>
     /// Property names <paramref name="template"/>'s record positional parameters may not take:
     /// everything a record field may not, the template identity statics and the per-choice
-    /// <c>Choice&lt;C&gt;</c> and, on a keyed template, <c>&lt;C&gt;ByKeyCommand</c> members, and the
+    /// <c>Choice&lt;C&gt;</c> and, on a keyed template, <c>&lt;C&gt;ByKeyCommand</c> and <c>Try&lt;C&gt;ByKeyAsync</c> members, and the
     /// nested <c>&lt;C&gt;</c> record of a choice whose argument is a record.
     /// </summary>
     internal static IReadOnlySet<string> OfTemplateField(
@@ -113,7 +122,7 @@ internal static class ReservedMemberNames
             var choiceName = Identifiers.Sanitize(choice.Name);
             return template.Key is null
                 ? new[] { $"Choice{choiceName}" }
-                : [$"Choice{choiceName}", ExerciseMemberNames.ByKeyCommand(choice)];
+                : [$"Choice{choiceName}", ExerciseMemberNames.ByKeyCommand(choice), ExerciseMemberNames.ByKeyExerciser(choice)];
         });
 
     private static IReadOnlySet<string> Set(params IEnumerable<string>[] names) =>

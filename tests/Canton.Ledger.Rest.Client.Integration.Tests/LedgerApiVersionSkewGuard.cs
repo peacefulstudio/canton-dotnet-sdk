@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -8,12 +9,14 @@ namespace Canton.Ledger.Rest.Client.Integration.Tests;
 
 public static partial class LedgerApiVersionSkewGuard
 {
+    private const int MaxResponseBodyLength = 500;
+
     private const string CantonVersionMetadataKey = "CantonVersion";
 
     internal static string VendoredSpecCantonVersion => ReadCantonVersionPin();
 
     internal static IReadOnlySet<string> AcceptedCantonMinors { get; } =
-        new HashSet<string>(StringComparer.Ordinal) { "3.6" };
+        new HashSet<string>(StringComparer.Ordinal) { "3.7" };
 
     private static string ReadCantonVersionPin()
     {
@@ -74,6 +77,15 @@ public static partial class LedgerApiVersionSkewGuard
         $"GET /v2/version returned version '{reportedVersion}', which has no major.minor prefix to compare "
         + $"against the accepted set ({AcceptedMinorList()}). A participant that cannot report a comparable "
         + "version is a defect, not a version skew.";
+
+    internal static string VersionProbeFailureMessage(HttpStatusCode statusCode, string? responseBody) =>
+        $"GET /v2/version failed with HTTP {(int)statusCode} ({statusCode}); response body: "
+        + DescribeResponseBody(responseBody);
+
+    private static string DescribeResponseBody(string? responseBody) =>
+        string.IsNullOrWhiteSpace(responseBody) ? "<empty>"
+        : responseBody.Length <= MaxResponseBodyLength ? responseBody
+        : responseBody[..MaxResponseBodyLength] + "... (truncated)";
 
     private static string AcceptedMinorList() =>
         string.Join(", ", AcceptedCantonMinors.Order(StringComparer.Ordinal).Select(minor => $"{minor}.x"));

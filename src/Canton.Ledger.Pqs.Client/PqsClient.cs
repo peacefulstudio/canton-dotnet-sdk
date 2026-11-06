@@ -409,14 +409,14 @@ internal sealed partial class PqsClient : IPqsClient
 
     internal static Contract<T> DeserializeContract<T>(string contractId, string payloadJson)
         where T : ITemplate, IDamlRecord<T> =>
-        new(new ContractId<T>(contractId), T.FromRecord(DamlLfJsonReader.ReadRecord<T>(payloadJson)));
+        new(new ContractId<T>(contractId), DamlLfJsonReader.Read<T>(payloadJson));
 
     internal static InterfaceContract<TInterface, TView> DeserializeInterfaceContract<TInterface, TView>(
         string contractId,
         string payloadJson)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView> =>
-        new(new ContractId<TInterface>(contractId), TView.FromRecord(DamlLfJsonReader.ReadRecord<TView>(payloadJson)));
+        new(new ContractId<TInterface>(contractId), DamlLfJsonReader.Read<TView>(payloadJson));
 
     /// <summary>
     /// Builds the package-name-qualified identifier PQS <c>active()</c> expects

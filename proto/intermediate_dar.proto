@@ -55,6 +55,28 @@ message IntermediateModule {
   // so adding a `repeated Exception exceptions = 5;` later doesn't
   // shift adjacent fields.
   reserved 5;
+  // Sorted lexicographically by `constants[i].name` — load-bearing for
+  // determinism. Producers must emit this ordering. Empty in a `--schema-only`
+  // decode, which erases every value body.
+  repeated Constant constants = 6;
+}
+
+// A top-level Daml value whose whole body is one literal. Producers emit only
+// values that are user-named (no compiler-generated `$`-prefixed name), non-generic
+// and spelled as a single Text, Int64, Bool or Numeric literal; every other
+// top-level value — computed, record, list, function — is absent.
+message Constant {
+  // The Daml-LF value name, mangled as the archive spells it.
+  string name = 1;
+  oneof literal {
+    string text_value = 2;
+    int64 int64_value = 3;
+    bool bool_value = 4;
+    // Plain decimal notation as the archive spells the Numeric literal:
+    // an optional leading `-`, integer digits, then `.` and fraction digits.
+    // Never scientific notation, never a leading `+`.
+    string numeric_value = 5;
+  }
 }
 
 message DataType {

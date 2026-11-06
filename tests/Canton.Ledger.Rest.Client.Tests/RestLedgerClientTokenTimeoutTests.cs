@@ -22,13 +22,14 @@ public sealed class RestLedgerClientTokenTimeoutTests : IDisposable
     private static readonly TimeSpan CallTimeout = TimeSpan.FromMilliseconds(200);
 
     private readonly RecordingHttpHandler _participant = new();
+    private readonly HangingTokenProvider _tokens = new();
     private readonly StubHttpClientFactory _factory;
     private readonly RestLedgerClient _client;
 
     public RestLedgerClientTokenTimeoutTests()
     {
         _factory = new StubHttpClientFactory(
-            new BearerTokenHandler(new HangingTokenProvider()) { InnerHandler = _participant });
+            new BearerTokenHandler(_tokens) { InnerHandler = _participant });
         _client = new RestLedgerClient(
             _factory, Options.Create(new RestLedgerClientOptions { HttpAddress = "http://localhost:7575" }));
     }
@@ -63,12 +64,14 @@ public sealed class RestLedgerClientTokenTimeoutTests : IDisposable
     [Fact]
     public async Task SubmitAndWaitAsync_keeps_a_caller_cancellation_during_the_token_fetch_as_an_OperationCanceledException()
     {
-        using var callerCancellation = new CancellationTokenSource(CallTimeout);
+        using var callerCancellation = new CancellationTokenSource();
 
-        var act = () => _client.SubmitAndWaitAsync(
+        var call = _client.SubmitAndWaitAsync(
             EntryPointInvocations.Submission(), Submitter, TimeSpan.FromMinutes(5), callerCancellation.Token);
+        await _tokens.Requested.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        await callerCancellation.CancelAsync();
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await call.Invoking(pending => pending).Should().ThrowAsync<OperationCanceledException>();
         _participant.Requests.Should().BeEmpty();
     }
 
@@ -97,8 +100,13 @@ public sealed class RestLedgerClientTokenTimeoutTests : IDisposable
 
     private sealed class HangingTokenProvider : ITokenProvider
     {
+        private readonly TaskCompletionSource _requested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Requested => _requested.Task;
+
         public async Task<string> GetTokenAsync(CancellationToken cancellationToken = default)
         {
+            _requested.TrySetResult();
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             return "never-issued";
         }

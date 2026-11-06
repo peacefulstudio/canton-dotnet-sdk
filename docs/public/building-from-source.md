@@ -54,6 +54,7 @@ mode fails with `DAML0006` until the consuming project sets `DamlCodegenBundleDi
 canton-dotnet-sdk/
 ├── src/
 │   ├── Canton.Ledger.Abstractions/       # Transport-neutral Canton contract layer (NuGet package)
+│   ├── Canton.Ledger.AspNetCore/         # ASP.NET Core ProblemDetails mapping for failed ledger commands (NuGet package)
 │   ├── Canton.Ledger.Grpc/               # gRPC stubs generated from the Canton Ledger API protos (NuGet package)
 │   ├── Canton.Ledger.Grpc.Client/        # gRPC ledger and admin clients (NuGet package)
 │   ├── Canton.Ledger.Kernel/             # Token providers, telemetry naming, retry pipeline (NuGet package)
@@ -89,5 +90,5 @@ canton-dotnet-sdk/
 ├── samples/
 │   ├── QuickstartExample/                # Working example against the src projects
 │   └── TokenStandardV2/                  # Splice Token Standard V2 packages from NuGet.org
-└── CONTEXT.md                            # domain model and architecture overview
+└── GLOSSARY.md                            # domain model and architecture overview
 ```

@@ -58,7 +58,8 @@ internal sealed partial class RestLedgerClient
         CancellationToken cancellationToken)
     {
         var commands = RestCommandBuilder.BuildCommands(submission, _userId);
-        await FireAsync(AsyncSubmitPath, commands, commands.CommandId, timeout, cancellationToken).ConfigureAwait(false);
+        await FireAsync(AsyncSubmitPath, commands, commands.CommandId, timeout, cancellationToken, CommandSpanOf(submission))
+            .ConfigureAwait(false);
         return (RuntimeCommands.CommandId)commands.CommandId;
     }
 
@@ -287,7 +288,7 @@ internal sealed partial class RestLedgerClient
 
         if (completionResponse?.OffsetCheckpoint is { } checkpoint)
         {
-            return new CompletionStreamEvent.Checkpoint(LedgerOffset.At(RestWireConversions.ParseOffset(checkpoint.Offset)));
+            return RestCompletionProjector.ProjectCheckpoint(checkpoint);
         }
 
         var variant = completionResponse?.AdditionalProperties.Keys.FirstOrDefault() ?? "Unknown";
@@ -422,11 +423,17 @@ internal sealed partial class RestLedgerClient
         }
     }
 
-    private Task FireAsync(string path, object body, string commandId, TimeSpan? timeout, CancellationToken cancellationToken) =>
+    private Task FireAsync(
+        string path,
+        object body,
+        string commandId,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken,
+        RestCommandSpan? commandSpan = null) =>
         _calls.SendAsync(
             new RestCall(
                 HttpMethod.Post, path, body, MissingBody("submission"), MalformedBody("submission"),
-                LedgerCallKind.AcceptedOnlyWrite, CommandId: commandId),
+                LedgerCallKind.AcceptedOnlyWrite, CommandId: commandId, CommandSpan: commandSpan),
             IgnoreBodyAsync,
             timeout,
             cancellationToken);

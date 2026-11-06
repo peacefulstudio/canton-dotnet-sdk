@@ -5,6 +5,7 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Testing.Localnet;
 using Com.Daml.Ledger.Api.V2.Admin;
 using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -37,11 +38,11 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
 {
     private const string ReassignmentFeatureDisabledSkipMessage =
         "Skipping: the participant rejected the unassign with \"Multi-synchronizer feature flag is not "
-        + "enabled\". The --multi-sync LocalNet connects the validator to two synchronizers but does not "
-        + "set the EnableMultiSynchronizer participant topology feature flag on its synchronizer trust "
-        + "certificates, so cross-synchronizer reassignment is disabled at submission. Enabling that flag "
-        + "on both synchronizers (LocalNet app-synchronizer.sc bootstrap) is required to run "
-        + "this live spike.";
+        + "enabled\". Only a protocol version 36 synchronizer answers that way: there, cross-synchronizer "
+        + "reassignment needs the EnableMultiSynchronizer participant topology feature flag on the "
+        + "validator's synchronizer trust certificates for both synchronizers (the LocalNet "
+        + "app-synchronizer.sc bootstrap sets it). Protocol version 37 has no such prerequisite, so on "
+        + "a protocol version 37 synchronizer look elsewhere for the cause of the rejection.";
 
     private readonly ActAsRightsLease _actAsRights;
     private readonly ITokenProvider _tokenProvider;
@@ -382,6 +383,44 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
 
         return new TypedReassignmentObservation<T>(unassigned, assigned);
     }
+
+    public async Task<IReadOnlyList<AcsSnapshotEntry<Asset>>> SubscribeActiveSnapshotAsync(
+        Party reader, CancellationToken cancellationToken)
+    {
+        var entries = new List<AcsSnapshotEntry<Asset>>();
+
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(_userId, cancellationToken);
+        await foreach (var entry in _client.SubscribeActiveAsync<Asset>(
+            ReaderOf(reader), cancellationToken: cancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        return entries;
+    }
+
+    public async Task<ActiveSnapshot<ActiveContract<Contract<Asset>>>> SnapshotActiveAssetsAsync(
+        Party reader, CancellationToken cancellationToken)
+    {
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(_userId, cancellationToken);
+        return await _client.SnapshotActiveAsync<Asset>(ReaderOf(reader), cancellationToken: cancellationToken);
+    }
+
+    public async Task<ActiveSnapshot<ActiveContract<InterfaceContract<IHolding, HoldingView>>>> QueryActiveHoldingsAsync(
+        Party reader, CancellationToken cancellationToken)
+    {
+        using var streamHold = await LedgerUserRightsGate.Shared.HoldStreamAsync(_userId, cancellationToken);
+        return await _client.QueryActiveAsync<IHolding, HoldingView>(
+            ReaderOf(reader), cancellationToken: cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AcsSnapshotEntry<Asset>>> ActiveContractsPageSnapshotAsync(
+        Party reader, CancellationToken cancellationToken) =>
+        (await _client.GetActiveContractsPageAsync<Asset>(ReaderOf(reader), cancellationToken: cancellationToken))
+        .Entries;
+
+    private static RuntimeCommands.SubmitterInfo ReaderOf(Party reader) =>
+        new(new HashSet<Party> { reader }, new HashSet<Party>());
 
     private static bool TimedOut(CancellationTokenSource linked, CancellationToken caller) =>
         linked.IsCancellationRequested && !caller.IsCancellationRequested;

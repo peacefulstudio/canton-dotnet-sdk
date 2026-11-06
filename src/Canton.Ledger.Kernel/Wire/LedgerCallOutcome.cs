@@ -21,6 +21,7 @@ internal static class LedgerCallOutcome
     {
         var exception = ExceptionOf(ending, kind);
         exception.CommandId = commandId;
+        exception.RejectedAfterRetry = ending is LedgerCallEnding.Rejected { AfterRetry: true };
         return exception;
     }
 

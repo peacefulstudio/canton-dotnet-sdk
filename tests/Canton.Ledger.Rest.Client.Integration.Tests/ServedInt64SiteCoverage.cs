@@ -31,7 +31,6 @@ internal static class ServedInt64SiteCoverage
             "GetActiveContractsPageRequest.activeAtOffset",
             "GetActiveContractsRequest.activeAtOffset",
             "GetCompletionsRequest.beginExclusive",
-            "GetTransactionByOffsetRequest.offset",
             "GetUpdateByOffsetRequest.offset",
             "GetUpdatesPageRequest.beginOffsetExclusive",
             "GetUpdatesPageRequest.endOffsetInclusive",
@@ -53,12 +52,6 @@ internal static class ServedInt64SiteCoverage
             "Duration.seconds",
         }.ToFrozenSet(StringComparer.Ordinal);
 
-    private static readonly FrozenSet<string> SitesOnSchemasTheGeneratedSurfaceDeclaresNoTypeFor =
-        new[]
-        {
-            "JsTransactionTree.offset",
-        }.ToFrozenSet(StringComparer.Ordinal);
-
     private static readonly FrozenSet<string> ReshapedSites =
         WireInt64Sites.ByOwner
             .SelectMany(owner => owner.Value.Select(jsonName => $"{owner.Key.Name}.{jsonName}"))
@@ -68,7 +61,6 @@ internal static class ServedInt64SiteCoverage
         RequestSitesTheParticipantAcceptsInTheDeclaredStringForm
             .Concat(SitesAWholeTypeConverterAlreadyReshapes)
             .Concat(SitesReadAsOnePartOfAServedDurationObject)
-            .Concat(SitesOnSchemasTheGeneratedSurfaceDeclaresNoTypeFor)
             .ToList();
 
     internal static IReadOnlyList<string> SitesNeitherReshapedNorExempt(IEnumerable<string> servedInt64Sites)

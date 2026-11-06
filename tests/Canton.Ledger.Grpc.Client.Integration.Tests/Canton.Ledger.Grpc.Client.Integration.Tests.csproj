@@ -23,6 +23,8 @@
     <ProjectReference Include="..\..\src\Canton.Ledger.Rest.Client\Canton.Ledger.Rest.Client.csproj" />
     <ProjectReference Include="..\..\src\Canton.Ledger.OpenTelemetry\Canton.Ledger.OpenTelemetry.csproj" />
     <ProjectReference Include="..\Canton.Ledger.Testing.Localnet\Canton.Ledger.Testing.Localnet.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Testing.Helpers\Canton.Ledger.Testing.Helpers.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Testing.LiveConformance\Canton.Ledger.Testing.LiveConformance.csproj" />
   </ItemGroup>
 
 </Project>

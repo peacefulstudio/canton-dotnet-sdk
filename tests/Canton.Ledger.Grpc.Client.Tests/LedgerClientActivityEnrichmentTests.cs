@@ -92,6 +92,15 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
 
     private static string UniqueContractId() => $"00{Guid.NewGuid():N}";
 
+    private static IEnumerable<string> ContractIdTags(Activity activity) =>
+        activity.TagObjects.Where(tag => tag.Key == "daml.contract_id").Select(tag => (string)tag.Value!);
+
+    private interface IGadget : IDamlType
+    {
+        static DamlTypeDescriptor IDamlType.DamlTypeId { get; } =
+            new(new RuntimeIdentifier("gadget-pkg", "Acme.Gadget", "IGadget"), DamlTypeKind.Interface, "gadget-package");
+    }
+
     [Fact]
     public async Task TryExerciseAsync_tags_the_activity_with_grpc_semconv_and_daml_attributes()
     {
@@ -243,6 +252,289 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             .Subject;
         activity.Status.Should().Be(ActivityStatusCode.Error);
         activity.GetTagItem(ActivityHelper.ErrorType).Should().Be(errorId);
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_tags_the_daml_template_id_and_choice_without_the_identifier_opt_in()
+    {
+        var contractId = UniqueContractId();
+        StubExerciseSuccess(contractId);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TryExerciseAsync<DamlUnit>(
+            ArchiveCommand(contractId), ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+        activity.GetTagItem("daml.contract_id").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_tags_the_daml_template_id_and_choice()
+    {
+        StubExerciseSuccess(UniqueContractId());
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand(UniqueContractId())).WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("SubmitAndWaitForTransaction");
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+        activity.GetTagItem("daml.contract_id").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_tags_the_contract_ids_when_opted_in()
+    {
+        _options.EmitPartyAndContractSpanTags = true;
+        StubExerciseSuccess(UniqueContractId());
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand("00abc")).WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        capture.Activities.Should().ContainSingle().Subject
+            .GetTagItem("daml.contract_id").Should().Be("00abc");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_joins_the_distinct_values_of_a_multi_command_submission()
+    {
+        StubExerciseSuccess(UniqueContractId());
+        var submission = new RuntimeCommands.CommandsSubmission(
+        [
+            RuntimeCommands.CreateCommand.For(new FooBar("alice")),
+            ArchiveCommand(UniqueContractId()),
+            ArchiveCommand(UniqueContractId()),
+        ]).WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("test-pkg:Sample.Foo:FooBar,pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionTreeAsync_tags_the_daml_template_id_and_choice()
+    {
+        StubExerciseSuccess(UniqueContractId());
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand(UniqueContractId()));
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TrySubmitAndWaitForTransactionTreeAsync(
+            submission, ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_tags_the_daml_template_id_not_the_clr_type_name_on_both_spans()
+    {
+        StubExerciseSuccess(UniqueContractId());
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TryCreateAsync(
+            new FooBar("alice"), ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        capture.Activities.Should().HaveCount(2)
+            .And.OnlyContain(a => a.GetTagItem("daml.template_id") as string == "test-pkg:Sample.Foo:FooBar");
+        capture.Activities.Should().OnlyContain(a => a.GetTagItem("daml.choice") == null);
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_tags_the_daml_error_id_and_category_of_a_rejection_but_not_its_metadata_by_default()
+    {
+        var ex = LedgerClientTestFixtures.MakeDamlRpcException(
+            "CONTRACT_NOT_FOUND",
+            "contract not found",
+            "InvalidGivenCurrentSystemStateResourceMissing",
+            extraMetadata: new Dictionary<string, string> { ["contract_id"] = "00feed" });
+        LedgerClientTestFixtures.StubCommandServiceFailure(_commandService, ex);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TryExerciseAsync<object>(
+            ArchiveCommand(UniqueContractId()), ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.error_id").Should().Be("CONTRACT_NOT_FOUND");
+        activity.GetTagItem("daml.error_category").Should().Be("InvalidGivenCurrentSystemStateResourceMissing");
+        activity.GetTagItem("daml.error_metadata.contract_id").Should().BeNull();
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+    }
+
+    [Fact]
+    public async Task TryExerciseAsync_tags_the_daml_error_metadata_when_opted_in()
+    {
+        _options.EmitPartyAndContractSpanTags = true;
+        var ex = LedgerClientTestFixtures.MakeDamlRpcException(
+            "CONTRACT_NOT_FOUND",
+            "contract not found",
+            "InvalidGivenCurrentSystemStateResourceMissing",
+            extraMetadata: new Dictionary<string, string> { ["contract_id"] = "00feed" });
+        LedgerClientTestFixtures.StubCommandServiceFailure(_commandService, ex);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TryExerciseAsync<object>(
+            ArchiveCommand(UniqueContractId()), ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.error_metadata.contract_id").Should().Be("00feed");
+        activity.GetTagItem("daml.error_metadata.category").Should().Be("InvalidGivenCurrentSystemStateResourceMissing");
+    }
+
+    [Fact]
+    public async Task TryCreateAsync_tags_the_daml_error_on_the_submission_span_when_the_participant_rejects()
+    {
+        var ex = LedgerClientTestFixtures.MakeDamlRpcException(
+            "DUPLICATE_CONTRACT_KEY", "duplicate", "InvalidGivenCurrentSystemStateResourceExists");
+        LedgerClientTestFixtures.StubCommandServiceFailure(_commandService, ex);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TryCreateAsync(
+            new FooBar("alice"), ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var submissionSpan = capture.Activities.Should()
+            .ContainSingle(a => a.GetTagItem(ActivityHelper.RpcMethod) as string == "SubmitAndWaitForTransaction")
+            .Subject;
+        submissionSpan.GetTagItem("daml.error_id").Should().Be("DUPLICATE_CONTRACT_KEY");
+        submissionSpan.GetTagItem("daml.error_category").Should().Be("InvalidGivenCurrentSystemStateResourceExists");
+        submissionSpan.GetTagItem("daml.template_id").Should().Be("test-pkg:Sample.Foo:FooBar");
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_tags_the_daml_template_id_and_choice()
+    {
+        StubSubmitAndWaitSuccess();
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand(UniqueContractId())).WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.SubmitAndWaitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SubmitAndWaitAsync_tags_the_exercised_contract_id_only_when_opted_in(bool optedIn)
+    {
+        _options.EmitPartyAndContractSpanTags = optedIn;
+        StubSubmitAndWaitSuccess();
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand("00abc")).WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.SubmitAndWaitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+        ContractIdTags(activity).Should().Equal(optedIn ? ["00abc"] : []);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TrySubmitAndWaitForTransactionTreeAsync_tags_the_exercised_contract_id_only_when_opted_in(bool optedIn)
+    {
+        _options.EmitPartyAndContractSpanTags = optedIn;
+        StubExerciseSuccess(UniqueContractId());
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand("00abc"));
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TrySubmitAndWaitForTransactionTreeAsync(
+            submission, ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("pkg:Module:Template");
+        activity.GetTagItem("daml.choice").Should().Be("Archive");
+        ContractIdTags(activity).Should().Equal(optedIn ? ["00abc"] : []);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_tags_the_interface_id_of_an_interface_exercise()
+    {
+        StubExerciseSuccess(UniqueContractId());
+        var submission = RuntimeCommands.CommandsSubmission
+            .Single(RuntimeCommands.ExerciseCommand.For(
+                new ContractId<IGadget>("00abc"), new RuntimeCommands.ChoiceName("Poke"), DamlUnit.Instance))
+            .WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        await client.TrySubmitAndWaitForTransactionAsync(
+            submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.template_id").Should().Be("gadget-pkg:Acme.Gadget:IGadget");
+        activity.GetTagItem("daml.choice").Should().Be("Poke");
+    }
+
+    [Fact]
+    public async Task SubmitAndWaitAsync_tags_the_daml_error_when_the_participant_rejects()
+    {
+        var ex = LedgerClientTestFixtures.MakeDamlRpcException(
+            "CONTRACT_NOT_FOUND", "contract not found", "InvalidGivenCurrentSystemStateResourceMissing");
+        _commandService
+            .SubmitAndWaitAsync(
+                Arg.Any<SubmitAndWaitRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new AsyncUnaryCall<SubmitAndWaitResponse>(
+                Task.FromException<SubmitAndWaitResponse>(ex),
+                Task.FromResult(new Metadata()),
+                () => ex.Status,
+                () => ex.Trailers ?? new Metadata(),
+                () => { }));
+        var submission = RuntimeCommands.CommandsSubmission.Single(ArchiveCommand(UniqueContractId())).WithActAs(ActAs);
+
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        var client = CreateClient();
+        var act = () => client.SubmitAndWaitAsync(submission, cancellationToken: TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<LedgerOperationException>();
+
+        var activity = capture.Activities.Should().ContainSingle().Subject;
+        activity.GetTagItem("daml.error_id").Should().Be("CONTRACT_NOT_FOUND");
+        activity.GetTagItem("daml.error_category").Should().Be("InvalidGivenCurrentSystemStateResourceMissing");
     }
 
     [Fact]
@@ -437,6 +729,20 @@ public sealed class LedgerClientActivityEnrichmentTests : IDisposable
             .Be("com.daml.ledger.api.v2.interactive.InteractiveSubmissionService");
         activity.GetTagItem(ActivityHelper.RpcMethod).Should().Be("PrepareSubmission");
     }
+
+    private void StubSubmitAndWaitSuccess() =>
+        _commandService
+            .SubmitAndWaitAsync(
+                Arg.Any<SubmitAndWaitRequest>(),
+                Arg.Any<Metadata>(),
+                Arg.Any<DateTime?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new AsyncUnaryCall<SubmitAndWaitResponse>(
+                Task.FromResult(new SubmitAndWaitResponse { UpdateId = "update-1", CompletionOffset = 1L }),
+                Task.FromResult(new Metadata()),
+                () => Status.DefaultSuccess,
+                () => new Metadata(),
+                () => { }));
 
     private void StubExerciseSuccess(string contractId)
     {

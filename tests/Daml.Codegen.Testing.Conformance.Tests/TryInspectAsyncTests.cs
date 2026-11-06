@@ -30,7 +30,7 @@ public class TryInspectAsyncTests
             ActingParties: [Alice],
             WitnessParties: [Alice])
         {
-            PackageName = "contractkeys-hcc6e8a4f16d9",
+            PackageName = "contractkeys-h5e25b75e405b",
         };
 
     private static FakeLedgerClient ClientCommitting(params ExercisedEvent[] exercised) =>

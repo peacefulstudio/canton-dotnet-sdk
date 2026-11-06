@@ -18,7 +18,7 @@ internal static class DamlErrorParser
         new Dictionary<StatusCode, DamlErrorCategory>
         {
             [StatusCode.Unauthenticated] = DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials,
-            [StatusCode.PermissionDenied] = DamlErrorCategory.AuthorizationChecksFailed,
+            [StatusCode.PermissionDenied] = DamlErrorCategory.InsufficientPermission,
         };
 
     internal static ParsedLedgerError Parse(RpcException exception)

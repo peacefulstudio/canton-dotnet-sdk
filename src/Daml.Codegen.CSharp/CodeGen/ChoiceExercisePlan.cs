@@ -81,6 +81,20 @@ internal sealed record ChoiceExercisePlan(
 }
 
 /// <summary>
+/// The decision, taken once per choice of a keyed template, whether its
+/// <c>Try&lt;Choice&gt;ByKeyAsync</c> exerciser also offers an overload taking the controllers as
+/// named <c>Party</c> parameters. The <c>SubmitterInfo</c> overload is always emitted.
+/// </summary>
+/// <param name="Choice">The planned choice.</param>
+/// <param name="ControllerParameters">Controller parameter names in declaration order; empty when
+/// no named-<c>Party</c> overload is offered.</param>
+internal sealed record ByKeyExercisePlan(DamlChoice Choice, IReadOnlyList<string> ControllerParameters)
+{
+    /// <summary>True when one overload takes the controllers as named <c>Party</c> parameters.</summary>
+    public bool OffersNamedControllers => ControllerParameters.Count > 0;
+}
+
+/// <summary>
 /// Plans the exerciser overloads of every choice from <see cref="PartyAnalysis"/>. Needs no
 /// emitter state, so a plan is asserted without rendering any text.
 /// </summary>
@@ -116,6 +130,51 @@ internal sealed class ChoiceExercisePlanner(PartyAnalysis party)
         [.. template.Choices
             .Where(choice => !ChoiceEmitter.ReturnsContractIds(choice.ReturnType))
             .Select(PlanNonContractChoice)];
+
+    /// <summary>
+    /// Plans the by-key exerciser of every choice of <paramref name="template"/>, in declaration
+    /// order. A choice is offered named controllers when every controller is a payload party field
+    /// and none of their parameter names would take one of the exerciser's own.
+    /// </summary>
+    /// <param name="template">The keyed template whose choices are planned.</param>
+    /// <param name="fields">The template payload fields the controller clauses are validated against.</param>
+    public IReadOnlyList<ByKeyExercisePlan> PlanByKey(
+        DamlTemplate template,
+        IReadOnlyList<DamlFieldDefinition> fields)
+    {
+        var partyFields = fields
+            .Where(f => f.Type is DamlPrimitiveType { Primitive: DamlPrimitive.Party })
+            .ToDictionary(f => f.Name, f => f, StringComparer.Ordinal);
+
+        return [.. template.Choices.Select(choice => new ByKeyExercisePlan(choice, NamedByKeyControllers(choice, partyFields)))];
+    }
+
+    private static readonly HashSet<string> ByKeyExerciserParameterNames = new(StringComparer.Ordinal)
+    {
+        "client",
+        "key",
+        "argument",
+        "submitter",
+        "workflowId",
+        "commandId",
+        "timeout",
+        "configure",
+        "cancellationToken",
+    };
+
+    private IReadOnlyList<string> NamedByKeyControllers(
+        DamlChoice choice,
+        IReadOnlyDictionary<string, DamlFieldDefinition> partyFields)
+    {
+        var controllers = party.ValidatePayloadParties(choice.Controllers, partyFields);
+        if (!NamesStaticControllers(controllers))
+        {
+            return [];
+        }
+
+        var (controllerParameters, _) = party.PartitionControllersAndObservers(controllers, DamlPartyAnalysis.Dynamic);
+        return controllerParameters.Any(ByKeyExerciserParameterNames.Contains) ? [] : controllerParameters;
+    }
 
     /// <summary>Plans the single exerciser an interface choice gets.</summary>
     /// <param name="choice">The interface choice.</param>
@@ -181,6 +240,9 @@ internal static class ExerciseMemberNames
 
     /// <summary>The <c>&lt;Choice&gt;ByKeyCommand</c> builder.</summary>
     public static string ByKeyCommand(DamlChoice choice) => $"{Identifiers.Sanitize(choice.Name)}ByKeyCommand";
+
+    /// <summary>The <c>Try&lt;Choice&gt;ByKeyAsync</c> exerciser.</summary>
+    public static string ByKeyExerciser(DamlChoice choice) => $"Try{Identifiers.Sanitize(choice.Name)}ByKeyAsync";
 
     /// <summary>The private <c>Project&lt;Choice&gt;Result</c> hand-off.</summary>
     public static string Projector(DamlChoice choice) => $"Project{Identifiers.Sanitize(choice.Name)}Result";

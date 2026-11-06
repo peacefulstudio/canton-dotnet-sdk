@@ -1,0 +1,9 @@
+apiRules:
+- include:
+    uidRegex: ^Canton\.Ledger\.Rest\.Client\.Raw\.(IAuthenticatedUserApi|IDarApi|IHealthApi|IPackageApi|IPartyManagementApi|IUserManagementApi|PartyManagementServiceApiExtensions)(\W|$)
+- exclude:
+    uidRegex: ^Com\.Daml\.Ledger\.Api\.V2(\W|$)
+- exclude:
+    uidRegex: ^Google\.(Api|LongRunning|Rpc|Type)(\W|$)
+- exclude:
+    uidRegex: ^Canton\.Ledger\.Rest\.Client\.Raw\.

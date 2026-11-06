@@ -164,6 +164,18 @@ generated tree in one step:
 The determinism gate reads only `richtypes`, so the determinism pins do not need
 refreshing for a default-target-only change.
 
+## Live conformance packages
+
+Two packages support running the conformance kit (`Daml.Ledger.Abstractions.Testing.Conformance`)
+against a real participant. `conformancekit` declares the `Conformance.Kit:ConformanceProbe`
+interface and its view; its DAR is the one the kit embeds (`ConformanceKitDar.Open()`).
+`conformanceprobe` holds the probe template that declares an `interface instance` of it. They
+are separate packages so the probe package depends on the interface package the way an adopter's
+package does, and the kit can embed the interface DAR alone. Both carry the content-addressed `<base>-h<hash12>` name, and the
+kit's `IConformanceProbe` pins the interface package's id and name. The `live-conformance`
+entry of `scripts/regenerate.sh` regenerates the C# bindings of both under
+`tests/Canton.Ledger.Testing.LiveConformance/Generated`.
+
 ## Wire captures
 
 Raw responses from a live Canton participant, kept next to the corpus whose shapes they

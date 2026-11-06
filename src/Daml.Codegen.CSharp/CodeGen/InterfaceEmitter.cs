@@ -69,6 +69,10 @@ internal sealed class InterfaceEmitter(
         {
             interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IHasChoices)}<{interfaceName}>");
         }
+        if (choiceEmitter.DeclaresArchive(iface.Choices))
+        {
+            interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IArchivable)}<{interfaceName}>");
+        }
         var interfaces = string.Join(", ", interfacesList);
 
         indent.AppendLine($"public interface {interfaceName} : {interfaces}");
@@ -91,6 +95,10 @@ internal sealed class InterfaceEmitter(
         {
             choiceEmitter.WriteInterfaceChoiceDescriptors(indent, iface, interfaceName);
             choiceEmitter.WriteChoicesAggregateProperty(indent, iface.Choices, interfaceName);
+            if (choiceEmitter.DeclaresArchive(iface.Choices))
+            {
+                choiceEmitter.WriteArchivableWitness(indent, interfaceName);
+            }
         }
 
         indent.TrimTrailingBlankLine();

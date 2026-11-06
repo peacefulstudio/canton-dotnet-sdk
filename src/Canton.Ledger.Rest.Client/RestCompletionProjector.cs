@@ -9,6 +9,7 @@ using Daml.Runtime;
 using RuntimeCommands = Daml.Runtime.Commands;
 using WireCompletion = Canton.Ledger.Rest.Client.Raw.Completion;
 using WireDeduplicationPeriod = Canton.Ledger.Rest.Client.Raw.DeduplicationPeriod;
+using WireOffsetCheckpoint = Canton.Ledger.Rest.Client.Raw.OffsetCheckpoint;
 using WireSynchronizerTime = Canton.Ledger.Rest.Client.Raw.SynchronizerTime;
 using WireTraceContext = Canton.Ledger.Rest.Client.Raw.TraceContext;
 
@@ -34,6 +35,15 @@ internal static class RestCompletionProjector
             NullIfEmpty(RestErrorDetails.ReadErrorId(errorInfo)),
             RestErrorDetails.ToMetadata(errorInfo),
             completion.UpdateId);
+    }
+
+    public static CompletionStreamEvent ProjectCheckpoint(WireOffsetCheckpoint checkpoint)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+
+        return new CompletionStreamEvent.Checkpoint(
+            LedgerOffset.At(RestWireConversions.ParseOffset(checkpoint.Offset)),
+            [.. (checkpoint.SynchronizerTimes ?? []).Select(ToSynchronizerTime)]);
     }
 
     private static Completion ToCompletion(WireCompletion completion) => new(

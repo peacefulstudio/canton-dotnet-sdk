@@ -26,6 +26,7 @@ internal sealed class RestActivityHandler : DelegatingHandler
     internal const string UrlTemplate = "url.template";
 
     internal static readonly HttpRequestOptionsKey<string> PathTemplateOption = new("Canton.Ledger.Rest.Client.PathTemplate");
+    internal static readonly HttpRequestOptionsKey<RestCommandSpan> CommandSpanOption = new("Canton.Ledger.Rest.Client.CommandSpan");
     internal const string HttpResponseStatusCode = "http.response.status_code";
     internal const string ErrorType = SemanticConventions.ErrorType;
 
@@ -38,11 +39,21 @@ internal sealed class RestActivityHandler : DelegatingHandler
     {
         using var activity = Source.StartActivity(request.Method.Method, ActivityKind.Client);
         SetRequestTags(activity, request);
+        request.Options.TryGetValue(CommandSpanOption, out var commandSpan);
+        if (commandSpan is not null)
+        {
+            activity.SetCommandTags(commandSpan.Submission, commandSpan.EmitIdentifiers);
+        }
 
         try
         {
             var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             RecordResponse(activity, response);
+            if (commandSpan is not null && activity is { IsAllDataRequested: true } && !response.IsSuccessStatusCode)
+            {
+                await TagDamlErrorAsync(activity, response, commandSpan, BearerTokenHandler.CallerCancellationOf(request, cancellationToken)).ConfigureAwait(false);
+            }
+
             return response;
         }
         catch (Exception exception)
@@ -51,6 +62,50 @@ internal sealed class RestActivityHandler : DelegatingHandler
             activity?.SetTag(ErrorType, exception.GetType().FullName);
             throw;
         }
+    }
+
+    private static async Task TagDamlErrorAsync(
+        Activity activity, HttpResponseMessage response, RestCommandSpan commandSpan, CancellationToken callerCancellation)
+    {
+        if (BufferLimitFor(response, commandSpan) is not { } bufferLimit)
+        {
+            return;
+        }
+
+        using var bodyTimeoutSource = RestCallEnvelope.CreateBodyTimeoutSource(commandSpan.BodyWindow, callerCancellation);
+        var bodyToken = bodyTimeoutSource?.Token ?? callerCancellation;
+        byte[] body;
+        try
+        {
+            await response.Content.LoadIntoBufferAsync(bufferLimit, bodyToken).ConfigureAwait(false);
+            body = await response.Content.ReadAsByteArrayAsync(bodyToken).ConfigureAwait(false);
+        }
+        catch (Exception failure) when (failure is HttpRequestException or IOException or OperationCanceledException)
+        {
+            var consumed = response.Content;
+            response.Content = new FaultedHttpContent(consumed.Headers, failure);
+            consumed.Dispose();
+            return;
+        }
+
+        using var probe = new HttpResponseMessage(response.StatusCode)
+        {
+            ReasonPhrase = response.ReasonPhrase,
+            Content = new ByteArrayContent(body),
+        };
+        foreach (var header in response.Content.Headers)
+        {
+            probe.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        var error = await RestErrorParser.ParseAsync(probe, bodyToken, commandSpan.MaxResponseBodyBytes).ConfigureAwait(false);
+        activity.SetDamlErrorTags(error, commandSpan.EmitIdentifiers);
+    }
+
+    private static long? BufferLimitFor(HttpResponseMessage response, RestCommandSpan commandSpan)
+    {
+        var limit = Math.Min(commandSpan.MaxResponseBodyBytes, int.MaxValue);
+        return response.Content.Headers.ContentLength is { } length && length <= limit ? limit : null;
     }
 
     private static void SetRequestTags(Activity? activity, HttpRequestMessage request)

@@ -10,6 +10,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Canton.Ledger.Abstractions" />
     <InternalsVisibleTo Include="Canton.Ledger.Kernel" />
+    <InternalsVisibleTo Include="Canton.Ledger.AspNetCore" />
+    <InternalsVisibleTo Include="Canton.Ledger.AspNetCore.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Kernel.Tests" />
     <InternalsVisibleTo Include="Daml.Ledger.Abstractions.Tests" />
   </ItemGroup>
 

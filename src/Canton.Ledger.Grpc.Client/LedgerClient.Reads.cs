@@ -76,7 +76,37 @@ internal sealed partial class LedgerClient
             configureActivity: activity =>
             {
                 activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, contractId.Value);
-                activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
+                activity.SetDamlType<T>();
+                activity.SetSubmitterTags(submitter, _options);
+            });
+    }
+
+    /// <inheritdoc />
+    public Task<InterfaceContractLifecycle<TInterface, TView>> GetEventsByContractIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        var request = new GetEventsByContractIdRequest
+        {
+            ContractId = contractId.Value,
+            EventFormat = GrpcSubscribeRequestBuilder.BuildEventFormat(
+                submitter, GrpcMarkerMatcher<TInterface>.StreamFilterIdentifier(), SubscribesAsAnInterface),
+        };
+
+        return _invoker.InvokeTracedAsync<LedgerClient, GetEventsByContractIdResponse, InterfaceContractLifecycle<TInterface, TView>>(
+            LedgerCallKind.Read,
+            LedgerCallInvoker.Source,
+            EventQueryService.Descriptor,
+            "GetEventsByContractId",
+            (headers, deadline, token) => _eventQueryService.GetEventsByContractIdAsync(request, headers, deadline, token),
+            GrpcInterfaceStreamProjector.ProjectContractLifecycle<TInterface, TView>,
+            cancellationToken,
+            timeout: timeout,
+            configureActivity: activity =>
+            {
+                activity.SetIdentifierTag(_options, LedgerActivityTagNames.DamlContractId, contractId.Value);
+                activity.SetDamlType<TInterface>();
                 activity.SetSubmitterTags(submitter, _options);
             });
     }
@@ -138,6 +168,7 @@ internal sealed partial class LedgerClient
         {
             EventFormat = GrpcSubscribeRequestBuilder.BuildEventFormat(
                 submitter, GrpcMarkerMatcher<T>.StreamFilterIdentifier(), GrpcMarkerMatcher<T>.IsInterface, includeDisclosure),
+            IncludeIncompleteReassignments = true,
         };
         if (activeAtOffset is { } offset) request.ActiveAtOffset = offset.Value;
         if (maxPageSize is { } pageSize) request.MaxPageSize = pageSize;
@@ -154,7 +185,7 @@ internal sealed partial class LedgerClient
             timeout: timeout,
             configureActivity: activity =>
             {
-                activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
+                activity.SetDamlType<T>();
                 activity.SetSubmitterTags(submitter, _options);
             });
     }

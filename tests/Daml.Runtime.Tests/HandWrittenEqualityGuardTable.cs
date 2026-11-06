@@ -64,6 +64,7 @@ internal static class HandWrittenEqualityGuardTable
                     ("Message", "node restarted"),
                     ("Category", DamlErrorCategory.ContentionOnSharedResources),
                     ("CommandId", "cmd-2"),
+                    ("Operation", new LedgerOperation.Command(OtherIdentifier, "Accept")),
                     ("SourceException", OtherSourceException)),
                 NoExclusions),
             [typeof(ExerciseOutcome<string>.CommittedUndecodable)] = new(
@@ -72,6 +73,7 @@ internal static class HandWrittenEqualityGuardTable
                     ("UpdateId", "update-2"),
                     ("Message", "result was truncated"),
                     ("CommandId", "cmd-2"),
+                    ("Operation", new LedgerOperation.Command(OtherIdentifier, "Accept")),
                     ("SourceException", OtherSourceException)),
                 NoExclusions),
             [typeof(ExerciseOutcome<string>.DamlError)] = new(
@@ -85,6 +87,7 @@ internal static class HandWrittenEqualityGuardTable
                     ("ErrorId", "LOCAL_VERDICT_FAILED"),
                     ("Message", "contract 00bb is gone"),
                     ("CommandId", "cmd-2"),
+                    ("Operation", new LedgerOperation.Command(OtherIdentifier, "Accept")),
                     ("Metadata", new Dictionary<string, string> { ["contract"] = "00bb" })),
                 NoExclusions),
             [typeof(ContractStreamEvent<SampleTemplate>.StreamError)] = new(

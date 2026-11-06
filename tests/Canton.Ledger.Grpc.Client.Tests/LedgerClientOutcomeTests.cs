@@ -110,7 +110,7 @@ public sealed class LedgerClientOutcomeTests : IDisposable
 
     [Theory]
     [InlineData(StatusCode.Unauthenticated, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.InsufficientPermission)]
     public async Task TrySubmitAndWaitForTransaction_carries_the_recovered_Category_on_a_redacted_InfraError(
         StatusCode statusCode, DamlErrorCategory expected)
     {

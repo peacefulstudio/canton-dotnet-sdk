@@ -232,7 +232,7 @@ internal sealed partial class LedgerClient
     {
         using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
         _invoker.TagServerCall(activity, UpdateService.Descriptor, "GetUpdates");
-        activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
+        activity.SetDamlType<T>();
         activity?.SetTag(LedgerActivityTagNames.CantonFromOffset, fromOffset);
         activity.SetSubmitterTags(submitter, _options);
 
@@ -322,10 +322,16 @@ internal sealed partial class LedgerClient
     {
         using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
         _invoker.TagServerCall(activity, StateService.Descriptor, "GetActiveContracts");
-        activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(T).Name);
+        activity.SetDamlType<T>();
         activity.SetSubmitterTags(submitter, _options);
 
         var effectiveOffset = activeAtOffset ?? (await GetLedgerEndForSnapshotAsync(cancellationToken).ConfigureAwait(false)).Offset;
+        if (IsEmptySnapshotOffset(effectiveOffset))
+        {
+            yield return new AcsSnapshotEntry<T>.Checkpoint(new StakeholderResume(LedgerOffset.Begin));
+            yield break;
+        }
+
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {
@@ -382,6 +388,8 @@ internal sealed partial class LedgerClient
             }
         }
     }
+
+    private static bool IsEmptySnapshotOffset(long effectiveOffset) => effectiveOffset == LedgerOffset.Begin.Value;
 
     private Task<GetLedgerEndResponse> GetLedgerEndForSnapshotAsync(CancellationToken cancellationToken) =>
         _invoker.InvokeTracedAsync<LedgerClient, GetLedgerEndResponse, GetLedgerEndResponse>(

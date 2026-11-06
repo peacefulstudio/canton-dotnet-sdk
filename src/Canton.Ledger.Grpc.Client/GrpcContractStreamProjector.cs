@@ -63,35 +63,9 @@ internal static class GrpcContractStreamProjector
     public static ContractLifecycle<T> ProjectContractLifecycle<T>(GetEventsByContractIdResponse response)
         where T : ITemplate, IDamlRecord<T>
     {
-        ContractStreamEvent<T>.Created? created = null;
-        if (response.Created is { CreatedEvent: { } createdEvent } createdEnvelope)
-        {
-            GrpcProjectionCore.RequireTemplateId(createdEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), createdEvent.ContractId);
-            var synchronizerId = RequireSynchronizer(createdEnvelope.SynchronizerId, createdEvent.ContractId);
-            created = GrpcProjectionCore.CreatedFromProto<ContractArms<T>, ContractStreamEvent<T>, T, T>(
-                    createdEvent, synchronizerId, createdEvent.Offset).Event
-                as ContractStreamEvent<T>.Created
-                ?? throw new InvalidOperationException(
-                    $"Contract '{createdEvent.ContractId}' cannot be read as {typeof(T).Name}: its interface view is unavailable.");
-        }
-
-        ContractStreamEvent<T>.Archived? archived = null;
-        if (response.Archived is { ArchivedEvent: { } archivedEvent } archivedEnvelope)
-        {
-            GrpcProjectionCore.RequireTemplateId(archivedEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archivedEvent.ContractId);
-            archived = (ContractStreamEvent<T>.Archived)ContractArms<T>.Archived(
-                LedgerWireConversions.ToContractId<T>(archivedEvent.ContractId),
-                LedgerWireConversions.ToLedgerOffset(archivedEvent.Offset),
-                RequireSynchronizer(archivedEnvelope.SynchronizerId, archivedEvent.ContractId),
-                LedgerWireConversions.ToPartyList(archivedEvent.WitnessParties));
-        }
-
-        return new ContractLifecycle<T>(created, archived);
+        var (created, archived) = GrpcProjectionCore.ProjectContractLifecycle<ContractArms<T>, ContractStreamEvent<T>, T, T>(response);
+        return new ContractLifecycle<T>(created as ContractStreamEvent<T>.Created, archived as ContractStreamEvent<T>.Archived);
     }
-
-    private static SynchronizerId RequireSynchronizer(string? wireSynchronizerId, string contractId) =>
-        StreamEventClassifier.Synchronizer(wireSynchronizerId)
-        ?? throw MalformedResponse.MissingRequiredField($"the event for contract '{contractId}' has no synchronizer_id");
 
     public static RuntimeDisclosedContract? DisclosureOf(GetActiveContractsResponse response)
     {

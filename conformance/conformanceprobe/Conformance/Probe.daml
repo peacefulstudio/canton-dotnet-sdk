@@ -1,0 +1,15 @@
+-- Copyright 2026 Peaceful Studio OÜ
+-- SPDX-License-Identifier: Apache-2.0
+module Conformance.Probe where
+
+import Conformance.Kit
+
+template ProbeContract
+  with
+    owner : Party
+    amount : Numeric 10
+  where
+    signatory owner
+
+    interface instance ConformanceProbe for ProbeContract where
+      view = ConformanceProbeView with amount

@@ -38,7 +38,7 @@ public class TryRelabelAsyncTests
                     ActingParties: [new Party("alice")],
                     WitnessParties: [new Party("alice")])
                 {
-                    PackageName = "richtypes-h25b56c547fd1",
+                    PackageName = "richtypes-h07285b495f9e",
                 },
             ],
         };

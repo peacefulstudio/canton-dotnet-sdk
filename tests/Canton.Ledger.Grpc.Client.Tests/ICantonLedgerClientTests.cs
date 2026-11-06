@@ -102,15 +102,36 @@ public class ICantonLedgerClientTests
         parameters[^2].DefaultValue.Should().BeNull();
     }
 
-    [Theory]
-    [InlineData(nameof(ICantonLedgerClient.QueryActiveAsync))]
-    [InlineData(nameof(ICantonLedgerClient.CompletionStreamAsync))]
-    public void ICantonLedgerClient_leaves_the_stream_shaped_operations_without_a_timeout(string operation)
+    [Fact]
+    public void ICantonLedgerClient_gives_QueryActiveAsync_an_optional_timeout_before_the_unreadable_row_policy()
     {
-        DeclaredParametersOf(operation).Should().NotContain(p => p.ParameterType == typeof(TimeSpan?),
-            "a subscription and a drained snapshot both inherit the streamer's no-timeout contract, matching the "
-            + "eight streaming members upstream declares on ILedgerStreamer; a caller wanting a deadline on either "
-            + "reaches for CancellationTokenSource.CancelAfter instead");
+        var parameters = DeclaredParametersOf(nameof(ICantonLedgerClient.QueryActiveAsync));
+
+        parameters[^3].ParameterType.Should().Be<TimeSpan?>(
+            "a drained snapshot is a bounded read, so its deadline is a failure and sits in the unary position");
+        parameters[^3].IsOptional.Should().BeTrue("omitting the deadline must wait for the terminal checkpoint");
+        parameters[^3].DefaultValue.Should().BeNull();
+    }
+
+    [Fact]
+    public void ICantonLedgerClient_gives_QueryActiveAsync_an_optional_unreadable_row_policy_before_the_cancellation_token()
+    {
+        var parameters = DeclaredParametersOf(nameof(ICantonLedgerClient.QueryActiveAsync));
+
+        parameters[^1].ParameterType.Should().Be<CancellationToken>();
+        parameters[^2].ParameterType.Should().Be<UnreadableRows>();
+        parameters[^2].Name.Should().Be("unreadableRows");
+        parameters[^2].IsOptional.Should().BeTrue("omitting the policy must keep the strict behaviour");
+        ((int)parameters[^2].DefaultValue!).Should().Be(0, "the default policy is Fail, member 0");
+    }
+
+    [Fact]
+    public void ICantonLedgerClient_leaves_CompletionStreamAsync_without_a_timeout()
+    {
+        DeclaredParametersOf(nameof(ICantonLedgerClient.CompletionStreamAsync)).Should()
+            .NotContain(p => p.ParameterType == typeof(TimeSpan?),
+                "a subscription inherits the streamer's no-timeout contract; a caller wanting a deadline reaches "
+                + "for CancellationTokenSource.CancelAfter instead");
     }
 
     private static ParameterInfo[] DeclaredParametersOf(string operation) =>

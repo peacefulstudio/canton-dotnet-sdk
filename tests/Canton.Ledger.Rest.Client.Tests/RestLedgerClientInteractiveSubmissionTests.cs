@@ -14,8 +14,10 @@ using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Serialization;
+using Google.Protobuf;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Interactive = Com.Daml.Ledger.Api.V2.Interactive;
 using RuntimeCommands = Daml.Runtime.Commands;
 using RuntimeIdentifier = Daml.Runtime.Data.Identifier;
 
@@ -95,14 +97,27 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
     private static PreparedSubmission Prepared(HashingSchemeVersion version = HashingSchemeVersion.V2) =>
         new(new byte[] { 0x0A, 0x03 }, new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }, version, HashingDetails: null, CostEstimate: null);
 
+    private static PreparedSubmission PreparedNamingCommandId(string commandId) =>
+        Prepared() with
+        {
+            PreparedTransaction = new Interactive.PreparedTransaction
+            {
+                Metadata = new Interactive.Metadata
+                {
+                    SubmitterInfo = new Interactive.Metadata.Types.SubmitterInfo { CommandId = commandId },
+                },
+            }.ToByteArray(),
+        };
+
     private static SignedSubmission Signed(
         HashingSchemeVersion version = HashingSchemeVersion.V2,
         RuntimeCommands.DeduplicationPeriod? deduplicationPeriod = null,
         RuntimeCommands.MinLedgerTime? minLedgerTime = null,
         SignatureFormat format = SignatureFormat.Der,
-        SigningAlgorithm algorithm = SigningAlgorithm.EcDsaSha256) =>
+        SigningAlgorithm algorithm = SigningAlgorithm.EcDsaSha256,
+        PreparedSubmission? prepared = null) =>
         new(
-            Prepared(version),
+            prepared ?? Prepared(version),
             [
                 new PartySignatures(
                     Alice,
@@ -458,6 +473,58 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
 
         await act.Should().ThrowAsync<LedgerOperationException>();
         transport.Requests.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_stamps_the_command_id_of_the_prepared_transaction_on_an_unanswered_failure()
+    {
+        var client = ClientWith(TransportFailingAfterSend());
+
+        var act = () => client.ExecuteSubmissionAsync(
+            Signed(prepared: PreparedNamingCommandId("prepared-cmd-1")), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.CommandId.Should().Be(new RuntimeCommands.CommandId("prepared-cmd-1"));
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAndWaitAsync_stamps_the_command_id_of_the_prepared_transaction_on_an_unanswered_failure()
+    {
+        var client = ClientWith(TransportFailingAfterSend());
+
+        var act = () => client.ExecuteSubmissionAndWaitAsync(
+            Signed(prepared: PreparedNamingCommandId("prepared-cmd-2")), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.CommandId.Should().Be(new RuntimeCommands.CommandId("prepared-cmd-2"));
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAndWaitForTransactionAsync_stamps_the_command_id_of_the_prepared_transaction_on_an_unanswered_failure()
+    {
+        var client = ClientWith(TransportFailingAfterSend());
+
+        var act = () => client.ExecuteSubmissionAndWaitForTransactionAsync(
+            Signed(prepared: PreparedNamingCommandId("prepared-cmd-3")),
+            new RuntimeCommands.SubmitterInfo(Alice),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.CommandId.Should().Be(new RuntimeCommands.CommandId("prepared-cmd-3"));
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_leaves_the_command_id_unset_when_the_prepared_transaction_cannot_be_read()
+    {
+        var client = ClientWith(TransportFailingAfterSend());
+
+        var act = () => client.ExecuteSubmissionAsync(Signed(), cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommandId.Should().BeNull();
     }
 
     [Fact]

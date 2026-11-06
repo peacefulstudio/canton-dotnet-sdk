@@ -61,6 +61,25 @@ internal sealed partial class RestLedgerClient
     }
 
     /// <inheritdoc />
+    public Task<InterfaceContractLifecycle<TInterface, TView>> GetEventsByContractIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        var request = new Raw.GetEventsByContractIdRequest
+        {
+            ContractId = contractId.Value,
+            EventFormat = RestSubscribeRequestBuilder.BuildEventFormat<TInterface>(submitter),
+        };
+
+        return _calls.SendAsync<Raw.GetEventsByContractIdResponse, InterfaceContractLifecycle<TInterface, TView>>(
+            Post(EventsByContractIdPath, request, "contract events"),
+            RestInterfaceStreamProjector.ProjectContractLifecycle<TInterface, TView>,
+            timeout,
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : IDamlType
@@ -108,6 +127,7 @@ internal sealed partial class RestLedgerClient
             EventFormat = RestSubscribeRequestBuilder.BuildEventFormat<T>(submitter, includeDisclosure),
             MaxPageSize = maxPageSize,
             PageToken = pageToken?.Value!,
+            IncludeIncompleteReassignments = true,
         };
 
         return await _calls.SendAsync<Raw.GetActiveContractsPageResponse, AcsPage<T>>(

@@ -56,11 +56,12 @@ object AstToIntermediate {
   def translate(
       dar: Dar[(PackageId, Ast.PackageSignature)],
       analyses: PartyAnalyses = PartyAnalyses.empty,
+      constants: LiteralConstants = LiteralConstants.empty,
   ): PbDar =
     PbDar(
-      main = Some(translatePackage(dar.main._1, dar.main._2, analyses)),
+      main = Some(translatePackage(dar.main._1, dar.main._2, analyses, constants)),
       dependencies = dar.dependencies
-        .map { case (id, pkg) => translatePackage(id, pkg, analyses) }
+        .map { case (id, pkg) => translatePackage(id, pkg, analyses, constants) }
         .sortBy(_.packageId),
     )
 
@@ -68,6 +69,7 @@ object AstToIntermediate {
       packageId: PackageId,
       pkg: Ast.PackageSignature,
       analyses: PartyAnalyses,
+      constants: LiteralConstants,
   ): PbPackage =
     PbPackage(
       packageId = packageId,
@@ -76,7 +78,7 @@ object AstToIntermediate {
       languageVersion = pkg.languageVersion.pretty,
       modules = pkg.modules.toSeq
         .sortBy { case (n, _) => n.toString }
-        .map { case (_, m) => translateModule(packageId, m, analyses) },
+        .map { case (_, m) => translateModule(packageId, m, analyses, constants) },
       upgradedPackageId = pkg.metadata.upgradedPackageId.getOrElse(""),
     )
 
@@ -84,6 +86,7 @@ object AstToIntermediate {
       packageId: PackageId,
       mod: Ast.ModuleSignature,
       analyses: PartyAnalyses,
+      constants: LiteralConstants,
   ): PbModule = {
     val declaredDataTypes = mod.definitions.toSeq.collect {
       case (name, dt: Ast.DDataType) => translateDataType(name, dt)
@@ -103,6 +106,7 @@ object AstToIntermediate {
       interfaces = mod.interfaces.toSeq
         .sortBy { case (n, _) => n.toString }
         .map { case (n, i) => translateInterface(n, i) },
+      constants = constants.lookup(packageId, mod.name),
     )
   }
 

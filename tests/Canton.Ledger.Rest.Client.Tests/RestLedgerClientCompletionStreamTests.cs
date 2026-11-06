@@ -190,6 +190,44 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
     }
 
     [Fact]
+    public async Task CompletionStreamAsync_maps_the_synchronizer_times_of_an_offset_checkpoint()
+    {
+        var transport = RespondingWith(
+            """
+            [
+              {"completionResponse": {"OffsetCheckpoint": {"value": {"offset": "99", "synchronizerTimes": [
+                {"synchronizerId": "sync-a::1220", "recordTime": "2026-10-01T12:00:00Z"},
+                {"synchronizerId": "sync-b::1220", "recordTime": "2026-10-01T12:00:30Z"}
+              ]}}}}
+            ]
+            """);
+        var client = ClientWith(transport);
+        using var cancellation = new CancellationTokenSource();
+
+        var events = await DrainUntilAsync(
+            client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 1);
+
+        events.Should().ContainSingle().Which.Should().BeOfType<CompletionStreamEvent.Checkpoint>()
+            .Which.SynchronizerTimes.Should().Equal(
+                new SynchronizerTime("sync-a::1220", new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)),
+                new SynchronizerTime("sync-b::1220", new DateTimeOffset(2026, 10, 1, 12, 0, 30, TimeSpan.Zero)));
+    }
+
+    [Fact]
+    public async Task CompletionStreamAsync_maps_an_offset_checkpoint_without_synchronizer_times_to_an_empty_array()
+    {
+        var transport = RespondingWith(CheckpointWindow);
+        var client = ClientWith(transport);
+        using var cancellation = new CancellationTokenSource();
+
+        var events = await DrainUntilAsync(
+            client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 1);
+
+        events.Should().ContainSingle().Which.Should().BeOfType<CompletionStreamEvent.Checkpoint>()
+            .Which.SynchronizerTimes.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task CompletionStreamAsync_yields_nothing_for_an_empty_window_and_reopens_the_next_one_at_the_same_offset()
     {
         var transport = new RecordingHttpHandler().WithResponseSequence(

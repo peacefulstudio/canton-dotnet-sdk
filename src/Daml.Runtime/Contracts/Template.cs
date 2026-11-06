@@ -73,6 +73,23 @@ public interface IHasChoices<TSelf>
 }
 
 /// <summary>
+/// Facet implemented by every template and interface marker that carries the implicit Daml
+/// <c>Archive</c> choice. Generic code constrained on this facet reaches the choice descriptor
+/// through <see cref="ChoiceArchive"/> with no reflection and no choice-name string, whether
+/// <typeparamref name="TSelf"/> is a template or an interface: archiving through an interface
+/// keeps Daml's semantics, so the underlying contract's signatories control it.
+/// </summary>
+/// <typeparam name="TSelf">The implementing template or interface marker type.</typeparam>
+public interface IArchivable<TSelf>
+    where TSelf : IDamlType, IArchivable<TSelf>
+{
+    /// <summary>
+    /// Gets the descriptor of the implicit <c>Archive</c> choice of <typeparamref name="TSelf"/>.
+    /// </summary>
+    static abstract Choice<TSelf, DamlUnit, DamlUnit> ChoiceArchive { get; }
+}
+
+/// <summary>
 /// Marker interface for all Daml interfaces.
 /// </summary>
 /// <remarks>

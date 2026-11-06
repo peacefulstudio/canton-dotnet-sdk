@@ -89,7 +89,7 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine($"{site.ArgumentParameterType} argument,");
         }
         WriteSubmitterParameters(indent, site, overload.Submitter);
-        WriteSubmissionParametersAndCloseSignature(indent);
+        SubmissionParameters.WriteAndCloseSignature(indent);
         indent.Dedent();
     }
 

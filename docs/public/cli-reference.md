@@ -62,12 +62,20 @@ Options:
   --version                                 Show version information
 ```
 
-Each run writes a `.codegen-manifest` file in the output directory listing every file it
-emitted, one relative path per line. The next run into the same directory deletes the files
+Each run writes a `.codegen-manifest` file in the output directory: a first line
+`# package: <name>` naming the package that owns the directory, then every file it emitted,
+one relative path per line. The next run into the same directory deletes the files
 the previous manifest lists that it no longer emits, along with directories that become
 empty, so regenerating from a DAR that dropped a template leaves no stale binding behind. Files
 the manifest does not list are never touched. Commit or ignore the manifest together with the
 generated sources.
+
+An output directory belongs to one package. A run for a different package than the one the
+manifest names fails with exit code 1, tells you to give each DAR its own output directory,
+and writes and deletes nothing. If the directory holds an earlier build of the same project
+under a package name you have since changed, delete the directory (`dotnet clean` for an MSBuild
+project) and generate again. A manifest without the `# package:` line, written by an
+earlier version, is cleaned up as before and rewritten with the owner.
 
 ## Standalone DAR-to-proto tool
 

@@ -31,11 +31,39 @@ dpm codegen-cs --dar ./my-project.dar --out ./generated -v 2
 > decoded IntermediateDar proto (`--intermediate`); it cannot read a `.dar`
 > directly. See [CLI Reference](cli-reference.md).
 
+## Several Commands in One Transaction
+
+A `CommandBatch` (`Daml.Ledger.Abstractions`) takes the generated choice descriptors (`Add`) and
+template payloads (`AddCreate`), submits them as one atomic transaction, and hands each command's typed
+result back through the handle its `Add` returned. A rejection names every command in the batch, e.g.
+`Iou.Transfer ×2: Daml error [...]`.
+
+```csharp
+using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
+using Daml.Runtime.Contracts;
+using Daml.Runtime.Data;
+using IouContract = Iou.Iou;
+
+var bob = new Party("Bob::1220deadbeef");
+var charlie = new Party("Charlie::1220deadbeef");
+var firstIou = new ContractId<IouContract>("00abc123");
+var secondIou = new ContractId<IouContract>("00def456");
+
+var batch = new CommandBatch();
+var first = batch.Add(IouContract.ChoiceTransfer, firstIou, new IouContract.Transfer(NewOwner: charlie));
+var second = batch.Add(IouContract.ChoiceTransfer, secondIou, new IouContract.Transfer(NewOwner: charlie));
+
+var results = (await ledgerClient.TrySubmitBatchAsync(batch, bob, workflowId: "iou-handover")).OneOrThrow();
+ContractId<IouContract> charliesFirst = results.Get(first);
+ContractId<IouContract> charliesSecond = results.Get(second);
+```
+
 ## Building Commands by Hand
 
-The generated `Try…Async` methods cover the common path. To assemble a submission yourself —
-several commands in one transaction, or a workflow id — build the commands from the generated
-types (this is the compiled [`samples/QuickstartExample`](../../samples/QuickstartExample/Program.cs)):
+The generated `Try…Async` methods and `CommandBatch` cover the common path. To assemble a submission
+yourself, build the commands from the generated types (this is the compiled [`samples/QuickstartExample`](../../samples/QuickstartExample/Program.cs)):
 
 ```csharp
 using Daml.Runtime.Commands;
@@ -127,10 +155,10 @@ public sealed partial record Iou(
     [property: DamlFieldAttribute("owner")] Party Owner,
     [property: DamlFieldAttribute("currency")] string Currency,
     [property: DamlFieldAttribute("amount")] decimal Amount
-) : ITemplate, IHasChoices<Iou>, IDamlRecord<Iou>
+) : ITemplate, IHasChoices<Iou>, IArchivable<Iou>, IDamlRecord<Iou>
 {
     /// <summary>Gets the template identifier.</summary>
-    public static Identifier TemplateId { get; } = new("1e91e26b7420ce7c15ff65d7d101e069e95c9db0a5128af03112ef8e0ab4cce2", "Iou", "Iou");
+    public static Identifier TemplateId { get; } = new("73862fe747aa7d0287c6708942caf4266b237f1b4b00cd8dfb6c1d1a46b4032c", "Iou", "Iou");
 
     // … package id/name/version properties, Daml-LF JSON decoder and Archive choice metadata elided …
 

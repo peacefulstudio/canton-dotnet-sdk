@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using AwesomeAssertions;
+using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Serialization;
 using Xunit;
@@ -45,6 +46,22 @@ public class ExerciseOutcomeJsonTests
         var restored = JsonSerializer.Deserialize<ExerciseOutcome<long>>(written);
         restored.Should().Be(value);
         restored.Should().NotBe(new ExerciseOutcome<long>.InfraError(new TransportStatus.NoResponse(), "connection reset"));
+    }
+
+    [Fact]
+    public void One_carrying_an_operation_writes_it_and_reads_back_unequal_to_the_same_result_without_one()
+    {
+        var operation = new LedgerOperation.Command(new Identifier("pkg-1", "Connections.ConnectionRequest", "ConnectionRequest"), "Accept");
+        ExerciseOutcome<long> value = new ExerciseOutcome<long>.One(42) { Operation = operation };
+
+        var written = JsonSerializer.Serialize(value);
+
+        written.Should().Contain("\"Operation\":{\"TemplateId\":{\"PackageId\":\"pkg-1\"");
+        written.Should().Contain("\"Name\":\"Accept\"");
+        written.Should().NotContain("Label");
+        var restored = JsonSerializer.Deserialize<ExerciseOutcome<long>>(written);
+        restored.Should().Be(value);
+        restored.Should().NotBe(new ExerciseOutcome<long>.One(42));
     }
 
     [Fact]

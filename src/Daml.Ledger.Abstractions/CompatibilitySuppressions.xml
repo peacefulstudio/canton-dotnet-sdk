@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Daml.Ledger.Abstractions.Extensions.StreamerSnapshot.SnapshotActiveAsync``1(Daml.Ledger.Abstractions.ILedgerStreamer,Daml.Runtime.Commands.SubmitterInfo,System.Nullable{Daml.Runtime.LedgerOffset},System.Boolean,System.Threading.CancellationToken)</Target>
+    <Left>lib/net10.0/Daml.Ledger.Abstractions.dll</Left>
+    <Right>lib/net10.0/Daml.Ledger.Abstractions.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Daml.Ledger.Abstractions.Extensions.StreamerSnapshot.SnapshotActiveAsync``2(Daml.Ledger.Abstractions.ILedgerStreamer,Daml.Runtime.Contracts.KeyDescriptor{``0,``1},Daml.Runtime.Commands.SubmitterInfo,System.Nullable{Daml.Runtime.LedgerOffset},System.Boolean,System.Threading.CancellationToken)</Target>
+    <Left>lib/net10.0/Daml.Ledger.Abstractions.dll</Left>
+    <Right>lib/net10.0/Daml.Ledger.Abstractions.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Daml.Ledger.Abstractions.Extensions.StreamerSnapshot.SnapshotAsync``1(Daml.Ledger.Abstractions.ILedgerStreamer,Daml.Runtime.Commands.SubmitterInfo,System.Nullable{Daml.Runtime.LedgerOffset},System.Threading.CancellationToken)</Target>
+    <Left>lib/net10.0/Daml.Ledger.Abstractions.dll</Left>
+    <Right>lib/net10.0/Daml.Ledger.Abstractions.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Daml.Ledger.Abstractions.Extensions.StreamerSnapshot.SnapshotAsync``2(Daml.Ledger.Abstractions.ILedgerStreamer,Daml.Runtime.Contracts.KeyDescriptor{``0,``1},Daml.Runtime.Commands.SubmitterInfo,System.Nullable{Daml.Runtime.LedgerOffset},System.Threading.CancellationToken)</Target>
+    <Left>lib/net10.0/Daml.Ledger.Abstractions.dll</Left>
+    <Right>lib/net10.0/Daml.Ledger.Abstractions.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+</Suppressions>
