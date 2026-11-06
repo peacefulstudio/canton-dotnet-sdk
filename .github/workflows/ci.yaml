@@ -62,6 +62,8 @@ jobs:
         run: .github/scripts/seed-local-feed.test.sh
       - name: Self-test the publish input resolution and runtime version normalization check
         run: .github/scripts/resolve-inputs.test.sh
+      - name: Self-test the registry client pack version
+        run: .github/scripts/pack-registry-client.test.sh
 
   intermediate-oracle:
     runs-on: ubuntu-latest

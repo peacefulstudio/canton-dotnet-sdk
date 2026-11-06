@@ -54,6 +54,16 @@ on:
         description: 'Release tag to build from and attach nupkgs to (e.g. v0.4.0-preview.4).'
         required: true
         type: string
+      client_project:
+        description: 'Path of an off-ledger client csproj packed beside the DAR packages with their ordinal. Empty = none. Skipped with a notice when the release tag does not contain it.'
+        required: false
+        type: string
+        default: ''
+      client_base_version:
+        description: 'Source release (M.m.p) the client is generated from; its version is <client_base_version>.<ordinal>. Required with client_project.'
+        required: false
+        type: string
+        default: ''
     secrets:
       COUNTERS_TOKEN:
         description: 'Token with Variables: read & write on this repo (used to read/persist the counter store).'
@@ -88,6 +98,8 @@ jobs:
       DAML_SDK_VERSION_INPUT: ${{ inputs.daml_sdk_version }}
       RUNTIME_VERSION_INPUT: ${{ inputs.runtime_version }}
       PACKAGE_LICENSE_INPUT: ${{ inputs.package_license }}
+      CLIENT_PROJECT: ${{ inputs.client_project }}
+      CLIENT_BASE_VERSION: ${{ inputs.client_base_version }}
 
     steps:
       - name: Checkout code
@@ -179,6 +191,11 @@ jobs:
           GH_ACTOR: ${{ github.actor }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: .github/scripts/build-pack.sh
+
+      - name: Pack the off-ledger client with the DAR packages' ordinal
+        env:
+          DOTNET_NOLOGO: 1
+        run: _gates/.github/scripts/pack-registry-client.sh
 
       - name: Guard — a prerelease codegen-cs must not emit stable packages
         run: .github/scripts/guard-prerelease.sh
