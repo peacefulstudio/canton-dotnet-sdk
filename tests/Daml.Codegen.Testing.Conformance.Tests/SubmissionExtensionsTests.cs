@@ -1,6 +1,8 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Codegen.Testing.Conformance.ContractKeys;
+using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -88,5 +90,80 @@ public class SubmissionExtensionsTests
         client.LastCreateSubmitter!.Value.ActAs.Should().ContainSingle().Which.Should().Be(
             new Party(AlicePartyId),
             "a payload carrying many non-party fields must still resolve its submitter from the owner field alone");
+    }
+
+    [Fact]
+    public async Task Marker_create_async_forwards_workflow_id_command_id_and_timeout_to_the_writer()
+    {
+        using var client = new FakeLedgerClient(
+            create: _ => new ExerciseOutcome<object>.One("marker-cid"));
+
+        await client.TryCreateAsync(
+            new Marker(new Party(AlicePartyId)),
+            workflowId: "wf-marker",
+            commandId: new CommandId("cmd-marker"),
+            timeout: TimeSpan.FromSeconds(7),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        client.LastCreateWorkflowId.Should().Be("wf-marker");
+        client.LastCreateCommandId.Should().Be(new CommandId("cmd-marker"));
+        client.LastCreateTimeout.Should().Be(TimeSpan.FromSeconds(7));
+    }
+
+    [Fact]
+    public async Task Marker_create_async_with_configure_puts_workflow_id_and_command_id_on_the_submission_and_forwards_the_timeout()
+    {
+        using var client = new FakeLedgerClient();
+        CommandsSubmission? seenByConfigure = null;
+
+        await client.TryCreateAsync(
+            new Marker(new Party(AlicePartyId)),
+            workflowId: "wf-configured",
+            commandId: new CommandId("cmd-configured"),
+            timeout: TimeSpan.FromSeconds(9),
+            configure: submission =>
+            {
+                seenByConfigure = submission;
+                return submission;
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        seenByConfigure!.WorkflowId.Should().Be(new WorkflowId("wf-configured"));
+        seenByConfigure.CommandId.Should().Be(new CommandId("cmd-configured"));
+        client.LastSubmission!.WorkflowId.Should().Be(new WorkflowId("wf-configured"));
+        client.LastSubmission.CommandId.Should().Be(new CommandId("cmd-configured"));
+        client.LastSubmissionTimeout.Should().Be(TimeSpan.FromSeconds(9));
+    }
+
+    [Fact]
+    public async Task Schedule_create_async_with_a_submitter_forwards_workflow_id_command_id_and_timeout_to_the_writer()
+    {
+        using var client = new FakeLedgerClient();
+        var custodian = new Party("custodian");
+
+        await client.TryCreateAsync(
+            new Schedule(new Conformance.KeyBuilders.ScheduleView(custodian, "2026-Q1")),
+            (SubmitterInfo)custodian,
+            workflowId: "wf-schedule",
+            commandId: new CommandId("cmd-schedule"),
+            timeout: TimeSpan.FromSeconds(11),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        client.LastCreateSubmitter!.Value.ActAs.Should().ContainSingle().Which.Should().Be(custodian);
+        client.LastCreateWorkflowId.Should().Be("wf-schedule");
+        client.LastCreateCommandId.Should().Be(new CommandId("cmd-schedule"));
+        client.LastCreateTimeout.Should().Be(TimeSpan.FromSeconds(11));
+    }
+
+    [Fact]
+    public async Task Marker_create_async_without_the_submission_parameters_forwards_null_for_each()
+    {
+        using var client = new FakeLedgerClient();
+
+        await client.TryCreateAsync(new Marker(new Party(AlicePartyId)), cancellationToken: TestContext.Current.CancellationToken);
+
+        client.LastCreateWorkflowId.Should().BeNull();
+        client.LastCreateCommandId.Should().BeNull();
+        client.LastCreateTimeout.Should().BeNull();
     }
 }

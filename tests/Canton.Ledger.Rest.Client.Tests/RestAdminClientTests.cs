@@ -305,7 +305,7 @@ public sealed class RestAdminClientTests : IDisposable
         var act = () => client.GetUserAsync("carol", TestContext.Current.CancellationToken);
 
         var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
-        thrown.Which.Category.Should().Be(DamlErrorCategory.AuthorizationChecksFailed);
+        thrown.Which.Category.Should().Be(DamlErrorCategory.InsufficientPermission);
         thrown.Which.ErrorId.Should().Be("PERMISSION_DENIED");
     }
 

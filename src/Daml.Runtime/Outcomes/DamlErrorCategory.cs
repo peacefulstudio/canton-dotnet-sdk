@@ -8,8 +8,9 @@ namespace Daml.Runtime.Outcomes;
 /// Mirrors the categories listed in the
 /// <see href="https://docs.canton.network/appdev/reference/error-codes">Canton error-codes reference</see>.
 ///
-/// Canton transports the category as a string in <c>ErrorInfo.metadata["category"]</c>;
-/// values that don't match any known category map to <see cref="Unknown"/>.
+/// Canton transports the numeric category id (for example <c>"8"</c>) in
+/// <c>ErrorInfo.metadata["category"]</c>; values that don't match any known category map to
+/// <see cref="Unknown"/>.
 /// </summary>
 public enum DamlErrorCategory
 {
@@ -42,10 +43,12 @@ public enum DamlErrorCategory
     SystemInternalAssumptionViolated,
 
     /// <summary>
-    /// Detected malicious or faulty behaviour from a participant
-    /// (<c>MaliciousOrFaultyBehaviour</c>).
+    /// Security alert — detected malicious or faulty behaviour from a participant
+    /// (<c>SecurityAlert</c>). Canton redacts most security alerts, so they reach the client as a
+    /// bare <c>INVALID_ARGUMENT</c> with no category and classify as <see cref="Unknown"/>; only the
+    /// unredacted variant (<c>UnredactedSecurityAlert</c>, which shares id 5) arrives as category 5.
     /// </summary>
-    MaliciousOrFaultyBehaviour,
+    SecurityAlert,
 
     /// <summary>
     /// Authentication interceptor rejected the credentials
@@ -55,9 +58,10 @@ public enum DamlErrorCategory
 
     /// <summary>
     /// Authorization checks failed for the requested operation
-    /// (<c>AuthorizationChecksFailed</c>).
+    /// (<c>InsufficientPermission</c>). Canton redacts it as well; the clients recover it from gRPC
+    /// <c>PermissionDenied</c> or HTTP 403.
     /// </summary>
-    AuthorizationChecksFailed,
+    InsufficientPermission,
 
     /// <summary>
     /// Request is invalid independent of system state — usually a client bug

@@ -36,6 +36,23 @@ internal static class ExerciseResultProjector
             exercisedDecoder,
             contractId);
 
+    internal static ExerciseOutcome<ByKeyExercise<TOwner, TResult>> ProjectRootExercise<TOwner, TResult>(
+        TransactionResult transaction,
+        DamlTypeDescriptor owner,
+        ChoiceName choiceName,
+        Func<DamlValue, TResult> resultDecoder)
+        where TOwner : IDamlType
+    {
+        var updateId = UpdateIdOf(transaction);
+        var exercised = LocateRoot(transaction, owner, choiceName)
+            ?? throw new InvalidOperationException(NoRootExerciseMessage(updateId, owner, choiceName));
+
+        return Decode(
+            updateId,
+            exercised,
+            root => new ByKeyExercise<TOwner, TResult>(new ContractId<TOwner>(root.ContractId), resultDecoder(root.ExerciseResult)));
+    }
+
     private static ExerciseOutcome<TResult> Project<TResult>(
         TransactionResult transaction,
         Func<ExercisedEvent, bool> isOwnedByCaller,
@@ -43,10 +60,21 @@ internal static class ExerciseResultProjector
         Func<ExercisedEvent, TResult> exercisedDecoder,
         string contractId)
     {
-        var updateId = string.IsNullOrEmpty(transaction.UpdateId) ? null : transaction.UpdateId;
+        var updateId = UpdateIdOf(transaction);
         var exercised = Locate(transaction, isOwnedByCaller, choiceName, contractId)
             ?? throw new InvalidOperationException(NoExercisedEventMessage(updateId, choiceName, contractId));
 
+        return Decode(updateId, exercised, exercisedDecoder);
+    }
+
+    private static string? UpdateIdOf(TransactionResult transaction) =>
+        string.IsNullOrEmpty(transaction.UpdateId) ? null : transaction.UpdateId;
+
+    private static ExerciseOutcome<TResult> Decode<TResult>(
+        string? updateId,
+        ExercisedEvent exercised,
+        Func<ExercisedEvent, TResult> exercisedDecoder)
+    {
         try
         {
             return new ExerciseOutcome<TResult>.One(exercisedDecoder(exercised));
@@ -56,6 +84,31 @@ internal static class ExerciseResultProjector
             return new ExerciseOutcome<TResult>.CommittedUndecodable(updateId, ex.Message, ex);
         }
     }
+
+    private static ExercisedEvent? LocateRoot(
+        TransactionResult transaction,
+        DamlTypeDescriptor owner,
+        ChoiceName choiceName)
+    {
+        var events = transaction.ExercisedEvents;
+        var roots = events.Where(candidate => !events.Any(enclosing => Encloses(enclosing, candidate))).ToList();
+
+        return roots is [var root]
+            && IsOwnedBy(root, owner)
+            && string.Equals(root.ChoiceName.Value, choiceName.Value, StringComparison.Ordinal)
+                ? root
+                : null;
+    }
+
+    private static bool Encloses(ExercisedEvent enclosing, ExercisedEvent candidate) =>
+        Encloses(enclosing, candidate.NodeId);
+
+    internal static bool Encloses(ExercisedEvent enclosing, int? candidateNodeId) =>
+        enclosing.NodeId is { } first
+        && enclosing.LastDescendantNodeId is { } last
+        && candidateNodeId is { } position
+        && position > first
+        && position <= last;
 
     private static ExercisedEvent? Locate(
         TransactionResult transaction,
@@ -76,7 +129,7 @@ internal static class ExerciseResultProjector
         return null;
     }
 
-    private static bool IsOwnedBy(ExercisedEvent exercised, DamlTypeDescriptor owner) =>
+    internal static bool IsOwnedBy(ExercisedEvent exercised, DamlTypeDescriptor owner) =>
         owner.Kind == DamlTypeKind.Interface
             ? exercised.InterfaceId is { } interfaceId && MarkerMatch.Interface(owner, interfaceId)
             : MarkerMatch.Template(owner, exercised.PackageName, exercised.TemplateId);
@@ -99,6 +152,13 @@ internal static class ExerciseResultProjector
         $"Submission succeeded but no '{choiceName.Value}' exercise on contract '{contractId}' was recorded on {DescribeTransaction(updateId)}. " +
         "The transaction returned for this submission carries no exercised event for it. " +
         "Either a custom ILedgerWriter did not project the transaction's exercised events into TransactionResult.ExercisedEvents, " +
+        "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
+        "request the LEDGER_EFFECTS shape with verbose events.";
+
+    private static string NoRootExerciseMessage(string? updateId, DamlTypeDescriptor owner, ChoiceName choiceName) =>
+        $"Submission succeeded but {DescribeTransaction(updateId)} has no single root exercise of '{choiceName.Value}' on template '{owner.Identifier.EntityName}'. " +
+        "A by-key command commits as one root exercise; its exercised event is the one that no other exercised event's " +
+        "node id range encloses. Either a custom ILedgerWriter did not project the exercised events with their node ids, " +
         "or the transaction was requested in a shape without exercised events (ACS_DELTA); " +
         "request the LEDGER_EFFECTS shape with verbose events.";
 

@@ -1,4 +1,5 @@
 Canton.Ledger.Abstractions
+Canton.Ledger.AspNetCore
 Canton.Ledger.Grpc
 Canton.Ledger.Grpc.Client
 Canton.Ledger.Kernel

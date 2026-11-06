@@ -8,6 +8,7 @@ using System.Net;
 using AwesomeAssertions;
 using Canton.Ledger.Testing.Helpers;
 using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -97,6 +98,100 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var client = ClientWith(new RecordingHttpHandler());
 
         client.SupportsUnboundedStreaming.Should().BeTrue();
+    }
+
+    private const string StreamingTemplateIdJson =
+        """{"packageId": "pkg", "moduleName": "Module", "entityName": "StreamingTemplate"}""";
+
+    private static string IncompleteUnassignedEntryJson(string contractId, string target) =>
+        $$$$"""
+        {"contractEntry": {"JsIncompleteUnassigned": {
+          "createdEvent": {"offset": "9", "contractId": "{{{{contractId}}}}", "packageName": "pkg-name", "templateId": {{{{StreamingTemplateIdJson}}}}, "createArgument": {}, "witnessParties": ["party::alice"]},
+          "unassignedEvent": {"contractId": "{{{{contractId}}}}", "source": "sync-a", "target": "{{{{target}}}}", "offset": "20", "reassignmentId": "reassignment-1", "reassignmentCounter": "1", "witnessParties": ["party::alice"]}
+        }}}
+        """;
+
+    private static string IncompleteAssignedEntryJson(string contractId) =>
+        $$$$"""
+        {"contractEntry": {"JsIncompleteAssigned": {
+          "assignedEvent": {
+            "source": "sync-a",
+            "target": "sync-b",
+            "reassignmentId": "reassignment-1",
+            "reassignmentCounter": "1",
+            "createdEvent": {"offset": "9", "contractId": "{{{{contractId}}}}", "packageName": "pkg-name", "templateId": {{{{StreamingTemplateIdJson}}}}, "createArgument": {}, "witnessParties": ["party::alice"]}
+          }
+        }}}
+        """;
+
+    private const string ActiveEntryJson =
+        $$$$"""
+        {"contractEntry": {"JsActiveContract": {"createdEvent": {"offset": "9", "contractId": "00active", "packageName": "pkg-name", "templateId": {{{{StreamingTemplateIdJson}}}}, "createArgument": {}, "witnessParties": ["party::alice"]}, "synchronizerId": "sync-1"}}}
+        """;
+
+    [Theory]
+    [InlineData(UnreadableRows.Fail)]
+    [InlineData(UnreadableRows.Return)]
+    public async Task SnapshotAsync_returns_a_contract_whose_reassignment_is_in_flight_on_its_source_synchronizer(
+        UnreadableRows policy)
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            $$"""{"activeContracts": [{{ActiveEntryJson}}, {{IncompleteUnassignedEntryJson("00moving", "sync-b")}}]}""");
+        var client = ClientWith(transport);
+
+        var snapshot = await client.SnapshotAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), unreadableRows: policy, cancellationToken: TestContext.Current.CancellationToken);
+
+        snapshot.Select(contract => contract.Id.Value).Should().Equal("00active", "00moving");
+        snapshot.Unreadable.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SnapshotActiveAsync_returns_a_contract_whose_reassignment_is_in_flight_on_its_source_synchronizer()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            $$"""{"activeContracts": [{{IncompleteUnassignedEntryJson("00moving", "sync-b")}}]}""");
+        var client = ClientWith(transport);
+
+        var snapshot = await client.SnapshotActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), cancellationToken: TestContext.Current.CancellationToken);
+
+        var moving = snapshot.Should().ContainSingle().Subject;
+        moving.Contract.Id.Value.Should().Be("00moving");
+        moving.SynchronizerId.Should().Be(new SynchronizerId("sync-a"));
+    }
+
+    [Fact]
+    public async Task SnapshotActiveAsync_returns_a_contract_whose_assignment_is_in_flight_on_its_target_synchronizer()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            $$"""{"activeContracts": [{{IncompleteAssignedEntryJson("00arriving")}}]}""");
+        var client = ClientWith(transport);
+
+        var snapshot = await client.SnapshotActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), cancellationToken: TestContext.Current.CancellationToken);
+
+        var arriving = snapshot.Should().ContainSingle().Subject;
+        arriving.Contract.Id.Value.Should().Be("00arriving");
+        arriving.SynchronizerId.Should().Be(new SynchronizerId("sync-b"));
+        snapshot.Unreadable.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SnapshotAsync_still_throws_on_an_in_flight_reassignment_whose_unassignment_has_no_target()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            $$"""{"activeContracts": [{{IncompleteUnassignedEntryJson("00moving", target: "")}}]}""");
+        var client = ClientWith(transport);
+
+        var snapshotting = async () => await client.SnapshotAsync<TestTemplate>(
+            Alice, LedgerOffset.At(10), cancellationToken: TestContext.Current.CancellationToken);
+
+        await snapshotting.Should().ThrowAsync<LedgerOperationException>().WithMessage("*MissingSynchronizerId*offset 20*");
     }
 
     [Fact]
@@ -307,6 +402,43 @@ public sealed class RestLedgerClientStreamingTests : IDisposable
         var unclassified = entries[0].Should().BeOfType<AcsSnapshotEntry<TestTemplate>.Unclassified>().Subject;
         unclassified.Offset.Should().Be(LedgerOffset.At(5L));
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_at_ledger_end_zero_yields_only_a_checkpoint_at_ledger_begin_without_posting_active_contracts_page()
+    {
+        var transport = new RecordingHttpHandler()
+            .WithResponseForPath("/v2/state/ledger-end", HttpStatusCode.OK, """{"offset": 0}""");
+        var client = ClientWith(transport);
+
+        var entries = new List<AcsSnapshotEntry<TestTemplate>>();
+        await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        entries.Should().ContainSingle().Which
+            .Should().Be(new AcsSnapshotEntry<TestTemplate>.Checkpoint(new StakeholderResume(LedgerOffset.At(0))));
+        transport.Requests.Select(request => request.PathAndQuery).Should().Equal("/v2/state/ledger-end");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_at_explicit_ledger_begin_yields_only_a_checkpoint_at_ledger_begin_without_any_request()
+    {
+        var transport = new RecordingHttpHandler();
+        var client = ClientWith(transport);
+
+        var entries = new List<AcsSnapshotEntry<TestTemplate>>();
+        await foreach (var entry in client.SubscribeActiveAsync<TestTemplate>(
+            Alice, LedgerOffset.Begin, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            entries.Add(entry);
+        }
+
+        entries.Should().ContainSingle().Which
+            .Should().Be(new AcsSnapshotEntry<TestTemplate>.Checkpoint(new StakeholderResume(LedgerOffset.At(0))));
+        transport.Requests.Should().BeEmpty();
     }
 
     [Fact]

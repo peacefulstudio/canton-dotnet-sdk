@@ -112,6 +112,25 @@ public sealed record ExerciseCommand(
             PackageName = owner.Kind == DamlTypeKind.Template ? owner.PackageName : null,
         };
     }
+
+    /// <summary>
+    /// Creates an ExerciseCommand for a specific contract from a choice descriptor, taking
+    /// the choice name from <paramref name="choice"/> and encoding <paramref name="argument"/>
+    /// through its <see cref="Choice{TOwner, TArg, TResult}.ArgumentEncoder"/>. Generic code
+    /// reaches the descriptor through a facet such as <see cref="IArchivable{TSelf}"/>:
+    /// <c>ExerciseCommand.For(contractId, T.ChoiceArchive, DamlUnit.Instance)</c>.
+    /// </summary>
+    /// <typeparam name="TOwner">The choice owner: a concrete template or interface marker.</typeparam>
+    /// <typeparam name="TArg">The choice argument type.</typeparam>
+    /// <typeparam name="TResult">The choice result type.</typeparam>
+    public static ExerciseCommand For<TOwner, TArg, TResult>(
+        ContractId<TOwner> contractId,
+        Choice<TOwner, TArg, TResult> choice,
+        TArg argument) where TOwner : IDamlType
+    {
+        ArgumentNullException.ThrowIfNull(choice);
+        return For(contractId, choice.Name, choice.ArgumentEncoder(argument));
+    }
 }
 
 /// <summary>

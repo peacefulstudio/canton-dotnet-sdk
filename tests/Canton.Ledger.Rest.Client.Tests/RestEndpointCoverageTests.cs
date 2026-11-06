@@ -29,7 +29,7 @@ public class RestEndpointCoverageTests
         + "spec operation must reach the raw surface as exactly one Refit route on the interface and "
         + "method its operationId names, and the only extra endpoints allowed are the hand-authored "
         + "off-spec ones in PinnedOffSpecEndpoints. Endpoints are qualified by declaring interface "
-        + "because the off-spec IDarApi, IPackageApi, IInteractiveSubmissionApi, IPartyManagementApi "
+        + "because the off-spec IDarApi, IPackageApi, IPartyManagementApi "
         + "and IUserManagementApi deliberately re-declare routes the generated "
         + "surface also carries, and by "
         + "declaring method because two methods sharing one route on one interface would otherwise "
@@ -61,7 +61,6 @@ public class RestEndpointCoverageTests
         ["InteractiveSubmissionService_ExecuteSubmissionAndWait"] = "POST /v2/interactive-submission/executeAndWait",
         ["InteractiveSubmissionService_ExecuteSubmissionAndWaitForTransaction"] = "POST /v2/interactive-submission/executeAndWaitForTransaction",
         ["InteractiveSubmissionService_GetPreferredPackages"] = "POST /v2/interactive-submission/preferred-packages",
-        ["InteractiveSubmissionService_GetPreferredPackageVersion"] = "GET /v2/interactive-submission/preferred-package-version",
         ["InteractiveSubmissionService_PrepareSubmission"] = "POST /v2/interactive-submission/prepare",
         ["PackageManagementService_UpdateVettedPackages"] = "POST /v2/package-vetting/update",
         ["PackageManagementService_UploadDarFile"] = "POST /v2/dars",
@@ -77,6 +76,7 @@ public class RestEndpointCoverageTests
         ["PartyManagementService_GetParties"] = "GET /v2/parties/{party}",
         ["PartyManagementService_ListKnownParties"] = "GET /v2/parties",
         ["PartyManagementService_UpdatePartyDetails"] = "PATCH /v2/parties/{party_details.party}",
+        ["StateService_ConvertRecordTimeToOffset"] = "GET /v2/state/convert-record-time-to-offset",
         ["StateService_GetActiveContracts"] = "POST /v2/state/active-contracts",
         ["StateService_GetActiveContractsPage"] = "POST /v2/state/active-contracts-page",
         ["StateService_GetConnectedSynchronizers"] = "GET /v2/state/connected-synchronizers",
@@ -105,7 +105,6 @@ public class RestEndpointCoverageTests
         "IDarApi.ValidateDar: POST /v2/dars/validate",
         "IHealthApi.CheckLiveness: GET /livez",
         "IHealthApi.CheckReadiness: GET /readyz",
-        "IInteractiveSubmissionApi.GetPreferredPackageVersion: GET /v2/interactive-submission/preferred-package-version",
         "IPackageApi.GetPackage: GET /v2/packages/{packageId}",
         "IPartyManagementApi.GetParties: GET /v2/parties/{party}",
         "IPartyManagementApi.ListKnownParties: GET /v2/parties",

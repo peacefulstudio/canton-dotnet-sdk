@@ -266,7 +266,7 @@ public sealed class LedgerClientRetryTests : IDisposable
 
         var act = () => client
             .TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync("Submit");
+            .OneOrThrowAsync();
 
         var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
         thrown.ErrorId.Should().Be("DUPLICATE_COMMAND");

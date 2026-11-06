@@ -29,6 +29,7 @@ namespace Canton.Ledger.Rest.Client.Integration.Tests;
 /// committed copy would prove nothing.
 /// </para>
 /// </summary>
+[Trait("Retires", nameof(WrappedOneOfJsonConverterFactory))]
 [Trait("Category", "Integration")]
 public class RestReassignmentEventShapeLiveTests(ITestOutputHelper output)
 {

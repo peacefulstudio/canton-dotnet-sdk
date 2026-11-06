@@ -103,6 +103,16 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         new Interactive.PreparedTransaction { Metadata = new Interactive.Metadata { TransactionUuid = "uuid-1" } }
             .ToByteArray();
 
+    private static byte[] PreparedTransactionBytes(string commandId) =>
+        new Interactive.PreparedTransaction
+        {
+            Metadata = new Interactive.Metadata
+            {
+                TransactionUuid = "uuid-1",
+                SubmitterInfo = new Interactive.Metadata.Types.SubmitterInfo { CommandId = commandId },
+            },
+        }.ToByteArray();
+
     private static SignedSubmission Signed(
         string submissionId = "sub-1",
         RuntimeCommands.DeduplicationPeriod? deduplication = null,
@@ -639,6 +649,65 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
         thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.FailedPrecondition));
         thrown.CommitState.Should().Be(CommitState.Unknown);
         thrown.InnerException.Should().BeOfType<RpcException>();
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_stamps_the_command_id_of_the_prepared_transaction_on_an_unanswered_failure()
+    {
+        _service.ExecuteSubmissionAsync(
+                Arg.Any<Interactive.ExecuteSubmissionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Faulted<Interactive.ExecuteSubmissionResponse>(StatusCode.Unavailable));
+
+        var act = () => CreateClient().ExecuteSubmissionAsync(
+            Signed(preparedTransaction: PreparedTransactionBytes("prepared-cmd-1")), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.CommandId.Should().Be(new RuntimeCommands.CommandId("prepared-cmd-1"));
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAndWaitAsync_stamps_the_command_id_of_the_prepared_transaction_on_an_unanswered_failure()
+    {
+        _service.ExecuteSubmissionAndWaitAsync(
+                Arg.Any<Interactive.ExecuteSubmissionAndWaitRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Faulted<Interactive.ExecuteSubmissionAndWaitResponse>(StatusCode.Unavailable));
+
+        var act = () => CreateClient().ExecuteSubmissionAndWaitAsync(
+            Signed(preparedTransaction: PreparedTransactionBytes("prepared-cmd-2")), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.CommandId.Should().Be(new RuntimeCommands.CommandId("prepared-cmd-2"));
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAndWaitForTransactionAsync_stamps_the_command_id_of_the_prepared_transaction_on_an_unanswered_failure()
+    {
+        _service.ExecuteSubmissionAndWaitForTransactionAsync(
+                Arg.Any<Interactive.ExecuteSubmissionAndWaitForTransactionRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Faulted<Interactive.ExecuteSubmissionAndWaitForTransactionResponse>(StatusCode.Unavailable));
+
+        var act = () => CreateClient().ExecuteSubmissionAndWaitForTransactionAsync(
+            Signed(preparedTransaction: PreparedTransactionBytes("prepared-cmd-3")), Submitter(), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommitState.Should().Be(CommitState.Unknown);
+        thrown.CommandId.Should().Be(new RuntimeCommands.CommandId("prepared-cmd-3"));
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAsync_leaves_the_command_id_unset_when_the_prepared_transaction_names_none()
+    {
+        _service.ExecuteSubmissionAsync(
+                Arg.Any<Interactive.ExecuteSubmissionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Faulted<Interactive.ExecuteSubmissionResponse>(StatusCode.Unavailable));
+
+        var act = () => CreateClient().ExecuteSubmissionAsync(Signed(), cancellationToken: Ct);
+
+        var thrown = (await act.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.CommandId.Should().BeNull();
     }
 
     [Fact]

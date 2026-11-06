@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Rest.Client.Raw;
 using Daml.Runtime;
@@ -49,4 +50,16 @@ internal static class RestInterfaceStreamProjector
         RestProjectionCore.ProjectActiveContractEntry<
             InterfaceArms<TInterface, TView>, InterfaceStreamEvent<TInterface, TView>, TInterface, TView>(
             response, logger, snapshotOffset);
+
+    public static InterfaceContractLifecycle<TInterface, TView> ProjectContractLifecycle<TInterface, TView>(
+        GetEventsByContractIdResponse response)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>
+    {
+        var (created, archived) = RestProjectionCore.ProjectContractLifecycle<
+            InterfaceArms<TInterface, TView>, InterfaceStreamEvent<TInterface, TView>, TInterface, TView>(response);
+        return new InterfaceContractLifecycle<TInterface, TView>(
+            created as InterfaceStreamEvent<TInterface, TView>.Created,
+            archived as InterfaceStreamEvent<TInterface, TView>.Archived);
+    }
 }

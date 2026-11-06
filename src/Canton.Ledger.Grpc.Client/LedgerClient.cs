@@ -40,6 +40,9 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
     private readonly ILogger _logger;
     private bool _disposed;
 
+    /// <inheritdoc />
+    public TimeProvider TimeProvider { get; } = TimeProvider.System;
+
     internal LedgerClient(
         IOptions<LedgerClientOptions> options,
         LedgerChannelProvider channels,
@@ -52,6 +55,7 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         ArgumentNullException.ThrowIfNull(tokenProvider);
 
         _options = options.Value;
+        TimeProvider = timeProvider ?? TimeProvider.System;
         _logger = (logger ?? NullLogger<LedgerClient>.Instance).RedactingExceptionsUnless(_options.EmitPartyAndContractSpanTags);
         _channel = channels.Channel;
 
@@ -101,7 +105,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         UpdateService.UpdateServiceClient updateService,
         StateService.StateServiceClient stateService,
         ITokenProvider? tokenProvider = null,
-        ILogger<LedgerClient>? logger = null)
+        ILogger<LedgerClient>? logger = null,
+        TimeProvider? timeProvider = null)
         : this(
             options,
             channel,
@@ -111,7 +116,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
             new CommandSubmissionService.CommandSubmissionServiceClient(channel),
             new CommandCompletionService.CommandCompletionServiceClient(channel),
             tokenProvider,
-            logger: logger)
+            logger: logger,
+            timeProvider: timeProvider)
     {
     }
 
@@ -128,8 +134,10 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         Interactive.InteractiveSubmissionService.InteractiveSubmissionServiceClient? interactiveSubmissionService = null,
         ContractService.ContractServiceClient? contractService = null,
         EventQueryService.EventQueryServiceClient? eventQueryService = null,
-        ILogger<LedgerClient>? logger = null)
+        ILogger<LedgerClient>? logger = null,
+        TimeProvider? timeProvider = null)
     {
+        TimeProvider = timeProvider ?? TimeProvider.System;
         _options = options;
         _channel = channel;
         _updateService = updateService;

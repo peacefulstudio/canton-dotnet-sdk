@@ -11,14 +11,18 @@ namespace Daml.Codegen.CSharp.Cli;
 /// <c>.codegen-manifest</c> beside the output lists what the last run wrote; the next run
 /// deletes the files it listed that the new run no longer emits, so a regeneration from a
 /// DAR that dropped a template stops compiling the old binding. Only manifest-listed files
-/// are ever deleted, and every path is confined to the output directory.
+/// are ever deleted, and every path is confined to the output directory. The manifest's first
+/// line names the package that owns the directory; a run for another package is refused
+/// before it writes or deletes anything.
 /// </summary>
 internal static partial class GeneratedOutputWriter
 {
     internal const string ManifestFileName = ".codegen-manifest";
+    private const string OwnerPrefix = "# package: ";
 
     internal static async Task WriteAsync(
         IReadOnlyList<GeneratedFile> generatedFiles,
+        string packageName,
         DirectoryInfo outputDirectory,
         ILogger logger,
         CancellationToken cancellationToken)
@@ -30,6 +34,7 @@ internal static partial class GeneratedOutputWriter
             emitted[NormalizeRelativePath(file.RelativePath)] = (file, ResolveWithinRoot(root, file.RelativePath));
         }
 
+        RefuseAnotherPackagesOutput(root, packageName);
         DeleteStaleFiles(root, emitted.Keys.ToHashSet(StringComparer.Ordinal), logger);
 
         foreach (var (relativePath, (file, fullPath)) in emitted)
@@ -46,8 +51,31 @@ internal static partial class GeneratedOutputWriter
             LogGeneratedFile(logger, relativePath);
         }
 
-        var manifestLines = emitted.Keys.Order(StringComparer.Ordinal).ToList();
+        var manifestLines = emitted.Keys.Order(StringComparer.Ordinal).Prepend(OwnerPrefix + packageName).ToList();
         await File.WriteAllLinesAsync(Path.Combine(root, ManifestFileName), manifestLines, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void RefuseAnotherPackagesOutput(string root, string packageName)
+    {
+        var manifestPath = Path.Combine(root, ManifestFileName);
+        if (!File.Exists(manifestPath))
+        {
+            return;
+        }
+
+        var owner = File.ReadLines(manifestPath)
+            .Select(line => line.Trim())
+            .FirstOrDefault(line => line.StartsWith(OwnerPrefix, StringComparison.Ordinal));
+        var ownerName = owner?[OwnerPrefix.Length..];
+        if (ownerName is not null && !string.Equals(ownerName, packageName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"The output directory '{root}' already holds the generated output of package '{ownerName}', "
+                + $"and this run generates package '{packageName}'. "
+                + "Generating a second package into it would delete the first one's files. "
+                + "Give each DAR its own output directory. "
+                + "If this directory holds an earlier build of the same project, run 'dotnet clean' or delete the directory.");
+        }
     }
 
     private static void DeleteStaleFiles(string root, HashSet<string> emittedPaths, ILogger logger)
@@ -61,7 +89,9 @@ internal static partial class GeneratedOutputWriter
         foreach (var line in File.ReadAllLines(manifestPath))
         {
             var relativePath = line.Trim();
-            if (relativePath.Length == 0 || emittedPaths.Contains(relativePath))
+            if (relativePath.Length == 0
+                || relativePath.StartsWith(OwnerPrefix, StringComparison.Ordinal)
+                || emittedPaths.Contains(relativePath))
             {
                 continue;
             }

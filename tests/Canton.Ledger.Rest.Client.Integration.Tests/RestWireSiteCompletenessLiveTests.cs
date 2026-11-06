@@ -28,6 +28,7 @@ public class RestWireSiteCompletenessLiveTests(ITestOutputHelper output)
     private const string DurationSchemaReference = "#/components/schemas/Duration";
 
     [Fact]
+    [Trait("Retires", nameof(WireInt64Sites))]
     public async Task Int64PropertySites_are_each_reshaped_by_WireInt64Sites_or_exempt_with_a_stated_reason()
     {
         var served = await ServedSchemaAsync(TestContext.Current.CancellationToken);
@@ -62,6 +63,7 @@ public class RestWireSiteCompletenessLiveTests(ITestOutputHelper output)
     }
 
     [Fact]
+    [Trait("Retires", nameof(WireDurationSites))]
     public async Task OffsetCheckpointFeature_serves_its_emission_delay_as_the_Duration_schema_minLedgerTimeRel_uses()
     {
         var served = await ServedSchemaAsync(TestContext.Current.CancellationToken);

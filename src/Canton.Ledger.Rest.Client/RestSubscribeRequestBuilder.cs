@@ -47,6 +47,7 @@ internal static class RestSubscribeRequestBuilder
             ActiveAtOffset = FormatOffset(activeAtOffset),
             EventFormat = BuildEventFormat<T>(submitter, includeDisclosure),
             MaxPageSize = maxPageSize,
+            IncludeIncompleteReassignments = true,
         };
 
     public static WireGetUpdatesRequest BuildGetUpdatesRequest<T>(

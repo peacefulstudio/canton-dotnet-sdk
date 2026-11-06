@@ -48,7 +48,7 @@ public sealed class ContractKeysCorpusDarCharacterizationTests
     {
         var package = await LoadMainPackageAsync();
 
-        package.Name.Should().Be("contractkeys-hcc6e8a4f16d9");
+        package.Name.Should().Be("contractkeys-h5e25b75e405b");
         package.LfVersion.Should().Be(
             CorpusLfVersion,
             "conformance/contractkeys/daml.yaml pins --target={0}; damlc rejects a key declaration at 2.1 and 2.2 "

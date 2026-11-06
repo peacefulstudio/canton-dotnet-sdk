@@ -189,7 +189,37 @@ public class GrpcCompletionProjectorTests
     {
         var result = GrpcCompletionProjector.ProjectCheckpoint(new ProtoOffsetCheckpoint { Offset = 42L });
 
-        result.Should().Be(new CompletionStreamEvent.Checkpoint(LedgerOffset.At(42)));
+        result.Should().Be(new CompletionStreamEvent.Checkpoint(LedgerOffset.At(42), []));
+    }
+
+    [Fact]
+    public void ProjectCheckpoint_maps_each_synchronizer_time_to_a_SynchronizerTime()
+    {
+        var checkpoint = new ProtoOffsetCheckpoint { Offset = 42L };
+        checkpoint.SynchronizerTimes.Add(new ProtoSynchronizerTime
+        {
+            SynchronizerId = "sync-a::1220",
+            RecordTime = Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)),
+        });
+        checkpoint.SynchronizerTimes.Add(new ProtoSynchronizerTime
+        {
+            SynchronizerId = "sync-b::1220",
+            RecordTime = Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 10, 1, 12, 0, 30, TimeSpan.Zero)),
+        });
+
+        var result = GrpcCompletionProjector.ProjectCheckpoint(checkpoint);
+
+        result.Should().BeOfType<CompletionStreamEvent.Checkpoint>().Which.SynchronizerTimes.Should().Equal(
+            new SynchronizerTime("sync-a::1220", new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)),
+            new SynchronizerTime("sync-b::1220", new DateTimeOffset(2026, 10, 1, 12, 0, 30, TimeSpan.Zero)));
+    }
+
+    [Fact]
+    public void ProjectCheckpoint_maps_an_empty_synchronizer_time_list_to_an_empty_array()
+    {
+        var result = GrpcCompletionProjector.ProjectCheckpoint(new ProtoOffsetCheckpoint { Offset = 42L });
+
+        result.Should().BeOfType<CompletionStreamEvent.Checkpoint>().Which.SynchronizerTimes.Should().BeEmpty();
     }
 
     [Fact]

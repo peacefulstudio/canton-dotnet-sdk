@@ -23,10 +23,13 @@ internal sealed class InterfaceSnapshotArmReader<TInterface, TView>
         "interface view",
         $"SubscribeActiveAsync({typeof(TInterface).Name}.View, ...)");
 
-    public static Task<List<InterfaceAcsSnapshotEntry<TInterface, TView>.Created>> DrainAsync(
-        IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>> entries,
+    public static Task<ActiveSnapshot<InterfaceAcsSnapshotEntry<TInterface, TView>.Created>> DrainAsync(
+        Func<CancellationToken, IAsyncEnumerable<InterfaceAcsSnapshotEntry<TInterface, TView>>> openStream,
+        TimeSpan? timeout,
+        UnreadableRows unreadableRows,
+        TimeProvider timeProvider,
         CancellationToken cancellationToken) =>
-        SnapshotDrain.DrainAsync(entries, Reader, Subject, cancellationToken);
+        SnapshotDrain.DrainAsync(openStream, Reader, Subject, timeout, unreadableRows, timeProvider, cancellationToken);
 
     public SnapshotArm<InterfaceAcsSnapshotEntry<TInterface, TView>.Created> Read(
         InterfaceAcsSnapshotEntry<TInterface, TView> entry) =>

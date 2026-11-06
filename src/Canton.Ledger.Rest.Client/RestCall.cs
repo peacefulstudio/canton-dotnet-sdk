@@ -15,4 +15,5 @@ internal sealed record RestCall(
     bool Replayable = true,
     string? Accept = null,
     string? CommandId = null,
-    string? PathTemplate = null);
+    string? PathTemplate = null,
+    RestCommandSpan? CommandSpan = null);

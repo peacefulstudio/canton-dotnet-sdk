@@ -39,7 +39,7 @@ internal sealed class SubmitterMergingFakeClient(Party authorized) : NotSupporte
         if (!IsAuthorized(submission, submitter))
         {
             return Task.FromResult<ExerciseOutcome<TransactionResult>>(new ExerciseOutcome<TransactionResult>.DamlError(
-                DamlErrorCategory.AuthorizationChecksFailed, "UNAUTHORIZED",
+                DamlErrorCategory.InsufficientPermission, "UNAUTHORIZED",
                 $"party {authorized.Value} did not authorize this submission", new Dictionary<string, string>()));
         }
 
@@ -56,7 +56,7 @@ internal sealed class SubmitterMergingFakeClient(Party authorized) : NotSupporte
         {
             throw new LedgerOperationException(
                 $"party {authorized.Value} did not authorize this submission",
-                DamlErrorCategory.AuthorizationChecksFailed, "UNAUTHORIZED", new Dictionary<string, string>());
+                DamlErrorCategory.InsufficientPermission, "UNAUTHORIZED", new Dictionary<string, string>());
         }
     }
 }

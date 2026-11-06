@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-ENTRIES="snapshots quickstart conformance determinism runtime-stdlib parity-splice-bindings"
+ENTRIES="snapshots quickstart conformance live-conformance determinism runtime-stdlib parity-splice-bindings"
 
 usage() {
   cat <<EOF
@@ -48,8 +48,11 @@ Entries (default: all):
                    quickstart DAR) and samples/QuickstartExample/Generated (emitter)
   conformance      src/Daml.Codegen.Testing.Conformance/Generated, one folder per
                    Daml module of every shipped fixture: ${SHIPPED_PACKAGES[*]}
+  live-conformance tests/Canton.Ledger.Testing.LiveConformance/Generated, the probe
+                   template and kit interface bindings the live conformance run seeds (emitter, from
+                   conformance/conformancekit and conformance/conformanceprobe)
   determinism      tests/determinism/shas/ pins of the richtypes pipeline
-  runtime-stdlib   src/Daml.Runtime/Stdlib/Generated, the stdlib bindings the DAR
+  runtime-stdlib  src/Daml.Runtime/Stdlib/Generated, the stdlib bindings the DAR
                    decoder generates from conformance/stable-packages
   parity-splice-bindings
                    the splice-wallet proto under
@@ -97,6 +100,9 @@ QUICKSTART_GENERATED_REL="samples/QuickstartExample/Generated"
 CONFORMANCE_GENERATED_REL="src/Daml.Codegen.Testing.Conformance/Generated"
 CONFORMANCE_ROOT_NAMESPACE="Daml.Codegen.Testing.Conformance"
 CONFORMANCE_ROOT_NAMESPACE_PATH="${CONFORMANCE_ROOT_NAMESPACE//.//}"
+LIVE_CONFORMANCE_DARS_REL=(conformance/conformancekit/conformancekit.dar conformance/conformanceprobe/conformanceprobe.dar)
+LIVE_CONFORMANCE_GENERATED_REL="tests/Canton.Ledger.Testing.LiveConformance/Generated"
+LIVE_CONFORMANCE_PACKAGES=(conformancekit conformanceprobe)
 DETERMINISM_DAR_REL="conformance/richtypes/richtypes.dar"
 DETERMINISM_SHAS_REL="tests/determinism/shas"
 EMITTER_PROJECT_REL="src/Daml.Codegen.CSharp.Cli"
@@ -188,7 +194,11 @@ rebuild_dar() {
   }
   cp "${built_dars[0]}" "$package_dir/$package.dar"
 
-  write_args=(write --only conformance --package "$package")
+  if [[ " ${LIVE_CONFORMANCE_PACKAGES[*]} " == *" $package "* ]]; then
+    write_args=(write --only live-conformance)
+  else
+    write_args=(write --only conformance --package "$package")
+  fi
   if [[ "conformance/$package/$package.dar" == "$DETERMINISM_DAR_REL" ]]; then
     write_args+=(--only determinism)
   fi
@@ -285,6 +295,8 @@ tools_snapshots() {
 tools_quickstart() { tools_snapshots; }
 
 tools_conformance() { printf 'emitter\nhelper\n'; }
+
+tools_live_conformance() { printf 'emitter\nhelper\n'; }
 
 tools_determinism() { printf 'emitter\nhelper\n'; }
 
@@ -459,6 +471,19 @@ produce_conformance() {
   if [[ "$PARTIAL_CONFORMANCE" != true ]]; then
     claim conformance "$CONFORMANCE_GENERATED_REL"
   fi
+}
+
+produce_live_conformance() {
+  local dar_rel raw_dir
+  mkdir -p "$STAGE/out/$LIVE_CONFORMANCE_GENERATED_REL"
+  for dar_rel in "${LIVE_CONFORMANCE_DARS_REL[@]}"; do
+    decode_with_helper "$dar_rel"
+    raw_dir="$STAGE/live-conformance-raw/$(basename "$dar_rel" .dar)"
+    emit "$PROTO" "$raw_dir"
+    [[ -n "$(find "$raw_dir" -type f -name '*.cs' | head -n 1)" ]] || die "the emitter produced nothing for $dar_rel"
+    cp -R "$raw_dir/." "$STAGE/out/$LIVE_CONFORMANCE_GENERATED_REL/"
+  done
+  claim live-conformance "$LIVE_CONFORMANCE_GENERATED_REL"
 }
 
 run_determinism_pipeline() {

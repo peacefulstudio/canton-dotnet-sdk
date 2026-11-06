@@ -6,6 +6,7 @@ using System.Globalization;
 using Daml.Codegen.Intermediate.Model;
 using PbBuiltin = Daml.Codegen.Intermediate.BuiltinType;
 using PbChoice = Daml.Codegen.Intermediate.Choice;
+using PbConstant = Daml.Codegen.Intermediate.Constant;
 using PbDar = Daml.Codegen.Intermediate.IntermediateDar;
 using PbDataType = Daml.Codegen.Intermediate.DataType;
 using PbDynamicParties = Daml.Codegen.Intermediate.DynamicParties;
@@ -86,6 +87,35 @@ public static class IntermediateDarWriter
         proto.Interfaces.AddRange(module.Interfaces
             .Select(WriteInterface)
             .OrderBy(i => i.Name, StringComparer.Ordinal));
+        proto.Constants.AddRange(module.Constants
+            .Select(WriteConstant)
+            .OrderBy(c => c.Name, StringComparer.Ordinal));
+        return proto;
+    }
+
+    private static PbConstant WriteConstant(DamlConstant constant)
+    {
+        var proto = new PbConstant { Name = constant.Name };
+        switch (constant.Value)
+        {
+            case DamlTextConstantValue text:
+                proto.TextValue = text.Value;
+                break;
+            case DamlInt64ConstantValue int64:
+                proto.Int64Value = int64.Value;
+                break;
+            case DamlBoolConstantValue boolean:
+                proto.BoolValue = boolean.Value;
+                break;
+            case DamlNumericConstantValue numeric:
+                proto.NumericValue = numeric.Value;
+                break;
+            default:
+                throw new NotSupportedException(
+                    $"Constant '{constant.Name}' has an unrecognised literal kind " +
+                    $"'{constant.Value.GetType().Name}'. Add the mapping in " +
+                    "IntermediateDarWriter.WriteConstant alongside the proto schema.");
+        }
         return proto;
     }
 

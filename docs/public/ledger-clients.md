@@ -27,7 +27,7 @@ Back to the [README](../../README.md).
 - Composable `Filter.Or` / `Filter.And` combinators
 - OpenTelemetry tracing via `ActivitySource`
 
-The PQS client is tested against PQS 3.6.0, the first PQS built for Canton 3.6, reading a Canton 3.6 participant.
+The PQS client is tested against PQS 3.7.0, built for Canton 3.7, reading a Canton 3.7 participant.
 
 ### Client kernel (`Canton.Ledger.Kernel`)
 - `Authentication`: OAuth2 client-credentials flow with thread-safe TTL token caching and automatic refresh

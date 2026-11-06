@@ -179,4 +179,6 @@ public sealed record CreatedContract(
     /// always decodes.
     /// </summary>
     public DamlUndecodedJson? UndecodedPayload { get; init; }
+
+    internal int? NodeId { get; init; }
 }

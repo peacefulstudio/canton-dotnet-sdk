@@ -133,6 +133,44 @@ internal static partial class GrpcProjectionCore
             _ => (null, null),
         };
 
+    public static (TEvent? Created, TEvent? Archived) ProjectContractLifecycle<TArms, TEvent, TMarker, TPayload>(
+        GetEventsByContractIdResponse response)
+        where TArms : IStreamArms<TEvent, TMarker, TPayload>
+        where TEvent : class
+        where TMarker : IDamlType
+        where TPayload : IDamlRecord<TPayload>
+    {
+        TEvent? created = null;
+        if (response.Created is { CreatedEvent: { } createdEvent } createdEnvelope)
+        {
+            RequireTemplateId(createdEvent.TemplateId, nameof(ProtoCreatedEvent), createdEvent.ContractId);
+            var synchronizerId = RequireSynchronizer(createdEnvelope.SynchronizerId, createdEvent.ContractId);
+            var (projected, admittedAsCreated) = CreatedFromProto<TArms, TEvent, TMarker, TPayload>(
+                createdEvent, synchronizerId, createdEvent.Offset);
+            created = admittedAsCreated
+                ? projected
+                : throw new InvalidOperationException(
+                    $"Contract '{createdEvent.ContractId}' cannot be read as {typeof(TMarker).Name}: its interface view is unavailable.");
+        }
+
+        TEvent? archived = null;
+        if (response.Archived is { ArchivedEvent: { } archivedEvent } archivedEnvelope)
+        {
+            RequireTemplateId(archivedEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archivedEvent.ContractId);
+            archived = TArms.Archived(
+                LedgerWireConversions.ToContractId<TMarker>(archivedEvent.ContractId),
+                LedgerWireConversions.ToLedgerOffset(archivedEvent.Offset),
+                RequireSynchronizer(archivedEnvelope.SynchronizerId, archivedEvent.ContractId),
+                LedgerWireConversions.ToPartyList(archivedEvent.WitnessParties));
+        }
+
+        return (created, archived);
+    }
+
+    private static SynchronizerId RequireSynchronizer(string? wireSynchronizerId, string contractId) =>
+        StreamEventClassifier.Synchronizer(wireSynchronizerId)
+        ?? throw MalformedResponse.MissingRequiredField($"the event for contract '{contractId}' has no synchronizer_id");
+
     public static (TEvent Event, bool AdmittedAsCreated) CreatedFromProto<TArms, TEvent, TMarker, TPayload>(
         ProtoCreatedEvent created,
         SynchronizerId synchronizerId,

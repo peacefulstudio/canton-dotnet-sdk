@@ -124,6 +124,27 @@ public class LedgerCallOutcomeTests
         AfterRetry(Endings[ending]).ToException(Enum.Parse<LedgerCallKind>(kind)).CommitState.Should().Be(expected);
     }
 
+    [Theory]
+    [InlineData("rejected, unstructured")]
+    [InlineData("rejected, definite category")]
+    [InlineData("rejected, contention")]
+    public void ToException_flags_a_rejection_only_when_the_sdk_retried_before_it(string ending)
+    {
+        var first = Endings[ending];
+
+        first.ToException(LedgerCallKind.AcceptedOnlyWrite).RejectedAfterRetry.Should().BeFalse();
+        AfterRetry(first).ToException(LedgerCallKind.AcceptedOnlyWrite).RejectedAfterRetry.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("unanswered")]
+    [InlineData("unreadable")]
+    [InlineData("never sent")]
+    public void ToException_does_not_flag_an_ending_that_is_not_a_rejection(string ending)
+    {
+        Endings[ending].ToException(LedgerCallKind.AcceptedOnlyWrite).RejectedAfterRetry.Should().BeFalse();
+    }
+
     private static LedgerCallEnding.Rejected AfterRetry(LedgerCallEnding ending) =>
         ((LedgerCallEnding.Rejected)ending) with { AfterRetry = true };
 

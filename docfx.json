@@ -1,0 +1,111 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "src",
+          "files": [
+            "Canton.Ledger.Abstractions/Canton.Ledger.Abstractions.csproj",
+            "Canton.Ledger.Grpc.Client/Canton.Ledger.Grpc.Client.csproj",
+            "Canton.Ledger.Grpc/Canton.Ledger.Grpc.csproj",
+            "Canton.Ledger.Kernel/Canton.Ledger.Kernel.csproj",
+            "Canton.Ledger.OpenTelemetry/Canton.Ledger.OpenTelemetry.csproj",
+            "Canton.Ledger.Pqs.Client/Canton.Ledger.Pqs.Client.csproj",
+            "Canton.Ledger.Rest.Client/Canton.Ledger.Rest.Client.csproj",
+            "Canton.Ledger.Rest/Canton.Ledger.Rest.csproj",
+            "Canton.Ledger.Testing/Canton.Ledger.Testing.csproj",
+            "Daml.Codegen.CSharp/Daml.Codegen.CSharp.csproj",
+            "Daml.Codegen.CSharp.MSBuild/Daml.Codegen.CSharp.MSBuild.csproj",
+            "Daml.Codegen.Intermediate/Daml.Codegen.Intermediate.csproj",
+            "Daml.Codegen.Testing.Conformance/Daml.Codegen.Testing.Conformance.csproj",
+            "Daml.Ledger.Abstractions/Daml.Ledger.Abstractions.csproj",
+            "Daml.Ledger.Abstractions.Testing.Conformance/Daml.Ledger.Abstractions.Testing.Conformance.csproj",
+            "Daml.Runtime/Daml.Runtime.csproj"
+          ]
+        }
+      ],
+      "dest": "docs/public/site/api",
+      "filter": "filterConfig.yml"
+    },
+    {
+      "src": [
+        {
+          "src": "src",
+          "files": [
+            "Canton.Ledger.Abstractions/Canton.Ledger.Abstractions.csproj",
+            "Canton.Ledger.Grpc.Client/Canton.Ledger.Grpc.Client.csproj",
+            "Canton.Ledger.Grpc/Canton.Ledger.Grpc.csproj",
+            "Canton.Ledger.Kernel/Canton.Ledger.Kernel.csproj",
+            "Canton.Ledger.OpenTelemetry/Canton.Ledger.OpenTelemetry.csproj",
+            "Canton.Ledger.Pqs.Client/Canton.Ledger.Pqs.Client.csproj",
+            "Canton.Ledger.Rest.Client/Canton.Ledger.Rest.Client.csproj",
+            "Canton.Ledger.Rest/Canton.Ledger.Rest.csproj",
+            "Canton.Ledger.Testing/Canton.Ledger.Testing.csproj",
+            "Daml.Codegen.CSharp/Daml.Codegen.CSharp.csproj",
+            "Daml.Codegen.CSharp.MSBuild/Daml.Codegen.CSharp.MSBuild.csproj",
+            "Daml.Codegen.Intermediate/Daml.Codegen.Intermediate.csproj",
+            "Daml.Codegen.Testing.Conformance/Daml.Codegen.Testing.Conformance.csproj",
+            "Daml.Ledger.Abstractions/Daml.Ledger.Abstractions.csproj",
+            "Daml.Ledger.Abstractions.Testing.Conformance/Daml.Ledger.Abstractions.Testing.Conformance.csproj",
+            "Daml.Runtime/Daml.Runtime.csproj"
+          ]
+        }
+      ],
+      "dest": "docs/public/site/api-markdown",
+      "filter": "filterConfig.yml",
+      "outputFormat": "markdown"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "src": "docs/public/site",
+        "files": [
+          "api/**.yml",
+          "api/index.md",
+          "index.md",
+          "toc.yml",
+          "articles/**.md",
+          "articles/toc.yml"
+        ]
+      },
+      {
+        "files": [
+          "README.md",
+          "docs/public/*.md",
+          "docs/public/benchmarks/README.md",
+          "src/*/README.md",
+          "CONTRIBUTING.md",
+          "CHANGELOG.md"
+        ]
+      }
+    ],
+    "output": "docs/public/site/_site",
+    "globalMetadata": {
+      "_appTitle": "Canton .NET SDK",
+      "_appFooter": "Copyright 2026 Peaceful Studio OÜ. Apache-2.0.",
+      "_enableSearch": true
+    },
+    "template": [
+      "default",
+      "modern"
+    ],
+    "resource": [
+      {
+        "files": [
+          "LICENSE",
+          "NOTICE",
+          "global.json",
+          "samples/QuickstartExample/**/*.daml",
+          "samples/QuickstartExample/**/*.cs",
+          "tests/Canton.Ledger.Grpc.Client.Tests/GrpcTraceparentPropagationTests.cs",
+          "docs/public/benchmarks/results/**"
+        ],
+        "exclude": [
+          "**/bin/**",
+          "**/obj/**"
+        ]
+      }
+    ]
+  }
+}

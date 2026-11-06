@@ -63,7 +63,8 @@ internal sealed partial class RestLedgerClient
                 ExecuteSubmissionPath,
                 BuildExecuteSubmissionRequest(submission, transactionFormat: null),
                 "executed submission",
-                LedgerCallKind.AcceptedOnlyWrite),
+                LedgerCallKind.AcceptedOnlyWrite,
+                submission.Prepared),
             IgnoreBodyAsync,
             timeout,
             cancellationToken);
@@ -87,7 +88,8 @@ internal sealed partial class RestLedgerClient
                 ExecuteSubmissionAndWaitPath,
                 BuildExecuteSubmissionRequest(submission, transactionFormat: null),
                 "executed submission",
-                LedgerCallKind.EffectAppliedWrite),
+                LedgerCallKind.EffectAppliedWrite,
+                submission.Prepared),
             ProjectExecutedSubmission,
             timeout,
             cancellationToken);
@@ -116,7 +118,8 @@ internal sealed partial class RestLedgerClient
                 ExecuteSubmissionAndWaitForTransactionPath,
                 BuildExecuteSubmissionRequest(submission, RestSubscribeRequestBuilder.BuildTransactionFormat(submitter)),
                 "executed transaction",
-                LedgerCallKind.EffectAppliedWrite),
+                LedgerCallKind.EffectAppliedWrite,
+                submission.Prepared),
             body => RestTransactionResultProjector.Project(
                 body.Transaction ?? throw MalformedResponse.MissingRequiredField("The response carries no transaction")),
             timeout,
@@ -224,8 +227,10 @@ internal sealed partial class RestLedgerClient
             : new SynchronizerId(synchronizerId);
 
     private static RestCall Execute(
-        string path, ServedExecuteSubmissionRequest body, string subject, LedgerCallKind kind) =>
-        new(HttpMethod.Post, path, body, MissingBody(subject), MalformedBody(subject), kind, Replayable: false);
+        string path, ServedExecuteSubmissionRequest body, string subject, LedgerCallKind kind, PreparedSubmission prepared) =>
+        new(
+            HttpMethod.Post, path, body, MissingBody(subject), MalformedBody(subject), kind, Replayable: false,
+            CommandId: PreparedTransactionCommandId.Of(prepared.PreparedTransaction)?.Value);
 
     private static string MissingBody(string subject) =>
         $"Server returned a successful response but no body was present for the {subject}.";

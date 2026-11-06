@@ -123,7 +123,7 @@ internal sealed partial class LedgerClient
     {
         using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
         _invoker.TagServerCall(activity, UpdateService.Descriptor, "GetUpdates");
-        activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(TInterface).Name);
+        activity.SetDamlType<TInterface>();
         activity?.SetTag(LedgerActivityTagNames.CantonFromOffset, fromOffset);
         activity.SetSubmitterTags(submitter, _options);
 
@@ -185,11 +185,17 @@ internal sealed partial class LedgerClient
     {
         using var activity = LedgerActivitySource.StartActivity<LedgerClient>(LedgerCallInvoker.Source);
         _invoker.TagServerCall(activity, StateService.Descriptor, "GetActiveContracts");
-        activity?.SetTag(LedgerActivityTagNames.DamlTemplateId, typeof(TInterface).Name);
+        activity.SetDamlType<TInterface>();
         activity.SetSubmitterTags(submitter, _options);
 
         var effectiveOffset = activeAtOffset
             ?? (await GetLedgerEndForSnapshotAsync(cancellationToken).ConfigureAwait(false)).Offset;
+        if (IsEmptySnapshotOffset(effectiveOffset))
+        {
+            yield return new InterfaceAcsSnapshotEntry<TInterface, TView>.Checkpoint(new StakeholderResume(LedgerOffset.Begin));
+            yield break;
+        }
+
         var opening = await _invoker.OpenStreamAsync(activity, cancellationToken).ConfigureAwait(false);
         if (opening.Fault is { } openingFault)
         {

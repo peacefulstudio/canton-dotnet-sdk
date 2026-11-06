@@ -142,7 +142,6 @@ public class ServiceCollectionExtensionsTests
         provider.GetService<IAuthenticatedUserApi>().Should().NotBeNull();
         provider.GetService<IDarApi>().Should().NotBeNull();
         provider.GetService<IHealthApi>().Should().NotBeNull();
-        provider.GetService<IInteractiveSubmissionApi>().Should().NotBeNull();
         provider.GetService<IPackageApi>().Should().NotBeNull();
         provider.GetService<IPartyManagementApi>().Should().NotBeNull();
         provider.GetService<IUserManagementApi>().Should().NotBeNull();

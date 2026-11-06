@@ -23,9 +23,9 @@ public class DamlErrorParserTests
     [InlineData("ContentionOnSharedResources", DamlErrorCategory.ContentionOnSharedResources)]
     [InlineData("DeadlineExceededRequestStateUnknown", DamlErrorCategory.DeadlineExceededRequestStateUnknown)]
     [InlineData("SystemInternalAssumptionViolated", DamlErrorCategory.SystemInternalAssumptionViolated)]
-    [InlineData("MaliciousOrFaultyBehaviour", DamlErrorCategory.MaliciousOrFaultyBehaviour)]
+    [InlineData("SecurityAlert", DamlErrorCategory.SecurityAlert)]
     [InlineData("AuthInterceptorInvalidAuthenticationCredentials", DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData("AuthorizationChecksFailed", DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData("InsufficientPermission", DamlErrorCategory.InsufficientPermission)]
     [InlineData("InvalidIndependentOfSystemState", DamlErrorCategory.InvalidIndependentOfSystemState)]
     [InlineData("InvalidGivenCurrentSystemStateOther", DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
     [InlineData("InvalidGivenCurrentSystemStateResourceExists", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
@@ -49,9 +49,9 @@ public class DamlErrorParserTests
     [InlineData("2", DamlErrorCategory.ContentionOnSharedResources)]
     [InlineData("3", DamlErrorCategory.DeadlineExceededRequestStateUnknown)]
     [InlineData("4", DamlErrorCategory.SystemInternalAssumptionViolated)]
-    [InlineData("5", DamlErrorCategory.MaliciousOrFaultyBehaviour)]
+    [InlineData("5", DamlErrorCategory.SecurityAlert)]
     [InlineData("6", DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData("7", DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData("7", DamlErrorCategory.InsufficientPermission)]
     [InlineData("8", DamlErrorCategory.InvalidIndependentOfSystemState)]
     [InlineData("9", DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
     [InlineData("10", DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists)]
@@ -163,7 +163,7 @@ public class DamlErrorParserTests
 
     [Theory]
     [InlineData(StatusCode.Unauthenticated, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.InsufficientPermission)]
     public void Parse_classifies_a_security_failure_from_the_transport_status_code_when_trailers_are_missing(
         StatusCode statusCode, DamlErrorCategory expected)
     {
@@ -265,7 +265,7 @@ public class DamlErrorParserTests
 
     [Theory]
     [InlineData(StatusCode.Unauthenticated, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(StatusCode.PermissionDenied, DamlErrorCategory.InsufficientPermission)]
     public void Parse_classifies_a_redacted_security_failure_from_the_transport_status_code(
         StatusCode statusCode, DamlErrorCategory expected)
     {

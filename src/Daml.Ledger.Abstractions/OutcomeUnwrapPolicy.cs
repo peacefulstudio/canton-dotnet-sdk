@@ -20,6 +20,7 @@ internal enum DiscardIntent
 {
     RejectNone,
     AcceptNone,
+    AcceptNoneWithoutOperation,
 }
 
 internal static class OutcomeUnwrapPolicy
@@ -50,6 +51,28 @@ internal static class OutcomeUnwrapPolicy
         throw Identified(FailureOf(outcome, rules, label, describeNone, describeMany, cancellationToken)!, CommandId.FromWire(outcome.CommandId) ?? commandId);
     }
 
+    internal static T OneOfOutcome<T>(ExerciseOutcome<T> outcome) =>
+        outcome.Operation is { } operation
+            ? Value(outcome, ValueIntent.RequireOneForOperation, operation.Label)
+            : Value(
+                outcome,
+                ValueIntent.RequireOne,
+                nameof(OneOfOutcome),
+                static () => "The operation produced no result (None); expected exactly one.",
+                static count => $"The operation produced {count} results; expected exactly one.");
+
+    internal static void DiscardOutcome<T>(ExerciseOutcome<T> outcome)
+    {
+        if (outcome.Operation is { } operation)
+        {
+            Discard(outcome, DiscardIntent.AcceptNone, operation.Label);
+        }
+        else
+        {
+            Discard(outcome, DiscardIntent.AcceptNoneWithoutOperation, nameof(DiscardOutcome));
+        }
+    }
+
     internal static void Discard<T>(
         ExerciseOutcome<T> outcome,
         DiscardIntent intent,
@@ -74,6 +97,7 @@ internal static class OutcomeUnwrapPolicy
     {
         DiscardIntent.RejectNone => RejectNoneRules.Instance,
         DiscardIntent.AcceptNone => AcceptNoneRules.Instance,
+        DiscardIntent.AcceptNoneWithoutOperation => AcceptNoneWithoutOperationRules.Instance,
         _ => throw new ArgumentOutOfRangeException(nameof(intent), intent, null),
     };
 
@@ -249,6 +273,17 @@ internal static class OutcomeUnwrapPolicy
     private sealed class AcceptNoneRules : OperationNamedMessages
     {
         internal static readonly AcceptNoneRules Instance = new();
+
+        internal override bool FailsOnNone => false;
+
+        internal override bool FailsOnManyAndUndecodable => false;
+
+        internal override Exception? Unexpected(string outcomeTypeName, string label) => null;
+    }
+
+    private sealed class AcceptNoneWithoutOperationRules : UnlabelledMessages
+    {
+        internal static readonly AcceptNoneWithoutOperationRules Instance = new();
 
         internal override bool FailsOnNone => false;
 

@@ -94,20 +94,32 @@ public class RetryPipelineFactoryTests
             new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromHours(1) },
             timeProvider: time);
         var attempts = 0;
+        var firstAttemptFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var execution = pipeline.ExecuteAsync(
             _ =>
             {
                 attempts++;
-                return attempts == 1 ? throw new InvalidOperationException("transient") : ValueTask.CompletedTask;
+                if (attempts != 1)
+                    return ValueTask.CompletedTask;
+
+                firstAttemptFinished.SetResult();
+                throw new InvalidOperationException("transient");
             },
             TestContext.Current.CancellationToken).AsTask();
-        await Task.Delay(50, TestContext.Current.CancellationToken);
+        await firstAttemptFinished.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         attempts.Should().Be(1);
         execution.IsCompleted.Should().BeFalse();
 
-        time.Advance(TimeSpan.FromHours(24));
+        using var ceiling = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!execution.IsCompleted)
+        {
+            ceiling.Token.ThrowIfCancellationRequested();
+            time.Advance(TimeSpan.FromHours(1));
+            await Task.Yield();
+        }
+
         await execution;
 
         attempts.Should().Be(2);

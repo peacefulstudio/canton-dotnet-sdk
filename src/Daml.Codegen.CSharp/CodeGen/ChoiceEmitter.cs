@@ -88,6 +88,36 @@ internal sealed partial class ChoiceEmitter(
     }
 
     /// <summary>
+    /// True when <paramref name="choices"/> carry the implicit stdlib <c>Archive</c> choice, so
+    /// the owner declares <c>IArchivable&lt;TSelf&gt;</c> and its <c>ChoiceArchive</c> descriptor
+    /// satisfies the facet.
+    /// </summary>
+    internal bool DeclaresArchive(IReadOnlyList<DamlChoice> choices) => choices.Any(IsSyntheticArchive);
+
+    /// <summary>
+    /// Emits the explicit <c>IArchivable&lt;TSelf&gt;.ChoiceArchive</c> implementation inside an
+    /// interface marker declaring the facet for itself, forwarding to the marker's own
+    /// <c>ChoiceArchive</c> descriptor. A plain <c>public static</c> member on the interface only
+    /// hides the inherited static abstract requirement (CS0108), which leaves the interface
+    /// unusable as a type argument (CS8920), so the implementation is explicit, as for
+    /// <see cref="WriteChoicesAggregateProperty"/>.
+    /// </summary>
+    internal void WriteArchivableWitness(IndentWriter indent, string interfaceName)
+    {
+        var archivableRef = TypeReferenceQualifier.Qualify(RuntimeTypeNames.IArchivable);
+        var choiceRef = TypeReferenceQualifier.Qualify(RuntimeTypeNames.Choice);
+        var unitRef = TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlUnit);
+
+        if (options.GenerateXmlDocs)
+        {
+            indent.AppendLine("/// <summary>Gets the descriptor of the implicit Archive choice.</summary>");
+        }
+
+        indent.AppendLine($"static {choiceRef}<{interfaceName}, {unitRef}, {unitRef}> {archivableRef}<{interfaceName}>.ChoiceArchive => ChoiceArchive;");
+        indent.AppendLine();
+    }
+
+    /// <summary>
     /// Resolves the C# argument shape of <paramref name="choice"/>: a same-package
     /// record reference becomes the nested argument record, <c>Unit</c> and the
     /// synthetic stdlib <c>Archive</c> become the argument-less <c>DamlUnit</c> shape,
@@ -350,7 +380,7 @@ internal sealed partial class ChoiceEmitter(
     private string ArgumentExpression(DamlChoice choice, ChoiceArgumentInfo argument) =>
         argument.HasArgument ? "argument.ToRecord()" : EmptyArgumentExpression(choice);
 
-    private static IReadOnlyList<string> ReturnNew(
+    private IReadOnlyList<string> ReturnNew(
         string commandType,
         string templateClassName,
         string receiverExpression,
@@ -360,9 +390,14 @@ internal sealed partial class ChoiceEmitter(
         $"return new {commandType}(",
         $"{templateClassName}.TemplateId,",
         $"{receiverExpression},",
-        $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),",
+        $"{ChoiceNameExpression(choice, templateClassName)},",
         $"{argumentExpression}) {{ PackageName = {templateClassName}.PackageName }};",
     ];
+
+    private string ChoiceNameExpression(DamlChoice choice, string ownerTypeName) =>
+        IsSyntheticArchive(choice)
+            ? $"{ownerTypeName}.Choice{SanitizeIdentifier(choice.Name)}.Name"
+            : $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\")";
 
     /// <summary>
     /// Emits one <c>&lt;Choice&gt;ByKeyCommand</c> builder per choice on

@@ -297,6 +297,16 @@ public class EmittedReservedNameReferencesAndDiagnosticsTests
         CompileErrors(dar).Should().BeEmpty();
     }
 
+    [Fact]
+    public void Keyed_template_payload_field_named_like_a_by_key_exerciser_compiles()
+    {
+        var dar = DarOf(
+            [Template("Asset", new DamlPrimitiveType(DamlPrimitive.Party), Choice("Reissue", IntType))],
+            Record("Asset", Field("tryReissueByKeyAsync", IntType), Field("owner", PartyType)));
+
+        CompileErrors(dar).Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData("UpgradedPackageId")]
     [InlineData("Plain")]

@@ -26,7 +26,7 @@ namespace Canton.Ledger.Grpc.Client.Tests;
 /// </summary>
 internal static class GrpcUntouchedBindingScenarios
 {
-    private const string RichTypesPackageId = "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
+    private const string RichTypesPackageId = "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c";
 
     private sealed record GenericResultsMarker : IDamlType
     {

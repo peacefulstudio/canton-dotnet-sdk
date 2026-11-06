@@ -5,14 +5,19 @@ using Canton.Ledger.Abstractions;
 using Daml.Runtime.Data;
 using Google.Protobuf;
 using Crypto = Com.Digitalasset.Canton.Crypto.V30;
+using HostingState = Com.Digitalasset.Canton.Protocol.V31.PartyToParticipant.Types.HostingParticipant.Types.HostingState;
+using ParticipantPermission = Com.Digitalasset.Canton.Protocol.V30.Enums.Types.ParticipantPermission;
+using TopologyChangeOp = Com.Digitalasset.Canton.Protocol.V30.Enums.Types.TopologyChangeOp;
 using TopologyV30 = Com.Digitalasset.Canton.Protocol.V30;
+using TopologyV31 = Com.Digitalasset.Canton.Protocol.V31;
 using Versioned = Com.Digitalasset.Canton.Version.V1;
 
 namespace Canton.Ledger.Kernel.Wire;
 
 internal static class ExternalPartyTopologyVerifier
 {
-    private const int StableTopologyProtoVersion = 30;
+    private const int TopologyProtoVersion30 = 30;
+    private const int TopologyProtoVersion31 = 31;
     private const uint OnboardingSerial = 1;
     private const uint PartySigningThreshold = 1;
     private const string PartyIdSeparator = "::";
@@ -20,15 +25,18 @@ internal static class ExternalPartyTopologyVerifier
     private static readonly MessageParser<Versioned.UntypedVersionedMessage> StrictWrapperParser =
         Versioned.UntypedVersionedMessage.Parser.WithDiscardUnknownFields(true);
 
-    private static readonly MessageParser<TopologyV30.TopologyTransaction> StrictTransactionParser =
+    private static readonly MessageParser<TopologyV30.TopologyTransaction> StrictV30TransactionParser =
         TopologyV30.TopologyTransaction.Parser.WithDiscardUnknownFields(true);
+
+    private static readonly MessageParser<TopologyV31.TopologyTransaction> StrictV31TransactionParser =
+        TopologyV31.TopologyTransaction.Parser.WithDiscardUnknownFields(true);
 
     internal static ExternalPartyTopology Verify(ExternalPartyTopologyRequest request, ExternalPartyTopology topology)
     {
         ExternalPartyIdentity.Verify(request.PublicKey, topology);
         RequirePartyIdOfHint(request.PartyIdHint, topology);
 
-        var mapping = OnboardingMapping(SingleTransaction(topology.TopologyTransactions));
+        var mapping = SingleOnboardingMapping(topology.TopologyTransactions);
         RequireMappedParty(mapping, topology.Party.Value);
         RequirePartySigningKey(mapping, request.PublicKey, topology.PublicKeyFingerprint);
         RequireHosting(mapping, request);
@@ -41,7 +49,7 @@ internal static class ExternalPartyTopologyVerifier
         try
         {
             var transactions = allocation.OnboardingTransactions.Select(signed => signed.Transaction).ToList();
-            var mapping = OnboardingMapping(SingleTransaction(transactions));
+            var mapping = SingleOnboardingMapping(transactions);
             return DerivedParty(mapping);
         }
         catch (MalformedResponseException notAnOnboarding)
@@ -54,7 +62,7 @@ internal static class ExternalPartyTopologyVerifier
         }
     }
 
-    private static Party DerivedParty(TopologyV30.PartyToParticipant mapping)
+    private static Party DerivedParty(PartyToParticipantMapping mapping)
     {
         var signingKeys = mapping.PartySigningKeys
             ?? throw Mismatch("the PartyToParticipant mapping carries no party signing keys.");
@@ -87,21 +95,32 @@ internal static class ExternalPartyTopologyVerifier
         }
     }
 
-    private static TopologyV30.TopologyTransaction SingleTransaction(IReadOnlyList<ReadOnlyMemory<byte>> transactions) =>
+    private static PartyToParticipantMapping SingleOnboardingMapping(IReadOnlyList<ReadOnlyMemory<byte>> transactions) =>
         transactions.Count == 1
-            ? Decode(transactions[0])
+            ? DecodeOnboardingMapping(transactions[0])
             : throw Mismatch(
                 "expected exactly one topology transaction, a PartyToParticipant mapping, "
                 + $"but got {transactions.Count}.");
 
-    private static TopologyV30.TopologyTransaction Decode(ReadOnlyMemory<byte> serialized)
+    private static PartyToParticipantMapping DecodeOnboardingMapping(ReadOnlyMemory<byte> serialized)
+    {
+        var wrapper = DecodeWrapper(serialized);
+        return wrapper.Version switch
+        {
+            TopologyProtoVersion30 => OnboardingMappingOf(DecodeTransaction(StrictV30TransactionParser, wrapper)),
+            TopologyProtoVersion31 => OnboardingMappingOf(DecodeTransaction(StrictV31TransactionParser, wrapper)),
+            _ => throw Mismatch(
+                $"the topology transaction is wrapped as proto version {wrapper.Version}, "
+                + $"not {TopologyProtoVersion30} or {TopologyProtoVersion31}."),
+        };
+    }
+
+    private static Versioned.UntypedVersionedMessage DecodeWrapper(ReadOnlyMemory<byte> serialized)
     {
         Versioned.UntypedVersionedMessage wrapper;
-        TopologyV30.TopologyTransaction transaction;
         try
         {
             wrapper = StrictWrapperParser.ParseFrom(serialized.Span);
-            transaction = StrictTransactionParser.ParseFrom(wrapper.Data);
         }
         catch (InvalidProtocolBufferException undecodable)
         {
@@ -113,39 +132,88 @@ internal static class ExternalPartyTopologyVerifier
             throw Mismatch("the topology transaction could not be decoded.");
         }
 
-        if (wrapper.Version != StableTopologyProtoVersion)
-        {
-            throw Mismatch(
-                $"the topology transaction is wrapped as proto version {wrapper.Version}, not {StableTopologyProtoVersion}.");
-        }
-
-        if (!serialized.Span.SequenceEqual(wrapper.ToByteArray()) || !wrapper.Data.Span.SequenceEqual(transaction.ToByteArray()))
-        {
-            throw Mismatch("the topology transaction carries content this client does not decode.");
-        }
-
-        return transaction;
+        return serialized.Span.SequenceEqual(wrapper.ToByteArray())
+            ? wrapper
+            : throw UndecodedContent();
     }
 
-    private static TopologyV30.PartyToParticipant OnboardingMapping(TopologyV30.TopologyTransaction transaction)
+    private static TTransaction DecodeTransaction<TTransaction>(
+        MessageParser<TTransaction> parser, Versioned.UntypedVersionedMessage wrapper)
+        where TTransaction : IMessage<TTransaction>
     {
-        if (transaction.Operation != TopologyV30.Enums.Types.TopologyChangeOp.AddReplace)
+        TTransaction transaction;
+        try
         {
-            throw Mismatch($"the topology transaction's operation is {transaction.Operation}, not AddReplace.");
+            transaction = parser.ParseFrom(wrapper.Data);
+        }
+        catch (InvalidProtocolBufferException undecodable)
+        {
+            throw new MalformedResponseException("the topology transaction could not be decoded.", undecodable);
         }
 
-        if (transaction.Serial != OnboardingSerial)
-        {
-            throw Mismatch($"the topology transaction's serial is {transaction.Serial}, not {OnboardingSerial}.");
-        }
-
-        var mappingCase = transaction.Mapping?.MappingCase ?? TopologyV30.TopologyMapping.MappingOneofCase.None;
-        return mappingCase == TopologyV30.TopologyMapping.MappingOneofCase.PartyToParticipant
-            ? transaction.Mapping!.PartyToParticipant
-            : throw Mismatch($"the topology transaction maps {mappingCase}, not PartyToParticipant.");
+        return wrapper.Data.Span.SequenceEqual(transaction.ToByteArray())
+            ? transaction
+            : throw UndecodedContent();
     }
 
-    private static void RequireMappedParty(TopologyV30.PartyToParticipant mapping, string party)
+    private static MalformedResponseException UndecodedContent() =>
+        Mismatch("the topology transaction carries content this client does not decode.");
+
+    private static PartyToParticipantMapping OnboardingMappingOf(TopologyV30.TopologyTransaction transaction)
+    {
+        RequireOnboardingChange(transaction.Operation, transaction.Serial);
+        var mappingCase = transaction.Mapping?.MappingCase ?? TopologyV30.TopologyMapping.MappingOneofCase.None;
+        if (mappingCase != TopologyV30.TopologyMapping.MappingOneofCase.PartyToParticipant)
+        {
+            throw NotPartyToParticipant(mappingCase.ToString());
+        }
+
+        var mapping = transaction.Mapping!.PartyToParticipant;
+        return new PartyToParticipantMapping(
+            mapping.Party,
+            mapping.Threshold,
+            [.. mapping.Participants.Select(participant => new HostingParticipant(
+                participant.ParticipantUid,
+                participant.Permission,
+                participant.Onboarding is null ? HostingState.Active : HostingState.Onboarding))],
+            mapping.PartySigningKeys);
+    }
+
+    private static PartyToParticipantMapping OnboardingMappingOf(TopologyV31.TopologyTransaction transaction)
+    {
+        RequireOnboardingChange(transaction.Operation, transaction.Serial);
+        var mappingCase = transaction.Mapping?.MappingCase ?? TopologyV31.TopologyMapping.MappingOneofCase.None;
+        if (mappingCase != TopologyV31.TopologyMapping.MappingOneofCase.PartyToParticipant)
+        {
+            throw NotPartyToParticipant(mappingCase.ToString());
+        }
+
+        var mapping = transaction.Mapping!.PartyToParticipant;
+        return new PartyToParticipantMapping(
+            mapping.Party,
+            mapping.Threshold,
+            [.. mapping.Participants.Select(participant => new HostingParticipant(
+                participant.ParticipantUid, participant.Permission, participant.State))],
+            mapping.PartySigningKeys);
+    }
+
+    private static void RequireOnboardingChange(TopologyChangeOp operation, uint serial)
+    {
+        if (operation != TopologyChangeOp.AddReplace)
+        {
+            throw Mismatch($"the topology transaction's operation is {operation}, not AddReplace.");
+        }
+
+        if (serial != OnboardingSerial)
+        {
+            throw Mismatch($"the topology transaction's serial is {serial}, not {OnboardingSerial}.");
+        }
+    }
+
+    private static MalformedResponseException NotPartyToParticipant(string mappingCase) =>
+        Mismatch($"the topology transaction maps {mappingCase}, not PartyToParticipant.");
+
+    private static void RequireMappedParty(PartyToParticipantMapping mapping, string party)
     {
         if (!string.Equals(mapping.Party, party, StringComparison.Ordinal))
         {
@@ -154,7 +222,7 @@ internal static class ExternalPartyTopologyVerifier
     }
 
     private static void RequirePartySigningKey(
-        TopologyV30.PartyToParticipant mapping, SigningPublicKey requestedKey, string requestedFingerprint)
+        PartyToParticipantMapping mapping, SigningPublicKey requestedKey, string requestedFingerprint)
     {
         var signingKeys = mapping.PartySigningKeys
             ?? throw Mismatch("the PartyToParticipant mapping carries no party signing keys.");
@@ -201,13 +269,13 @@ internal static class ExternalPartyTopologyVerifier
         }
     }
 
-    private static void RequireHosting(TopologyV30.PartyToParticipant mapping, ExternalPartyTopologyRequest request)
+    private static void RequireHosting(PartyToParticipantMapping mapping, ExternalPartyTopologyRequest request)
     {
         var confirming = request.OtherConfirmingParticipantUids ?? [];
         var observing = request.ObservingParticipantUids ?? [];
         var requested = confirming
-            .Select(uid => (Uid: uid, Permission: TopologyV30.Enums.Types.ParticipantPermission.Confirmation))
-            .Concat(observing.Select(uid => (Uid: uid, Permission: TopologyV30.Enums.Types.ParticipantPermission.Observation)))
+            .Select(uid => (Uid: uid, Permission: ParticipantPermission.Confirmation))
+            .Concat(observing.Select(uid => (Uid: uid, Permission: ParticipantPermission.Observation)))
             .ToDictionary(participant => participant.Uid, participant => participant.Permission, StringComparer.Ordinal);
 
         RequireEachHostedOnce(mapping.Participants);
@@ -230,14 +298,11 @@ internal static class ExternalPartyTopologyVerifier
         }
     }
 
-    private static void RequireEachHostedOnce(IEnumerable<TopologyV30.PartyToParticipant.Types.HostingParticipant> participants)
+    private static void RequireEachHostedOnce(IReadOnlyList<HostingParticipant> participants)
     {
         foreach (var participant in participants)
         {
-            if (participant.Onboarding is not null)
-            {
-                throw Mismatch($"participant {participant.ParticipantUid} is marked as onboarding the party.");
-            }
+            RequireActive(participant);
         }
 
         var repeated = participants
@@ -249,9 +314,25 @@ internal static class ExternalPartyTopologyVerifier
         }
     }
 
+    private static void RequireActive(HostingParticipant participant)
+    {
+        switch (participant.State)
+        {
+            case HostingState.Active:
+                return;
+            case HostingState.Onboarding:
+                throw Mismatch($"participant {participant.ParticipantUid} is marked as onboarding the party.");
+            case HostingState.Nominated or HostingState.Freezing:
+                throw Mismatch(
+                    $"participant {participant.ParticipantUid} is {participant.State}, so it does not host the party yet.");
+            default:
+                throw Mismatch($"participant {participant.ParticipantUid} carries no hosting state.");
+        }
+    }
+
     private static void RequireGeneratingParticipant(
-        IReadOnlyCollection<TopologyV30.PartyToParticipant.Types.HostingParticipant> participants,
-        Dictionary<string, TopologyV30.Enums.Types.ParticipantPermission> requested,
+        IReadOnlyList<HostingParticipant> participants,
+        Dictionary<string, ParticipantPermission> requested,
         bool observationOnly)
     {
         var unrequested = participants.Where(participant => !requested.ContainsKey(participant.ParticipantUid)).ToList();
@@ -265,8 +346,8 @@ internal static class ExternalPartyTopologyVerifier
 
         var generating = unrequested[0];
         var permission = observationOnly
-            ? TopologyV30.Enums.Types.ParticipantPermission.Observation
-            : TopologyV30.Enums.Types.ParticipantPermission.Confirmation;
+            ? ParticipantPermission.Observation
+            : ParticipantPermission.Confirmation;
         if (generating.Permission != permission)
         {
             throw Mismatch(
@@ -287,4 +368,12 @@ internal static class ExternalPartyTopologyVerifier
     }
 
     private static MalformedResponseException Mismatch(string detail) => new(detail);
+
+    private sealed record PartyToParticipantMapping(
+        string Party,
+        uint Threshold,
+        IReadOnlyList<HostingParticipant> Participants,
+        Crypto.SigningKeysWithThreshold? PartySigningKeys);
+
+    private sealed record HostingParticipant(string ParticipantUid, ParticipantPermission Permission, HostingState State);
 }

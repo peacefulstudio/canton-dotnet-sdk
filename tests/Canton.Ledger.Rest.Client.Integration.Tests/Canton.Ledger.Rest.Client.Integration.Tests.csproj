@@ -18,6 +18,8 @@
     <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
     <ProjectReference Include="..\..\src\Canton.Ledger.Rest.Client\Canton.Ledger.Rest.Client.csproj" />
     <ProjectReference Include="..\Canton.Ledger.Testing.Localnet\Canton.Ledger.Testing.Localnet.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Testing.Helpers\Canton.Ledger.Testing.Helpers.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Testing.LiveConformance\Canton.Ledger.Testing.LiveConformance.csproj" />
   </ItemGroup>
 
   <ItemGroup>

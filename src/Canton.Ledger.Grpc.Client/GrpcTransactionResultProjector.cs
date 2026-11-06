@@ -98,6 +98,7 @@ internal static class GrpcTransactionResultProjector
         {
             InterfaceIds = ToInterfaceIds(created),
             PackageName = created.PackageName,
+            NodeId = created.NodeId,
         };
     }
 
@@ -171,6 +172,8 @@ internal static class GrpcTransactionResultProjector
             LedgerWireConversions.ToPartyList(exercised.WitnessParties))
         {
             PackageName = exercised.PackageName,
+            NodeId = exercised.NodeId,
+            LastDescendantNodeId = exercised.LastDescendantNodeId,
         };
     }
 }

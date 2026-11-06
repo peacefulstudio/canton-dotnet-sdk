@@ -29,25 +29,25 @@ namespace Daml.Codegen.Testing.Conformance.ContractKeys;
 /// materialize as concrete <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IStewardship : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView>, global::Daml.Runtime.Contracts.IHasChoices<IStewardship>
+public interface IStewardship : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView>, global::Daml.Runtime.Contracts.IHasChoices<IStewardship>, global::Daml.Runtime.Contracts.IArchivable<IStewardship>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2", "ContractKeys", "Stewardship");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337", "ContractKeys", "Stewardship");
 
     /// <summary>Gets the package ID.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337";
 
     /// <summary>Gets the package name.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "contractkeys-hcc6e8a4f16d9";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "contractkeys-h5e25b75e405b";
 
     /// <summary>Gets the package version.</summary>
     static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("2bf1bcfec97eb3d0466d5fc85bc58d65c7854a5d4e9d5b88401d9c33833d86e2", "ContractKeys", "Stewardship"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "contractkeys-hcc6e8a4f16d9");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("111f6672984fc59edda613fad3fab08a4c25815181d6843312a5c5b46225c337", "ContractKeys", "Stewardship"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "contractkeys-h5e25b75e405b");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static global::Daml.Runtime.Contracts.ViewDescriptor<IStewardship, global::Daml.Codegen.Testing.Conformance.ContractKeys.StewardshipView> View { get; } = new();
@@ -59,7 +59,7 @@ public interface IStewardship : global::Daml.Runtime.Contracts.IDamlInterface, g
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<IStewardship, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<IStewardship, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -90,6 +90,9 @@ public interface IStewardship : global::Daml.Runtime.Contracts.IDamlInterface, g
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IStewardship>.Choices { get; } = [ChoiceArchive, ChoiceDescribeCharter];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<IStewardship, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<IStewardship>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -117,7 +120,7 @@ public static class IStewardshipExtensions
         this global::Daml.Runtime.Contracts.ContractId<IStewardship> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<IStewardship>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IStewardship>(contractId, IStewardship.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

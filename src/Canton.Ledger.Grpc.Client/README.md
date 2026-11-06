@@ -5,14 +5,14 @@ High-level gRPC client for the Canton Ledger API with integration to `Daml.Runti
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Grpc.Client --version 0.7.1
+dotnet add package Canton.Ledger.Grpc.Client --version 0.8.0
 ```
 
 ## Key Types
 
 | Type | Purpose |
 |------|---------|
-| `ICantonLedgerClient` (from `Canton.Ledger.Abstractions`) | **The type to resolve from the container.** Everything on `ILedgerClient` plus the Canton-only participant operations: `SubmitAsync`, `SubmitReassignmentAsync`, `TrySubmitAndWaitForReassignmentAsync`, `TrySubmitAndWaitForTransactionTreeAsync`, `CompletionStreamAsync`, `GetConnectedSynchronizersAsync`, `GetLedgerApiVersionAsync`, `GetUpdateByOffsetAsync`, `GetUpdateByIdAsync`, `GetDisclosureAsync<T>`, `EstimateTrafficCostAsync`, and typed interface-view queries via `QueryActiveAsync<TInterface, TView>` |
+| `ICantonLedgerClient` (from `Canton.Ledger.Abstractions`) | **The type to resolve from the container.** Everything on `ILedgerClient` plus the Canton-only participant operations: `SubmitAsync`, `SubmitReassignmentAsync`, `TrySubmitAndWaitForReassignmentAsync`, `TrySubmitAndWaitForTransactionTreeAsync`, `CompletionStreamAsync`, `GetConnectedSynchronizersAsync`, `GetLedgerApiVersionAsync`, `GetUpdateByOffsetAsync`, `GetUpdateByIdAsync`, `GetDisclosureAsync<T>`, `EstimateTrafficCostAsync`, and typed interface-view queries via `QueryActiveAsync<TInterface, TView>` and `GetEventsByContractIdAsync<TInterface, TView>` |
 | `ILedgerClient` (from `Daml.Ledger.Abstractions`) | Command operations: `TryCreateAsync`, `TryExerciseAsync`, `SubmitAndWaitAsync`, `TrySubmitAndWaitForTransactionAsync`, `SubscribeAsync`, `SubscribeActiveAsync`, `GetLedgerEndAsync` |
 | `Daml.Ledger.Abstractions.Extensions` | Convenience extension methods on the client interfaces: `ThrowingExercise.ExerciseAsync` (wraps `TryExerciseAsync`, throws on non-`One` outcomes), `CreateByExercise` (`TryCreateOneByExerciseAsync`, `TryCreateManyByExerciseAsync` and their throwing forms), `SingleCommandExtensions.TrySubmitSingleAsync`, `StreamerSnapshot.SnapshotAsync` |
 | `LedgerClient` (concrete, gRPC) | The implementation `AddLedgerClient` registers behind `ICantonLedgerClient` — resolve the interface rather than naming this type. Its raw-stub escape hatch is reached through `IGrpcCallInvokerFactory`, and its `ActivitySource` name through `LedgerActivitySourceNames.GrpcLedgerClient` |

@@ -634,6 +634,19 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
     }
 
     [Fact]
+    public async Task GetActiveContractsPageAsync_asks_for_incomplete_reassignments()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(
+            HttpStatusCode.OK, """{"activeContracts": [], "activeAtOffset": "30"}""");
+
+        await ClientWith(transport).GetActiveContractsPageAsync<TypedReadTemplate>(
+            Submitter, activeAtOffset: LedgerOffset.At(30), cancellationToken: TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(transport.LastRequestBody!);
+        body.RootElement.GetProperty("includeIncompleteReassignments").GetRawText().Should().Be("true");
+    }
+
+    [Fact]
     public async Task GetActiveContractsPageAsync_Created_entry_carries_a_Disclosure_built_from_the_created_event_blob()
     {
         var createdWithBlob = CreatedEventJson.Replace("\"nodeId\": 0,", "\"nodeId\": 0, \"createdEventBlob\": \"CgsM\",");

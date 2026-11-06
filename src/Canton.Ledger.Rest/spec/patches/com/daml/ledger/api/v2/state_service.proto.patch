@@ -1,19 +1,20 @@
 --- a/com/daml/ledger/api/v2/state_service.proto
 +++ b/com/daml/ledger/api/v2/state_service.proto
-@@ -9,7 +9,9 @@
+@@ -9,8 +9,10 @@
  import "com/daml/ledger/api/v2/offset_checkpoint.proto";
  import "com/daml/ledger/api/v2/reassignment.proto";
  import "com/daml/ledger/api/v2/transaction_filter.proto";
 +import "google/api/annotations.proto";
+ import "google/protobuf/timestamp.proto";
  
 +option go_package = "github.com/digital-asset/canton/go/ledger/api/v2;ledgerapiv2";
  option csharp_namespace = "Com.Daml.Ledger.Api.V2";
  option java_outer_classname = "StateServiceOuterClass";
  option java_package = "com.daml.ledger.api.v2";
-@@ -21,24 +23,46 @@
-   // the client SHOULD begin streaming updates from the update service,
-   // starting at the GetActiveContractsRequest.active_at_offset specified in this request.
-   // Clients SHOULD NOT assume that the set of active contracts they receive reflects the state at the ledger end.
+@@ -26,24 +28,46 @@
+   // the snapshot may fail with "FAILED_PRECONDITION/PARTICIPANT_PRUNED_DATA_ACCESSED".
+   // Note that it is ok to request acs snapshots for party migration with offsets other than ledger end, because party
+   // migration is not concerned with incomplete (un)assignments.
 -  rpc GetActiveContracts(GetActiveContractsRequest) returns (stream GetActiveContractsResponse);
 +  rpc GetActiveContracts(GetActiveContractsRequest) returns (stream GetActiveContractsResponse) {
 +    option (google.api.http) = {
@@ -59,10 +60,23 @@
 +      get: "/v2/state/latest-pruned-offsets"
 +    };
 +  }
+ 
+   // Translate syncrhonizer record time to an offset
+   // If the requested record time is earlier that the earliest record time known for the given synchronizer
+@@ -52,7 +76,11 @@
+   // If the requested record time is after the latest record time observed for this synchronizer, the request fails with
+   // RECORD_TIME_NOT_OBSERVED_YET error code. This may be transitional condition until participant node catches up with most recent synchronizer updates.
+   // In such case the caller may retry this request.
+-  rpc ConvertRecordTimeToOffset(ConvertRecordTimeToOffsetRequest) returns (ConvertRecordTimeToOffsetResponse);
++  rpc ConvertRecordTimeToOffset(ConvertRecordTimeToOffsetRequest) returns (ConvertRecordTimeToOffsetResponse) {
++    option (google.api.http) = {
++      get: "/v2/state/convert-record-time-to-offset"
++    };
++  }
  }
  
- // If the given offset is different than the ledger end, and there are (un)assignments in-flight at the given offset,
-@@ -135,25 +159,8 @@
+ message GetActiveContractsRequest {
+@@ -160,25 +188,8 @@
    // ``TransactionFilter`` in the query.
    //
    // Required
@@ -89,7 +103,7 @@
    // Opaque representation of a continuation token which can be used in the request to bypass the already processed part
    // of the active contracts snapshot.
    // Only populated for the streaming ``GetActiveContracts`` rpc call.
-@@ -180,6 +187,28 @@
+@@ -205,6 +216,28 @@
    optional bytes next_page_token = 3;
  }
  
@@ -118,7 +132,7 @@
  message ActiveContract {
    // The event as it appeared in the context of its last update (i.e. daml transaction or
    // reassignment). In particular, the last offset, node_id pair is preserved.
-@@ -291,7 +320,7 @@
+@@ -316,7 +349,7 @@
    // If the request includes a synchronizer that participant was never connected to, it will be omitted in the output.
    //
    // Optional: can be empty
@@ -127,3 +141,19 @@
  }
  
  message GetLedgerEndResponse {
+@@ -361,13 +394,13 @@
+ message ConvertRecordTimeToOffsetRequest {
+   // The record time to be converted to an offset
+   // Required
+-  google.protobuf.Timestamp record_time = 1;
++  google.protobuf.Timestamp record_time = 1 [json_name = "record-time"];
+ 
+   // The ID of the synchronizer
+   // Must be a synchronizer from which the participant had received at least one update ever.
+   //
+   // Required
+-  string synchronizer_id = 2;
++  string synchronizer_id = 2 [json_name = "synchronizer-id"];
+ }
+ 
+ message ConvertRecordTimeToOffsetResponse {

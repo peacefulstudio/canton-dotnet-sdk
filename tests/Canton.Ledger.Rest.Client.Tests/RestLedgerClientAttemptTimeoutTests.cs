@@ -19,14 +19,18 @@ public sealed class RestLedgerClientAttemptTimeoutTests
 
     private sealed class HangingEndpoint : HttpMessageHandler
     {
+        private readonly TaskCompletionSource _attemptObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _attempts;
 
         public int Attempts => Volatile.Read(ref _attempts);
+
+        public Task AttemptObserved => _attemptObserved.Task;
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _attempts);
+            _attemptObserved.TrySetResult();
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             throw new InvalidOperationException("A hanging endpoint never answers.");
         }
@@ -90,11 +94,13 @@ public sealed class RestLedgerClientAttemptTimeoutTests
         var endpoint = new HangingEndpoint();
         using var provider = ClientOver(endpoint, maxRetryAttempts: 2);
         var client = provider.GetRequiredService<ICantonLedgerClient>();
-        using var caller = new CancellationTokenSource(AttemptTimeout);
+        using var caller = new CancellationTokenSource();
 
-        var act = () => client.GetLedgerEndAsync(TimeSpan.FromMinutes(5), caller.Token);
+        var call = client.GetLedgerEndAsync(TimeSpan.FromMinutes(5), caller.Token);
+        await endpoint.AttemptObserved.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        await caller.CancelAsync();
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await call.Invoking(pending => pending).Should().ThrowAsync<OperationCanceledException>();
         endpoint.Attempts.Should().Be(1);
     }
 

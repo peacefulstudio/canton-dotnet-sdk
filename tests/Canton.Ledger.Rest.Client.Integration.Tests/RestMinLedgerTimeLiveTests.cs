@@ -76,6 +76,7 @@ public class RestMinLedgerTimeLiveTests
     }
 
     [Fact]
+    [Trait("Retires", nameof(WireDurationSites))]
     public async Task A_relative_minimum_ledger_time_binds_only_when_it_is_sent_as_the_served_Duration_object()
     {
         await using var lane = await RestLiveLane.OpenAsync(TestContext.Current.CancellationToken);

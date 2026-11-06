@@ -12,7 +12,7 @@ namespace Daml.Codegen.Testing.Conformance.Tests;
 
 public class MarkerTests
 {
-    private const string PackageHash = "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
+    private const string PackageHash = "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c";
 
     [Fact]
     public void ToRecord_then_from_record_round_trips_the_owner()
@@ -36,7 +36,7 @@ public class MarkerTests
     public void Marker_package_metadata_matches_the_corpus_dar()
     {
         Marker.PackageId.Should().Be(PackageHash);
-        Marker.PackageName.Should().Be("richtypes-h25b56c547fd1");
+        Marker.PackageName.Should().Be("richtypes-h07285b495f9e");
         Marker.PackageVersion.Should().Be(new Version(0, 0, 1));
     }
 
@@ -81,6 +81,6 @@ public class MarkerTests
         var command = new ContractId<Marker>("marker-cid").MintCommand(new Marker.Mint(12.5m));
 
         command.Choice.Should().Be(new ChoiceName("Mint"));
-        command.PackageName.Should().Be("richtypes-h25b56c547fd1");
+        command.PackageName.Should().Be("richtypes-h07285b495f9e");
     }
 }

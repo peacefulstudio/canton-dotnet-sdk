@@ -30,7 +30,7 @@ public class TryPairAsyncTests
             ActingParties: [Patron],
             WitnessParties: [Patron])
         {
-            PackageName = "richtypes-h25b56c547fd1",
+            PackageName = "richtypes-h07285b495f9e",
         };
 
     private static FakeLedgerClient ClientCommitting(ExercisedEvent exercised) =>

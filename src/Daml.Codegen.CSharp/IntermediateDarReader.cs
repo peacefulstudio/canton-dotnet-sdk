@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Daml.Codegen.Intermediate.Model;
 using PbBuiltin = Daml.Codegen.Intermediate.BuiltinType;
 using PbChoice = Daml.Codegen.Intermediate.Choice;
+using PbConstant = Daml.Codegen.Intermediate.Constant;
 using PbDar = Daml.Codegen.Intermediate.IntermediateDar;
 using PbDataType = Daml.Codegen.Intermediate.DataType;
 using PbField = Daml.Codegen.Intermediate.Field;
@@ -43,6 +44,9 @@ public static partial class IntermediateDarReader
 {
     [GeneratedRegex(@"\A[A-Za-z_$][A-Za-z0-9_$]*\z")]
     private static partial Regex IdentifierGrammar();
+
+    [GeneratedRegex(@"\A-?[0-9]+(\.[0-9]+)?\z")]
+    private static partial Regex PlainDecimalGrammar();
 
     [GeneratedRegex(@"\A(?=[._-]*[A-Za-z0-9])[A-Za-z0-9._-]+\z")]
     private static partial Regex PackageCoordinateGrammar();
@@ -153,7 +157,37 @@ public static partial class IntermediateDarReader
             Templates = templates,
             DataTypes = dataTypes,
             Interfaces = interfaces,
+            Constants = module.Constants.Select(ConvertConstant).ToList(),
         };
+    }
+
+    private static DamlConstant ConvertConstant(PbConstant constant)
+    {
+        var name = RequireIdentifier(constant.Name, "constant name");
+        DamlConstantValue value = constant.LiteralCase switch
+        {
+            PbConstant.LiteralOneofCase.TextValue => new DamlTextConstantValue(constant.TextValue),
+            PbConstant.LiteralOneofCase.Int64Value => new DamlInt64ConstantValue(constant.Int64Value),
+            PbConstant.LiteralOneofCase.BoolValue => new DamlBoolConstantValue(constant.BoolValue),
+            PbConstant.LiteralOneofCase.NumericValue => new DamlNumericConstantValue(
+                RequirePlainDecimal(constant.NumericValue, name)),
+            _ => throw new InvalidDataException(
+                $"IntermediateDar constant '{name}' carries no literal; a constant must hold exactly one of " +
+                "text, int64, bool or numeric."),
+        };
+        return new DamlConstant(name, value);
+    }
+
+    private static string RequirePlainDecimal(string value, string constantName)
+    {
+        if (!PlainDecimalGrammar().IsMatch(value))
+        {
+            throw new InvalidDataException(
+                $"IntermediateDar numeric constant '{constantName}' value '{value}' is not in plain decimal " +
+                "notation (optional '-', integer digits, optional '.' and fraction digits). Other spellings are " +
+                "rejected because the emitter interpolates the value into generated C# source.");
+        }
+        return value;
     }
 
     private static DamlDataType ConvertDataType(PbDataType dt)

@@ -12,11 +12,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions.Testing.Conformance\Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Codegen.Testing.Conformance\Daml.Codegen.Testing.Conformance.csproj" />
     <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
   </ItemGroup>
 

@@ -144,6 +144,63 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
     private IEnumerable<EmittedDeclarationFile> GenerateModule(DarCrossPackageResolver resolver, PackageEmitContext context)
     {
+        var typeFiles = GenerateModuleTypes(resolver, context).ToList();
+        foreach (var typeFile in typeFiles)
+        {
+            yield return typeFile;
+        }
+
+        if (GenerateConstants(context, typeFiles) is { } constantsFile)
+        {
+            yield return constantsFile;
+        }
+    }
+
+    private EmittedDeclarationFile? GenerateConstants(PackageEmitContext context, IReadOnlyList<EmittedDeclarationFile> typeFiles)
+    {
+        var module = context.Module;
+        var rendered = new List<RenderedConstant>();
+        foreach (var constant in module.Constants
+            .Where(constant => IsIncludedByRootFilter(module.Name, constant.Name))
+            .OrderBy(constant => constant.Name, StringComparer.Ordinal))
+        {
+            if (ConstantsEmitter.Render(constant) is { } renderedConstant)
+            {
+                rendered.Add(renderedConstant);
+            }
+            else
+            {
+                LogSkippingNumericConstant(_log, module.Name, constant.Name, ((DamlNumericConstantValue)constant.Value).Value);
+            }
+        }
+
+        if (rendered.Count == 0)
+        {
+            return null;
+        }
+
+        var className = ConstantsEmitter.ClassName(NamesTakenInNamespaceOf(context, typeFiles));
+        var code = EmitFile(context.Namespace, indent => ConstantsEmitter.WriteClass(indent, options, module.Name, className, rendered));
+        return new EmittedDeclarationFile("constants", className, GeneratedFile.Text(RelativeFilePath(context.Namespace, $"{className}.cs"), code));
+    }
+
+    private static HashSet<string> NamesTakenInNamespaceOf(PackageEmitContext context, IReadOnlyList<EmittedDeclarationFile> typeFiles)
+    {
+        var taken = new HashSet<string>(context.NameTable.TopLevelTypeNames(context.Module.Name), StringComparer.Ordinal);
+        taken.UnionWith(EmittedTypeNameClashes.TopLevelTypeNamesOf(typeFiles));
+        var childNamespacePrefix = context.Namespace + ".";
+        foreach (var moduleNamespace in context.NameTable.ModuleNamespaces.Values)
+        {
+            if (moduleNamespace.StartsWith(childNamespacePrefix, StringComparison.Ordinal))
+            {
+                taken.Add(moduleNamespace[childNamespacePrefix.Length..].Split('.')[0]);
+            }
+        }
+        return taken;
+    }
+
+    private IEnumerable<EmittedDeclarationFile> GenerateModuleTypes(DarCrossPackageResolver resolver, PackageEmitContext context)
+    {
         var package = context.Package;
         var module = context.Module;
         var moduleNamespace = context.Namespace;
@@ -335,4 +392,10 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
     [LoggerMessage(EventId = 1003, Level = LogLevel.Debug, Message = "Skipping interface {ModuleName}:{InterfaceName} (filtered)")]
     private static partial void LogSkippingInterface(ILogger logger, string moduleName, string interfaceName);
+
+    [LoggerMessage(
+        EventId = 1004,
+        Level = LogLevel.Information,
+        Message = "Skipping Daml value {ModuleName}:{ConstantName} = {Literal}: its Numeric literal is not exactly representable as a C# decimal (at most 28 fraction digits and an unscaled value below 2^96).")]
+    private static partial void LogSkippingNumericConstant(ILogger logger, string moduleName, string constantName, string literal);
 }

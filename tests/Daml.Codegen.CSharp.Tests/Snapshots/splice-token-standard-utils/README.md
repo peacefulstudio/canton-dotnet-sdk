@@ -4,29 +4,20 @@
 (the `IntermediateDar` proto for this package) and asserts byte-equal output
 against the `expected/` tree.
 
-This package emits no C# types, so its snapshot is pinned by the
-`emits-no-types` marker file in this directory: the drift test asserts that
-codegen produces zero `.cs` output, and the publish-time guard reads the same
-marker before accepting an empty generated tree. The day the package starts
-emitting a type, both fail, so the change is caught rather than shipped
-unnoticed.
+This package emits no data types, only a `Constants` class holding the two Text values the
+helper library defines as literals, so the `expected/` tree pins exactly that file.
 
 ## Why this DAR
 
 The Token Standard V2 helper library — a non-`vN` package (version 2.0.0). It
 is a library of Daml functions and re-exports of types that are owned by the V2
-API packages, so it defines no serializable data types of its own and the C#
-codegen emits nothing for it. Pinning it as an `emits-no-types` snapshot puts
-that fact under drift detection: if a future Splice release adds a
-codegen-visible type to the library, or an emitter change starts emitting one,
-the drift test flags it instead of letting the new surface ship unnoticed.
-
-## The `emits-no-types` marker
-
-The `emits-no-types` file in this directory marks the snapshot as expecting
-zero generated `.cs`. When a package legitimately gains a codegen-visible type,
-remove the marker and refresh the `expected/` snapshot so it pins the emitted
-types instead.
+API packages, so it defines no serializable data types of its own. Its only
+codegen-visible surface is the literal top-level values of
+`Splice.TokenStandard.Utils.Internal.Conversions`, which the C# codegen emits as
+`public const` fields. Pinning it puts that surface under drift detection: if a
+future Splice release adds a type or a literal value to the library, or an
+emitter change alters what is emitted, the drift test flags it instead of
+letting the new surface ship unnoticed.
 
 ## Refreshing the snapshot
 

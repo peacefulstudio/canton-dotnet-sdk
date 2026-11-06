@@ -319,9 +319,9 @@ public class ExerciseOutcomeTests
     public void InfraError_carries_a_category_determined_without_a_structured_error()
     {
         var outcome = new ExerciseOutcome<TransactionResult>.InfraError(
-            new TransportStatus.Grpc(GrpcStatusCode.PermissionDenied), "permission denied", DamlErrorCategory.AuthorizationChecksFailed);
+            new TransportStatus.Grpc(GrpcStatusCode.PermissionDenied), "permission denied", DamlErrorCategory.InsufficientPermission);
 
-        outcome.Category.Should().Be(DamlErrorCategory.AuthorizationChecksFailed);
+        outcome.Category.Should().Be(DamlErrorCategory.InsufficientPermission);
         outcome.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.PermissionDenied));
         outcome.SourceException.Should().BeNull();
     }

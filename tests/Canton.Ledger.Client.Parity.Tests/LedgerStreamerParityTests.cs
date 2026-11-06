@@ -242,6 +242,25 @@ public abstract class LedgerStreamerParityTests
     }
 
     [Fact]
+    public async Task GetEventsByContractIdAsync_returns_the_IHolding_view_of_the_created_Asset_and_no_archival()
+    {
+        await using var lane = await OpenStreamerAsync(TestContext.Current.CancellationToken);
+        var (_, writer, client, owner) = lane.Capability;
+
+        var assetCid = await CreateAssetAsync(writer, owner);
+        var lifecycle = await client.GetEventsByContractIdAsync<IHolding, HoldingView>(
+            new ContractId<IHolding>(assetCid.Value),
+            (SubmitterInfo)owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        lifecycle.Created.Should().NotBeNull();
+        lifecycle.Created!.ContractId.Value.Should().Be(assetCid.Value);
+        lifecycle.Created.Payload.Amount.Should().Be(AssetAmount);
+        lifecycle.Created.WitnessParties.Select(party => party.Value).Should().Contain(owner.Value);
+        lifecycle.Archived.Should().BeNull();
+    }
+
+    [Fact]
     public async Task SubscribeActiveAsync_asked_for_the_created_event_blob_returns_the_created_Marker_ready_for_disclosure()
     {
         Assert.SkipUnless(
@@ -333,7 +352,7 @@ public abstract class LedgerStreamerParityTests
         using (await lane.HoldStreamAsync(TestContext.Current.CancellationToken))
         {
             holdings = await client.QueryActiveAsync<IHolding, HoldingView>(
-                owner, ledgerEnd, includeDisclosure: true, TestContext.Current.CancellationToken);
+                owner, ledgerEnd, includeDisclosure: true, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         var disclosure = holdings.Should().ContainSingle(holding => holding.Contract.Id.Value == assetCid.Value)

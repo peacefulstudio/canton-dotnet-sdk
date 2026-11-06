@@ -15,7 +15,9 @@ namespace Daml.Runtime.Streams;
 /// <summary>
 /// One entry in an active-contract-set snapshot. The snapshot yields
 /// <see cref="Created"/> rows and an <see cref="Unclassified"/> row for anything the
-/// projector cannot classify, then ends with a single terminal
+/// projector cannot classify — among it the <see cref="UnclassifiedKind.UnassignedEvent"/> row
+/// that follows the <see cref="Created"/> row of a contract unassigned and not yet assigned, which
+/// the snapshot includes — then ends with a single terminal
 /// <see cref="Checkpoint"/> — emitted even when the snapshot is empty — or, when the
 /// transport faults mid-snapshot, a terminal <see cref="StreamError"/> in place of that
 /// <see cref="Checkpoint"/>.

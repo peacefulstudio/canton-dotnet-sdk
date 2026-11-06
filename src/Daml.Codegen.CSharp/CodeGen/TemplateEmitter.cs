@@ -82,6 +82,8 @@ internal sealed partial class TemplateEmitter(
         if (keyWitness is not null)
             interfacesList.Add(keyWitness.FacetType);
         interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IHasChoices)}<{className}>");
+        if (choiceEmitter.DeclaresArchive(template.Choices))
+            interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IArchivable)}<{className}>");
         interfacesList.Add($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.IDamlRecord)}<{className}>");
         var interfaces = string.Join(", ", interfacesList);
 
@@ -140,6 +142,7 @@ internal sealed partial class TemplateEmitter(
             explicitInterfaceOwner: choicesMemberNameIsTaken ? className : null);
 
         choiceEmitter.WriteChoiceByKeyCommandBuilders(indent, template, className);
+        choiceEmitter.WriteChoiceByKeyExercisers(indent, template, className, fields);
 
         indent.TrimTrailingBlankLine();
         indent.Dedent();

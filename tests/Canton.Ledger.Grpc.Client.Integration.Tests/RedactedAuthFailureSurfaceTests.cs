@@ -32,7 +32,6 @@ public class RedactedAuthFailureSurfaceTests
 
     private const string RefusedToken = "not-a-token-the-participant-issued";
     private const string UnauthenticatedUser = "redacted-auth-surface-user";
-    private const string OperationName = "SubmitAndWaitForTransaction";
 
     private static readonly Party Alice = new("party::alice");
 
@@ -72,7 +71,7 @@ public class RedactedAuthFailureSurfaceTests
             await client
                 .TrySubmitAndWaitForTransactionAsync(
                     Submission(), Submitter, cancellationToken: TestContext.Current.CancellationToken)
-                .OneOrThrowAsync(OperationName));
+                .OneOrThrowAsync());
 
         Assert.Equal(DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials, thrown.Category);
     }

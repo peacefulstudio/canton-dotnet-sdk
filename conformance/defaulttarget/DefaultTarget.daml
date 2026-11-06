@@ -1,6 +1,9 @@
 -- Copyright 2026 Peaceful Studio OÜ
 -- SPDX-License-Identifier: Apache-2.0
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module DefaultTarget where
+
+import DA.Date
 
 template Note
   with
@@ -9,3 +12,48 @@ template Note
     revision : Int
   where
     signatory owner
+
+greeting : Text
+greeting = "say \"hi\"\n\\ \233 \127881"
+
+retryLimit : Int
+retryLimit = 42
+
+negativeLimit : Int
+negativeLimit = -7
+
+maintenanceMode : Bool
+maintenanceMode = True
+
+disabled : Bool
+disabled = False
+
+feeRate : Numeric 10
+feeRate = 0.0025
+
+negativeFee : Numeric 10
+negativeFee = -1.5
+
+legacyDecimal : Decimal
+legacyDecimal = 3.14
+
+tinyRate : Numeric 37
+tinyRate = 0.0000000000000000000000000000000000001
+
+computed : Int
+computed = 6 * 7
+
+alias : Text
+alias = greeting
+
+phantom : forall a. Text
+phantom = "generic"
+
+unit' : ()
+unit' = ()
+
+someDate : Date
+someDate = date 2026 Nov 4
+
+name' : Text
+name' = "primed"

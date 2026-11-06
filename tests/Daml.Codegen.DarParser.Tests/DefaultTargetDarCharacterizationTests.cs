@@ -24,7 +24,7 @@ public sealed class DefaultTargetDarCharacterizationTests
     {
         var archive = await LoadAsync();
 
-        archive.MainPackage.Name.Should().Be("defaulttarget-h4f032a323aad");
+        archive.MainPackage.Name.Should().Be("defaulttarget-hb8eb5f9432d5");
         archive.MainPackage.Version.Should().Be(new Version(0, 0, 1));
         archive.MainPackage.LfVersion.Should().Be(
             LfVersionDamlcEmitsWhenNoTargetIsRequested,
@@ -52,6 +52,27 @@ public sealed class DefaultTargetDarCharacterizationTests
             .Should().Be(new DamlPrimitiveType(DamlPrimitive.Text));
         fields.Single(f => f.Name == "revision").Type
             .Should().Be(new DamlPrimitiveType(DamlPrimitive.Int64));
+    }
+
+    [Fact]
+    public async Task DefaultTargetDarCharacterization_only_the_single_literal_values_the_developer_wrote_are_read_as_constants()
+    {
+        var archive = await LoadAsync();
+
+        var constants = archive.MainPackage.Modules.Should().ContainSingle().Which.Constants;
+
+        constants.Should().Equal(
+            [
+                new DamlConstant("disabled", new DamlBoolConstantValue(false)),
+                new DamlConstant("feeRate", new DamlNumericConstantValue("0.0025000000")),
+                new DamlConstant("greeting", new DamlTextConstantValue("say \"hi\"\n\\ \u00E9 \uD83C\uDF89")),
+                new DamlConstant("legacyDecimal", new DamlNumericConstantValue("3.1400000000")),
+                new DamlConstant("maintenanceMode", new DamlBoolConstantValue(true)),
+                new DamlConstant("name$u0027", new DamlTextConstantValue("primed")),
+                new DamlConstant("negativeLimit", new DamlInt64ConstantValue(-7)),
+                new DamlConstant("retryLimit", new DamlInt64ConstantValue(42)),
+                new DamlConstant("tinyRate", new DamlNumericConstantValue("0.0000000000000000000000000000000000001")),
+            ]);
     }
 
     [Fact]

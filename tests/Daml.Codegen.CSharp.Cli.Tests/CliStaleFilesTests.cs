@@ -64,4 +64,49 @@ public class CliStaleFilesTests : IDisposable
         File.Exists(droppedFile[0]).Should().BeFalse("the dropped type's binding must not survive regeneration");
         Directory.GetFiles(output, "*.cs", SearchOption.AllDirectories).Should().HaveCount(keptFiles);
     }
+
+    [Fact]
+    public async Task CliStaleFiles_a_run_for_another_package_exits_1_naming_both_packages_and_touches_nothing()
+    {
+        var output = Path.Combine(_workspace, "out");
+        (await Program.Main(["--intermediate", FixtureIntermediate(), "-o", output])).Should().Be(0);
+        var filesBefore = Directory.GetFiles(output, "*", SearchOption.AllDirectories).Order().ToList();
+        var manifestBefore = File.ReadAllText(Path.Combine(output, ".codegen-manifest"));
+
+        var (exit, stderr) = await RunCapturingStdErr(() => Program.Main(
+            ["--intermediate", WriteIntermediateRenamedTo("another-package"), "-o", output]));
+
+        exit.Should().Be(1);
+        stderr.Should().Contain("already holds the generated output of package 'splice-api-token-holding-v1'");
+        stderr.Should().Contain("this run generates package 'another-package'");
+        stderr.Should().Contain("Give each DAR its own output directory.");
+        stderr.Should().Contain("If this directory holds an earlier build of the same project, run 'dotnet clean' or delete the directory.");
+        Directory.GetFiles(output, "*", SearchOption.AllDirectories).Order().Should().Equal(filesBefore);
+        File.ReadAllText(Path.Combine(output, ".codegen-manifest")).Should().Be(manifestBefore);
+    }
+
+    private string WriteIntermediateRenamedTo(string packageName)
+    {
+        var dar = IntermediateDar.Parser.ParseFrom(File.ReadAllBytes(FixtureIntermediate()));
+        dar.Main.PackageName = packageName;
+        var path = Path.Combine(_workspace, "renamed.binpb");
+        File.WriteAllBytes(path, dar.ToByteArray());
+        return path;
+    }
+
+    private static async Task<(int Exit, string StdErr)> RunCapturingStdErr(Func<Task<int>> run)
+    {
+        var originalError = Console.Error;
+        using var capture = new StringWriter();
+        Console.SetError(capture);
+        try
+        {
+            var exit = await run();
+            return (exit, capture.ToString());
+        }
+        finally
+        {
+            Console.SetError(originalError);
+        }
+    }
 }

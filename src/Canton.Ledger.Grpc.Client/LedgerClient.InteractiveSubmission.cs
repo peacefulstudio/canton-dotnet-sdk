@@ -47,14 +47,18 @@ internal sealed partial class LedgerClient
         CancellationToken cancellationToken = default)
     {
         var request = BuildExecuteSubmissionRequest(submission);
+        var commandId = PreparedTransactionCommandId.Of(request.PreparedTransaction);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.ExecuteSubmissionResponse>(
             LedgerCallKind.AcceptedOnlyWrite,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "ExecuteSubmission",
-            (headers, deadline, token) => _interactiveSubmissionService.ExecuteSubmissionAsync(
-                request, headers, deadline, token),
+            (headers, deadline, token) =>
+            {
+                ResponseReceipt.RecordCommandId(commandId);
+                return _interactiveSubmissionService.ExecuteSubmissionAsync(request, headers, deadline, token);
+            },
             cancellationToken,
             activity => activity?.SetTag(LedgerActivityTagNames.CantonSubmissionId, submission.SubmissionId),
             timeout,
@@ -68,14 +72,18 @@ internal sealed partial class LedgerClient
         CancellationToken cancellationToken = default)
     {
         var request = BuildExecuteSubmissionAndWaitRequest(submission);
+        var commandId = PreparedTransactionCommandId.Of(request.PreparedTransaction);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.ExecuteSubmissionAndWaitResponse, ExecutedSubmission>(
             LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "ExecuteSubmissionAndWait",
-            (headers, deadline, token) => _interactiveSubmissionService.ExecuteSubmissionAndWaitAsync(
-                request, headers, deadline, token),
+            (headers, deadline, token) =>
+            {
+                ResponseReceipt.RecordCommandId(commandId);
+                return _interactiveSubmissionService.ExecuteSubmissionAndWaitAsync(request, headers, deadline, token);
+            },
             response => new ExecutedSubmission(response.UpdateId, LedgerWireConversions.ToLedgerOffset(response.CompletionOffset)),
             cancellationToken,
             configureActivity: activity => activity?.SetTag(LedgerActivityTagNames.CantonSubmissionId, submission.SubmissionId),
@@ -91,14 +99,19 @@ internal sealed partial class LedgerClient
         CancellationToken cancellationToken = default)
     {
         var request = BuildExecuteSubmissionAndWaitForTransactionRequest(submission, submitter);
+        var commandId = PreparedTransactionCommandId.Of(request.PreparedTransaction);
 
         return _invoker.InvokeTracedAsync<LedgerClient, Interactive.ExecuteSubmissionAndWaitForTransactionResponse, TransactionResult>(
             LedgerCallKind.EffectAppliedWrite,
             LedgerCallInvoker.Source,
             Interactive.InteractiveSubmissionService.Descriptor,
             "ExecuteSubmissionAndWaitForTransaction",
-            (headers, deadline, token) => _interactiveSubmissionService.ExecuteSubmissionAndWaitForTransactionAsync(
-                request, headers, deadline, token),
+            (headers, deadline, token) =>
+            {
+                ResponseReceipt.RecordCommandId(commandId);
+                return _interactiveSubmissionService.ExecuteSubmissionAndWaitForTransactionAsync(
+                    request, headers, deadline, token);
+            },
             response => ProjectExecutedTransaction(response, submission.SubmissionId),
             cancellationToken,
             configureActivity: activity =>

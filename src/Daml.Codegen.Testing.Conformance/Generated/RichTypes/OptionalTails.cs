@@ -27,7 +27,7 @@ public sealed partial record OptionalTails(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("midNote")] string? MidNote,
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("inner")] global::Daml.Codegen.Testing.Conformance.RichTypes.TrailingNote Inner,
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("tailNote")] string? TailNote
-) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<OptionalTails>, global::Daml.Runtime.Data.IDamlRecord<OptionalTails>
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<OptionalTails>, global::Daml.Runtime.Contracts.IArchivable<OptionalTails>, global::Daml.Runtime.Data.IDamlRecord<OptionalTails>
 {
     /// <inheritdoc />
     public override int GetHashCode()
@@ -41,13 +41,13 @@ public sealed partial record OptionalTails(
     }
 
     /// <summary>Gets the template identifier.</summary>
-    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "OptionalTails");
+    public static global::Daml.Runtime.Data.Identifier TemplateId { get; } = new("3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c", "RichTypes", "OptionalTails");
 
     /// <summary>Gets the package ID.</summary>
-    public static string PackageId => "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
+    public static string PackageId => "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c";
 
     /// <summary>Gets the package name.</summary>
-    public static string PackageName => "richtypes-h25b56c547fd1";
+    public static string PackageName => "richtypes-h07285b495f9e";
 
     /// <summary>Gets the package version.</summary>
     public static global::System.Version PackageVersion { get; } = new(0, 0, 1);
@@ -141,11 +141,17 @@ public static class OptionalTailsSubmissionExtensions
     /// </summary>
     /// <param name="client">The ledger client.</param>
     /// <param name="payload">The contract payload.</param>
-    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
+    /// <param name="workflowId">Optional workflow id; passed through to the ledger when supplied. No default — workflow IDs are correlation keys, and a per-template default would bucket every create of the same template under one ID.</param>
+    /// <param name="commandId">Optional command id for deduplication; a fresh id is minted only when omitted. The id the submission was sent with, minted or supplied, is reported on the outcome's <c>CommandId</c>, including a failed one; look it up on the completion stream to learn whether the submission was accepted before deciding to retry.</param>
+    /// <param name="timeout">Optional per-attempt deadline, applied best-effort by the transport; transports without a server-side deadline apply a client-side bound only. The default <c>null</c> falls back to the client-wide <c>Timeout</c> option (30 seconds unless changed). An overrun surfaces as an <c>InfraError</c> outcome.</param>
+    /// <param name="configure">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It runs after <c>workflowId</c> and <c>commandId</c> are applied. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public static global::System.Threading.Tasks.Task<global::Daml.Runtime.Outcomes.ExerciseOutcome<global::Daml.Runtime.Contracts.ContractId<OptionalTails>>> TryCreateAsync(
         this global::Daml.Ledger.Abstractions.ILedgerWriter client,
         OptionalTails payload,
+        string? workflowId = null,
+        global::Daml.Runtime.Commands.CommandId? commandId = null,
+        global::System.TimeSpan? timeout = null,
         global::System.Func<global::Daml.Runtime.Commands.CommandsSubmission, global::Daml.Runtime.Commands.CommandsSubmission>? configure = null,
         global::System.Threading.CancellationToken cancellationToken = default)
     {
@@ -154,7 +160,7 @@ public static class OptionalTailsSubmissionExtensions
 
         global::Daml.Runtime.Commands.SubmitterInfo submitter = payload.Owner;
 
-        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<OptionalTails>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);
+        return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<OptionalTails>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);
     }
 }
 
@@ -178,7 +184,7 @@ public static class OptionalTailsNonContractExtensions
         return new global::Daml.Runtime.Commands.ExerciseCommand(
             global::Daml.Codegen.Testing.Conformance.RichTypes.OptionalTails.TemplateId,
             contractId,
-            new global::Daml.Runtime.Commands.ChoiceName("Archive"),
+            global::Daml.Codegen.Testing.Conformance.RichTypes.OptionalTails.ChoiceArchive.Name,
             global::Daml.Runtime.Data.DamlRecord.Create()) { PackageName = global::Daml.Codegen.Testing.Conformance.RichTypes.OptionalTails.PackageName };
     }
 

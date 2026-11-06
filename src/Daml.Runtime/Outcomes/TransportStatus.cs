@@ -19,9 +19,9 @@ namespace Daml.Runtime.Outcomes;
 ///   <item><see cref="Grpc"/> — the gRPC transport's own status for the call.</item>
 ///   <item><see cref="Http"/> — the HTTP status the participant actually answered with.</item>
 ///   <item><see cref="NoResponse"/> — no complete response. On REST, the connection failed or the deadline expired
-///   before the participant finished answering. On gRPC, only a call that was never sent because the bearer
-///   token could not be acquired; every other gRPC failure, a deadline overrun included, reports
-///   <see cref="Grpc"/> with the status code.</item>
+///   before the participant finished answering. On gRPC, a call that was never sent because the bearer
+///   token could not be acquired, or a snapshot read whose client-side timeout expired; every other gRPC
+///   failure, a deadline overrun included, reports <see cref="Grpc"/> with the status code.</item>
 ///   <item><see cref="UndecodableBody"/> — the participant answered, but the client could not
 ///   decode what it sent.</item>
 /// </list>
@@ -45,9 +45,10 @@ public abstract record TransportStatus
     /// <summary>
     /// The call got no complete response to report a status from. On the REST transport that is
     /// a connection failure, or a deadline expiring, before the participant finished answering —
-    /// including partway through reading the response body. On the gRPC transport it is only a
-    /// call that was never sent: the bearer token could not be acquired, so the request never
-    /// left the client and the commit state is <c>NotCommitted</c>. Every other gRPC failure, a
+    /// including partway through reading the response body. On the gRPC transport it is a
+    /// call that was never sent (the bearer token could not be acquired, so the request never
+    /// left the client) or a snapshot read whose client-side timeout expired; the commit state is
+    /// <c>NotCommitted</c> in both. Every other gRPC failure, a
     /// deadline overrun included, is <see cref="Grpc"/> with the status code, so branch on the
     /// error category and the commit state for an answer that holds on both transports.
     /// </summary>

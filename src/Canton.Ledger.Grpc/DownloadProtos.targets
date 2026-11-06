@@ -19,8 +19,8 @@
          When bumping CantonVersion or GoogleCommonProtosVersion, refresh all three in
          the same commit: curl -sL <jar-url> | shasum -a 256, cross-checked against
          <jar-url>.sha1 from Maven Central. -->
-    <LedgerApiProtoHash>7ec399a4cc2fcc565d24c80a0aa6c02d55e0b49d9fdf28fca12abcc683d17916</LedgerApiProtoHash>
-    <LedgerApiValueProtoHash>b14d19b85cb8250f5aca52d4cfd137fe75a58c7a795d7894406b62c91414d9d8</LedgerApiValueProtoHash>
+    <LedgerApiProtoHash>52586028ca71afc7dc456105b5255749fc25c5e8ae90d5444fb0aec0b3b3df90</LedgerApiProtoHash>
+    <LedgerApiValueProtoHash>05e5e53edb59b02aa1407453f9688dcf828ed9a98bbe99d405982bf3fc9a673d</LedgerApiValueProtoHash>
     <GoogleCommonProtosHash>31048b6ce4bf3e68776e3e7adb4c7a133964fa170c135fea0a9d4e09ea33b221</GoogleCommonProtosHash>
 
     <!-- Maven Central URLs -->

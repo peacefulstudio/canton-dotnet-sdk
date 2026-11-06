@@ -74,6 +74,6 @@ public class ExerciseByKeyCommandTests
     {
         var command = Account.CreditByKeyCommand(Key, new Account.Credit(7));
 
-        command.PackageName.Should().Be("contractkeys-hcc6e8a4f16d9");
+        command.PackageName.Should().Be("contractkeys-h5e25b75e405b");
     }
 }

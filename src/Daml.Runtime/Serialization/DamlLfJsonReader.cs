@@ -110,6 +110,52 @@ public static class DamlLfJsonReader
         }
     }
 
+    /// <summary>
+    /// Decodes an already-parsed LF-JSON object into the generated Daml record
+    /// <typeparamref name="T"/>: <c>T.FromRecord(ReadRecord&lt;T&gt;(json, limits))</c> in one call.
+    /// </summary>
+    /// <typeparam name="T">The generated Daml record type to decode into.</typeparam>
+    /// <param name="json">The LF-JSON object to decode.</param>
+    /// <param name="limits">
+    /// Decode limits; the shared hardened defaults apply when omitted. As with
+    /// <see cref="ReadRecord{T}(JsonElement, DamlJsonDeserializationLimits?)"/>,
+    /// <see cref="DamlJsonDeserializationLimits.MaxInputCharacters"/> is accepted and ignored here.
+    /// </param>
+    /// <returns>The decoded record.</returns>
+    /// <exception cref="JsonException">The JSON does not match the expected shape, or a decode limit is exceeded.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limits"/> is not a valid limit configuration.</exception>
+    /// <remarks>
+    /// Records only: a Daml variant has no static factory, so decode one with
+    /// <see cref="ReadVariant{T}(JsonElement, DamlJsonDeserializationLimits?)"/>.
+    /// JSON properties the target type does not declare are ignored by design, for tolerance of payloads produced by newer Daml package versions.
+    /// </remarks>
+    /// <seealso cref="ReadRecord{T}(JsonElement, DamlJsonDeserializationLimits?)"/>
+    public static T Read<T>(JsonElement json, DamlJsonDeserializationLimits? limits = null)
+        where T : IDamlRecord<T> =>
+        T.FromRecord(ReadRecord<T>(json, limits));
+
+    /// <summary>
+    /// Parses LF-JSON under the shared hardened document options and decodes it into the
+    /// generated Daml record <typeparamref name="T"/>:
+    /// <c>T.FromRecord(ReadRecord&lt;T&gt;(json, limits))</c> in one call.
+    /// </summary>
+    /// <typeparam name="T">The generated Daml record type to decode into.</typeparam>
+    /// <param name="json">The LF-JSON text to parse and decode.</param>
+    /// <param name="limits">Decode limits; the shared hardened defaults apply when omitted.</param>
+    /// <returns>The decoded record.</returns>
+    /// <exception cref="JsonException">The JSON is malformed, does not match the expected shape, or exceeds a limit.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limits"/> is not a valid limit configuration.</exception>
+    /// <remarks>
+    /// Records only: a Daml variant has no static factory, so decode one with
+    /// <see cref="ReadVariant{T}(string, DamlJsonDeserializationLimits?)"/>.
+    /// JSON properties the target type does not declare are ignored by design, for tolerance of payloads produced by newer Daml package versions.
+    /// </remarks>
+    /// <seealso cref="ReadRecord{T}(string, DamlJsonDeserializationLimits?)"/>
+    public static T Read<T>(string json, DamlJsonDeserializationLimits? limits = null)
+        where T : IDamlRecord<T> =>
+        T.FromRecord(ReadRecord<T>(json, limits));
+
     private static DamlLfJsonDecodeContext ParseRoot<T>(
         string json, DamlJsonDeserializationLimits? limits, out JsonDocument document)
     {

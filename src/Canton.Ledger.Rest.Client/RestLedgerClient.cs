@@ -117,6 +117,9 @@ internal sealed partial class RestLedgerClient
     /// </remarks>
     public bool SupportsUnboundedStreaming => true;
 
+    /// <inheritdoc />
+    public TimeProvider TimeProvider => _timeProvider;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RestLedgerClient"/> class with no configured
     /// user id; the participant derives it from the caller's access token.
@@ -712,7 +715,8 @@ internal sealed partial class RestLedgerClient
                 timeout,
                 cancellationToken)
             .ConfigureAwait(false);
-        return RestTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command);
+        return RestTransactionResultProjector.ProjectChoiceResult<TResult>(outcome, command)
+            .WithOperation(LedgerOperation.Of(command));
     }
 
     /// <inheritdoc />
@@ -755,7 +759,8 @@ internal sealed partial class RestLedgerClient
                 timeout,
                 cancellationToken)
             .ConfigureAwait(false);
-        return RestTransactionResultProjector.ProjectToContractId<TTemplate>(outcome);
+        return RestTransactionResultProjector.ProjectToContractId<TTemplate>(outcome)
+            .WithOperation(LedgerOperation.Creating(TTemplate.TemplateId));
     }
 
     /// <inheritdoc />
@@ -783,7 +788,8 @@ internal sealed partial class RestLedgerClient
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitPath, commands,
                 MissingSubmitAndWaitBodyMessage, MalformedSubmitAndWaitBodyPrefix, LedgerCallKind.EffectAppliedWrite,
-                CommandId: commands.CommandId),
+                CommandId: commands.CommandId,
+                CommandSpan: CommandSpanOf(submission)),
             body => ProjectSubmitAndWaitResult(commands, body),
             timeout,
             cancellationToken);
@@ -847,6 +853,9 @@ internal sealed partial class RestLedgerClient
             cancellationToken);
     }
 
+    private RestCommandSpan CommandSpanOf(RuntimeCommands.CommandsSubmission submission) =>
+        new(submission, _emitPartyAndContractSpanTags, _calls.MaxResponseBodyBytes);
+
     private static RuntimeCommands.SubmitterInfo? SubmitterFrom(RuntimeCommands.CommandsSubmission submission) =>
         submission.ActAs is { Count: > 0 } actAs
             ? new RuntimeCommands.SubmitterInfo(actAs.ToHashSet(), submission.ReadAs?.ToHashSet())
@@ -872,7 +881,8 @@ internal sealed partial class RestLedgerClient
             new RestCall(
                 HttpMethod.Post, SubmitAndWaitForTransactionPath, requestBody,
                 MissingTransactionMessage, MalformedTransactionPrefix, LedgerCallKind.EffectAppliedWrite,
-                CommandId: requestBody.Commands.CommandId),
+                CommandId: requestBody.Commands.CommandId,
+                CommandSpan: CommandSpanOf(submission)),
             body => body.Transaction is { } transaction
                 ? new ExerciseOutcome<TProjection>.One(project(transaction))
                 : new ExerciseOutcome<TProjection>.CommittedUndecodable(

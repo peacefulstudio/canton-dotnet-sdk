@@ -13,6 +13,7 @@ using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 using ProtoCreatedEvent = Com.Daml.Ledger.Api.V2.CreatedEvent;
@@ -68,13 +69,40 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
 
     public void Dispose() => _channel.Dispose();
 
-    private ICantonLedgerClient CreateClient() => new LedgerClient(
+    private ICantonLedgerClient CreateClient(TimeProvider? timeProvider = null) => new LedgerClient(
         _options,
         _channel,
         _commandService,
         _updateService,
         _stateService,
-        _tokenProvider);
+        _tokenProvider,
+        timeProvider: timeProvider);
+
+    [Fact]
+    public void TimeProvider_is_the_clock_the_client_was_built_with()
+    {
+        var clock = new FakeTimeProvider();
+
+        var client = CreateClient(clock);
+
+        ((ILedgerStreamer)client).TimeProvider.Should().BeSameAs(clock);
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_with_a_zero_timeout_reports_the_deadline_failure()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(MakeActiveContractWithView("00impl", amount: 1m));
+
+        var client = CreateClient(new FakeTimeProvider());
+        var querying = async () => await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, timeout: TimeSpan.Zero, cancellationToken: TestContext.Current.CancellationToken);
+
+        var thrown = (await querying.Should().ThrowAsync<LedgerOperationException>()).Which;
+        thrown.Category.Should().Be(DamlErrorCategory.DeadlineExceededRequestStateUnknown);
+        thrown.Status.Should().Be(new TransportStatus.NoResponse());
+        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+    }
 
     [Fact]
     public async Task QueryActiveAsync_decodes_the_participant_computed_interface_view_into_the_view_record()
@@ -146,6 +174,23 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
             ActAs, cancellationToken: TestContext.Current.CancellationToken);
 
         holdings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returns_an_empty_list_at_ledger_end_zero_without_calling_GetActiveContracts()
+    {
+        StubGetLedgerEnd(offset: 0L);
+
+        var client = CreateClient();
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Should().BeEmpty();
+        _stateService.DidNotReceive().GetActiveContracts(
+            Arg.Any<GetActiveContractsRequest>(),
+            Arg.Any<Metadata>(),
+            Arg.Any<DateTime?>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -230,6 +275,102 @@ public sealed class LedgerClientQueryActiveInterfaceTests : IDisposable
 
         await querying.Should().ThrowAsync<LedgerOperationException>()
             .WithMessage("*InterfaceViewUnavailable*");
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returning_unreadable_rows_lists_a_row_of_another_interface_beside_the_readable_rows()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(
+            MakeActiveContractWithView("00impl", amount: 1m),
+            MakeActiveContract("00unrelated", offset: 88L),
+            MakeActiveContractWithView("00impl2", amount: 2m, offset: 42L));
+
+        var client = CreateClient();
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, unreadableRows: UnreadableRows.Return, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Select(holding => holding.Contract.Id.Value).Should().Equal("00impl", "00impl2");
+        holdings.Unreadable.Should().HaveCount(1);
+        holdings.Unreadable[0].Offset.Should().Be(LedgerOffset.At(88));
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returning_unreadable_rows_lists_a_view_that_does_not_decode()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var entry = MakeActiveContractWithView("00impl", amount: 1m);
+        entry.ActiveContract.CreatedEvent.InterfaceViews[0].ViewValue = new ProtoRecord
+        {
+            Fields = { new RecordField { Label = "quantity", Value = new ProtoValue { Numeric = "1" } } },
+        };
+        StubGetActiveContracts(entry);
+
+        var client = CreateClient();
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, unreadableRows: UnreadableRows.Return, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Should().BeEmpty();
+        holdings.Unreadable.Should().Equal(new UnreadableRow(UnclassifiedKind.DecodeFailure, null, LedgerOffset.At(41)));
+    }
+
+    [Theory]
+    [InlineData(UnreadableRows.Fail)]
+    [InlineData(UnreadableRows.Return)]
+    public async Task QueryActiveAsync_returns_a_holding_whose_reassignment_is_in_flight_on_its_source_synchronizer(
+        UnreadableRows policy)
+    {
+        StubGetLedgerEnd(offset: 10L);
+        var moving = new GetActiveContractsResponse
+        {
+            IncompleteUnassigned = new IncompleteUnassigned
+            {
+                CreatedEvent = MakeActiveContractWithView("00moving", amount: 3m).ActiveContract.CreatedEvent,
+                UnassignedEvent = new UnassignedEvent
+                {
+                    ContractId = "00moving",
+                    Source = Synchronizer1,
+                    Target = Synchronizer2,
+                    Offset = 500L,
+                },
+            },
+        };
+        StubGetActiveContracts(MakeActiveContractWithView("00impl", amount: 1m), moving);
+
+        var client = CreateClient();
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, unreadableRows: policy, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Select(holding => holding.Contract.Id.Value).Should().Equal("00impl", "00moving");
+        holdings[1].Contract.View.Amount.Should().Be(3m);
+        holdings[1].SynchronizerId.Should().Be((SynchronizerId)Synchronizer1);
+        holdings.Unreadable.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task QueryActiveAsync_returns_a_holding_whose_assignment_is_in_flight_on_its_target_synchronizer()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(new GetActiveContractsResponse
+        {
+            IncompleteAssigned = new IncompleteAssigned
+            {
+                AssignedEvent = new AssignedEvent
+                {
+                    Source = Synchronizer1,
+                    Target = Synchronizer2,
+                    CreatedEvent = MakeActiveContractWithView("00arriving", amount: 4m).ActiveContract.CreatedEvent,
+                },
+            },
+        });
+
+        var client = CreateClient();
+        var holdings = await client.QueryActiveAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var arriving = holdings.Should().ContainSingle().Subject;
+        arriving.Contract.Id.Value.Should().Be("00arriving");
+        arriving.SynchronizerId.Should().Be((SynchronizerId)Synchronizer2);
     }
 
     private static GetActiveContractsResponse MakeActiveContract(

@@ -140,8 +140,8 @@ public sealed class VacuousStreamCheckConformanceTests
     [Fact]
     public async Task Tightened_checks_pass_against_the_seeded_shipped_fake_held_open_after_its_rows()
     {
-        var kit = new StreamBreakingKit(BrokenFamily.Template, StreamBreakage.HeldOpenUntilCancelled);
-        var interfaceKit = new StreamBreakingKit(BrokenFamily.Interface, StreamBreakage.HeldOpenUntilCancelled);
+        var kit = StreamBreakingKit.ExpectedToPass(BrokenFamily.Template, StreamBreakage.HeldOpenUntilCancelled);
+        var interfaceKit = StreamBreakingKit.ExpectedToPass(BrokenFamily.Interface, StreamBreakage.HeldOpenUntilCancelled);
         Func<Task>[] checks =
         [
             () => kit.Subscribing_from_an_offset_excludes_the_event_at_that_offset(),
@@ -162,13 +162,27 @@ public sealed class VacuousStreamCheckConformanceTests
         }
     }
 
+    [Fact]
+    public void Pass_path_kits_allow_ten_seconds_for_a_stream_read()
+    {
+        StreamBreakingKit.ExpectedToPass(BrokenFamily.Template, StreamBreakage.HeldOpenUntilCancelled)
+            .Budget.Should().Be(TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
+    public void Timeout_expecting_kits_allow_four_hundred_milliseconds_for_a_stream_read()
+    {
+        StreamBreakingKit.ExpectedToTimeOut(BrokenFamily.Template, StreamBreakage.BlockedAfterCheckingTheTokenOnce)
+            .Budget.Should().Be(TimeSpan.FromMilliseconds(400));
+    }
+
     private static async Task AssertFailsWith(
         BrokenFamily family,
         StreamBreakage breakage,
         Func<LedgerClientConformanceTests<ConformanceProbe>, Task> check,
         string expectedContract)
     {
-        var run = await Record.ExceptionAsync(() => check(new StreamBreakingKit(family, breakage)));
+        var run = await Record.ExceptionAsync(() => check(StreamBreakingKit.ExpectedToPass(family, breakage)));
 
         run.Should().NotBeNull("a client with this fault must fail the check, not satisfy it vacuously");
         run!.Message.Should().Contain(expectedContract);
@@ -182,7 +196,7 @@ public sealed class VacuousStreamCheckConformanceTests
         Func<LedgerClientConformanceTests<ConformanceProbe>, Task> check,
         string expectedContract)
     {
-        var run = await Record.ExceptionAsync(() => check(new StreamBreakingKit(family, breakage)));
+        var run = await Record.ExceptionAsync(() => check(StreamBreakingKit.ExpectedToTimeOut(family, breakage)));
 
         run.Should().NotBeNull("a client with this fault must fail the check, not satisfy it vacuously");
         run!.Message.Should().Contain(nameof(TimeoutException));
@@ -194,18 +208,26 @@ public sealed class VacuousStreamCheckConformanceTests
         StreamBreakage breakage,
         Func<LedgerClientConformanceTests<ConformanceProbe>, Task> check)
     {
-        var run = await Record.ExceptionAsync(() => check(new StreamBreakingKit(family, breakage)));
+        var run = await Record.ExceptionAsync(() => check(StreamBreakingKit.ExpectedToPass(family, breakage)));
 
         run.Should().BeNull("a stream that honours the contract must not be failed by the check");
     }
 
-    private sealed class StreamBreakingKit(BrokenFamily family, StreamBreakage breakage)
+    private sealed class StreamBreakingKit(BrokenFamily family, StreamBreakage breakage, TimeSpan budget)
         : LedgerClientConformanceTests<ConformanceProbe>
     {
+        public TimeSpan Budget => budget;
+
+        public static StreamBreakingKit ExpectedToPass(BrokenFamily family, StreamBreakage breakage) =>
+            new(family, breakage, TimeSpan.FromSeconds(10));
+
+        public static StreamBreakingKit ExpectedToTimeOut(BrokenFamily family, StreamBreakage breakage) =>
+            new(family, breakage, TimeSpan.FromMilliseconds(400));
+
         protected override ILedgerClient CreateClient() => new StreamBreakingFakeClient(family, breakage);
 
         protected override SubmitterInfo Reader { get; } = new Party("alice");
 
-        protected override TimeSpan StreamTimeout => TimeSpan.FromMilliseconds(400);
+        protected override TimeSpan StreamTimeout => budget;
     }
 }

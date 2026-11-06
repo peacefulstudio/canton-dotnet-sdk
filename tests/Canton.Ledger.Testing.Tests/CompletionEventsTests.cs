@@ -61,6 +61,17 @@ public class CompletionEventsTests
     }
 
     [Fact]
+    public void CompletionEvents_Checkpoint_carries_the_staged_synchronizer_times()
+    {
+        var recordTime = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+
+        var checkpoint = CompletionEvents.Checkpoint(LedgerOffset.At(11), new SynchronizerTime("sync-a::1220", recordTime));
+
+        checkpoint.Should().BeOfType<CompletionStreamEvent.Checkpoint>().Which.SynchronizerTimes
+            .Should().Equal(new SynchronizerTime("sync-a::1220", recordTime));
+    }
+
+    [Fact]
     public void CompletionEvents_StreamError_wraps_the_CompletionStreamEvent_StreamError_variant()
     {
         var error = CompletionEvents.StreamError(new TransportStatus.Grpc(GrpcStatusCode.Unavailable), "boom");

@@ -43,7 +43,7 @@ public sealed partial record Iou(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("owner")] global::Daml.Runtime.Data.Party Owner,
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("currency")] string Currency,
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("amount")] decimal Amount
-) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Iou>, global::Daml.Runtime.Data.IDamlRecord<Iou>
+) : global::Daml.Runtime.Contracts.ITemplate, global::Daml.Runtime.Contracts.IHasChoices<Iou>, global::Daml.Runtime.Contracts.IArchivable<Iou>, global::Daml.Runtime.Data.IDamlRecord<Iou>
 ```
 
 and `Party`'s constructor and conversions are:

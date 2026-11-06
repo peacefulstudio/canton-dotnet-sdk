@@ -100,9 +100,9 @@ public class GeneratedStjRoundTripSweepTests
     }
 
     [Fact]
-    public void GeneratedStjRoundTripSweep_discovers_exactly_149_public_types()
+    public void GeneratedStjRoundTripSweep_discovers_exactly_150_public_types()
     {
-        Exported.Should().HaveCount(149);
+        Exported.Should().HaveCount(150);
     }
 
     [Fact]

@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Canton.Ledger.Abstractions/Canton.Ledger.Abstractions.csproj" />
+    <Project Path="src/Canton.Ledger.AspNetCore/Canton.Ledger.AspNetCore.csproj" />
     <Project Path="src/Canton.Ledger.Grpc.Client/Canton.Ledger.Grpc.Client.csproj" />
     <Project Path="src/Canton.Ledger.Grpc/Canton.Ledger.Grpc.csproj" />
     <Project Path="src/Canton.Ledger.Kernel/Canton.Ledger.Kernel.csproj" />
@@ -28,9 +29,11 @@
     <Project Path="src/Daml.Ledger.Abstractions.Testing.Conformance/Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
     <Project Path="src/Daml.Ledger.Abstractions/Daml.Ledger.Abstractions.csproj" />
     <Project Path="src/Daml.Runtime/Daml.Runtime.csproj" />
+    <Project Path="src/Splice.Api.Token.Registry.Client/Splice.Api.Token.Registry.Client.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Canton.Ledger.Abstractions.Tests/Canton.Ledger.Abstractions.Tests.csproj" />
+    <Project Path="tests/Canton.Ledger.AspNetCore.Tests/Canton.Ledger.AspNetCore.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Client.Parity.SpliceBindings/Canton.Ledger.Client.Parity.SpliceBindings.csproj" />
     <Project Path="tests/Canton.Ledger.Client.Parity.Tests/Canton.Ledger.Client.Parity.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj" />
@@ -41,6 +44,7 @@
     <Project Path="tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Rest.Client.Tests/Canton.Ledger.Rest.Client.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Helpers/Canton.Ledger.Testing.Helpers.csproj" />
+    <Project Path="tests/Canton.Ledger.Testing.LiveConformance/Canton.Ledger.Testing.LiveConformance.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Localnet.Tests/Canton.Ledger.Testing.Localnet.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Localnet/Canton.Ledger.Testing.Localnet.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Tests/Canton.Ledger.Testing.Tests.csproj" />
@@ -53,6 +57,7 @@
     <Project Path="tests/Daml.Ledger.Abstractions.Testing.Conformance.Tests/Daml.Ledger.Abstractions.Testing.Conformance.Tests.csproj" />
     <Project Path="tests/Daml.Ledger.Abstractions.Tests/Daml.Ledger.Abstractions.Tests.csproj" />
     <Project Path="tests/Daml.Runtime.Tests/Daml.Runtime.Tests.csproj" />
+    <Project Path="tests/Splice.Api.Token.Registry.Client.Tests/Splice.Api.Token.Registry.Client.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Fixtures/">
     <Project Path="tests/Fixtures/FakeDpm/FakeDpm.csproj" />

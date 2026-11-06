@@ -72,7 +72,7 @@ SCAN_PATHS=(
   conformance
   proto
   benchmarks
-  CONTEXT.md
+  GLOSSARY.md
   Directory.Build.props
   coverage.settings.xml
   .editorconfig

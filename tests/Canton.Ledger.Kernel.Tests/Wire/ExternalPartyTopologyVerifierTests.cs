@@ -51,8 +51,8 @@ public class ExternalPartyTopologyVerifierTests
         TopologyV30.TopologyTransaction.Parser.ParseFrom(
             Versioned.UntypedVersionedMessage.Parser.ParseFrom(Convert.FromHexString(GoldenTransactionHex)).Data);
 
-    private static byte[] Serialized(TopologyV30.TopologyTransaction transaction, int version = 30) =>
-        new Versioned.UntypedVersionedMessage { Data = transaction.ToByteString(), Version = version }.ToByteArray();
+    private static byte[] Serialized(TopologyV30.TopologyTransaction transaction) =>
+        new Versioned.UntypedVersionedMessage { Data = transaction.ToByteString(), Version = 30 }.ToByteArray();
 
     private static byte[] Tampered(Action<TopologyV30.TopologyTransaction> tamper)
     {
@@ -364,13 +364,6 @@ public class ExternalPartyTopologyVerifierTests
         }));
 
         ExternalPartyTopologyVerifier.Verify(request, topology).Should().BeSameAs(topology);
-    }
-
-    [Fact]
-    public void Verify_refuses_a_transaction_versioned_for_another_protocol()
-    {
-        RefusalOf(Request(), TopologyOf(Serialized(GoldenTransaction(), version: 31)))
-            .Should().Be("the topology transaction is wrapped as proto version 31, not 30.");
     }
 
     [Fact]

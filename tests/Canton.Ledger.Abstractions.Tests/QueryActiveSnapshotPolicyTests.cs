@@ -9,6 +9,7 @@ using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Serialization;
 using Daml.Runtime.Streams;
 using Daml.Testing.SnapshotPolicy;
@@ -19,12 +20,12 @@ namespace Canton.Ledger.Abstractions.Tests;
 
 public sealed class QueryActiveSnapshotPolicyTests
 {
-    public static TheoryData<string> PolicyCase()
+    public static TheoryData<string, UnreadableRows> PolicyCase()
     {
-        var data = new TheoryData<string>();
-        foreach (var policyCase in SnapshotPolicyCases.Names)
+        var data = new TheoryData<string, UnreadableRows>();
+        foreach (var (policyCase, policy) in SnapshotPolicyCases.Combinations)
         {
-            data.Add(policyCase);
+            data.Add(policyCase, policy);
         }
 
         return data;
@@ -32,23 +33,31 @@ public sealed class QueryActiveSnapshotPolicyTests
 
     [Theory]
     [MemberData(nameof(PolicyCase))]
-    public Task SnapshotPolicy_case_holds_on_QueryActiveAsync(string policyCase) =>
-        SnapshotPolicyCases.RunAsync(policyCase, new QueryActiveDriver());
+    public Task SnapshotPolicy_case_holds_on_QueryActiveAsync(string policyCase, UnreadableRows policy) =>
+        SnapshotPolicyCases.RunAsync(policyCase, new QueryActiveDriver(policy));
 
-    private sealed class QueryActiveDriver : ISnapshotPolicyDriver
+    private sealed class QueryActiveDriver(UnreadableRows policy) : ISnapshotPolicyDriver
     {
         private static readonly Party Alice = new("alice");
+
+        public UnreadableRows Policy { get; } = policy;
 
         public SnapshotPolicySubject Subject { get; } =
             new("IPolicyHolding", "interface view", "SubscribeActiveAsync(IPolicyHolding.View, ...)");
 
-        public async Task<IReadOnlyList<string>> DrainAsync(
+        private readonly TaskCompletionSource _stalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WhenStalled => _stalled.Task;
+
+        public async Task<SnapshotRead> DrainAsync(
             IReadOnlyList<SnapshotStep> script,
             bool streamHonoursCancellation,
+            TimeSpan? timeout,
+            TimeProvider timeProvider,
             CancellationToken cancellationToken)
         {
-            var entries = script.Select(ToEntry).ToArray();
             var client = Substitute.For<ICantonLedgerClient>();
+            client.TimeProvider.Returns(timeProvider);
             client
                 .SubscribeActiveAsync(
                     Arg.Any<ViewDescriptor<IPolicyHolding, PolicyHoldingView>>(),
@@ -56,18 +65,21 @@ public sealed class QueryActiveSnapshotPolicyTests
                     Arg.Any<LedgerOffset?>(),
                     Arg.Any<bool>(),
                     Arg.Any<CancellationToken>())
-                .Returns(call => Replay(entries, streamHonoursCancellation, call.Arg<CancellationToken>()));
+                .Returns(call => Replay(script, streamHonoursCancellation, call.Arg<CancellationToken>()));
 
-            var contracts = await DefaultQueryActive(client, new SubmitterInfo(Alice), null, false, cancellationToken);
+            var contracts = await DefaultQueryActive(
+                client, new SubmitterInfo(Alice), null, false, timeout, Policy, cancellationToken);
 
-            return contracts.Select(contract => contract.Contract.Id.Value).ToList();
+            return new SnapshotRead(contracts.Select(contract => contract.Contract.Id.Value).ToList(), contracts.Unreadable);
         }
 
-        private delegate Task<IReadOnlyList<ActiveContract<InterfaceContract<IPolicyHolding, PolicyHoldingView>>>> QueryActive(
+        private delegate Task<ActiveSnapshot<ActiveContract<InterfaceContract<IPolicyHolding, PolicyHoldingView>>>> QueryActive(
             ICantonLedgerClient client,
             SubmitterInfo submitter,
             LedgerOffset? activeAtOffset,
             bool includeDisclosure,
+            TimeSpan? timeout,
+            UnreadableRows unreadableRows,
             CancellationToken cancellationToken);
 
         private static readonly QueryActive DefaultQueryActive = BindDefaultQueryActive();
@@ -83,7 +95,7 @@ public sealed class QueryActiveSnapshotPolicyTests
             var invokeNonVirtually = new DynamicMethod(
                 "QueryActiveAsyncDefaultBody",
                 defaultBody.ReturnType,
-                [typeof(ICantonLedgerClient), typeof(SubmitterInfo), typeof(LedgerOffset?), typeof(bool), typeof(CancellationToken)],
+                [typeof(ICantonLedgerClient), typeof(SubmitterInfo), typeof(LedgerOffset?), typeof(bool), typeof(TimeSpan?), typeof(UnreadableRows), typeof(CancellationToken)],
                 typeof(QueryActiveDriver).Module,
                 skipVisibility: true);
             var il = invokeNonVirtually.GetILGenerator();
@@ -92,25 +104,48 @@ public sealed class QueryActiveSnapshotPolicyTests
             il.Emit(OpCodes.Ldarg_2);
             il.Emit(OpCodes.Ldarg_3);
             il.Emit(OpCodes.Ldarg, (short)4);
+            il.Emit(OpCodes.Ldarg, (short)5);
+            il.Emit(OpCodes.Ldarg, (short)6);
             il.Emit(OpCodes.Call, defaultBody);
             il.Emit(OpCodes.Ret);
 
             return (QueryActive)invokeNonVirtually.CreateDelegate(typeof(QueryActive));
         }
 
-        private static async IAsyncEnumerable<InterfaceAcsSnapshotEntry<IPolicyHolding, PolicyHoldingView>> Replay(
-            InterfaceAcsSnapshotEntry<IPolicyHolding, PolicyHoldingView>[] entries,
+        private async IAsyncEnumerable<InterfaceAcsSnapshotEntry<IPolicyHolding, PolicyHoldingView>> Replay(
+            IReadOnlyList<SnapshotStep> script,
             bool streamHonoursCancellation,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            foreach (var entry in entries)
+            foreach (var step in script)
             {
                 if (streamHonoursCancellation)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                yield return entry;
+                if (step is SnapshotStep.Stall stall)
+                {
+                    _stalled.TrySetResult();
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ContinueWith(
+                        static _ => { },
+                        CancellationToken.None);
+
+                    if (stall.Ending == StallEnding.ThrowsCancellation)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
+                    if (stall.Ending == StallEnding.ReportsCancelledFaultInBand)
+                    {
+                        yield return new InterfaceAcsSnapshotEntry<IPolicyHolding, PolicyHoldingView>.StreamError(
+                            new TransportStatus.Grpc(GrpcStatusCode.Cancelled), "CANCELLED", null, null, null);
+                    }
+
+                    yield break;
+                }
+
+                yield return ToEntry(step);
                 await Task.Yield();
             }
         }

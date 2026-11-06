@@ -29,7 +29,7 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// materialize as concrete <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface ITransferFactory : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView>, global::Daml.Runtime.Contracts.IHasChoices<ITransferFactory>
+public interface ITransferFactory : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferInstructionV2.TransferFactoryView>, global::Daml.Runtime.Contracts.IHasChoices<ITransferFactory>, global::Daml.Runtime.Contracts.IArchivable<ITransferFactory>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
@@ -62,7 +62,7 @@ public interface ITransferFactory : global::Daml.Runtime.Contracts.IDamlInterfac
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<ITransferFactory, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<ITransferFactory, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -107,6 +107,9 @@ public interface ITransferFactory : global::Daml.Runtime.Contracts.IDamlInterfac
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<ITransferFactory>.Choices { get; } = [ChoiceArchive, ChoiceTransferFactory_PublicFetch, ChoiceTransferFactory_Transfer];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<ITransferFactory, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<ITransferFactory>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -134,7 +137,7 @@ public static class ITransferFactoryExtensions
         this global::Daml.Runtime.Contracts.ContractId<ITransferFactory> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferFactory>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferFactory>(contractId, ITransferFactory.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

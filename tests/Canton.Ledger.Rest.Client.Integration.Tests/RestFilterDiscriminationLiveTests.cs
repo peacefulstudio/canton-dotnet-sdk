@@ -44,6 +44,7 @@ namespace Canton.Ledger.Rest.Client.Integration.Tests;
 /// a reader driven by the template's Daml type, which this client does not yet have.
 /// </para>
 /// </summary>
+[Trait("Retires", nameof(WrappedOneOfJsonConverterFactory))]
 [Trait("Category", "Integration")]
 public class RestFilterDiscriminationLiveTests
 {

@@ -99,9 +99,8 @@ public sealed class LedgerOperationException : InvalidOperationException
     /// and <see cref="CommitState.Unknown"/> for an <see cref="ExerciseOutcome{T}.InfraError"/>.
     /// A catch site must read this, not a null <see cref="UpdateId"/>, to decide whether resubmitting
     /// the command is safe. When this is <see cref="CommitState.Unknown"/>, do not resubmit blindly:
-    /// look <see cref="CommandId"/> up on the completion stream
-    /// (<c>ICantonLedgerClient.CompletionStreamAsync</c>) to learn whether the original request
-    /// committed. A resubmitted consuming exercise that already committed is rejected with
+    /// resolve <see cref="CommandId"/> with <c>ICantonLedgerClient.RecoverAsync</c> to learn whether
+    /// the original request committed. A resubmitted consuming exercise that already committed is rejected with
     /// <c>CONTRACT_NOT_FOUND</c>, which looks like a plain rejection of a command that never ran.
     /// </summary>
     public CommitState CommitState { get; }
@@ -109,11 +108,14 @@ public sealed class LedgerOperationException : InvalidOperationException
     /// <summary>
     /// The command id of the failed write, including one the <c>ExerciseAsync</c> and
     /// <c>CreateOneByExerciseAsync</c>/<c>CreateManyByExerciseAsync</c> helpers or the client
-    /// generated because the caller supplied none; look it up on the completion stream to find out
-    /// what became of the command. <c>null</c> when the failed call carried no command id: a read, an
-    /// administration call, an interactive-submission execute, or an exception raised without a call.
+    /// generated because the caller supplied none; resolve it with <c>ICantonLedgerClient.RecoverAsync</c>
+    /// to find out what became of the command. An interactive-submission execute carries the command id the
+    /// prepared transaction was prepared with. <c>null</c> when the failed call carried no command id:
+    /// a read, an administration call, or an exception raised without a call.
     /// </summary>
     public CommandId? CommandId { get; internal set; }
+
+    internal bool RejectedAfterRetry { get; set; }
 
     /// <summary>
     /// Creates an exception for a non-committed or unexpected outcome with no structured

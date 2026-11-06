@@ -17,6 +17,14 @@ internal sealed class FakeLedgerClient : NotSupportedLedgerClient
 
     public SubmitterInfo? LastCreateSubmitter { get; private set; }
 
+    public string? LastCreateWorkflowId { get; private set; }
+
+    public CommandId? LastCreateCommandId { get; private set; }
+
+    public TimeSpan? LastCreateTimeout { get; private set; }
+
+    public TimeSpan? LastSubmissionTimeout { get; private set; }
+
     public FakeLedgerClient(
         Func<CommandsSubmission, ExerciseOutcome<TransactionResult>>? transaction = null,
         Func<object, ExerciseOutcome<object>>? create = null)
@@ -34,6 +42,7 @@ internal sealed class FakeLedgerClient : NotSupportedLedgerClient
     {
         var effectiveSubmission = submission.WithSubmitter(submitter);
         LastSubmission = effectiveSubmission;
+        LastSubmissionTimeout = timeout;
         return Task.FromResult(_transaction(effectiveSubmission));
     }
 
@@ -46,6 +55,9 @@ internal sealed class FakeLedgerClient : NotSupportedLedgerClient
         CancellationToken cancellationToken = default)
     {
         LastCreateSubmitter = submitter;
+        LastCreateWorkflowId = workflowId;
+        LastCreateCommandId = commandId;
+        LastCreateTimeout = timeout;
         var projected = _create is null
             ? new ExerciseOutcome<ContractId<TTemplate>>.InfraError(new TransportStatus.UndecodableBody(), "unset")
             : Project<TTemplate>(_create(payload!));

@@ -30,7 +30,7 @@ namespace Splice.Api.Token.TransferInstructionV2;
 /// materialize as concrete <see cref="global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface ITransferInstruction : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView>, global::Daml.Runtime.Contracts.IHasChoices<ITransferInstruction>
+public interface ITransferInstruction : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Splice.Api.Token.TransferInstructionV2.TransferInstructionView>, global::Daml.Runtime.Contracts.IHasChoices<ITransferInstruction>, global::Daml.Runtime.Contracts.IArchivable<ITransferInstruction>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
@@ -72,7 +72,7 @@ public interface ITransferInstruction : global::Daml.Runtime.Contracts.IDamlInte
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -131,6 +131,9 @@ public interface ITransferInstruction : global::Daml.Runtime.Contracts.IDamlInte
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<ITransferInstruction>.Choices { get; } = [ChoiceArchive, ChoiceTransferInstruction_Accept, ChoiceTransferInstruction_Reject, ChoiceTransferInstruction_Withdraw];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<ITransferInstruction, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<ITransferInstruction>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -158,7 +161,7 @@ public static class ITransferInstructionExtensions
         this global::Daml.Runtime.Contracts.ContractId<ITransferInstruction> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferInstruction>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<ITransferInstruction>(contractId, ITransferInstruction.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

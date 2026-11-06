@@ -274,7 +274,7 @@ internal static partial class Program
 
         var generator = new CSharpCodeGenerator(BuildOptions(args, effectiveCounter), logger);
         var generatedFiles = generator.Generate(dar);
-        await GeneratedOutputWriter.WriteAsync(generatedFiles, args.OutputDirectory, logger, cancellationToken).ConfigureAwait(false);
+        await GeneratedOutputWriter.WriteAsync(generatedFiles, dar.MainPackage.Name, args.OutputDirectory, logger, cancellationToken).ConfigureAwait(false);
     }
 
     private static string ResolveCodegenVersion(CodegenArgs args) =>

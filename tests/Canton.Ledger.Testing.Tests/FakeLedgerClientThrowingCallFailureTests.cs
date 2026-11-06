@@ -53,6 +53,8 @@ public class FakeLedgerClientThrowingCallFailureTests
             ["EstimateTrafficCostAsync"] = client => client.EstimateTrafficCostAsync(Submission()),
             ["GetContractAsync"] = client => client.GetContractAsync(AssetId, Submitter),
             ["GetEventsByContractIdAsync"] = client => client.GetEventsByContractIdAsync(AssetId, Submitter),
+            ["GetEventsByContractIdAsyncThroughAnInterface"] = client =>
+                client.GetEventsByContractIdAsync<IDemoHoldingView, DemoHoldingView>(new ContractId<IDemoHoldingView>("00cid"), Submitter),
             ["GetDisclosureAsync"] = client => client.GetDisclosureAsync(AssetId, Submitter),
             ["GetActiveContractsPageAsync"] = client => client.GetActiveContractsPageAsync<DemoAsset>(Submitter),
             ["GetLatestPrunedOffsetsAsync"] = client => client.GetLatestPrunedOffsetsAsync(),
@@ -165,13 +167,13 @@ public class FakeLedgerClientThrowingCallFailureTests
         var outcome = await client.TryExerciseAsync<DamlUnit>(
             command, Submitter, commandId: (CommandId)"cmd-3", cancellationToken: TestContext.Current.CancellationToken);
 
-        outcome.Should().Be(staged with { CommandId = "cmd-3" });
+        outcome.Should().Be(staged with { CommandId = "cmd-3", Operation = LedgerOperation.Of(command) });
     }
 
     [Fact]
     public async Task CompletionStreamAsync_ignores_the_staged_failure_and_yields_its_staged_events()
     {
-        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(3));
+        var checkpoint = new CompletionStreamEvent.Checkpoint(LedgerOffset.At(3), []);
         var client = FakeLedgerClient.Create()
             .WithCompletionEvents(checkpoint)
             .WithThrowingCallFailure(StagedFailure)

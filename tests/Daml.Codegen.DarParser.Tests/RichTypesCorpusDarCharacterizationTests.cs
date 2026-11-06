@@ -87,7 +87,7 @@ public sealed class RichTypesCorpusDarCharacterizationTests
     {
         var package = await LoadMainPackageAsync();
 
-        package.Name.Should().Be("richtypes-h25b56c547fd1");
+        package.Name.Should().Be("richtypes-h07285b495f9e");
         package.LfVersion.Should().Be(
             CorpusLfVersion,
             "conformance/richtypes/daml.yaml pins --target={0}; damlc picks a different version when nothing asks, "
@@ -228,9 +228,9 @@ public sealed class RichTypesCorpusDarCharacterizationTests
             .Definition.Should().BeOfType<DamlRecordDefinition>()
             .Subject.Fields.Single(f => f.Name == "children").Type;
 
-        package.PackageId.Should().Be("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4");
+        package.PackageId.Should().Be("3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c");
         children.Should().BeOfType<DamlListType>().Subject.Element.Should().Be(
-            new DamlTypeRef("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "Branch"));
+            new DamlTypeRef("3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c", "RichTypes", "Branch"));
     }
 
     [Fact]

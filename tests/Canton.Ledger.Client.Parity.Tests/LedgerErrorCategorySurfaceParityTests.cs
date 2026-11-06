@@ -49,7 +49,6 @@ public sealed class LedgerErrorCategorySurfaceParityTests
 
     private const string ParticipantAddress = "http://127.0.0.1:1";
     private const string ParityUser = "parity-user";
-    private const string OperationName = "SubmitAndWaitForTransaction";
 
     private const string RedactedCorrelationId = "0123456789abcdef0123456789abcdef";
     private const string RedactedMessage = "A security-sensitive error has been received";
@@ -73,7 +72,7 @@ public sealed class LedgerErrorCategorySurfaceParityTests
                 StatusCode.PermissionDenied,
                 HttpStatusCode.Forbidden,
                 RedactedMessage,
-                DamlErrorCategory.AuthorizationChecksFailed),
+                DamlErrorCategory.InsufficientPermission),
 
             ["a failure no evidence classifies"] = new(
                 StatusCode.Unavailable,
@@ -126,7 +125,7 @@ public sealed class LedgerErrorCategorySurfaceParityTests
         var act = async () => await lane.Capability
             .TrySubmitAndWaitForTransactionAsync(
                 Submission(), Submitter, cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync(OperationName);
+            .OneOrThrowAsync();
 
         var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
         thrown.Which.Category.Should().Be(

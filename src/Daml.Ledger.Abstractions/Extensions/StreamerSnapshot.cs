@@ -27,7 +27,9 @@ public static class StreamerSnapshot
     /// <para>
     /// A snapshot that faults, carries a row the projector could not classify, or ends
     /// without its terminal checkpoint throws <see cref="LedgerOperationException"/>
-    /// rather than shortening the returned list: a terminal
+    /// rather than shortening the returned list, unless <c>unreadableRows</c> is
+    /// <see cref="UnreadableRows.Return"/>, which hands each unclassified row back on
+    /// <see cref="ActiveSnapshot{TRow}.Unreadable"/> instead: a terminal
     /// <see cref="AcsSnapshotEntry{T}.StreamError"/> means the snapshot is incomplete, an
     /// <see cref="AcsSnapshotEntry{T}.Unclassified"/> row means a row was not projected,
     /// and a stream that ends without the documented terminal
@@ -60,12 +62,12 @@ public static class StreamerSnapshot
     /// <para>
     /// Each row's own offset, synchronizer id and witness parties are discarded too, by design:
     /// this method hands back contracts, not observations of them. Use
-    /// <see cref="SnapshotActiveAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>
+    /// <see cref="SnapshotActiveAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, bool, TimeSpan?, UnreadableRows, CancellationToken)"/>
     /// to keep the last-update offset and the synchronizer id.
     /// </para>
     /// <para>
     /// The returned contracts carry no contract key. A keyed template's snapshot goes through
-    /// the <see cref="SnapshotAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, CancellationToken)"/>
+    /// the <see cref="SnapshotAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, TimeSpan?, UnreadableRows, CancellationToken)"/>
     /// overload, which yields <see cref="Contract{T, TKey}"/> with the key decoded.
     /// </para>
     /// </remarks>
@@ -73,39 +75,58 @@ public static class StreamerSnapshot
     /// <param name="streamer">The streaming capability.</param>
     /// <param name="submitter">The submitter authorization whose combined parties scope visibility.</param>
     /// <param name="activeAtOffset">Snapshot offset; <c>null</c> means the current ledger end.</param>
+    /// <param name="timeout">
+    /// Wall-clock bound on the whole drain, measured on the streamer's
+    /// <see cref="ILedgerStreamer.TimeProvider"/>; <c>null</c>, the default, applies none. Expiry
+    /// before the terminal checkpoint throws a <see cref="LedgerOperationException"/> whose
+    /// <see cref="LedgerOperationException.Category"/> is
+    /// <see cref="Daml.Runtime.Outcomes.DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>,
+    /// whose <see cref="LedgerOperationException.Status"/> is
+    /// <see cref="Daml.Runtime.Outcomes.TransportStatus.NoResponse"/> and whose
+    /// <see cref="LedgerOperationException.CommitState"/> is <see cref="CommitState.NotCommitted"/>,
+    /// and the underlying stream is cancelled. Cancelling <paramref name="cancellationToken"/> wins
+    /// over an expired timeout.
+    /// </param>
+    /// <param name="unreadableRows">
+    /// What to do with a row the projector could not classify. <see cref="UnreadableRows.Fail"/>, the
+    /// default, throws <see cref="LedgerOperationException"/> on the first one.
+    /// <see cref="UnreadableRows.Return"/> keeps draining and lists each one on
+    /// <see cref="ActiveSnapshot{TRow}.Unreadable"/>. A fault, a missing checkpoint, an expired
+    /// <paramref name="timeout"/> and cancellation fail the same way under both.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
     /// </param>
+    /// <returns>
+    /// The readable rows in delivery order. <see cref="ActiveSnapshot{TRow}.Unreadable"/> is empty
+    /// under <see cref="UnreadableRows.Fail"/>.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> is <c>null</c>.</exception>
     /// <exception cref="LedgerOperationException">
-    /// The snapshot faulted, carried an unclassified row, or ended without its terminal
-    /// checkpoint.
+    /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
+    /// ended without its terminal checkpoint, or did not reach it within <paramref name="timeout"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was cancelled. Cancellation is surfaced as an
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<IReadOnlyList<Contract<T>>> SnapshotAsync<T>(
+    public static async Task<ActiveSnapshot<Contract<T>>> SnapshotAsync<T>(
         this ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        TimeSpan? timeout = null,
+        UnreadableRows unreadableRows = UnreadableRows.Fail,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken)
             .ConfigureAwait(false);
 
-        var contracts = new List<Contract<T>>(rows.Count);
-        foreach (var row in rows)
-        {
-            contracts.Add(row.ToContract());
-        }
-
-        return contracts;
+        return rows.Select(row => row.ToContract());
     }
 
     /// <summary>
@@ -115,7 +136,7 @@ public static class StreamerSnapshot
     /// <remarks>
     /// <para>
     /// The provenance-keeping twin of
-    /// <see cref="SnapshotAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, CancellationToken)"/>,
+    /// <see cref="SnapshotAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, TimeSpan?, UnreadableRows, CancellationToken)"/>,
     /// with identical fault, unclassified-row, truncation and cancellation behaviour. A distinct
     /// name rather than an overload: C# does not overload on return type.
     /// </para>
@@ -129,7 +150,7 @@ public static class StreamerSnapshot
     /// </para>
     /// <para>
     /// The returned contracts carry no contract key. A keyed template's snapshot goes through
-    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>,
+    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, bool, TimeSpan?, UnreadableRows, CancellationToken)"/>,
     /// which yields <see cref="Contract{T, TKey}"/> with the key decoded.
     /// </para>
     /// </remarks>
@@ -143,40 +164,59 @@ public static class StreamerSnapshot
     /// <see cref="ActiveContract{TContract}.Disclosure"/> another party can attach to its
     /// submission. <c>false</c>, the default, leaves it <c>null</c>.
     /// </param>
+    /// <param name="timeout">
+    /// Wall-clock bound on the whole drain, measured on the streamer's
+    /// <see cref="ILedgerStreamer.TimeProvider"/>; <c>null</c>, the default, applies none. Expiry
+    /// before the terminal checkpoint throws a <see cref="LedgerOperationException"/> whose
+    /// <see cref="LedgerOperationException.Category"/> is
+    /// <see cref="Daml.Runtime.Outcomes.DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>,
+    /// whose <see cref="LedgerOperationException.Status"/> is
+    /// <see cref="Daml.Runtime.Outcomes.TransportStatus.NoResponse"/> and whose
+    /// <see cref="LedgerOperationException.CommitState"/> is <see cref="CommitState.NotCommitted"/>,
+    /// and the underlying stream is cancelled. Cancelling <paramref name="cancellationToken"/> wins
+    /// over an expired timeout.
+    /// </param>
+    /// <param name="unreadableRows">
+    /// What to do with a row the projector could not classify. <see cref="UnreadableRows.Fail"/>, the
+    /// default, throws <see cref="LedgerOperationException"/> on the first one.
+    /// <see cref="UnreadableRows.Return"/> keeps draining and lists each one on
+    /// <see cref="ActiveSnapshot{TRow}.Unreadable"/>. A fault, a missing checkpoint, an expired
+    /// <paramref name="timeout"/> and cancellation fail the same way under both.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
     /// </param>
+    /// <returns>
+    /// The readable rows in delivery order. <see cref="ActiveSnapshot{TRow}.Unreadable"/> is empty
+    /// under <see cref="UnreadableRows.Fail"/>.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> is <c>null</c>.</exception>
     /// <exception cref="LedgerOperationException">
-    /// The snapshot faulted, carried an unclassified row, or ended without its terminal
-    /// checkpoint.
+    /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
+    /// ended without its terminal checkpoint, or did not reach it within <paramref name="timeout"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was cancelled. Cancellation is surfaced as an
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<IReadOnlyList<ActiveContract<Contract<T>>>> SnapshotActiveAsync<T>(
+    public static async Task<ActiveSnapshot<ActiveContract<Contract<T>>>> SnapshotActiveAsync<T>(
         this ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
         bool includeDisclosure = false,
+        TimeSpan? timeout = null,
+        UnreadableRows unreadableRows = UnreadableRows.Fail,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken)
             .ConfigureAwait(false);
 
-        var contracts = new List<ActiveContract<Contract<T>>>(rows.Count);
-        foreach (var row in rows)
-        {
-            contracts.Add(row.ToActiveContract());
-        }
-
-        return contracts;
+        return rows.Select(row => row.ToActiveContract());
     }
 
     /// <summary>
@@ -186,11 +226,11 @@ public static class StreamerSnapshot
     /// </summary>
     /// <remarks>
     /// Behaves exactly as
-    /// <see cref="SnapshotAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, CancellationToken)"/>
+    /// <see cref="SnapshotAsync{T}(ILedgerStreamer, SubmitterInfo, LedgerOffset?, TimeSpan?, UnreadableRows, CancellationToken)"/>
     /// for every fault, unclassified row and truncation case, and additionally throws
     /// <see cref="LedgerOperationException"/> when a create row of a keyed template arrives
     /// without the key the keyed shape requires. It discards the same per-row provenance;
-    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, bool, CancellationToken)"/>
+    /// <see cref="SnapshotActiveAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, bool, TimeSpan?, UnreadableRows, CancellationToken)"/>
     /// keeps it.
     /// </remarks>
     /// <typeparam name="T">The keyed Daml template the snapshot is filtered to.</typeparam>
@@ -203,26 +243,52 @@ public static class StreamerSnapshot
     /// overload and <see cref="Contract{T, TKey}.FromCreatedEvent"/> decode identically.</param>
     /// <param name="submitter">The submitter authorization whose combined parties scope visibility.</param>
     /// <param name="activeAtOffset">Snapshot offset; <c>null</c> means the current ledger end.</param>
+    /// <param name="timeout">
+    /// Wall-clock bound on the whole drain, measured on the streamer's
+    /// <see cref="ILedgerStreamer.TimeProvider"/>; <c>null</c>, the default, applies none. Expiry
+    /// before the terminal checkpoint throws a <see cref="LedgerOperationException"/> whose
+    /// <see cref="LedgerOperationException.Category"/> is
+    /// <see cref="Daml.Runtime.Outcomes.DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>,
+    /// whose <see cref="LedgerOperationException.Status"/> is
+    /// <see cref="Daml.Runtime.Outcomes.TransportStatus.NoResponse"/> and whose
+    /// <see cref="LedgerOperationException.CommitState"/> is <see cref="CommitState.NotCommitted"/>,
+    /// and the underlying stream is cancelled. Cancelling <paramref name="cancellationToken"/> wins
+    /// over an expired timeout.
+    /// </param>
+    /// <param name="unreadableRows">
+    /// What to do with a row the projector could not classify. <see cref="UnreadableRows.Fail"/>, the
+    /// default, throws <see cref="LedgerOperationException"/> on the first one.
+    /// <see cref="UnreadableRows.Return"/> keeps draining and lists each one on
+    /// <see cref="ActiveSnapshot{TRow}.Unreadable"/>. A fault, a missing checkpoint, an expired
+    /// <paramref name="timeout"/> and cancellation fail the same way under both.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
     /// </param>
+    /// <returns>
+    /// The readable rows in delivery order. <see cref="ActiveSnapshot{TRow}.Unreadable"/> is empty
+    /// under <see cref="UnreadableRows.Fail"/>.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> or
     /// <paramref name="key"/> is <c>null</c>.</exception>
     /// <exception cref="LedgerOperationException">
-    /// The snapshot faulted, carried an unclassified row, ended without its terminal
-    /// checkpoint, or carried a create row with no contract key.
+    /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
+    /// ended without its terminal checkpoint, did not reach it within <paramref name="timeout"/>,
+    /// or carried a create row with no contract key.
     /// </exception>
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was cancelled. Cancellation is surfaced as an
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<IReadOnlyList<Contract<T, TKey>>> SnapshotAsync<T, TKey>(
+    public static async Task<ActiveSnapshot<Contract<T, TKey>>> SnapshotAsync<T, TKey>(
         this ILedgerStreamer streamer,
         KeyDescriptor<T, TKey> key,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
+        TimeSpan? timeout = null,
+        UnreadableRows unreadableRows = UnreadableRows.Fail,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>, IHasKey<T, TKey>
     {
@@ -230,16 +296,10 @@ public static class StreamerSnapshot
         ArgumentNullException.ThrowIfNull(key);
         _ = key;
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken)
             .ConfigureAwait(false);
 
-        var contracts = new List<Contract<T, TKey>>(rows.Count);
-        foreach (var row in rows)
-        {
-            contracts.Add(ToKeyedContract<T, TKey>(row));
-        }
-
-        return contracts;
+        return rows.Select(ToKeyedContract<T, TKey>);
     }
 
     /// <summary>
@@ -249,7 +309,7 @@ public static class StreamerSnapshot
     /// </summary>
     /// <remarks>
     /// The provenance-keeping twin of
-    /// <see cref="SnapshotAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, CancellationToken)"/>,
+    /// <see cref="SnapshotAsync{T, TKey}(ILedgerStreamer, KeyDescriptor{T, TKey}, SubmitterInfo, LedgerOffset?, TimeSpan?, UnreadableRows, CancellationToken)"/>,
     /// with identical behaviour for every fault, unclassified row, truncation and missing-key
     /// case. <see cref="ActiveContract{TContract}.LastUpdateOffset"/> is a per-contract fact and
     /// not a resume point; the terminal checkpoint's <see cref="StakeholderResume"/> ticket and
@@ -271,49 +331,69 @@ public static class StreamerSnapshot
     /// <see cref="ActiveContract{TContract}.Disclosure"/> another party can attach to its
     /// submission. <c>false</c>, the default, leaves it <c>null</c>.
     /// </param>
+    /// <param name="timeout">
+    /// Wall-clock bound on the whole drain, measured on the streamer's
+    /// <see cref="ILedgerStreamer.TimeProvider"/>; <c>null</c>, the default, applies none. Expiry
+    /// before the terminal checkpoint throws a <see cref="LedgerOperationException"/> whose
+    /// <see cref="LedgerOperationException.Category"/> is
+    /// <see cref="Daml.Runtime.Outcomes.DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>,
+    /// whose <see cref="LedgerOperationException.Status"/> is
+    /// <see cref="Daml.Runtime.Outcomes.TransportStatus.NoResponse"/> and whose
+    /// <see cref="LedgerOperationException.CommitState"/> is <see cref="CommitState.NotCommitted"/>,
+    /// and the underlying stream is cancelled. Cancelling <paramref name="cancellationToken"/> wins
+    /// over an expired timeout.
+    /// </param>
+    /// <param name="unreadableRows">
+    /// What to do with a row the projector could not classify. <see cref="UnreadableRows.Fail"/>, the
+    /// default, throws <see cref="LedgerOperationException"/> on the first one.
+    /// <see cref="UnreadableRows.Return"/> keeps draining and lists each one on
+    /// <see cref="ActiveSnapshot{TRow}.Unreadable"/>. A fault, a missing checkpoint, an expired
+    /// <paramref name="timeout"/> and cancellation fail the same way under both.
+    /// </param>
     /// <param name="cancellationToken">
     /// Cancels the underlying stream, which surfaces as an
     /// <see cref="OperationCanceledException"/> rather than a gracefully-completed stream.
     /// </param>
+    /// <returns>
+    /// The readable rows in delivery order. <see cref="ActiveSnapshot{TRow}.Unreadable"/> is empty
+    /// under <see cref="UnreadableRows.Fail"/>.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> or
     /// <paramref name="key"/> is <c>null</c>.</exception>
     /// <exception cref="LedgerOperationException">
-    /// The snapshot faulted, carried an unclassified row, ended without its terminal
-    /// checkpoint, or carried a create row with no contract key.
+    /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
+    /// ended without its terminal checkpoint, did not reach it within <paramref name="timeout"/>,
+    /// or carried a create row with no contract key.
     /// </exception>
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was cancelled. Cancellation is surfaced as an
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<IReadOnlyList<ActiveContract<Contract<T, TKey>>>> SnapshotActiveAsync<T, TKey>(
+    public static async Task<ActiveSnapshot<ActiveContract<Contract<T, TKey>>>> SnapshotActiveAsync<T, TKey>(
         this ILedgerStreamer streamer,
         KeyDescriptor<T, TKey> key,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
         bool includeDisclosure = false,
+        TimeSpan? timeout = null,
+        UnreadableRows unreadableRows = UnreadableRows.Fail,
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>, IHasKey<T, TKey>
     {
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, cancellationToken)
+        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken)
             .ConfigureAwait(false);
 
-        var contracts = new List<ActiveContract<Contract<T, TKey>>>(rows.Count);
-        foreach (var row in rows)
+        return rows.Select(row => new ActiveContract<Contract<T, TKey>>(
+            ToKeyedContract<T, TKey>(row),
+            row.Offset,
+            row.SynchronizerId)
         {
-            contracts.Add(new ActiveContract<Contract<T, TKey>>(
-                ToKeyedContract<T, TKey>(row),
-                row.Offset,
-                row.SynchronizerId)
-            {
-                Disclosure = row.Disclosure,
-            });
-        }
-
-        return contracts;
+            Disclosure = row.Disclosure,
+        });
     }
 
     private static Contract<T, TKey> ToKeyedContract<T, TKey>(AcsSnapshotEntry<T>.Created created)

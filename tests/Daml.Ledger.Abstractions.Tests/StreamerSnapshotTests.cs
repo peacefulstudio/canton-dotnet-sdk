@@ -514,7 +514,11 @@ public sealed partial class StreamerSnapshotTests
 
     private sealed class FakeStreamer(params AcsSnapshotEntry<Probe>[] entries) : ILedgerStreamer
     {
-        private bool ObservesCancellation { get; init; } = true;
+        public bool ObservesCancellation { get; init; } = true;
+
+        public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+
+        public Func<CancellationToken, IAsyncEnumerable<AcsSnapshotEntry<Probe>>>? Source { get; init; }
 
         public bool? RequestedCreatedEventBlob { get; private set; }
 
@@ -543,7 +547,7 @@ public sealed partial class StreamerSnapshotTests
             where T : ITemplate, IDamlRecord<T>
         {
             RequestedCreatedEventBlob = includeDisclosure;
-            return (IAsyncEnumerable<AcsSnapshotEntry<T>>)(object)Replay(cancellationToken);
+            return (IAsyncEnumerable<AcsSnapshotEntry<T>>)(object)(Source?.Invoke(cancellationToken) ?? Replay(cancellationToken));
         }
 
         public IAsyncEnumerable<InterfaceStreamEvent<TInterface, TView>> SubscribeAsync<TInterface, TView>(

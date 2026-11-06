@@ -70,7 +70,7 @@ internal static class RestErrorParser
         new Dictionary<HttpStatusCode, DamlErrorCategory>
         {
             [HttpStatusCode.Unauthorized] = DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials,
-            [HttpStatusCode.Forbidden] = DamlErrorCategory.AuthorizationChecksFailed,
+            [HttpStatusCode.Forbidden] = DamlErrorCategory.InsufficientPermission,
         };
 
     /// <remarks>

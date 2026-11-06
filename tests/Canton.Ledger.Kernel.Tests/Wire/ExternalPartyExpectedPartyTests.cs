@@ -49,6 +49,13 @@ public class ExternalPartyExpectedPartyTests
     }
 
     [Fact]
+    public void ExpectedPartyOf_derives_the_party_of_a_v31_onboarding_transaction()
+    {
+        ExternalPartyTopologyVerifier.ExpectedPartyOf(AllocationOf(CapturedV31Topology.Transaction))
+            .Should().Be(new Party("ext-signing-8e4d21c5c1da451ab3bad771964a0929::12201a7f9a2e46df4de035ce54bcd90966c503992337feac4ffc223e1335eb287043"));
+    }
+
+    [Fact]
     public void ExpectedPartyOf_refuses_a_party_outside_the_namespace_of_its_signing_key()
     {
         var transaction = Tampered(tx => tx.Mapping.PartyToParticipant.Party = "alice::1220" + new string('b', 64));

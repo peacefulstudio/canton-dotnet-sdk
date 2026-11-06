@@ -157,6 +157,32 @@ public sealed class LedgerClientStreamFaultTests : IDisposable
         AssertFaultRecorded(capture, detail);
     }
 
+    [Fact]
+    public async Task SubscribeAsync_tags_the_daml_template_id_not_the_clr_type_name()
+    {
+        StubGetUpdatesFailure(new RpcException(new Status(StatusCode.Unavailable, "update stream down")));
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        await CollectAsync(
+            CreateClient().SubscribeAsync<FooBar>(ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        capture.Activities.Should().ContainSingle().Subject
+            .GetTagItem(LedgerActivityTagNames.DamlTemplateId).Should().Be("test-pkg:Sample.Foo:FooBar");
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_tags_the_daml_template_id_not_the_clr_type_name()
+    {
+        StubGetActiveContractsFailure(new RpcException(new Status(StatusCode.Unavailable, "snapshot stream down")));
+        using var capture = ActivityCapture.Of(LedgerActivitySourceNames.GrpcLedgerClient);
+
+        await CollectAsync(CreateClient().SubscribeActiveAsync<FooBar>(
+            ActAs, LedgerOffset.At(7L), cancellationToken: TestContext.Current.CancellationToken));
+
+        capture.Activities.Should().ContainSingle().Subject
+            .GetTagItem(LedgerActivityTagNames.DamlTemplateId).Should().Be("test-pkg:Sample.Foo:FooBar");
+    }
+
     private static void AssertFaultRecorded(ActivityCapture capture, string detail)
     {
         var activity = capture.Activities.Should().ContainSingle(a => a.StatusDescription == detail).Subject;

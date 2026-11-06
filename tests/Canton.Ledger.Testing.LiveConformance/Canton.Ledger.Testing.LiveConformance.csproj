@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <UseMicrosoftTestingPlatformRunner>false</UseMicrosoftTestingPlatformRunner>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Remove="xunit.v3.mtp-v2" />
+    <PackageReference Remove="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Remove="AwesomeAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="Peaceful.Canton.Localnet.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Canton.Ledger.Abstractions\Canton.Ledger.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions.Testing.Conformance\Daml.Ledger.Abstractions.Testing.Conformance.csproj" />
+    <ProjectReference Include="..\Canton.Ledger.Testing.Localnet\Canton.Ledger.Testing.Localnet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Integration.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Integration.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\conformance\conformanceprobe\conformanceprobe.dar" LogicalName="conformanceprobe.dar" />
+  </ItemGroup>
+
+</Project>

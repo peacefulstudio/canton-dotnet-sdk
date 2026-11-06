@@ -286,7 +286,9 @@ internal sealed class LedgerCallInvoker
         catch (RpcException ex)
         {
             activity.RecordGrpcError(ex, _options);
-            throw RpcCallEnding.Rejected(ex, afterRetry: receipt.Retried).ToException(kind, receipt.CommandId);
+            var rejection = RpcCallEnding.Rejected(ex, afterRetry: receipt.Retried);
+            activity.SetDamlErrorTags(rejection.Error, _options.EmitPartyAndContractSpanTags);
+            throw rejection.ToException(kind, receipt.CommandId);
         }
         catch (TokenAcquisitionException tokenFailure)
         {

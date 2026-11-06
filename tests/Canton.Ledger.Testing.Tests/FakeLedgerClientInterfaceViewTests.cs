@@ -103,6 +103,24 @@ public class FakeLedgerClientInterfaceViewTests
     }
 
     [Fact]
+    public async Task QueryActiveAsync_returning_unreadable_rows_lists_an_unclassified_row_beside_the_staged_views()
+    {
+        ICantonLedgerClient client = FakeLedgerClient.Create()
+            .WithActiveInterfaceContracts<IDemoHoldingView, DemoHoldingView>(
+                new InterfaceAcsSnapshotEntry<IDemoHoldingView, DemoHoldingView>.Unclassified(
+                    LedgerOffset.At(1), UnclassifiedKind.InterfaceViewUnavailable),
+                Checkpoint(1))
+            .Build();
+
+        var holdings = await client.QueryActiveAsync<IDemoHoldingView, DemoHoldingView>(
+            Owner, unreadableRows: UnreadableRows.Return, cancellationToken: TestContext.Current.CancellationToken);
+
+        holdings.Should().BeEmpty();
+        holdings.Unreadable.Should().Equal(
+            new UnreadableRow(UnclassifiedKind.InterfaceViewUnavailable, null, LedgerOffset.At(1)));
+    }
+
+    [Fact]
     public async Task QueryActiveAsync_keeps_each_interface_marker_on_its_own_staged_snapshot()
     {
         ICantonLedgerClient client = FakeLedgerClient.Create()

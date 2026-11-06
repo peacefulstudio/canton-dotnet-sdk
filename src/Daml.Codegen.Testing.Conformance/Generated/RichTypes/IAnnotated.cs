@@ -29,25 +29,25 @@ namespace Daml.Codegen.Testing.Conformance.RichTypes;
 /// materialize as concrete <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView"/> values, whose record value equality
 /// applies once concretely typed.
 /// </remarks>
-public interface IAnnotated : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView>, global::Daml.Runtime.Contracts.IHasChoices<IAnnotated>
+public interface IAnnotated : global::Daml.Runtime.Contracts.IDamlInterface, global::Daml.Runtime.Contracts.IHasView<global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView>, global::Daml.Runtime.Contracts.IHasChoices<IAnnotated>, global::Daml.Runtime.Contracts.IArchivable<IAnnotated>
 {
     /// <summary>Gets the interface identifier.</summary>
     static global::Daml.Runtime.Data.Identifier global::Daml.Runtime.Contracts.IDamlInterface.InterfaceId => InterfaceId;
 
     /// <summary>Gets the interface identifier.</summary>
-    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "Annotated");
+    public static new global::Daml.Runtime.Data.Identifier InterfaceId { get; } = new("3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c", "RichTypes", "Annotated");
 
     /// <summary>Gets the package ID.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageId => "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c";
 
     /// <summary>Gets the package name.</summary>
-    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "richtypes-h25b56c547fd1";
+    static string global::Daml.Runtime.Contracts.IDamlInterface.PackageName => "richtypes-h07285b495f9e";
 
     /// <summary>Gets the package version.</summary>
     static global::System.Version global::Daml.Runtime.Contracts.IDamlInterface.PackageVersion => new(0, 0, 1);
 
     /// <summary>Gets the compile-time Daml type descriptor.</summary>
-    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("2f0d55f302337c8a8a0497a00bc255f8e7a30aa52c783719dd5a3bdd486904d4", "RichTypes", "Annotated"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "richtypes-h25b56c547fd1");
+    static global::Daml.Runtime.Contracts.DamlTypeDescriptor global::Daml.Runtime.IDamlType.DamlTypeId => new(new global::Daml.Runtime.Data.Identifier("3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c", "RichTypes", "Annotated"), global::Daml.Runtime.Contracts.DamlTypeKind.Interface, "richtypes-h07285b495f9e");
 
     /// <summary>Gets the pure type witness pairing this marker with its view record <see cref="global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView"/>; passing it to a generic method infers both type parameters from one argument.</summary>
     public static global::Daml.Runtime.Contracts.ViewDescriptor<IAnnotated, global::Daml.Codegen.Testing.Conformance.RichTypes.AnnotationView> View { get; } = new();
@@ -62,7 +62,7 @@ public interface IAnnotated : global::Daml.Runtime.Contracts.IDamlInterface, glo
     /// Exercise the Archive choice.
     /// This choice is consuming and will archive the contract.
     /// </summary>
-    public static global::Daml.Runtime.Commands.Choice<IAnnotated, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
+    public static new global::Daml.Runtime.Commands.Choice<IAnnotated, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> ChoiceArchive { get; } = new()
     {
         Name = new global::Daml.Runtime.Commands.ChoiceName("Archive"),
         Consuming = true,
@@ -79,6 +79,9 @@ public interface IAnnotated : global::Daml.Runtime.Contracts.IDamlInterface, glo
 
     /// <summary>Gets the choice descriptors declared by this type.</summary>
     static global::System.Collections.Generic.IReadOnlyList<global::Daml.Runtime.Commands.IChoice> global::Daml.Runtime.Contracts.IHasChoices<IAnnotated>.Choices { get; } = [ChoiceArchive];
+
+    /// <summary>Gets the descriptor of the implicit Archive choice.</summary>
+    static global::Daml.Runtime.Commands.Choice<IAnnotated, global::Daml.Runtime.Data.DamlUnit, global::Daml.Runtime.Data.DamlUnit> global::Daml.Runtime.Contracts.IArchivable<IAnnotated>.ChoiceArchive => ChoiceArchive;
 }
 
 /// <summary>
@@ -106,7 +109,7 @@ public static class IAnnotatedExtensions
         this global::Daml.Runtime.Contracts.ContractId<IAnnotated> contractId)
     {
         global::System.ArgumentNullException.ThrowIfNull(contractId);
-        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAnnotated>(contractId, new global::Daml.Runtime.Commands.ChoiceName("Archive"), global::Daml.Runtime.Data.DamlRecord.Create());
+        return global::Daml.Runtime.Commands.ExerciseCommand.For<IAnnotated>(contractId, IAnnotated.ChoiceArchive.Name, global::Daml.Runtime.Data.DamlRecord.Create());
     }
 
     /// <summary>

@@ -129,6 +129,21 @@ public class GrpcSubscribeRequestBuilderTests
         request.BeginExclusive.Should().Be(0L);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildGetActiveContractsRequest_asks_for_incomplete_reassignments(bool isInterface)
+    {
+        var submitter = new RuntimeCommands.SubmitterInfo(
+            new HashSet<Party> { (Party)"alice" },
+            new HashSet<Party>());
+
+        var request = GrpcSubscribeRequestBuilder.BuildGetActiveContractsRequest(
+            submitter, TemplateId, activeAtOffset: 999L, isInterface: isInterface);
+
+        request.IncludeIncompleteReassignments.Should().Be(true);
+    }
+
     [Fact]
     public void BuildGetActiveContractsRequest_passes_activeAtOffset_through()
     {

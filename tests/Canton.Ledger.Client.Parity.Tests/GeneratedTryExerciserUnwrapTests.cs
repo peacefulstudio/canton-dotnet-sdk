@@ -31,7 +31,7 @@ public class GeneratedTryExerciserUnwrapTests
 
         var contractId = await client
             .TryCreateAsync(new Marker(Alice), cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync("Create Marker");
+            .OneOrThrowAsync();
 
         contractId.Should().Be(new ContractId<Marker>("00marker"));
     }
@@ -49,10 +49,10 @@ public class GeneratedTryExerciserUnwrapTests
 
         var act = async () => await client
             .TryCreateAsync(new Marker(Alice), cancellationToken: TestContext.Current.CancellationToken)
-            .OneOrThrowAsync("Create Marker");
+            .OneOrThrowAsync();
 
         var thrown = await act.Should().ThrowAsync<LedgerOperationException>();
         thrown.Which.Category.Should().Be(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing);
-        thrown.Which.Operation.Should().Be("Create Marker");
+        thrown.Which.Operation.Should().Be("Marker.Create");
     }
 }

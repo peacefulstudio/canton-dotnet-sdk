@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\..\conformance\conformancekit\conformancekit.dar" LogicalName="conformancekit.dar" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 

@@ -71,7 +71,7 @@ public sealed class RestCallEnvelopeTests : IDisposable
                 call.Operation,
                 HttpStatusCode.Forbidden,
                 7,
-                DamlErrorCategory.AuthorizationChecksFailed);
+                DamlErrorCategory.InsufficientPermission);
         }
 
         return rows;

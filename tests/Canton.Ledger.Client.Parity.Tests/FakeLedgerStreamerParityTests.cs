@@ -59,6 +59,11 @@ public sealed class FakeLedgerStreamerParityTests : LedgerStreamerParityTests
                 new InterfaceAcsSnapshotEntry<IHolding, HoldingView>.Created(
                     holdingCid, holdingView, null, snapshotCreatedAt, synchronizerId, [owner]),
                 new InterfaceAcsSnapshotEntry<IHolding, HoldingView>.Checkpoint(new StakeholderResume(snapshotCreatedAt)))
+            .WithInterfaceContractLifecycle(
+                holdingCid,
+                new InterfaceContractLifecycle<IHolding, HoldingView>(
+                    HoldingCreatedAt(holdingCid, holdingView, owner, synchronizerId, snapshotCreatedAt),
+                    null))
             .WithInterfaceEvents<IHolding, HoldingView>(
                 holdingAtTheWindowsExcludedLowerBound,
                 HoldingCreatedAt(holdingCid, holdingView, owner, synchronizerId, createdInsideTheWindowAt),

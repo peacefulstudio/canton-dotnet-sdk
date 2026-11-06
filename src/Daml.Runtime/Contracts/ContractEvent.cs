@@ -170,4 +170,8 @@ public sealed record ExercisedEvent(
     /// template.
     /// </summary>
     public string? PackageName { get; init; }
+
+    internal int? NodeId { get; init; }
+
+    internal int? LastDescendantNodeId { get; init; }
 }

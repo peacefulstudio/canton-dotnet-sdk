@@ -45,7 +45,8 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine("/// </summary>");
         }
 
-        indent.AppendLine($"public static {TypeReferenceQualifier.Qualify(RuntimeTypeNames.Choice)}<{interfaceName}, {argTypeRef}, {returnType}> Choice{choiceName} {{ get; }} = new()");
+        var hidesFacetDescriptor = IsSyntheticArchive(choice) ? "new " : string.Empty;
+        indent.AppendLine($"public static {hidesFacetDescriptor}{TypeReferenceQualifier.Qualify(RuntimeTypeNames.Choice)}<{interfaceName}, {argTypeRef}, {returnType}> Choice{choiceName} {{ get; }} = new()");
         indent.AppendLine("{");
         indent.Indent();
         indent.AppendLine($"Name = new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"),");
@@ -166,7 +167,7 @@ internal sealed partial class ChoiceEmitter
             NullGuardedParameters: GuardedParameters("contractId", hasArg && choice.ArgumentType is DamlTypeRef),
             ReturnStatement:
             [
-                $"return {exerciseCommand}.For<{interfaceName}>(contractId, new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ChoiceName)}(\"{choice.Name}\"), {argExpr});",
+                $"return {exerciseCommand}.For<{interfaceName}>(contractId, {ChoiceNameExpression(choice, interfaceName)}, {argExpr});",
             ]);
     }
 

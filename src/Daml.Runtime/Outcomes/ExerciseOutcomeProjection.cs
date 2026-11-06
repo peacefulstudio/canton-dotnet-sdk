@@ -36,7 +36,7 @@ public static class ExerciseOutcomeProjection
     ///   <item><see cref="ExerciseOutcome{T}.DamlError"/> / <see cref="ExerciseOutcome{T}.InfraError"/> —
     ///   re-wrapped over <typeparamref name="TProjected"/> with every field preserved.</item>
     /// </list>
-    /// Whatever arm results carries the <see cref="ExerciseOutcome{T}.CommandId"/> of
+    /// Whatever arm results carries the <see cref="ExerciseOutcome{T}.CommandId"/> and <see cref="ExerciseOutcome{T}.Operation"/> of
     /// <paramref name="outcome"/>.
     /// </summary>
     /// <typeparam name="TProjected">The projected success payload type.</typeparam>
@@ -62,7 +62,7 @@ public static class ExerciseOutcomeProjection
             _ => throw new UnreachableException($"Unexpected outcome {outcome.GetType().Name} from TrySubmitAndWaitForTransactionAsync."),
         };
 
-        return projected.WithCommandId(outcome.CommandId);
+        return projected.WithOriginOf(outcome);
     }
 
     /// <summary>
@@ -113,7 +113,49 @@ public static class ExerciseOutcomeProjection
             contractId);
     }
 
-    private static DamlValue ReadCarried<TOwner, TArg, TResult>(
+    /// <summary>
+    /// The by-key Exercise-result projection: finds the root exercise of a committed
+    /// <paramref name="transaction"/> and decodes its result through the choice's <c>ResultDecoder</c>,
+    /// pairing it with the contract the ledger resolved the key to. Codegen-emitted
+    /// <c>Try&lt;Choice&gt;ByKeyAsync</c> exercisers call this from the projector they hand to
+    /// <see cref="ProjectCommitted{TProjected}"/>.
+    /// </summary>
+    /// <remarks>
+    /// The root exercise is the one exercised event that no other exercised event's
+    /// <c>[node_id, last_descendant_node_id]</c> range encloses; the order of the transaction's event list
+    /// is not relied on. It must belong to <typeparamref name="TOwner"/> (compared by package name, module
+    /// and entity, as <see cref="ProjectChoiceResult{TOwner, TArg, TResult}"/> does) and carry the choice
+    /// name. An event that carries no node ids encloses nothing and is enclosed by nothing, so a transaction
+    /// holding a single exercised event resolves to it. A result that fails to decode is returned as
+    /// <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> because the command already committed; an
+    /// <see cref="OperationCanceledException"/> from the decoder propagates.
+    /// </remarks>
+    /// <typeparam name="TOwner">The keyed template that declares the choice.</typeparam>
+    /// <typeparam name="TArg">The choice argument type.</typeparam>
+    /// <typeparam name="TResult">The choice result type.</typeparam>
+    /// <param name="transaction">The committed transaction to read.</param>
+    /// <param name="choice">The generated choice descriptor, supplying the choice name and result decoder.</param>
+    /// <returns><see cref="ExerciseOutcome{T}.One"/> carrying the resolved contract id and the decoded result,
+    /// or <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> when decoding fails.</returns>
+    /// <exception cref="InvalidOperationException">The transaction has no single root exercise of the choice
+    /// on <typeparamref name="TOwner"/>: a custom writer dropped exercised events or their node ids, or the
+    /// transaction was requested without exercised events (<c>ACS_DELTA</c>).</exception>
+    public static ExerciseOutcome<ByKeyExercise<TOwner, TResult>> ProjectByKeyExercise<TOwner, TArg, TResult>(
+        this TransactionResult transaction,
+        Choice<TOwner, TArg, TResult> choice)
+        where TOwner : IDamlType
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+        ArgumentNullException.ThrowIfNull(choice);
+
+        return ExerciseResultProjector.ProjectRootExercise<TOwner, TResult>(
+            transaction,
+            TOwner.DamlTypeId,
+            choice.Name,
+            result => choice.ResultDecoder(ReadCarried(result, choice)));
+    }
+
+    internal static DamlValue ReadCarried<TOwner, TArg, TResult>(
         DamlValue result, Choice<TOwner, TArg, TResult> choice)
         where TOwner : IDamlType =>
         result is DamlUndecodedJson undecoded

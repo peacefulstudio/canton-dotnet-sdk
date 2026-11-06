@@ -6,6 +6,8 @@ using System.Text.Json;
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Authentication;
 using Com.Daml.Ledger.Api.V2;
+using Daml.Ledger.Abstractions;
+using Daml.Ledger.Abstractions.Extensions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -242,6 +244,52 @@ public sealed class LedgerClientSubscribeTests : IDisposable
             .Should().BeOfType<AcsSnapshotEntry<FooBar>.Created>().Subject
             .SynchronizerId.Should().Be(new SynchronizerId("sync-1"));
     }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_at_ledger_end_zero_yields_only_a_checkpoint_at_ledger_begin_without_calling_GetActiveContracts()
+    {
+        StubGetLedgerEnd(offset: 0L);
+
+        var client = CreateClient();
+        var entries = await CollectAsync(client.SubscribeActiveAsync<FooBar>(ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        entries.Should().ContainSingle().Which
+            .Should().Be(new AcsSnapshotEntry<FooBar>.Checkpoint(new StakeholderResume(LedgerOffset.At(0))));
+        AssertGetActiveContractsNotCalled();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_at_explicit_ledger_begin_yields_only_a_checkpoint_at_ledger_begin_without_calling_GetActiveContracts()
+    {
+        var client = CreateClient();
+        var entries = await CollectAsync(client.SubscribeActiveAsync<FooBar>(
+            ActAs, LedgerOffset.Begin, cancellationToken: TestContext.Current.CancellationToken));
+
+        entries.Should().ContainSingle().Which
+            .Should().Be(new AcsSnapshotEntry<FooBar>.Checkpoint(new StakeholderResume(LedgerOffset.At(0))));
+        AssertGetActiveContractsNotCalled();
+    }
+
+    [Fact]
+    public async Task SubscribeActiveAsync_for_interface_marker_at_ledger_end_zero_yields_only_a_checkpoint_at_ledger_begin_without_calling_GetActiveContracts()
+    {
+        StubGetLedgerEnd(offset: 0L);
+
+        var client = CreateClient();
+        var entries = await CollectAsync(client.SubscribeActiveAsync(
+            FooViewDescriptor, ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        entries.Should().ContainSingle().Which
+            .Should().Be(new InterfaceAcsSnapshotEntry<IFoo, FooView>.Checkpoint(new StakeholderResume(LedgerOffset.At(0))));
+        AssertGetActiveContractsNotCalled();
+    }
+
+    private void AssertGetActiveContractsNotCalled() =>
+        _stateService.DidNotReceive().GetActiveContracts(
+            Arg.Any<GetActiveContractsRequest>(),
+            Arg.Any<Metadata>(),
+            Arg.Any<DateTime?>(),
+            Arg.Any<CancellationToken>());
 
     [Fact]
     public async Task SubscribeAsync_surfaces_unrelated_template_Created_as_Unclassified()
@@ -1078,7 +1126,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_filters_request_by_template_id()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         GetActiveContractsRequest? captured = null;
         StubGetActiveContracts(captureRequest: r => captured = r);
 
@@ -1097,7 +1145,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_for_interface_marker_filters_request_by_interface_id()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         GetActiveContractsRequest? captured = null;
         StubGetActiveContracts(captureRequest: r => captured = r);
 
@@ -1118,7 +1166,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_asks_the_template_filter_for_the_created_event_blob_when_requested()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         GetActiveContractsRequest? captured = null;
         StubGetActiveContracts(captureRequest: r => captured = r);
 
@@ -1133,7 +1181,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_leaves_the_created_event_blob_out_of_the_template_filter_by_default()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         GetActiveContractsRequest? captured = null;
         StubGetActiveContracts(captureRequest: r => captured = r);
 
@@ -1147,7 +1195,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_for_interface_marker_asks_the_interface_filter_for_the_created_event_blob_when_requested()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         GetActiveContractsRequest? captured = null;
         StubGetActiveContracts(captureRequest: r => captured = r);
 
@@ -1182,7 +1230,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_IncompleteAssigned_Created_carries_a_Disclosure_built_from_its_created_event_blob()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         StubGetActiveContracts(new GetActiveContractsResponse
         {
             IncompleteAssigned = new IncompleteAssigned
@@ -1218,7 +1266,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_IncompleteUnassigned_Created_carries_a_Disclosure_on_the_source_synchronizer()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         StubGetActiveContracts(new GetActiveContractsResponse
         {
             IncompleteUnassigned = new IncompleteUnassigned
@@ -1252,6 +1300,116 @@ public sealed class LedgerClientSubscribeTests : IDisposable
                 "00mid3",
                 new RuntimeIdentifier("test-pkg", "Sample.Foo", "FooBar"),
                 new byte[] { 0x41, 0x42 }) { SynchronizerId = new SynchronizerId("sync-a") });
+    }
+
+    private static GetActiveContractsResponse MakeIncompleteUnassignedContract(
+        string contractId, string source, string target) =>
+        new()
+        {
+            IncompleteUnassigned = new IncompleteUnassigned
+            {
+                CreatedEvent = new ProtoCreatedEvent
+                {
+                    ContractId = contractId,
+                    PackageName = "test-package",
+                    TemplateId = FooBarTemplate,
+                    CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
+                    Offset = 41L,
+                },
+                UnassignedEvent = new UnassignedEvent
+                {
+                    ContractId = contractId,
+                    PackageName = "test-package",
+                    TemplateId = FooBarTemplate,
+                    Source = source,
+                    Target = target,
+                    Offset = 500L,
+                },
+            },
+        };
+
+    private static GetActiveContractsResponse MakeIncompleteAssignedContract(string contractId, string target) =>
+        new()
+        {
+            IncompleteAssigned = new IncompleteAssigned
+            {
+                AssignedEvent = new AssignedEvent
+                {
+                    Source = "sync-a",
+                    Target = target,
+                    CreatedEvent = new ProtoCreatedEvent
+                    {
+                        ContractId = contractId,
+                        PackageName = "test-package",
+                        TemplateId = FooBarTemplate,
+                        CreateArguments = LedgerClientTestFixtures.OwnerArguments(),
+                        Offset = 42L,
+                    },
+                },
+            },
+        };
+
+    [Theory]
+    [InlineData(UnreadableRows.Fail)]
+    [InlineData(UnreadableRows.Return)]
+    public async Task SnapshotAsync_returns_a_contract_whose_reassignment_is_in_flight_on_its_source_synchronizer(
+        UnreadableRows policy)
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(
+            MakeActiveContract("00active", FooBarTemplate),
+            MakeIncompleteUnassignedContract("00moving", source: "sync-a", target: "sync-b"));
+
+        var client = CreateClient();
+        var snapshot = await client.SnapshotAsync<FooBar>(
+            ActAs, unreadableRows: policy, cancellationToken: TestContext.Current.CancellationToken);
+
+        snapshot.Select(contract => contract.Id.Value).Should().Equal("00active", "00moving");
+        snapshot.Unreadable.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SnapshotActiveAsync_returns_a_contract_whose_reassignment_is_in_flight_on_its_source_synchronizer()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(MakeIncompleteUnassignedContract("00moving", source: "sync-a", target: "sync-b"));
+
+        var client = CreateClient();
+        var snapshot = await client.SnapshotActiveAsync<FooBar>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var moving = snapshot.Should().ContainSingle().Subject;
+        moving.Contract.Id.Value.Should().Be("00moving");
+        moving.SynchronizerId.Should().Be(new SynchronizerId("sync-a"));
+    }
+
+    [Fact]
+    public async Task SnapshotActiveAsync_returns_a_contract_whose_assignment_is_in_flight_on_its_target_synchronizer()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(MakeIncompleteAssignedContract("00arriving", target: "sync-b"));
+
+        var client = CreateClient();
+        var snapshot = await client.SnapshotActiveAsync<FooBar>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        var arriving = snapshot.Should().ContainSingle().Subject;
+        arriving.Contract.Id.Value.Should().Be("00arriving");
+        arriving.SynchronizerId.Should().Be(new SynchronizerId("sync-b"));
+        snapshot.Unreadable.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SnapshotAsync_still_throws_on_an_in_flight_reassignment_whose_unassignment_has_no_target()
+    {
+        StubGetLedgerEnd(offset: 10L);
+        StubGetActiveContracts(MakeIncompleteUnassignedContract("00moving", source: "sync-a", target: string.Empty));
+
+        var client = CreateClient();
+        var snapshotting = async () => await client.SnapshotAsync<FooBar>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken);
+
+        await snapshotting.Should().ThrowAsync<LedgerOperationException>().WithMessage("*MissingSynchronizerId*offset 500*");
     }
 
     [Fact]
@@ -1508,7 +1666,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_IncompleteUnassigned_as_Created_then_Unclassified()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var incomplete = new GetActiveContractsResponse
         {
             IncompleteUnassigned = new IncompleteUnassigned
@@ -1547,7 +1705,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_includes_IncompleteAssigned_entries()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var incomplete = new GetActiveContractsResponse
         {
             IncompleteAssigned = new IncompleteAssigned
@@ -1579,7 +1737,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Unclassified_when_active_contract_synchronizer_id_missing()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var response = new GetActiveContractsResponse
         {
             ActiveContract = new ActiveContract
@@ -1609,7 +1767,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Unclassified_when_IncompleteUnassigned_source_missing()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var incomplete = new GetActiveContractsResponse
         {
             IncompleteUnassigned = new IncompleteUnassigned
@@ -1646,7 +1804,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_Unclassified_when_IncompleteAssigned_target_missing()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var incomplete = new GetActiveContractsResponse
         {
             IncompleteAssigned = new IncompleteAssigned
@@ -1680,7 +1838,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_classifies_template_mismatch_before_missing_synchronizer_id_like_live_SubscribeAsync()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var response = new GetActiveContractsResponse
         {
             ActiveContract = new ActiveContract
@@ -1715,7 +1873,7 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     [Fact]
     public async Task SubscribeActiveAsync_surfaces_IncompleteUnassigned_offset_from_reassignment_event_when_created_event_absent()
     {
-        StubGetLedgerEnd(offset: 0L);
+        StubGetLedgerEnd(offset: 10L);
         var incomplete = new GetActiveContractsResponse
         {
             IncompleteUnassigned = new IncompleteUnassigned

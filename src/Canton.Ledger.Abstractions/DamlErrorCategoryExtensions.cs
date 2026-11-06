@@ -21,7 +21,7 @@ public static class DamlErrorCategoryExtensions
     /// Maps the category to the HTTP status code a JSON-facing service should return
     /// for it. <see cref="DamlErrorCategory.Unknown"/> maps to
     /// <see cref="HttpStatusCode.InternalServerError"/>;
-    /// <see cref="DamlErrorCategory.MaliciousOrFaultyBehaviour"/> maps to
+    /// <see cref="DamlErrorCategory.SecurityAlert"/> maps to
     /// <see cref="HttpStatusCode.BadRequest"/> (Canton reports a security alert as gRPC
     /// <c>INVALID_ARGUMENT</c> with the details redacted, which its JSON API serves as 400);
     /// <see cref="DamlErrorCategory.BackgroundProcessDegradationWarning"/> is a
@@ -39,9 +39,9 @@ public static class DamlErrorCategoryExtensions
             DamlErrorCategory.ContentionOnSharedResources => HttpStatusCode.Conflict,
             DamlErrorCategory.DeadlineExceededRequestStateUnknown => HttpStatusCode.GatewayTimeout,
             DamlErrorCategory.SystemInternalAssumptionViolated => HttpStatusCode.InternalServerError,
-            DamlErrorCategory.MaliciousOrFaultyBehaviour => HttpStatusCode.BadRequest,
+            DamlErrorCategory.SecurityAlert => HttpStatusCode.BadRequest,
             DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials => HttpStatusCode.Unauthorized,
-            DamlErrorCategory.AuthorizationChecksFailed => HttpStatusCode.Forbidden,
+            DamlErrorCategory.InsufficientPermission => HttpStatusCode.Forbidden,
             DamlErrorCategory.InvalidIndependentOfSystemState => HttpStatusCode.BadRequest,
             DamlErrorCategory.InvalidGivenCurrentSystemStateOther => HttpStatusCode.BadRequest,
             DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists => HttpStatusCode.Conflict,

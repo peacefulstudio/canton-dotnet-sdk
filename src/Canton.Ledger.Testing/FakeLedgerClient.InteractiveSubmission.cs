@@ -28,7 +28,7 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        RecordSigned(submission);
+        RecordSigned(submission, timeout);
         return ThrowingCallFailure is { } failure ? Task.FromException(failure) : Task.CompletedTask;
     }
 
@@ -38,7 +38,7 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        RecordSigned(submission);
+        RecordSigned(submission, timeout);
         return Answering(() =>
         {
             var executed = _interactive.ExecutedSubmission ?? throw StagingMissing(
@@ -55,7 +55,7 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        RecordSigned(submission);
+        RecordSigned(submission, timeout);
         return Answering(() =>
         {
             var transaction = _interactive.ExecutedTransaction ?? throw StagingMissing(
@@ -78,11 +78,11 @@ public sealed partial class FakeLedgerClient
             "preferred packages", nameof(GetPreferredPackagesAsync), "WithPreferredPackages"));
     }
 
-    private void RecordSigned(SignedSubmission submission)
+    private void RecordSigned(SignedSubmission submission, TimeSpan? timeout)
     {
         ArgumentNullException.ThrowIfNull(submission);
         ArgumentException.ThrowIfNullOrWhiteSpace(submission.SubmissionId);
-        _submissions.Enqueue(new RecordedSubmission.Execution(submission));
+        _submissions.Enqueue(new RecordedSubmission.Execution(submission, timeout));
     }
 }
 

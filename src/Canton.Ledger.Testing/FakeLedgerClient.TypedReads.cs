@@ -33,6 +33,18 @@ public sealed partial class FakeLedgerClient
                 $"events for contract '{contractId.Value}'", nameof(GetEventsByContractIdAsync), $"WithContractLifecycle<{typeof(T).Name}>"));
 
     /// <inheritdoc />
+    public Task<InterfaceContractLifecycle<TInterface, TView>> GetEventsByContractIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView> =>
+        Answering(() => TypedReads.ContractLifecycles.TryGetValue((typeof(TInterface), contractId.Value), out var lifecycle)
+            ? (InterfaceContractLifecycle<TInterface, TView>)lifecycle
+            : throw StagingMissing(
+                $"events for contract '{contractId.Value}'",
+                nameof(GetEventsByContractIdAsync),
+                $"WithInterfaceContractLifecycle<{typeof(TInterface).Name}, {typeof(TView).Name}>"));
+
+    /// <inheritdoc />
     public Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : IDamlType =>

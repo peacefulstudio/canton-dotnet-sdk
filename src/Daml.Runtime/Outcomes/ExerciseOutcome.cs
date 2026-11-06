@@ -73,6 +73,20 @@ public abstract record ExerciseOutcome<T>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CommandId { get; init; }
 
+    /// <summary>
+    /// What the submission behind this outcome did: a <see cref="LedgerOperation.Command"/> naming the
+    /// template and choice, or the template and <c>Create</c>, of a single command, or a
+    /// <see cref="LedgerOperation.Batch"/> of every command in a batch. <c>null</c> when the outcome was
+    /// built by hand or by a submission that names no operation, such as a raw
+    /// <c>TrySubmitAndWaitForTransactionAsync</c>. A generated <c>Try&lt;Choice&gt;Async</c>,
+    /// <c>TryCreateAsync</c> and <c>TrySubmitBatchAsync</c> set it on every outcome they return, a failed one
+    /// included, so <c>OneOrThrow()</c> names the operation without being told. It takes part in equality: two
+    /// outcomes of different operations are not equal even when their content is. Written to JSON only
+    /// when set.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public LedgerOperation? Operation { get; init; }
+
     /// <summary>The operation succeeded and produced a <typeparamref name="T"/>.</summary>
     public sealed record One(T Result) : ExerciseOutcome<T>;
 
@@ -184,6 +198,7 @@ public abstract record ExerciseOutcome<T>
                 || ErrorId != other.ErrorId
                 || Message != other.Message
                 || CommandId != other.CommandId
+                || Operation != other.Operation
                 || Metadata.Count != other.Metadata.Count)
             {
                 return false;
@@ -201,7 +216,7 @@ public abstract record ExerciseOutcome<T>
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            var hash = HashCode.Combine(Category, ErrorId, Message, CommandId, Metadata.Count);
+            var hash = HashCode.Combine(Category, ErrorId, Message, CommandId, Operation, Metadata.Count);
             foreach (var (key, value) in Metadata)
             {
                 hash ^= HashCode.Combine(key, value);
@@ -241,7 +256,7 @@ public abstract record ExerciseOutcome<T>
         [property: JsonIgnore] Exception? SourceException = null) : ExerciseOutcome<T>
     {
         /// <summary>
-        /// Compares two infrastructure failures by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ExerciseOutcome{T}.CommandId"/>, ignoring <see cref="SourceException"/>.
+        /// Compares two infrastructure failures by <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/>, <see cref="ExerciseOutcome{T}.CommandId"/> and <see cref="ExerciseOutcome{T}.Operation"/>, ignoring <see cref="SourceException"/>.
         /// </summary>
         /// <remarks>
         /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
@@ -256,14 +271,15 @@ public abstract record ExerciseOutcome<T>
             && EqualityComparer<TransportStatus>.Default.Equals(Status, other.Status)
             && Message == other.Message
             && Category == other.Category
-            && CommandId == other.CommandId;
+            && CommandId == other.CommandId
+            && Operation == other.Operation;
 
         /// <summary>
         /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
         /// <see cref="Equals(InfraError)"/>.
         /// </summary>
-        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/> and <see cref="ExerciseOutcome{T}.CommandId"/>.</returns>
-        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, CommandId);
+        /// <returns>A hash code over <see cref="Status"/>, <see cref="Message"/>, <see cref="Category"/>, <see cref="ExerciseOutcome{T}.CommandId"/> and <see cref="ExerciseOutcome{T}.Operation"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(Status, Message, Category, CommandId, Operation);
     }
 
     /// <summary>
@@ -288,7 +304,7 @@ public abstract record ExerciseOutcome<T>
         [property: JsonIgnore] Exception? SourceException = null) : ExerciseOutcome<T>
     {
         /// <summary>
-        /// Compares two committed-but-undecodable outcomes by <see cref="UpdateId"/>, <see cref="Message"/> and <see cref="ExerciseOutcome{T}.CommandId"/>, ignoring <see cref="SourceException"/>.
+        /// Compares two committed-but-undecodable outcomes by <see cref="UpdateId"/>, <see cref="Message"/>, <see cref="ExerciseOutcome{T}.CommandId"/> and <see cref="ExerciseOutcome{T}.Operation"/>, ignoring <see cref="SourceException"/>.
         /// </summary>
         /// <remarks>
         /// <see cref="SourceException"/> is a diagnostic attachment, not part of the value's identity:
@@ -302,14 +318,15 @@ public abstract record ExerciseOutcome<T>
             other is not null
             && UpdateId == other.UpdateId
             && Message == other.Message
-            && CommandId == other.CommandId;
+            && CommandId == other.CommandId
+            && Operation == other.Operation;
 
         /// <summary>
         /// Hashes the value by every member other than <see cref="SourceException"/>, consistently with
         /// <see cref="Equals(CommittedUndecodable)"/>.
         /// </summary>
-        /// <returns>A hash code over <see cref="UpdateId"/>, <see cref="Message"/> and <see cref="ExerciseOutcome{T}.CommandId"/>.</returns>
-        public override int GetHashCode() => HashCode.Combine(UpdateId, Message, CommandId);
+        /// <returns>A hash code over <see cref="UpdateId"/>, <see cref="Message"/>, <see cref="ExerciseOutcome{T}.CommandId"/> and <see cref="ExerciseOutcome{T}.Operation"/>.</returns>
+        public override int GetHashCode() => HashCode.Combine(UpdateId, Message, CommandId, Operation);
     }
 }
 

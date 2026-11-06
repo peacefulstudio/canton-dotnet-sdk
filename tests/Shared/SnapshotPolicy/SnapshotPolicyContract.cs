@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
@@ -26,16 +27,33 @@ internal abstract record SnapshotStep
         long? Offset,
         UnclassifiedKind Kind,
         string? RawKind = null) : SnapshotStep;
+
+    public sealed record Stall(StallEnding Ending = StallEnding.ThrowsCancellation) : SnapshotStep;
+}
+
+internal enum StallEnding
+{
+    ThrowsCancellation,
+    ReportsCancelledFaultInBand,
+    EndsWithoutCheckpoint,
 }
 
 internal sealed record SnapshotPolicySubject(string Name, string RowNoun, string Alternative);
 
+internal sealed record SnapshotRead(IReadOnlyList<string> Ids, IReadOnlyList<UnreadableRow> Unreadable);
+
 internal interface ISnapshotPolicyDriver
 {
+    UnreadableRows Policy { get; }
+
     SnapshotPolicySubject Subject { get; }
 
-    Task<IReadOnlyList<string>> DrainAsync(
+    Task WhenStalled { get; }
+
+    Task<SnapshotRead> DrainAsync(
         IReadOnlyList<SnapshotStep> script,
         bool streamHonoursCancellation,
+        TimeSpan? timeout,
+        TimeProvider timeProvider,
         CancellationToken cancellationToken);
 }

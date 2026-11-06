@@ -37,6 +37,7 @@ public class EmittedTryExerciserNamesCompileTests
             "TryDescribeAsync",
             "TryFreezeAsync",
             "TryRedeemAsync",
+            "TryReissueByKeyAsync",
             "TryReissueAsync",
             "TryTransferAsync",
             "TryTryRedeemAsync",

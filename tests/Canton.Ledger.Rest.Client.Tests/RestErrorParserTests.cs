@@ -373,7 +373,7 @@ public class RestErrorParserTests
 
     [Theory]
     [InlineData(HttpStatusCode.Unauthorized, 16, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(HttpStatusCode.Forbidden, 7, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(HttpStatusCode.Forbidden, 7, DamlErrorCategory.InsufficientPermission)]
     public async Task ParseAsync_classifies_a_redacted_security_envelope_from_the_http_status_code(
         HttpStatusCode statusCode, int grpcCodeValue, DamlErrorCategory expected)
     {
@@ -409,7 +409,7 @@ public class RestErrorParserTests
 
     [Theory]
     [InlineData(HttpStatusCode.Unauthorized, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(HttpStatusCode.Forbidden, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(HttpStatusCode.Forbidden, DamlErrorCategory.InsufficientPermission)]
     public async Task ParseAsync_classifies_a_detail_less_auth_status_carrying_a_google_rpc_status(
         HttpStatusCode statusCode, DamlErrorCategory expected)
     {
@@ -423,7 +423,7 @@ public class RestErrorParserTests
 
     [Theory]
     [InlineData(HttpStatusCode.Unauthorized, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(HttpStatusCode.Forbidden, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(HttpStatusCode.Forbidden, DamlErrorCategory.InsufficientPermission)]
     public async Task ParseAsync_classifies_an_auth_status_whose_body_carries_nothing_to_read(
         HttpStatusCode statusCode, DamlErrorCategory expected)
     {
@@ -438,7 +438,7 @@ public class RestErrorParserTests
 
     [Theory]
     [InlineData(HttpStatusCode.Unauthorized, DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials)]
-    [InlineData(HttpStatusCode.Forbidden, DamlErrorCategory.AuthorizationChecksFailed)]
+    [InlineData(HttpStatusCode.Forbidden, DamlErrorCategory.InsufficientPermission)]
     public async Task ParseAsync_classifies_a_text_plain_auth_status(
         HttpStatusCode statusCode, DamlErrorCategory expected)
     {

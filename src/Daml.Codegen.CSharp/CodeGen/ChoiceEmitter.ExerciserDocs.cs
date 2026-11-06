@@ -30,7 +30,7 @@ internal sealed partial class ChoiceEmitter
             indent.AppendLine("/// <param name=\"argument\">The choice argument.</param>");
         }
         WriteSubmitterParameterDocs(indent, site, overload.Submitter);
-        WriteSubmissionParameterDocs(indent);
+        SubmissionParameters.WriteExerciseDocs(indent);
     }
 
     private static string ReceiverParameterDoc(ExerciserSite site, ExerciseReceiver receiver) =>

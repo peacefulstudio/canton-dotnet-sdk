@@ -20,7 +20,7 @@ public static class GrpcStatusMappingExtensions
     /// <summary>
     /// Maps the category to the gRPC status the participant returns it under.
     /// <see cref="DamlErrorCategory.Unknown"/> maps to <see cref="StatusCode.Unknown"/>;
-    /// <see cref="DamlErrorCategory.MaliciousOrFaultyBehaviour"/> maps to
+    /// <see cref="DamlErrorCategory.SecurityAlert"/> maps to
     /// <see cref="StatusCode.InvalidArgument"/> (Canton reports a security alert under that code
     /// and redacts only the details);
     /// <see cref="DamlErrorCategory.BackgroundProcessDegradationWarning"/> is a log-only
@@ -38,9 +38,9 @@ public static class GrpcStatusMappingExtensions
             DamlErrorCategory.ContentionOnSharedResources => StatusCode.Aborted,
             DamlErrorCategory.DeadlineExceededRequestStateUnknown => StatusCode.DeadlineExceeded,
             DamlErrorCategory.SystemInternalAssumptionViolated => StatusCode.Internal,
-            DamlErrorCategory.MaliciousOrFaultyBehaviour => StatusCode.InvalidArgument,
+            DamlErrorCategory.SecurityAlert => StatusCode.InvalidArgument,
             DamlErrorCategory.AuthInterceptorInvalidAuthenticationCredentials => StatusCode.Unauthenticated,
-            DamlErrorCategory.AuthorizationChecksFailed => StatusCode.PermissionDenied,
+            DamlErrorCategory.InsufficientPermission => StatusCode.PermissionDenied,
             DamlErrorCategory.InvalidIndependentOfSystemState => StatusCode.InvalidArgument,
             DamlErrorCategory.InvalidGivenCurrentSystemStateOther => StatusCode.FailedPrecondition,
             DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists => StatusCode.AlreadyExists,

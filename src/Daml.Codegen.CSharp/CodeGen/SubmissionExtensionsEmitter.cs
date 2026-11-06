@@ -99,7 +99,7 @@ internal sealed class SubmissionExtensionsEmitter(
     /// <summary>
     /// Emits the <c>TryCreateAsync</c> extension. On the static path, the payload
     /// alone is enough to derive every signatory — the caller passes only the
-    /// payload and an optional cancellation token, and the wrapper builds a
+    /// payload and the optional submission parameters, and the wrapper builds a
     /// <c>SubmitterInfo</c> from the payload's <c>Party</c> properties. On the
     /// dynamic path, the caller passes a
     /// <c>SubmitterInfo</c> directly (with implicit conversion from
@@ -148,8 +148,7 @@ internal sealed class SubmissionExtensionsEmitter(
             {
                 indent.AppendLine("/// <param name=\"submitter\">The submitter party set (<c>actAs</c> + optional <c>readAs</c>).</param>");
             }
-            indent.AppendLine("/// <param name=\"configure\">Optional hook that receives the submission built for this call and returns the one to submit, so a caller can add what this helper does not expose: <c>s => s.WithDisclosedContracts(holding.Disclosure!)</c>, <c>WithDeduplicationPeriod</c>, <c>WithSynchronizerId</c> or <c>WithMinLedgerTime</c>. It must keep the helper's command, and the submitter's act-as and read-as parties replace any set on the submission. The default <c>null</c> submits the submission unchanged.</param>");
-            indent.AppendLine("/// <param name=\"cancellationToken\">Cancellation token.</param>");
+            SubmissionParameters.WriteCreateDocs(indent);
         }
 
         indent.AppendLine($"public static global::System.Threading.Tasks.Task<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ExerciseOutcome)}<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{className}>>> TryCreateAsync(");
@@ -160,9 +159,7 @@ internal sealed class SubmissionExtensionsEmitter(
         {
             indent.AppendLine($"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.SubmitterInfo)} submitter,");
         }
-        var submission = TypeReferenceQualifier.Qualify(RuntimeTypeNames.CommandsSubmission);
-        indent.AppendLine($"{TypeReferenceQualifier.Qualify("Func")}<{submission}, {submission}>? configure = null,");
-        indent.AppendLine("global::System.Threading.CancellationToken cancellationToken = default)");
+        SubmissionParameters.WriteAndCloseSignature(indent);
         indent.Dedent();
 
         indent.AppendLine("{");
@@ -206,7 +203,7 @@ internal sealed class SubmissionExtensionsEmitter(
             indent.AppendLine();
         }
 
-        indent.AppendLine($"return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<{className}>(client, payload, submitter, configure: configure, cancellationToken: cancellationToken);");
+        indent.AppendLine($"return global::Daml.Ledger.Abstractions.Extensions.SingleCommandExtensions.TryCreateAsync<{className}>(client, payload, submitter, workflowId, commandId, timeout, configure, cancellationToken);");
 
         indent.Dedent();
         indent.AppendLine("}");

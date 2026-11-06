@@ -141,7 +141,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// effective id the participant recorded — minted here when the submission
     /// omits one — and a failed call reports it on
     /// <see cref="LedgerOperationException.CommandId"/>. After a transport failure,
-    /// look that id up on <see cref="CompletionStreamAsync"/> before retrying (by hand
+    /// resolve that id with <see cref="RecoveryExtensions.RecoverAsync"/> before retrying (by hand
     /// or via a resilience policy such as Polly): a resubmitted consuming exercise
     /// that already committed is rejected with <c>CONTRACT_NOT_FOUND</c> rather than
     /// deduplicated. Re-invoking with a fresh, command_id-less
@@ -159,7 +159,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
     /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
-    /// surfaced, so look <see cref="LedgerOperationException.CommandId"/> up on <see cref="CompletionStreamAsync"/> before resubmitting. A structured participant rejection is
+    /// surfaced, so resolve <see cref="LedgerOperationException.CommandId"/> with <see cref="RecoveryExtensions.RecoverAsync"/> before resubmitting. A structured participant rejection is
     /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
     /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
     /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
@@ -187,8 +187,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// the resulting <c>UnassignedEvent</c> and pass it to a follow-up <see cref="AssignCommand"/>.
     /// The returned <see cref="RuntimeCommands.CommandId"/> is the effective id the participant
     /// recorded — minted here when omitted — and a failed call reports it on
-    /// <see cref="LedgerOperationException.CommandId"/>; after a transport failure, look that id up on
-    /// <see cref="CompletionStreamAsync"/> before retrying.
+    /// <see cref="LedgerOperationException.CommandId"/>; after a transport failure, resolve that id with
+    /// <see cref="RecoveryExtensions.RecoverAsync"/> before retrying.
     /// </remarks>
     /// <param name="submission">The reassignment submission to hand to the participant.</param>
     /// <param name="timeout">
@@ -200,7 +200,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
     /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
-    /// surfaced, so look <see cref="LedgerOperationException.CommandId"/> up on <see cref="CompletionStreamAsync"/> before resubmitting. A structured participant rejection is
+    /// surfaced, so resolve <see cref="LedgerOperationException.CommandId"/> with <see cref="RecoveryExtensions.RecoverAsync"/> before resubmitting. A structured participant rejection is
     /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
     /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
     /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
@@ -321,7 +321,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// This is a materializing convenience, not a streaming read: it cannot hand a fault back
     /// in-band, so a snapshot that faults, carries a row the projector could not classify, or ends
     /// without its terminal checkpoint throws <see cref="LedgerOperationException"/> rather than
-    /// returning a short list that looks complete. The in-band terminal-<c>StreamError</c>
+    /// returning a short list that looks complete; <paramref name="unreadableRows"/> set to
+    /// <see cref="UnreadableRows.Return"/> opts out of that for the unclassified row alone. The in-band terminal-<c>StreamError</c>
     /// contract binds the <c>await foreach</c> streaming surfaces; stay on
     /// <see cref="ILedgerStreamer.SubscribeActiveAsync{TInterface, TView}"/> for value-shaped
     /// fault handling.
@@ -331,7 +332,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// A snapshot row whose view the participant did not compute — an absent view, or one carrying
     /// a <c>viewStatus</c> other than <c>OK</c> — and a row whose view did not decode into
     /// <typeparamref name="TView"/> both reach the drain as an unclassified row and throw
-    /// <see cref="LedgerOperationException"/> rather than yielding an empty view record.
+    /// <see cref="LedgerOperationException"/> rather than yielding an empty view record, unless
+    /// <paramref name="unreadableRows"/> is <see cref="UnreadableRows.Return"/>.
     /// </para>
     /// </remarks>
     /// <typeparam name="TInterface">The generated Daml interface marker (e.g. <c>IHolding</c>).</typeparam>
@@ -343,28 +345,52 @@ public interface ICantonLedgerClient : ILedgerClient
     /// returned <see cref="ActiveContract{TContract}"/> carries a <see cref="ActiveContract{TContract}.Disclosure"/>
     /// naming the implementing template. <see langword="false"/>, the default, leaves it <see langword="null"/>.
     /// </param>
+    /// <param name="timeout">
+    /// Wall-clock bound on the whole snapshot, measured on <see cref="ILedgerStreamer.TimeProvider"/>;
+    /// <see langword="null"/>, the default, applies none. Expiry before the terminal checkpoint throws
+    /// <see cref="LedgerOperationException"/> with <see cref="LedgerOperationException.Category"/>
+    /// <see cref="DamlErrorCategory.DeadlineExceededRequestStateUnknown"/>,
+    /// <see cref="LedgerOperationException.Status"/> <see cref="TransportStatus.NoResponse"/> and
+    /// <see cref="CommitState.NotCommitted"/>, and cancels the underlying stream. Cancelling
+    /// <paramref name="cancellationToken"/> wins over an expired timeout.
+    /// </param>
+    /// <param name="unreadableRows">
+    /// What to do with a row whose interface view the SDK cannot read.
+    /// <see cref="UnreadableRows.Fail"/>, the default, throws <see cref="LedgerOperationException"/> on the
+    /// first one. <see cref="UnreadableRows.Return"/> keeps draining and lists each one on
+    /// <see cref="ActiveSnapshot{TRow}.Unreadable"/>. A fault, a missing checkpoint, an expired
+    /// <paramref name="timeout"/> and cancellation fail the same way under both.
+    /// </param>
     /// <param name="cancellationToken">Cancels the underlying snapshot stream cleanly.</param>
     /// <returns>
-    /// The active interface contracts, each wrapped with its last-update offset and synchronizer id.
+    /// The readable interface contracts, each wrapped with its last-update offset and synchronizer id, in
+    /// delivery order. <see cref="ActiveSnapshot{TRow}.Unreadable"/> is empty under
+    /// <see cref="UnreadableRows.Fail"/>.
     /// </returns>
     /// <exception cref="LedgerOperationException">
-    /// The snapshot faulted, carried an unclassified row, or ended without its terminal checkpoint.
+    /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>, ended without
+    /// its terminal checkpoint, or did not reach it within <paramref name="timeout"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
-    async Task<IReadOnlyList<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
+    async Task<ActiveSnapshot<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
         bool includeDisclosure = false,
+        TimeSpan? timeout = null,
+        UnreadableRows unreadableRows = UnreadableRows.Fail,
         CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
     {
         var rows = await InterfaceSnapshotArmReader<TInterface, TView>.DrainAsync(
-            SubscribeActiveAsync(
-                new ViewDescriptor<TInterface, TView>(), submitter, activeAtOffset, includeDisclosure, cancellationToken),
+            token => SubscribeActiveAsync(
+                new ViewDescriptor<TInterface, TView>(), submitter, activeAtOffset, includeDisclosure, token),
+            timeout,
+            unreadableRows,
+            TimeProvider,
             cancellationToken).ConfigureAwait(false);
 
-        return rows.ConvertAll(ToActiveContract);
+        return rows.Select(ToActiveContract);
 
         static ActiveContract<InterfaceContract<TInterface, TView>> ToActiveContract(
             InterfaceAcsSnapshotEntry<TInterface, TView>.Created row) =>
@@ -691,6 +717,49 @@ public interface ICantonLedgerClient : ILedgerClient
         where T : ITemplate, IDamlRecord<T>;
 
     /// <summary>
+    /// Reads the creation and archival of one contract through
+    /// <c>EventQueryService.GetEventsByContractId</c> filtered by the Daml interface
+    /// <typeparamref name="TInterface"/>, decoding the participant-computed interface view into
+    /// <typeparamref name="TView"/>. For a contract known only by its interface id, such as a Token
+    /// Standard <c>ContractId&lt;IAllocation&gt;</c>, whose implementing template the caller cannot name.
+    /// The <paramref name="submitter"/>'s combined <c>ActAs ∪ ReadAs</c> parties scope visibility.
+    /// </summary>
+    /// <remarks>
+    /// The interface counterpart of <see cref="GetEventsByContractIdAsync{T}"/>, with the same disclosure and
+    /// authorisation semantics. Like <see cref="QueryActiveAsync{TInterface, TView}"/>, the request asks the
+    /// participant for an <c>InterfaceFilter</c> by package-name reference with the view included, and the
+    /// creation carries the view, not the implementing template's create arguments. An archived contract
+    /// answers with both events, so whether and at which offset it was archived is
+    /// <see cref="InterfaceContractLifecycle{TInterface, TView}.Archived"/>.
+    /// </remarks>
+    /// <typeparam name="TInterface">The generated Daml interface marker (e.g. <c>IAllocation</c>).</typeparam>
+    /// <typeparam name="TView">The interface's view record (e.g. <c>AllocationView</c>).</typeparam>
+    /// <param name="contractId">The interface-typed id of the contract whose events to read.</param>
+    /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
+    /// <param name="timeout">
+    /// Per-call deadline overriding the client's configured request timeout.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="LedgerOperationException">
+    /// The call failed: the participant could not be reached or did not answer within the deadline, rejected the
+    /// call (an id the parties cannot see or that never existed is answered <c>CONTRACT_EVENTS_NOT_FOUND</c>), or
+    /// answered with a body the client could not decode. A read changes nothing, so
+    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The creation carries no usable interface view for <typeparamref name="TInterface"/>: the contract does not
+    /// implement it, or the participant did not compute the view.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+    Task<InterfaceContractLifecycle<TInterface, TView>> GetEventsByContractIdAsync<TInterface, TView>(
+        ContractId<TInterface> contractId,
+        RuntimeCommands.SubmitterInfo submitter,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where TInterface : IDamlInterface, IHasView<TView>
+        where TView : IDamlRecord<TView>;
+
+    /// <summary>
     /// Reads the explicit-disclosure data of one contract through
     /// <c>EventQueryService.GetEventsByContractId</c> with a wildcard filter that requests the created event
     /// blob. No payload is decoded, so <typeparamref name="T"/> may be a template or an interface and the
@@ -735,6 +804,13 @@ public interface ICantonLedgerClient : ILedgerClient
     /// each following call passes the previous page's <see cref="AcsPage{T}.NextPageToken"/> together with
     /// its <see cref="AcsPage{T}.ActiveAtOffset"/> as <paramref name="activeAtOffset"/>.
     /// </summary>
+    /// <remarks>
+    /// The snapshot includes incomplete reassignments, even though Canton 3.7 excludes them by
+    /// default: a contract unassigned from its source synchronizer and not yet assigned to its target
+    /// arrives as a <see cref="AcsSnapshotEntry{T}.Created"/> entry on the source synchronizer followed
+    /// by an <see cref="AcsSnapshotEntry{T}.Unclassified"/> entry with
+    /// <see cref="UnclassifiedKind.UnassignedEvent"/>. There is no option to leave them out.
+    /// </remarks>
     /// <param name="submitter">The parties whose visibility scopes the snapshot.</param>
     /// <param name="activeAtOffset">
     /// The offset to compute the snapshot at; the current ledger end when omitted.
@@ -905,7 +981,7 @@ public interface ICantonLedgerClient : ILedgerClient
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
     /// <see cref="CommitState.Unknown"/>: the participant may have accepted the submission before the failure
-    /// surfaced, so look the command id the submission was prepared with up on <see cref="CompletionStreamAsync"/> before resubmitting. A structured participant rejection is
+    /// surfaced, so resolve the command id the submission was prepared with using <see cref="RecoveryExtensions.RecoverAsync"/> before resubmitting. A structured participant rejection is
     /// <see cref="CommitState.NotCommitted"/>, except a <see cref="LedgerOperationException.Category"/> of
     /// <c>DeadlineExceededRequestStateUnknown</c> or <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>,
     /// and two error ids that take precedence over the category: <c>DUPLICATE_COMMAND</c> is
@@ -937,8 +1013,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <exception cref="LedgerOperationException">
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
-    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so look the command id the submission was prepared with up on
-    /// <see cref="CompletionStreamAsync"/> before resubmitting.
+    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so resolve the command id the submission was prepared with using
+    /// <see cref="RecoveryExtensions.RecoverAsync"/> before resubmitting.
     /// A structured participant rejection is <see cref="CommitState.NotCommitted"/>, except a
     /// <see cref="LedgerOperationException.Category"/> of <c>DeadlineExceededRequestStateUnknown</c> or
     /// <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>, and two error ids that take precedence
@@ -973,8 +1049,8 @@ public interface ICantonLedgerClient : ILedgerClient
     /// <exception cref="LedgerOperationException">
     /// The call failed. When the participant could not be reached, did not answer within the deadline, or answered
     /// with a failure that names no structured error, <see cref="LedgerOperationException.CommitState"/> is
-    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so look the command id the submission was prepared with up on
-    /// <see cref="CompletionStreamAsync"/> before resubmitting.
+    /// <see cref="CommitState.Unknown"/>: the transaction may have committed, so resolve the command id the submission was prepared with using
+    /// <see cref="RecoveryExtensions.RecoverAsync"/> before resubmitting.
     /// A structured participant rejection is <see cref="CommitState.NotCommitted"/>, except a
     /// <see cref="LedgerOperationException.Category"/> of <c>DeadlineExceededRequestStateUnknown</c> or
     /// <c>Unknown</c>, which stays <see cref="CommitState.Unknown"/>, and two error ids that take precedence
