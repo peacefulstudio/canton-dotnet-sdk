@@ -62,5 +62,7 @@ jobs:
       runtime_version: ${{ inputs.runtime_version }}
       package_license: ${{ inputs.package_license }}
       release_tag: ${{ inputs.release_tag }}
+      client_project: src/Splice.Api.Token.Registry.Client/Splice.Api.Token.Registry.Client.csproj
+      client_base_version: ${{ inputs.splice_version }}
     secrets:
       COUNTERS_TOKEN: ${{ secrets.RELEASE_COUNTERS_TOKEN }}
