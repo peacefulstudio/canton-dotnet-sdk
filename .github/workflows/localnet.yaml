@@ -211,10 +211,11 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-trait "Category=MultiSync" \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 30 5
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 60 0
 
       - name: REST conformance tests (JSON Ledger API)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -232,10 +233,11 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-trait "Category=MultiSync" \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 37 4
+          "$(cygpath -u "${GITHUB_WORKSPACE}")/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 73 0
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -363,10 +365,11 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Grpc.Client.Integration.Tests/Canton.Ledger.Grpc.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-trait "Category=MultiSync" \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionConformanceTests \
             --filter-not-class Canton.Ledger.Grpc.Client.Integration.Tests.ReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 30 3
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "gRPC integration tests" 60 0
 
       - name: REST conformance tests (JSON Ledger API)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -376,10 +379,11 @@ jobs:
           dotnet test --configuration Release --no-build \
             --project tests/Canton.Ledger.Rest.Client.Integration.Tests/Canton.Ledger.Rest.Client.Integration.Tests.csproj \
             -- --filter-trait "Category=Integration" \
+            --filter-not-trait "Category=MultiSync" \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionConformanceTests \
             --filter-not-class Canton.Ledger.Rest.Client.Integration.Tests.RestReassignmentRejectionLiveTests \
             --output Detailed 2>&1 | tee "${log}"
-          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 37 2
+          "${GITHUB_WORKSPACE}/.github/scripts/assert-tests-ran.sh" "${log}" "REST conformance tests" 73 0
 
       - name: Cross-transport parity tests (Fake, gRPC, REST)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
