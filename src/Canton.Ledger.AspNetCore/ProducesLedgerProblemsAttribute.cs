@@ -12,7 +12,7 @@ namespace Canton.Ledger.AspNetCore;
 /// <see cref="CommittedCommandProblem"/> (the command committed; the caller must not retry), <c>400</c>,
 /// <c>403</c>, <c>404</c>, <c>409</c> and <c>502</c> as <c>ProblemDetails</c>. <c>404</c> means a resource
 /// other than a contract is missing (a user, a DAR, an identity provider config); a contract that is gone
-/// (<c>CONTRACT_NOT_FOUND</c>) is <c>409</c>. The MVC counterpart of
+/// (<c>CONTRACT_NOT_FOUND</c> or <c>LOCAL_VERDICT_INACTIVE_CONTRACTS</c>) is <c>409</c>. The MVC counterpart of
 /// <see cref="LedgerProblemEndpointConventionBuilderExtensions.ProducesLedgerProblems{TBuilder}"/>.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]

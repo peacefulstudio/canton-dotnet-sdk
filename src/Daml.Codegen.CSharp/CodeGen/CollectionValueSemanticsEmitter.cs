@@ -38,12 +38,17 @@ internal enum CollectionShape
 /// The Daml field name the member projects, carried so the redeclared property keeps its
 /// <c>DamlFieldAttribute</c>; <c>null</c> for a member that carries no such attribute.
 /// </param>
+/// <param name="IsTypeParameter">
+/// Whether the member's type is one of the record's type parameters, which an instantiation can
+/// bind to a collection that record-synthesized equality would read by reference.
+/// </param>
 internal sealed record ValueMember(
     string Name,
     string CSharpType,
     CollectionShape Shape,
     string Summary,
-    string? DamlFieldName);
+    string? DamlFieldName,
+    bool IsTypeParameter);
 
 /// <summary>
 /// Emits the value semantics a generated record needs once any of its members is a
@@ -83,7 +88,10 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
     /// <c>GetHashCode</c>, which hashes every member through
     /// <see cref="Daml.Runtime.Data.DamlEqualityComparer{T}"/> rather than the record-synthesized
     /// hash that folds a <c>long</c>, <c>decimal</c> or <c>DateTimeOffset</c> member into 32 bits
-    /// by a fixed rule.
+    /// by a fixed rule, preceded by an <c>Equals</c> when a member's type is a type parameter.
+    /// Every type-parameter member compares through
+    /// <see cref="Daml.Runtime.Data.DamlEqualityComparer{T}"/>, so an instantiation at a list or
+    /// map type compares by content.
     /// </summary>
     /// <param name="indent">Writer positioned at the top of the record body.</param>
     /// <param name="selfType">The record's own type, including type parameters.</param>
@@ -100,6 +108,10 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
     {
         if (!NeedsValueSemantics(members))
         {
+            if (members.Any(member => member.IsTypeParameter))
+            {
+                WriteEquals(indent, selfType, members, derivesFromRecord);
+            }
             if (members.Count > 0)
             {
                 WriteGetHashCode(indent, members, derivesFromRecord);
@@ -228,11 +240,13 @@ internal sealed class CollectionValueSemanticsEmitter(CodeGenOptions options)
         indent.AppendLine();
     }
 
-    private string MemberEqualityClause(ValueMember member) => member.Shape switch
+    private string MemberEqualityClause(ValueMember member) => member switch
     {
-        CollectionShape.None =>
+        { Shape: not CollectionShape.None } => $"{Collections}.Equal({member.Name}, other.{member.Name})",
+        { IsTypeParameter: true } =>
+            $"{DamlTypeMapper.EqualityComparerFor(member.CSharpType)}.Equals({member.Name}, other.{member.Name})",
+        _ =>
             $"{TypeReferenceQualifier.Qualify("EqualityComparer")}<{member.CSharpType}>.Default.Equals({member.Name}, other.{member.Name})",
-        _ => $"{Collections}.Equal({member.Name}, other.{member.Name})",
     };
 
     private static string MemberHashArguments(ValueMember member) => member.Shape switch

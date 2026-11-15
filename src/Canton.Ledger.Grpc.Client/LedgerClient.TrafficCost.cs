@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Ledger.Abstractions;
@@ -33,6 +34,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: true, hashingSchemeVersion: null);
 
         return _invoker.ExecuteTracedAsync<LedgerClient, TrafficCostEstimate?>(

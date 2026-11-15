@@ -157,6 +157,8 @@ internal sealed partial class RestLedgerClient
             foreach (var projected in RestInterfaceStreamProjector.ProjectUpdate<TInterface, TView>(update, _logger))
             {
                 yield return projected;
+
+                if (projected is InterfaceStreamEvent<TInterface, TView>.StreamError) yield break;
             }
         }
     }

@@ -538,7 +538,9 @@ public class RestContractStreamProjectorTests
             "with no snapshot offset to fall back on there is no resume point to report");
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         loggerFactory.Records.Should().ContainSingle(
-            record => record.Level == LogLevel.Warning && record.Message.Contains("not-a-number"));
+            record => record.Level == LogLevel.Warning
+                && record.Exception is MalformedResponseException
+                && record.Exception.Message.Contains("not-a-number"));
     }
 
     [Fact]
@@ -571,8 +573,9 @@ public class RestContractStreamProjectorTests
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         loggerFactory.Records.Should().ContainSingle(
             record => record.Level == LogLevel.Warning
-                && record.Message.Contains("not-a-number")
-                && record.Message.Contains("snapshot offset 77"));
+                && record.Exception is MalformedResponseException
+                && record.Exception.Message.Contains("not-a-number")
+                && record.Message.Contains("at offset 77"));
     }
 
     [Fact]
@@ -590,7 +593,9 @@ public class RestContractStreamProjectorTests
             "with no snapshot offset to fall back on there is no resume point to report");
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         loggerFactory.Records.Should().ContainSingle(
-            record => record.Level == LogLevel.Warning && record.Message.Contains("not-a-number"));
+            record => record.Level == LogLevel.Warning
+                && record.Exception is MalformedResponseException
+                && record.Exception.Message.Contains("not-a-number"));
     }
 
     [Fact]
@@ -608,8 +613,9 @@ public class RestContractStreamProjectorTests
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         loggerFactory.Records.Should().ContainSingle(
             record => record.Level == LogLevel.Warning
-                && record.Message.Contains("not-a-number")
-                && record.Message.Contains("snapshot offset 77"));
+                && record.Exception is MalformedResponseException
+                && record.Exception.Message.Contains("not-a-number")
+                && record.Message.Contains("at offset 77"));
     }
 
     private static async Task<GetActiveContractsResponse> ActiveContractsResponseWithArguments(string entityName, string createArgumentJson) =>

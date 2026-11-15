@@ -12,6 +12,7 @@ public class LedgerApiVersionSkewGuardTests
 {
     [Theory]
     [InlineData("3.7.1")]
+    [InlineData("3.7.2")]
     [InlineData("3.7.0")]
     [InlineData("3.7.2-snapshot.20261101.0")]
     public void Classify_accepts_a_participant_on_an_accepted_canton_minor(string reportedVersion)

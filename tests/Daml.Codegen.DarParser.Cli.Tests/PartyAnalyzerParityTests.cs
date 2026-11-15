@@ -67,9 +67,7 @@ public class PartyAnalyzerParityTests
         var protoPath = ParitySnapshots.ProtoPath(snapshotName);
         File.Exists(protoPath).Should().BeTrue(
             $"the JVM-helper-produced IntermediateDar snapshot must ship at {protoPath}; " +
-            "refresh with `java -jar jvm-helper/target/scala-2.13/daml-dar-to-proto.jar " +
-            $"--dar tests/Daml.Codegen.CSharp.Tests/Snapshots/{snapshotName}/{snapshotName}.dar " +
-            $"--out tests/Daml.Codegen.CSharp.Tests/Snapshots/{snapshotName}/intermediate.binpb`");
+            $"refresh with `scripts/regenerate.sh write --only snapshots --snapshot {snapshotName}`");
 
         using var stream = File.OpenRead(protoPath);
         return IntermediateDarReader.Read(IntermediateDar.Parser.ParseFrom(stream));

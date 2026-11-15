@@ -72,6 +72,14 @@ public abstract record Validation<TErrs, TA> where TErrs : notnull where TA : no
     /// <summary>Success constructor.</summary>
     public sealed record Success(TA Value) : Validation<TErrs, TA>
     {
+        /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
+        /// <param name="other">The value to compare against.</param>
+        /// <returns><c>true</c> when every member is equal.</returns>
+        public bool Equals(Success? other) =>
+            other is not null
+            && base.Equals(other)
+            && global::Daml.Runtime.Data.DamlEqualityComparer<TA>.Default.Equals(Value, other.Value);
+
         /// <inheritdoc />
         public override int GetHashCode()
         {

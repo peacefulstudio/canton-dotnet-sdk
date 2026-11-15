@@ -60,11 +60,20 @@ public sealed record TransactionEventScenario
     public bool OmitTemplateId { get; init; }
 
     /// <summary>
+    /// Renders the event with no contract id: the field a transport that can carry an absent value
+    /// leaves out and one that cannot sends as an empty string.
+    /// </summary>
+    public bool OmitContractId { get; init; }
+
+    /// <summary>
     /// Renders the event with no offset of its own — the unset field every transport encodes as
     /// zero — so a resume offset read off the event rather than off the transaction is visible as
     /// the beginning of the ledger.
     /// </summary>
     public bool OmitEventOffset { get; init; }
+
+    /// <summary>Renders the transaction itself with a malformed (negative) offset, which no participant sends.</summary>
+    public bool MalformedUpdateOffset { get; init; }
 
     /// <summary>
     /// Appends a well-formed matching created event after the scenario's own event. It carries the

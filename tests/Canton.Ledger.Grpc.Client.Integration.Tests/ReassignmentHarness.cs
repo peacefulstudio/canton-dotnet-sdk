@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Com.Daml.Ledger.Api.V2.Admin;
 using Daml.Ledger.Abstractions;
@@ -146,7 +147,7 @@ internal sealed class ReassignmentHarness : IAsyncDisposable
 
         var outcome = await _client.TrySubmitAndWaitForTransactionAsync(
             submission, issuer, cancellationToken: cancellationToken);
-        var result = Assert.IsType<ExerciseOutcome<TransactionResult>.One>(outcome).Result;
+        var result = ExerciseOutcomeAssert.IsOne(outcome).Result;
         return Assert.Single(result.CreatedContracts).ContractId;
     }
 

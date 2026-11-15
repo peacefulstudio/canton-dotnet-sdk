@@ -328,7 +328,7 @@ internal sealed class LedgerCallInvoker
     }
 
     internal DateTime? GetDeadline(TimeSpan? perCallTimeout = null) =>
-        CallContextHelper.GetDeadline(perCallTimeout ?? _options.Timeout, _timeProvider);
+        CallContextHelper.GetDeadline(PerCallTimeout.Resolve(perCallTimeout, _options.Timeout), _timeProvider);
 
     internal void TagServerCall(Activity? activity, ServiceDescriptor service, string method) =>
         activity.SetGrpcCallTags(service, method, _serverAddress, _serverPort);

@@ -79,6 +79,7 @@ public static class SingleCommandExtensions
         Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(command);
         WriterExtensionHelpers.ThrowIfDefault(commandId);
@@ -169,8 +170,10 @@ public static class SingleCommandExtensions
         CancellationToken cancellationToken = default)
         where TTemplate : ITemplate
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(payload);
+        WriterExtensionHelpers.ThrowIfDefault(commandId);
 
         return configure is null
             ? TryCreateUnconfiguredAsync(writer, payload, submitter, workflowId, commandId, timeout, cancellationToken)
@@ -194,7 +197,7 @@ public static class SingleCommandExtensions
         return outcome.WithOperation(LedgerOperation.Creating(TTemplate.TemplateId));
     }
 
-    private static async Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateConfiguredAsync<TTemplate>(
+    private static Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateConfiguredAsync<TTemplate>(
         ILedgerWriter writer,
         TTemplate payload,
         SubmitterInfo submitter,
@@ -205,18 +208,16 @@ public static class SingleCommandExtensions
         CancellationToken cancellationToken)
         where TTemplate : ITemplate
     {
-        var outcome = await writer
-            .TrySubmitSingleAsync(
-                CreateCommand.For(payload),
-                submitter,
-                workflowId ?? $"create-{typeof(TTemplate).Name.ToLowerInvariant()}",
-                commandId,
-                timeout,
-                configure,
-                cancellationToken)
-            .ConfigureAwait(false);
+        var submission = writer.TrySubmitSingleAsync(
+            CreateCommand.For(payload),
+            submitter,
+            workflowId ?? $"create-{typeof(TTemplate).Name.ToLowerInvariant()}",
+            commandId,
+            timeout,
+            configure,
+            cancellationToken);
 
-        return outcome.ProjectCommitted(CreateByExercise.ProjectSingleCreated<TTemplate>);
+        return CreateByExercise.ProjectCommittedAsync(submission, CreateByExercise.ProjectSingleCreated<TTemplate>);
     }
 
     private static CommandsSubmission ApplyConfigure(

@@ -126,7 +126,8 @@ internal sealed class VariantEmitter(
                         argType,
                         mapper.ClassifyCollection(ctor.ArgumentType!),
                         $"The payload the {ctor.Name} constructor carries.",
-                        DamlFieldName: null)],
+                        DamlFieldName: null,
+                        IsTypeParameter: ctor.ArgumentType is DamlTypeVar)],
                     derivesFromRecord: true);
             }
 

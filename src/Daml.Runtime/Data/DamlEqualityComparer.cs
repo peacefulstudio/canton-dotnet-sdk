@@ -6,11 +6,15 @@ using System.Diagnostics.CodeAnalysis;
 namespace Daml.Runtime.Data;
 
 /// <summary>
-/// The equality comparer that generated bindings and the <c>Daml.Runtime.Stdlib</c> types hash
-/// map keys, set elements and record members through. Equality is
-/// <see cref="EqualityComparer{T}.Default"/>'s. The hash code differs from it only for
-/// <see cref="long"/>, <see cref="decimal"/> and <see cref="DateTimeOffset"/>, bare or nullable,
-/// which it computes from the whole value with the per-process randomised <see cref="HashCode"/>.
+/// The equality comparer that generated bindings and the <c>Daml.Runtime.Stdlib</c> types compare
+/// and hash map keys, set elements and record members through. Equality is
+/// <see cref="EqualityComparer{T}.Default"/>'s, except for <c>IReadOnlyList&lt;E&gt;</c> and
+/// <c>IReadOnlyDictionary&lt;K,V&gt;</c>, which compare by content and recursively: a list element
+/// by element in order, a dictionary entry by entry independently of insertion order, each
+/// element, key and value through <see cref="DamlEqualityComparer{T}"/> in turn. The hash code
+/// reads the same content, and differs from the default's for <see cref="long"/>,
+/// <see cref="decimal"/> and <see cref="DateTimeOffset"/>, bare or nullable, which it computes
+/// from the whole value with the per-process randomised <see cref="HashCode"/>.
 /// </summary>
 /// <remarks>
 /// The framework's own hash codes for those three types fold the value into 32 bits by a fixed
@@ -26,6 +30,8 @@ namespace Daml.Runtime.Data;
     Justification = "Mirrors EqualityComparer<T>.Default: generated code names the comparer for a concrete key type as DamlEqualityComparer<TKey>.Default.")]
 public sealed class DamlEqualityComparer<T> : IEqualityComparer<T>
 {
+    private static readonly IEqualityComparer<T>? StructuralComparer = StructuralCollectionComparers.For<T>();
+
     private DamlEqualityComparer()
     {
     }
@@ -34,14 +40,21 @@ public sealed class DamlEqualityComparer<T> : IEqualityComparer<T>
     public static DamlEqualityComparer<T> Default { get; } = new();
 
     /// <inheritdoc />
-    public bool Equals(T? x, T? y) => EqualityComparer<T>.Default.Equals(x, y);
+    public bool Equals(T? x, T? y) =>
+        StructuralComparer is { } structural
+            ? structural.Equals(x, y)
+            : EqualityComparer<T>.Default.Equals(x, y);
 
     /// <inheritdoc />
-    public int GetHashCode([DisallowNull] T obj) => obj switch
+    public int GetHashCode([DisallowNull] T obj) => StructuralComparer is { } structural
+        ? structural.GetHashCode(obj)
+        : ScalarHashCode(obj);
+
+    private static int ScalarHashCode(T obj) => obj switch
     {
         long value => DamlHash.Int64(value),
         decimal value => DamlHash.Decimal(value),
         DateTimeOffset value => DamlHash.Int64(value.UtcTicks),
-        _ => EqualityComparer<T>.Default.GetHashCode(obj),
+        _ => EqualityComparer<T>.Default.GetHashCode(obj!),
     };
 }

@@ -75,4 +75,8 @@ internal sealed class InterfaceArms<TInterface, TView>
 
     public static InterfaceStreamEvent<TInterface, TView> Checkpoint(LedgerOffset offset) =>
         new InterfaceStreamEvent<TInterface, TView>.Checkpoint(offset);
+
+    public static InterfaceStreamEvent<TInterface, TView> StreamError(StreamFault fault) =>
+        new InterfaceStreamEvent<TInterface, TView>.StreamError(
+            fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
 }

@@ -374,7 +374,9 @@ public sealed partial class FakeLedgerClientBuilder
 
     /// <summary>
     /// Stages the transaction that <see cref="FakeLedgerClient.GetUpdateByOffsetAsync"/> returns for
-    /// <paramref name="offset"/>.
+    /// <paramref name="offset"/>. The real transports list only the created and archived contracts the
+    /// participant marks as part of the ACS delta, as a submit does; the fake replays the staged
+    /// transaction as it is, so stage the lists the real client would report.
     /// </summary>
     /// <param name="offset">The absolute offset the point read looks up.</param>
     /// <param name="transaction">The transaction to reply with.</param>
@@ -389,7 +391,9 @@ public sealed partial class FakeLedgerClientBuilder
 
     /// <summary>
     /// Stages the transaction that <see cref="FakeLedgerClient.GetUpdateByIdAsync"/> returns for
-    /// <paramref name="updateId"/>.
+    /// <paramref name="updateId"/>. The real transports list only the created and archived contracts the
+    /// participant marks as part of the ACS delta, as a submit does; the fake replays the staged
+    /// transaction as it is, so stage the lists the real client would report.
     /// </summary>
     /// <param name="updateId">The update id the point read looks up.</param>
     /// <param name="transaction">The transaction to reply with.</param>
@@ -408,7 +412,9 @@ public sealed partial class FakeLedgerClientBuilder
     /// <see cref="WithUpdateByOffset(LedgerOffset, TransactionResult)"/>: this fake replays already-projected
     /// values rather than a wire response, and the two point reads return different types, so a staged
     /// <see cref="TransactionResult"/> cannot answer the tree read. On the real transports both reads
-    /// ask the participant for the same ledger-effects shape and differ only in projection.
+    /// ask the participant for the same ledger-effects shape and list the same created and archived
+    /// contracts: the ACS-delta view. Stage a <see cref="TransactionResult"/> whose created and archived
+    /// lists are that view, since the fake replays it without filtering.
     /// </summary>
     /// <param name="offset">The absolute offset the tree point read looks up.</param>
     /// <param name="tree">The transaction tree to reply with.</param>

@@ -31,8 +31,11 @@ internal static class LedgerFailures
     internal static LedgerOperationException OutcomeUnknown(string? commandId) =>
         Unwrap(new ExerciseOutcome<int>.InfraError(new TransportStatus.NoResponse(), "connection reset") { CommandId = commandId });
 
-    internal static LedgerOperationException RedactedRefusal(TransportStatus status, DamlErrorCategory? category = null) =>
-        Unwrap(new ExerciseOutcome<int>.InfraError(status, "redacted by the participant", category));
+    internal static LedgerOperationException RedactedRefusal(
+        TransportStatus status, DamlErrorCategory? category = null, string? errorId = null) =>
+        errorId is null
+            ? Unwrap(new ExerciseOutcome<int>.InfraError(status, "redacted by the participant", category))
+            : new LedgerOperationException("redacted by the participant", status, category, errorId: errorId);
 
     internal static LedgerOperationException RedactedRefusalAfterRetry(TransportStatus status, string commandId)
     {

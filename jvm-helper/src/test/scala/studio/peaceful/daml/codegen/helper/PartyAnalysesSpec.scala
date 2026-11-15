@@ -18,7 +18,7 @@ class PartyAnalysesSpec extends AnyWordSpec with Matchers with EitherValues {
   private val TemplatesFixtureDar = Paths.get(
     sys.props.getOrElse(
       "jvmHelper.testTemplatesFixtureDar",
-      "../tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-amulet-name-service/splice-amulet-name-service.dar",
+      SpliceSnapshotDars.path("splice-amulet-name-service").toString,
     )
   )
 

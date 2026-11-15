@@ -87,6 +87,7 @@ internal static partial class GeneratedStjSampleTable
         samples[typeof(Asset)] = [new Asset(Alice, 19.95m)];
         samples[typeof(Box<string>)] = [new Box<string>("boxed")];
         samples[typeof(Box<Profile>)] = [new Box<Profile>(new Profile("ace", 7))];
+        samples[typeof(Box<IReadOnlyList<long>>)] = [new Box<IReadOnlyList<long>>(new List<long> { 1, 2 })];
         samples[typeof(Box<Optional<string>>)] =
         [
             new Box<Optional<string>>(new Optional<string>.Some("inner")),

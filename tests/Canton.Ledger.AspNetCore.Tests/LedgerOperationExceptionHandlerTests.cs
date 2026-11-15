@@ -81,6 +81,7 @@ public class LedgerOperationExceptionHandlerTests
     [Theory]
     [InlineData(DamlErrorCategory.ContentionOnSharedResources, "LOCAL_VERDICT_LOCKED_CONTRACTS", 409, "Conflict")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "CONTRACT_NOT_FOUND", 409, "Conflict")]
+    [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "LOCAL_VERDICT_INACTIVE_CONTRACTS", 409, "Conflict")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists, "DUPLICATE_CONTRACT_KEY", 409, "Conflict")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "USER_NOT_FOUND", 404, "Not Found")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "IDP_CONFIG_NOT_FOUND", 404, "Not Found")]
@@ -113,6 +114,7 @@ public class LedgerOperationExceptionHandlerTests
     [Theory]
     [InlineData(DamlErrorCategory.ContentionOnSharedResources, "LOCAL_VERDICT_LOCKED_CONTRACTS", "Contention on the contract; please retry.")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "CONTRACT_NOT_FOUND", "The contract was already consumed or never existed.")]
+    [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "LOCAL_VERDICT_INACTIVE_CONTRACTS", "The contract was already consumed or never existed.")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceExists, "DUPLICATE_CONTRACT_KEY", "The contract this submission would create already exists.")]
     [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, "USER_NOT_FOUND", "The ledger has no such resource.")]
     [InlineData(DamlErrorCategory.InsufficientPermission, "PERMISSION_DENIED", "The ledger refused this submission's authority.")]
@@ -130,17 +132,72 @@ public class LedgerOperationExceptionHandlerTests
     }
 
     [Theory]
-    [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
-    [InlineData(DamlErrorCategory.InvalidIndependentOfSystemState)]
-    public async Task A_caller_fixable_400_returns_the_failure_message_as_its_detail(DamlErrorCategory category)
+    [InlineData(DamlErrorCategory.InvalidIndependentOfSystemState, "DAML_AUTHORIZATION_ERROR", "The ledger rejected the command as invalid (DAML_AUTHORIZATION_ERROR).")]
+    [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateOther, "INCONSISTENT", "The ledger rejected the command in its current state (INCONSISTENT).")]
+    [InlineData(DamlErrorCategory.SecurityAlert, "EVENT_DESERIALIZATION_ERROR", "The ledger refused the request as malformed (EVENT_DESERIALIZATION_ERROR).")]
+    public async Task A_caller_fixable_400_answers_a_fixed_detail_naming_the_error_id_without_the_ledger_message(
+        DamlErrorCategory category, string errorId, string expectedDetail)
     {
         await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.Rejected(
-            category, "GUARD_FAILED", message: "price must be positive"));
+            category, errorId, message: "requires authorizers trader::1220abcd but only buyer::1220ef01 were given"));
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be(expectedDetail);
+    }
+
+    [Theory]
+    [InlineData(DamlErrorCategory.InvalidIndependentOfSystemState)]
+    [InlineData(DamlErrorCategory.InvalidGivenCurrentSystemStateOther)]
+    [InlineData(DamlErrorCategory.SecurityAlert)]
+    public async Task A_caller_fixable_400_returns_the_failure_message_as_its_detail_when_the_host_opts_in(
+        DamlErrorCategory category)
+    {
+        await using var host = await LedgerApiHost.StartAsync(
+            app => app.MapGet("/fail", (Func<IResult>)(() => throw LedgerFailures.Rejected(
+                category, "GUARD_FAILED", message: "price must be positive"))),
+            optIntoLedgerErrorMessages: true);
 
         var (_, problem) = await host.GetProblemAsync("/fail");
 
         problem.GetProperty("detail").GetString().Should().Be(
             $"ConnectionRequest.Accept: Daml error [{category}/GUARD_FAILED]: price must be positive");
+    }
+
+    [Fact]
+    public async Task A_redacted_grpc_invalid_argument_refusal_answers_a_fixed_detail_without_the_ledger_message()
+    {
+        await using var host = await LedgerApiHost.ThrowingAsync(
+            LedgerFailures.RedactedRefusal(new TransportStatus.Grpc(GrpcStatusCode.InvalidArgument)));
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be("The ledger rejected the command as invalid.");
+    }
+
+    [Fact]
+    public async Task A_redacted_rest_400_refusal_carrying_an_error_id_answers_a_fixed_detail_naming_it()
+    {
+        await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.RedactedRefusal(
+            new TransportStatus.Http(HttpStatusCode.BadRequest), errorId: "INVALID_ARGUMENT"));
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be("The ledger rejected the command as invalid (INVALID_ARGUMENT).");
+    }
+
+    [Fact]
+    public async Task A_redacted_400_refusal_returns_the_failure_message_as_its_detail_when_the_host_opts_in()
+    {
+        await using var host = await LedgerApiHost.StartAsync(
+            app => app.MapGet("/fail", (Func<IResult>)(() => throw LedgerFailures.RedactedRefusal(
+                new TransportStatus.Grpc(GrpcStatusCode.InvalidArgument)))),
+            optIntoLedgerErrorMessages: true);
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be(
+            "ConnectionRequest.Accept: infrastructure error [Grpc { StatusCode = InvalidArgument }]: redacted by the participant");
     }
 
     [Fact]
@@ -275,10 +332,10 @@ public class LedgerOperationExceptionHandlerTests
     [Fact]
     public async Task A_ledger_failure_marks_the_request_span_failed_and_tags_the_error_id_and_category()
     {
-        using var activities = new CapturedActivities();
         await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.Rejected(
             DamlErrorCategory.ContentionOnSharedResources, "LOCAL_VERDICT_LOCKED_CONTRACTS",
             metadata: new Dictionary<string, string> { ["agreement_id"] = "agr-1" }));
+        using var activities = new CapturedActivities(host.TraceId);
 
         await host.GetAsync("/fail");
 
@@ -293,17 +350,51 @@ public class LedgerOperationExceptionHandlerTests
     [Fact]
     public async Task A_ledger_failure_tags_the_error_metadata_when_the_host_opts_in()
     {
-        using var activities = new CapturedActivities();
         await using var host = await LedgerApiHost.StartAsync(
             app => app.MapGet("/fail", (Func<IResult>)(() => throw LedgerFailures.Rejected(
                 DamlErrorCategory.ContentionOnSharedResources, "LOCAL_VERDICT_LOCKED_CONTRACTS",
                 metadata: new Dictionary<string, string> { ["agreement_id"] = "agr-1", ["swap_index"] = "0" }))),
             optIntoErrorMetadataTags: true);
+        using var activities = new CapturedActivities(host.TraceId);
 
         await host.GetAsync("/fail");
 
         var span = await activities.RequestActivityFailingWithAsync("LOCAL_VERDICT_LOCKED_CONTRACTS");
         span.GetTagItem("daml.error_metadata.agreement_id").Should().Be("agr-1");
         span.GetTagItem("daml.error_metadata.swap_index").Should().Be("0");
+    }
+
+    [Fact]
+    public async Task A_logged_ledger_failure_carries_its_exception_without_the_ledger_message()
+    {
+        var logs = new CapturedLogs();
+        await using var host = await LedgerApiHost.StartAsync(
+            app => app.MapGet("/fail", (Func<IResult>)(() => throw LedgerFailures.Rejected(
+                DamlErrorCategory.InvalidIndependentOfSystemState, "DAML_AUTHORIZATION_ERROR",
+                message: "requires authorizers trader::1220abcd but only buyer::1220ef01 were given"))),
+            services => services.AddSingleton<ILoggerProvider>(logs));
+
+        await host.GetAsync("/fail");
+
+        var logged = logs.Exceptions.Should().ContainSingle().Subject!;
+        logged.Message.Should().Be("Daml.Ledger.Abstractions.LedgerOperationException");
+        logged.ToString().Should().NotContain("trader::1220abcd");
+    }
+
+    [Fact]
+    public async Task A_logged_ledger_failure_carries_its_unredacted_exception_when_the_host_opts_in()
+    {
+        var logs = new CapturedLogs();
+        await using var host = await LedgerApiHost.StartAsync(
+            app => app.MapGet("/fail", (Func<IResult>)(() => throw LedgerFailures.Rejected(
+                DamlErrorCategory.InvalidIndependentOfSystemState, "DAML_AUTHORIZATION_ERROR",
+                message: "requires authorizers trader::1220abcd"))),
+            services => services.AddSingleton<ILoggerProvider>(logs),
+            optIntoLedgerErrorMessages: true);
+
+        await host.GetAsync("/fail");
+
+        logs.Exceptions.Should().ContainSingle().Which!.Message.Should().Be(
+            "ConnectionRequest.Accept: Daml error [InvalidIndependentOfSystemState/DAML_AUTHORIZATION_ERROR]: requires authorizers trader::1220abcd");
     }
 }

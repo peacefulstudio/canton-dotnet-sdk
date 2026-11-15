@@ -145,6 +145,18 @@ public class RestRetryHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_sends_once_and_surfaces_the_failure_when_Retry_is_enabled_with_zero_attempts()
+    {
+        var transport = new CountingHandler(new HttpRequestException("connection refused"));
+        using var client = ClientOver(transport, Fast(0));
+
+        var act = async () => await client.GetAsync("/v2/state/ledger-end", TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        transport.Attempts.Should().Be(1);
+    }
+
+    [Fact]
     public async Task SendAsync_retries_a_transient_connection_failure_until_it_succeeds()
     {
         var transport = new CountingHandler(new HttpRequestException("connection refused"), new HttpRequestException("connection refused"));

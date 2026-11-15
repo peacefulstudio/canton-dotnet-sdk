@@ -479,11 +479,14 @@ public class RestTransactionTreeProjectorTests
     {
         var consuming = Exercised(nodeId: 0, lastDescendantNodeId: 2, "00burned", "Archive");
         consuming.ExercisedEvent!.Consuming = true;
+        consuming.ExercisedEvent.AcsDelta = true;
         var nonConsuming = Exercised(nodeId: 1, lastDescendantNodeId: 1, "00kept", "Peek");
         nonConsuming.ExercisedEvent!.Consuming = false;
+        var created = Created(nodeId: 2, "00aa");
+        created.CreatedEvent!.AcsDelta = true;
 
         var flattened = RestTransactionTreeProjector
-            .Project(Transaction(consuming, nonConsuming, Created(nodeId: 2, "00aa")))
+            .Project(Transaction(consuming, nonConsuming, created))
             .ToTransactionResult();
 
         flattened.UpdateId.Should().Be("update-1");
@@ -554,6 +557,56 @@ public class RestTransactionTreeProjectorTests
 
     private static WireRecord EmptyRecord() =>
         JsonSerializer.Deserialize<WireRecord>("{}", RestRefitSettings.SerializerOptions)!;
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(null, false)]
+    public void Project_carries_the_acsDelta_flag_of_a_created_event(bool? acsDelta, bool expected)
+    {
+        var created = Created(nodeId: 0, "00aa");
+        created.CreatedEvent!.AcsDelta = acsDelta;
+
+        var tree = RestTransactionTreeProjector.Project(Transaction(created));
+
+        tree.RootEvents.Should().ContainSingle().Which
+            .Should().BeOfType<TreeEvent.Created>().Which.AcsDelta.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(null, false)]
+    public void Project_carries_the_acsDelta_flag_of_an_exercised_event(bool? acsDelta, bool expected)
+    {
+        var exercised = Exercised(nodeId: 0, lastDescendantNodeId: 0, "00aa", "Archive");
+        exercised.ExercisedEvent!.AcsDelta = acsDelta;
+
+        var tree = RestTransactionTreeProjector.Project(Transaction(exercised));
+
+        tree.RootEvents.Should().ContainSingle().Which
+            .Should().BeOfType<TreeEvent.Exercised>().Which.AcsDelta.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Project_then_ToTransactionResult_drops_a_contract_created_and_archived_in_one_transaction()
+    {
+        var outer = Exercised(nodeId: 0, lastDescendantNodeId: 3, "00aa", "Outer");
+        var inner = Exercised(nodeId: 1, lastDescendantNodeId: 1, "00bb", "Inner");
+        inner.ExercisedEvent!.Consuming = true;
+        inner.ExercisedEvent.AcsDelta = true;
+        var transientCreate = Created(nodeId: 2, "00cc");
+        transientCreate.CreatedEvent!.AcsDelta = false;
+        var transientArchive = Exercised(nodeId: 3, lastDescendantNodeId: 3, "00cc", "Archive");
+        transientArchive.ExercisedEvent!.Consuming = true;
+        transientArchive.ExercisedEvent.AcsDelta = false;
+
+        var result = RestTransactionTreeProjector.Project(Transaction(outer, inner, transientCreate, transientArchive))
+            .ToTransactionResult();
+
+        result.CreatedContracts.Should().BeEmpty();
+        result.ArchivedContractIds.Should().Equal("00bb");
+    }
 
     private static WireTransaction Transaction(params WireEvent[] events) =>
         new() { UpdateId = "update-1", Offset = "42", CommandId = "cmd-1", Events = events };

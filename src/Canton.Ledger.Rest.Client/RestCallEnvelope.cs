@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime.Outcomes;
@@ -129,7 +130,7 @@ internal sealed partial class RestCallEnvelope(
         CancellationToken cancellationToken)
     {
         var client = CreateClient();
-        var attemptTimeout = timeout ?? defaultTimeout;
+        var attemptTimeout = PerCallTimeout.Resolve(timeout, defaultTimeout);
 
         HttpResponseMessage response;
         var afterRetry = false;

@@ -41,7 +41,13 @@ public sealed record DamlInt64(long Value) : DamlValue
 /// trailing mantissa zeros, so two Numerics with the same value but different mantissa
 /// precision, e.g. <c>1.50</c> vs <c>1.5</c>, are equal.
 /// </para>
+/// <para>
+/// Through <see cref="System.Text.Json"/> it travels as an object whose <c>Value</c> is the
+/// <see cref="ToCanonicalString"/> text, so every legal Numeric round-trips, including those
+/// <see cref="decimal"/> cannot hold.
+/// </para>
 /// </remarks>
+[JsonConverter(typeof(DamlNumericJsonConverter))]
 public sealed record DamlNumeric : DamlValue
 {
     private const int MaxSignificantDigits = 38;
@@ -153,6 +159,9 @@ public sealed record DamlNumeric : DamlValue
         return _isNegative ? $"-{integerPart}.{fractionalPart}" : $"{integerPart}.{fractionalPart}";
     }
 
+    /// <summary>Formats this value as <see cref="ToCanonicalString"/>, which never throws for a legal Numeric.</summary>
+    public override string ToString() => ToCanonicalString();
+
     /// <summary>
     /// Parses the exact canonical wire shape (<c>-?digits(.digits?)?</c>, no exponent, where the
     /// bare trailing dot is the participant's <c>Numeric 0</c> form, e.g. <c>42.</c>)
@@ -257,6 +266,61 @@ public sealed record DamlNumeric : DamlValue
             scale--;
         }
         return (mantissa, scale, isNegative);
+    }
+}
+
+/// <summary>
+/// Supplies the <see cref="System.Text.Json"/> converter for <see cref="DamlNumeric"/>: an object
+/// whose <c>Value</c> member is the canonical string, because a JSON number would pass through
+/// <see cref="decimal"/> and throw for a Numeric with more than 28-29 significant digits.
+/// </summary>
+internal sealed class DamlNumericJsonConverter : JsonConverter<DamlNumeric>
+{
+    private const string ValueMember = "Value";
+
+    public override DamlNumeric Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException($"Expected a JSON object for {nameof(DamlNumeric)}, got {reader.TokenType}.");
+        }
+
+        DamlNumeric? numeric = null;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var isValueMember = reader.ValueTextEquals(ValueMember);
+            reader.Read();
+            if (!isValueMember)
+            {
+                reader.Skip();
+                continue;
+            }
+
+            numeric = ReadCanonical(ref reader);
+        }
+
+        return numeric ?? throw new JsonException($"{nameof(DamlNumeric)} is missing its \"{ValueMember}\" member.");
+    }
+
+    public override void Write(Utf8JsonWriter writer, DamlNumeric value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteString(ValueMember, value.ToCanonicalString());
+        writer.WriteEndObject();
+    }
+
+    private static DamlNumeric ReadCanonical(ref Utf8JsonReader reader)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+        {
+            throw new JsonException(
+                $"Expected the canonical Numeric string for {nameof(DamlNumeric)} \"{ValueMember}\", got {reader.TokenType}.");
+        }
+
+        var text = reader.GetString();
+        return DamlNumeric.TryParseCanonical(text!, out var parsed)
+            ? parsed
+            : throw new JsonException($"'{text}' is not a canonical Daml-LF Numeric.");
     }
 }
 

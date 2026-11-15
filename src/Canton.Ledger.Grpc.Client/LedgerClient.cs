@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Com.Daml.Ledger.Api.V2;
 using Daml.Ledger.Abstractions;
@@ -180,6 +181,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(command);
         return _submissionClient.TryExerciseAsync<TResult>(
             command, submitter, workflowId, commandId, timeout: timeout, cancellationToken: cancellationToken);
@@ -191,6 +194,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.SubmitAndWaitAsync(submission, timeout, cancellationToken);
     }
@@ -202,6 +207,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.SubmitAndWaitAsync(submission.WithSubmitter(submitter), timeout, cancellationToken);
     }
@@ -212,6 +219,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.SubmitAsync(submission, timeout, cancellationToken);
     }
@@ -222,6 +231,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.SubmitReassignmentAsync(submission, timeout, cancellationToken);
     }
@@ -233,6 +244,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.TrySubmitAndWaitForReassignmentAsync<T>(submission, timeout, cancellationToken);
     }
@@ -249,6 +262,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.TrySubmitAndWaitForTransactionAsync(submission, timeout, cancellationToken);
     }
@@ -266,6 +281,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.TrySubmitAndWaitForTransactionAsync(
             submission.WithSubmitter(submitter), timeout, cancellationToken);
@@ -287,6 +304,8 @@ internal sealed partial class LedgerClient : ICantonLedgerClient, IUnboundedStre
         CancellationToken cancellationToken = default)
         where TTemplate : ITemplate
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(payload);
         return _submissionClient.TryCreateAsync(
             payload, submitter, workflowId, commandId, timeout: timeout, cancellationToken: cancellationToken);

@@ -257,7 +257,9 @@ public interface ICantonLedgerClient : ILedgerClient
     /// ACS-delta view (creates and archives), while hierarchy is only meaningful over the ledger-effects
     /// view (creates and exercises), which this method always requests. Callers that want the flattened
     /// shape as well project the tree with <see cref="TransactionTreeExtensions.ToTransactionResult"/>
-    /// rather than submitting twice.
+    /// rather than submitting twice: it keeps the created and archived contracts the participant marks as
+    /// part of the ACS delta, so it reports the same contracts the flat overload does, a contract created
+    /// and archived within the one transaction included in neither.
     /// </para>
     /// <para>
     /// Only events the submitting parties are entitled to see are returned. An event whose parent
@@ -512,6 +514,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// visibility, with no template/interface restriction — every event those
     /// parties witness on the update is returned.
     /// </summary>
+    /// <remarks>
+    /// Asks for the participant's ledger-effects view and lists the creates and archives the participant
+    /// marks as part of the ACS delta, as the submit does: a contract created and archived within the one
+    /// transaction is in neither list, and the target of a consuming exercise is listed as archived.
+    /// <see cref="TransactionResult.ExercisedEvents"/> still lists every exercise.
+    /// </remarks>
     /// <param name="offset">The absolute offset of the update to look up. Must be past
     /// <see cref="LedgerOffset.Begin"/>.</param>
     /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
@@ -547,6 +555,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// visibility, with no template/interface restriction — every event those
     /// parties witness on the update is returned.
     /// </summary>
+    /// <remarks>
+    /// Asks for the participant's ledger-effects view and lists the creates and archives the participant
+    /// marks as part of the ACS delta, as the submit does: a contract created and archived within the one
+    /// transaction is in neither list, and the target of a consuming exercise is listed as archived.
+    /// <see cref="TransactionResult.ExercisedEvents"/> still lists every exercise.
+    /// </remarks>
     /// <param name="updateId">The id of the update to look up.</param>
     /// <param name="submitter">The parties whose visibility scopes the lookup.</param>
     /// <param name="timeout">
@@ -584,8 +598,13 @@ public interface ICantonLedgerClient : ILedgerClient
     /// creates and exercises. <see cref="GetUpdateByOffsetAsync"/> asks for that same view over the same
     /// RPC and differs only in projection: it flattens the response into created/archived/exercised
     /// lists, while this method rebuilds the parent/child structure from the node ids already carried on
-    /// those events. A caller wanting both shapes reads once and flattens the tree with
-    /// <see cref="TransactionTreeExtensions.ToTransactionResult"/> rather than reading twice.
+    /// those events.
+    /// </para>
+    /// <para>
+    /// Flattening the tree with <see cref="TransactionTreeExtensions.ToTransactionResult"/> gives back
+    /// <see cref="GetUpdateByOffsetAsync"/>'s created and archived lists: both keep only the created and
+    /// archived contracts the participant marks as part of the ACS delta, so a contract created and
+    /// archived within the one transaction is in neither list.
     /// </para>
     /// <para>
     /// The <paramref name="submitter"/>'s combined <c>ActAs ∪ ReadAs</c> parties scope visibility, with

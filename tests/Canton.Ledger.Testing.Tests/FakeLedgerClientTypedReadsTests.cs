@@ -162,7 +162,7 @@ public class FakeLedgerClientTypedReadsTests
         var client = FakeLedgerClient.Create().WithDisclosure(new ContractId<DemoAsset>("cid1"), disclosure).Build();
 
         var result = await client.GetDisclosureAsync(
-            new ContractId<DemoAsset>("cid1"), (SubmitterInfo)Alice, TimeSpan.Zero, TestContext.Current.CancellationToken);
+            new ContractId<DemoAsset>("cid1"), (SubmitterInfo)Alice, TimeSpan.FromMilliseconds(1), TestContext.Current.CancellationToken);
 
         result.Should().Be(disclosure);
     }

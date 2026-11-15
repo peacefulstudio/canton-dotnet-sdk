@@ -51,7 +51,7 @@ public sealed class LedgerCallInvokerTokenFailureCooldownTests : IDisposable
     public async Task InvokeAsync_inside_the_cooldown_window_fails_never_sent_like_the_failure_that_opened_it_without_calling_the_identity_provider()
     {
         await AssertNeverSentTokenFailure();
-        _time.Advance(TimeSpan.FromMilliseconds(499));
+        _time.Advance(TimeSpan.FromMilliseconds(249));
 
         await AssertNeverSentTokenFailure();
 

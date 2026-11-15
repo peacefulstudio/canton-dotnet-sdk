@@ -171,7 +171,9 @@ public sealed record ExercisedEvent(
     /// </summary>
     public string? PackageName { get; init; }
 
+    [JsonInclude]
     internal int? NodeId { get; init; }
 
+    [JsonInclude]
     internal int? LastDescendantNodeId { get; init; }
 }

@@ -20,13 +20,13 @@ class DecodeSpec extends AnyWordSpec with Matchers with EitherValues with Option
 
   private val FixtureDar = Paths.get(
     sys.props.getOrElse("jvmHelper.testFixtureDar",
-      "../tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-api-token-holding-v1/splice-api-token-holding-v1.dar"
+      SpliceSnapshotDars.path("splice-api-token-holding-v1").toString
     )
   )
 
   private val TemplatesFixtureDar = Paths.get(
     sys.props.getOrElse("jvmHelper.testTemplatesFixtureDar",
-      "../tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-amulet-name-service/splice-amulet-name-service.dar"
+      SpliceSnapshotDars.path("splice-amulet-name-service").toString
     )
   )
 

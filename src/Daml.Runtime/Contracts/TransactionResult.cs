@@ -83,6 +83,7 @@ public sealed record TransactionResult(
     /// </summary>
     public long? PaidTrafficCost { get; init; }
 
+    [JsonInclude]
     internal EquatableArray<Identifier> RequestedInterfaces { get; init; }
 
     internal TransactionResult WithRequestedInterfaces(IEnumerable<DamlTypeDescriptor> requested) =>
@@ -180,5 +181,6 @@ public sealed record CreatedContract(
     /// </summary>
     public DamlUndecodedJson? UndecodedPayload { get; init; }
 
+    [JsonInclude]
     internal int? NodeId { get; init; }
 }

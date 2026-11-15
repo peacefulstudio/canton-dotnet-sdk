@@ -720,6 +720,56 @@ public sealed class LedgerClientSubscribeTests : IDisposable
     }
 
     [Fact]
+    public async Task SubscribeAsync_surfaces_a_negative_transaction_offset_in_band_and_keeps_streaming()
+    {
+        var malformed = MakeTransaction(MakeCreatedEvent("00bad", FooBarTemplate, offset: 42L));
+        malformed.Offset = -1L;
+        var wellFormed = MakeTransaction(MakeCreatedEvent("00abc", FooBarTemplate, offset: 43L));
+        StubGetUpdates(MakeGetUpdatesResponse(malformed), MakeGetUpdatesResponse(wellFormed));
+
+        var events = await CollectAsync(CreateClient().SubscribeAsync<FooBar>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().HaveCount(2);
+        var refused = events[0].Should().BeOfType<ContractStreamEvent<FooBar>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().BeNull();
+        events[1].Should().BeOfType<ContractStreamEvent<FooBar>.Created>().Which.Offset.Value.Should().Be(43L);
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_ends_with_an_UndecodableBody_StreamError_at_a_checkpoint_with_a_negative_offset()
+    {
+        StubGetUpdates(
+            new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = 7L } },
+            new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = -1L } },
+            MakeGetUpdatesResponse(MakeTransaction(MakeCreatedEvent("00abc", FooBarTemplate, offset: 43L))));
+
+        var events = await CollectAsync(CreateClient().SubscribeAsync<FooBar>(
+            ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().HaveCount(2);
+        events[0].Should().BeOfType<ContractStreamEvent<FooBar>.Checkpoint>().Which.Offset.Value.Should().Be(7L);
+        events[1].Should().BeOfType<ContractStreamEvent<FooBar>.StreamError>()
+            .Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_for_interface_marker_ends_with_an_UndecodableBody_StreamError_at_a_checkpoint_with_a_negative_offset()
+    {
+        StubGetUpdates(
+            new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = -1L } },
+            new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = 8L } });
+
+        var events = await CollectAsync(CreateClient().SubscribeAsync(
+            FooViewDescriptor, ActAs, cancellationToken: TestContext.Current.CancellationToken));
+
+        events.Should().ContainSingle().Which
+            .Should().BeOfType<InterfaceStreamEvent<IFoo, FooView>.StreamError>()
+            .Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+    }
+
+    [Fact]
     public async Task SubscribeAsync_for_interface_marker_populates_StreamError_ErrorId_from_the_transport_fault()
     {
         var rpcException = CategorisedRpcException.WithCategory(

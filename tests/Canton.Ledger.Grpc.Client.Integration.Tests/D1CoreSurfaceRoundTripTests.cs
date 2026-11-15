@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
@@ -96,7 +97,7 @@ public class D1CoreSurfaceRoundTripTests
 
         var submitOutcome = await client.TrySubmitAndWaitForTransactionAsync(
             submission, owner, cancellationToken: TestContext.Current.CancellationToken);
-        var submitted = Assert.IsType<ExerciseOutcome<TransactionResult>.One>(submitOutcome).Result;
+        var submitted = ExerciseOutcomeAssert.IsOne(submitOutcome).Result;
         var createdContractId = Assert.Single(submitted.CreatedContracts).ContractId;
 
         var byOffset = await client.GetUpdateByOffsetAsync(

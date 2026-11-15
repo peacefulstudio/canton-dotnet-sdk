@@ -17,6 +17,49 @@ internal static partial class RuntimeStjSampleTable
         AddStdlibUnions(samples);
         AddStdlibCollections(samples);
         AddStdlibTuples(samples);
+        AddStdlibCollectionTypeArguments(samples);
+    }
+
+    private static void AddStdlibCollectionTypeArguments(Dictionary<Type, object[]> samples)
+    {
+        samples[typeof(Std.Tuple2<string, IReadOnlyList<long>>)] = [new Std.Tuple2<string, IReadOnlyList<long>>("alice", new List<long> { 1, 2 })];
+        samples[typeof(Std.Tuple3<string, IReadOnlyList<long>, IReadOnlyDictionary<string, long>>)] =
+        [
+            new Std.Tuple3<string, IReadOnlyList<long>, IReadOnlyDictionary<string, long>>(
+                "alice",
+                new List<long> { 1, 2 },
+                new Dictionary<string, long> { ["a"] = 1 }),
+        ];
+        samples[typeof(Std.Tuple4<string, IReadOnlyList<long>, IReadOnlyDictionary<string, long>, long>)] =
+        [
+            new Std.Tuple4<string, IReadOnlyList<long>, IReadOnlyDictionary<string, long>, long>(
+                "alice",
+                new List<long> { 1, 2 },
+                new Dictionary<string, long> { ["a"] = 1 },
+                4),
+        ];
+        samples[typeof(Std.Optional<IReadOnlyList<long>>)] =
+        [
+            new Std.Optional<IReadOnlyList<long>>.Some(new List<long> { 1, 2 }),
+            new Std.Optional<IReadOnlyList<long>>.None(),
+        ];
+        samples[typeof(Std.Either<IReadOnlyList<long>, IReadOnlyDictionary<string, long>>)] =
+        [
+            new Std.Either<IReadOnlyList<long>, IReadOnlyDictionary<string, long>>.Left(new List<long> { 1, 2 }),
+            new Std.Either<IReadOnlyList<long>, IReadOnlyDictionary<string, long>>.Right(new Dictionary<string, long> { ["a"] = 1 }),
+        ];
+        samples[typeof(Std.Map<string, IReadOnlyList<long>>)] =
+        [
+            new Std.Map<string, IReadOnlyList<long>>([new("a", new List<long> { 1, 2 })]),
+        ];
+        samples[typeof(Std.NonEmpty<IReadOnlyList<long>>)] =
+        [
+            new Std.NonEmpty<IReadOnlyList<long>>(new List<long> { 1 }, [new List<long> { 2, 3 }]),
+        ];
+        samples[typeof(Std.Set<IReadOnlyList<long>>)] =
+        [
+            new Std.Set<IReadOnlyList<long>>([new List<long> { 1, 2 }, new List<long> { 3 }]),
+        ];
     }
 
     private static void AddStdlibEnums(Dictionary<Type, object[]> samples)

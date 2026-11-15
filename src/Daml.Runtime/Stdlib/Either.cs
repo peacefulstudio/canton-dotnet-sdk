@@ -42,6 +42,15 @@ public abstract record Either<TL, TR>
     /// <param name="Value">The carried left value.</param>
     public sealed record Left(TL Value) : Either<TL, TR>
     {
+        /// <summary>
+        /// Compares the carried values by content: a list or dictionary value is compared by its
+        /// entries, not by reference.
+        /// </summary>
+        public bool Equals(Left? other) =>
+            other is not null
+            && base.Equals(other)
+            && DamlEqualityComparer<TL>.Default.Equals(Value, other.Value);
+
         /// <inheritdoc />
         public override int GetHashCode() =>
             HashCode.Combine(base.GetHashCode(), DamlEqualityComparer<TL>.Default.GetHashCode(Value));
@@ -53,6 +62,15 @@ public abstract record Either<TL, TR>
     /// <param name="Value">The carried right value.</param>
     public sealed record Right(TR Value) : Either<TL, TR>
     {
+        /// <summary>
+        /// Compares the carried values by content: a list or dictionary value is compared by its
+        /// entries, not by reference.
+        /// </summary>
+        public bool Equals(Right? other) =>
+            other is not null
+            && base.Equals(other)
+            && DamlEqualityComparer<TR>.Default.Equals(Value, other.Value);
+
         /// <inheritdoc />
         public override int GetHashCode() =>
             HashCode.Combine(base.GetHashCode(), DamlEqualityComparer<TR>.Default.GetHashCode(Value));

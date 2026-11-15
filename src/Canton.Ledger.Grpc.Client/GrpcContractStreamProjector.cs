@@ -54,7 +54,7 @@ internal static class GrpcContractStreamProjector
         }
 
         return new CreatedContract<T>(
-            LedgerWireConversions.ToContractId<T>(created.ContractId),
+            WireValues.ContractId<T>(created.ContractId),
             payload,
             GrpcProjectionCore.ContractKeyOf(created),
             LedgerWireConversions.ToPartyList(created.WitnessParties));

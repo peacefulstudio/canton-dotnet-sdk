@@ -250,11 +250,14 @@ public class GrpcTransactionTreeProjectorTests
     {
         var consuming = Exercised(nodeId: 0, lastDescendantNodeId: 2, "00burned", "Archive");
         consuming.Exercised.Consuming = true;
+        consuming.Exercised.AcsDelta = true;
         var nonConsuming = Exercised(nodeId: 1, lastDescendantNodeId: 1, "00kept", "Peek");
         nonConsuming.Exercised.Consuming = false;
+        var created = Created(nodeId: 2, "00aa");
+        created.Created.AcsDelta = true;
 
         var flattened = GrpcTransactionTreeProjector
-            .Project(Transaction(consuming, nonConsuming, Created(nodeId: 2, "00aa")))
+            .Project(Transaction(consuming, nonConsuming, created))
             .ToTransactionResult();
 
         flattened.UpdateId.Should().Be("update-1");
@@ -334,6 +337,52 @@ public class GrpcTransactionTreeProjectorTests
 
         act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
             "Malformed response from ledger: an exercised event has no contract_id, though the Ledger API marks the field as required.");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Project_carries_the_acs_delta_flag_of_a_created_event(bool acsDelta)
+    {
+        var created = Created(nodeId: 0, "00aa");
+        created.Created.AcsDelta = acsDelta;
+
+        var tree = GrpcTransactionTreeProjector.Project(Transaction(created));
+
+        tree.RootEvents.Should().ContainSingle().Which
+            .Should().BeOfType<TreeEvent.Created>().Which.AcsDelta.Should().Be(acsDelta);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Project_carries_the_acs_delta_flag_of_an_exercised_event(bool acsDelta)
+    {
+        var exercised = Exercised(nodeId: 0, lastDescendantNodeId: 0, "00aa", "Archive");
+        exercised.Exercised.AcsDelta = acsDelta;
+
+        var tree = GrpcTransactionTreeProjector.Project(Transaction(exercised));
+
+        tree.RootEvents.Should().ContainSingle().Which
+            .Should().BeOfType<TreeEvent.Exercised>().Which.AcsDelta.Should().Be(acsDelta);
+    }
+
+    [Fact]
+    public void Project_then_ToTransactionResult_drops_a_contract_created_and_archived_in_one_transaction()
+    {
+        var outer = Exercised(nodeId: 0, lastDescendantNodeId: 3, "00aa", "Outer");
+        var inner = Exercised(nodeId: 1, lastDescendantNodeId: 1, "00bb", "Inner");
+        inner.Exercised.Consuming = true;
+        inner.Exercised.AcsDelta = true;
+        var transientCreate = Created(nodeId: 2, "00cc");
+        var transientArchive = Exercised(nodeId: 3, lastDescendantNodeId: 3, "00cc", "Archive");
+        transientArchive.Exercised.Consuming = true;
+
+        var result = GrpcTransactionTreeProjector.Project(Transaction(outer, inner, transientCreate, transientArchive))
+            .ToTransactionResult();
+
+        result.CreatedContracts.Should().BeEmpty();
+        result.ArchivedContractIds.Should().Equal("00bb");
     }
 
     private static Transaction Transaction(params Event[] events)

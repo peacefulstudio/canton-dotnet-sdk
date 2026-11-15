@@ -5,7 +5,7 @@ Runtime library for Daml C# code generation, part of the [Canton .NET SDK](https
 ## Installation
 
 ```bash
-dotnet add package Daml.Runtime --version 0.8.0
+dotnet add package Daml.Runtime --version 0.8.1
 ```
 
 ## Usage
@@ -245,7 +245,7 @@ PQS speak. A `Map<K,V>` writes `{"Entries":[…],"Count":…}`, a `NonEmpty<T>` 
 `{"Hd":…,"Tl":…,"All":…}`, a `Set<T>` writes the bare array above where Daml-LF spells the same
 value `{"map":[["alice",{}]]}`, and a generated record whose Daml field name had to be escaped
 in C# is read under the C# name, not the `[DamlField]` label the wire carries. Use it for
-a cache, a log line or a snapshot on disk; read a ledger or PQS payload with the schema-directed
+a cache, a log line or a snapshot on disk (a `TransactionResult` read back keeps the node numbering and requested interfaces that `Single<I>()` and `ProjectByKeyExercise` rely on); read a ledger or PQS payload with the schema-directed
 `DamlLfJsonReader` shown above — a PQS row is decoded by exactly that call:
 
 ```csharp

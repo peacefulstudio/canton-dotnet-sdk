@@ -120,7 +120,20 @@ public sealed record Map<TKey, TValue>(IReadOnlyList<KeyValuePair<TKey, TValue>>
     /// value type — so we override it with structural comparison.
     /// </summary>
     public bool Equals(Map<TKey, TValue>? other) =>
-        other is not null && Entries.SequenceEqual(other.Entries);
+        other is not null && Entries.SequenceEqual(other.Entries, EntryComparer.Instance);
+
+    private sealed class EntryComparer : IEqualityComparer<KeyValuePair<TKey, TValue>>
+    {
+        public static EntryComparer Instance { get; } = new();
+
+        public bool Equals(KeyValuePair<TKey, TValue> x, KeyValuePair<TKey, TValue> y) =>
+            DamlEqualityComparer<TKey>.Default.Equals(x.Key, y.Key)
+            && DamlEqualityComparer<TValue>.Default.Equals(x.Value, y.Value);
+
+        public int GetHashCode(KeyValuePair<TKey, TValue> obj) => HashCode.Combine(
+            DamlEqualityComparer<TKey>.Default.GetHashCode(obj.Key),
+            DamlEqualityComparer<TValue>.Default.GetHashCode(obj.Value));
+    }
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -128,7 +141,7 @@ public sealed record Map<TKey, TValue>(IReadOnlyList<KeyValuePair<TKey, TValue>>
         var hash = new HashCode();
         foreach (var entry in Entries)
         {
-            hash.Add(entry);
+            hash.Add(entry, EntryComparer.Instance);
         }
         return hash.ToHashCode();
     }

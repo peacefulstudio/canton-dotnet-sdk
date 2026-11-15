@@ -277,15 +277,25 @@ public class DamlJsonSerializerBasicTests
     }
 
     [Fact]
-    public void DeserializeRecord_should_handle_DamlVariant_with_null_value()
+    public void DeserializeRecord_should_read_DamlVariant_null_value_as_DamlOptional_None()
     {
-        var json = """{"result":{"tag":"Empty","value":null}}""";
+        var json = """{"result":{"tag":"A","value":null}}""";
 
         var record = DamlJsonSerializer.DeserializeRecord(json);
 
         var variant = record.GetField("result")!.As<DamlVariant>();
-        variant.Constructor.Should().Be("Empty");
-        variant.Value.Should().BeOfType<DamlUnit>();
+        variant.Constructor.Should().Be("A");
+        variant.Value.Should().Be(DamlOptional.None);
+    }
+
+    [Fact]
+    public void Serialize_should_round_trip_DamlVariant_null_value_as_null()
+    {
+        var json = """{"tag":"A","value":null}""";
+
+        var value = DamlJsonSerializer.Deserialize(json);
+
+        DamlJsonSerializer.Serialize(value).Should().Be("""{"tag":"A","value":null}""");
     }
 
     [Fact]

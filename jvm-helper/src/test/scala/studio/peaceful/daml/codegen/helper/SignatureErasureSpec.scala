@@ -16,7 +16,7 @@ class SignatureErasureSpec extends AnyWordSpec with Matchers with OptionValues w
 
   private val FixtureDar = Paths.get(
     sys.props.getOrElse("jvmHelper.testFixtureDar",
-      "../tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-api-token-holding-v1/splice-api-token-holding-v1.dar"
+      SpliceSnapshotDars.path("splice-api-token-holding-v1").toString
     )
   )
 

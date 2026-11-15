@@ -126,6 +126,27 @@ public class GeneratedCollectionFieldValueSemanticsTests
     }
 
     [Fact]
+    public void Box_at_a_list_type_equals_another_built_from_separate_but_equal_content()
+    {
+        var left = new Box<IReadOnlyList<long>>(new List<long> { 1, 2 });
+        var right = new Box<IReadOnlyList<long>>(new List<long> { 1, 2 });
+
+        left.Should().Be(right);
+        left.GetHashCode().Should().Be(right.GetHashCode());
+        left.Should().NotBe(new Box<IReadOnlyList<long>>(new List<long> { 2, 1 }));
+    }
+
+    [Fact]
+    public void Box_at_a_map_type_compares_independently_of_insertion_order()
+    {
+        var forward = new Box<IReadOnlyDictionary<string, long>>(new Dictionary<string, long> { ["a"] = 1, ["b"] = 2 });
+        var reversed = new Box<IReadOnlyDictionary<string, long>>(new Dictionary<string, long> { ["b"] = 2, ["a"] = 1 });
+
+        forward.Should().Be(reversed);
+        forward.GetHashCode().Should().Be(reversed.GetHashCode());
+    }
+
+    [Fact]
     public void DamlFieldAttribute_survives_on_the_redeclared_collection_properties()
     {
         DamlFieldName(typeof(RichRecord), nameof(RichRecord.Tags)).Should().Be("tags");

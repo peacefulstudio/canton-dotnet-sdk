@@ -153,6 +153,7 @@ public sealed class LedgerClientD1SurfaceTests : IDisposable
         {
             Created = new ProtoCreatedEvent
             {
+                AcsDelta = true,
                 ContractId = "00contract1",
                 TemplateId = new ProtoIdentifier { PackageId = "pkg", ModuleName = "Module", EntityName = "Template" },
                 CreateArguments = new ProtoRecord(),

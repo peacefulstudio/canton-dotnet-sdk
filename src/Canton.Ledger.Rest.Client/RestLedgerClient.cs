@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Results;
 using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
@@ -206,14 +207,18 @@ internal sealed partial class RestLedgerClient
     /// </remarks>
     public Task<LedgerOffset> GetLedgerEndAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        _calls.SendAsync<Raw.GetLedgerEndResponse, LedgerOffset>(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _calls.SendAsync<Raw.GetLedgerEndResponse, LedgerOffset>(
             new RestCall(
                 HttpMethod.Get, LedgerEndPath, Body: null, MissingBody("ledger end"), MalformedBody("ledger end"),
                 LedgerCallKind.Read),
             ProjectLedgerEnd,
             timeout,
             cancellationToken);
+    }
 
     private static LedgerOffset ProjectLedgerEnd(Raw.GetLedgerEndResponse body)
     {
@@ -351,6 +356,8 @@ internal sealed partial class RestLedgerClient
             foreach (var projected in RestContractStreamProjector.ProjectUpdate<T>(update, _logger))
             {
                 yield return projected;
+
+                if (projected is ContractStreamEvent<T>.StreamError) yield break;
             }
         }
     }
@@ -693,6 +700,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(command);
 
         return TryExerciseCoreAsync<TResult>(command, submitter, workflowId, commandId, timeout, cancellationToken);
@@ -735,6 +744,8 @@ internal sealed partial class RestLedgerClient
         CancellationToken cancellationToken = default)
         where TTemplate : ITemplate
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(payload);
 
         return TryCreateCoreAsync(payload, submitter, workflowId, commandId, timeout, cancellationToken);
@@ -770,6 +781,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return SubmitAndWaitAsync(submission.WithSubmitter(submitter), timeout, cancellationToken);
@@ -781,6 +794,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         var commands = RestCommandBuilder.BuildCommands(submission, _userId);
@@ -824,6 +839,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return TrySubmitAndWaitForTransactionAsync(
@@ -842,6 +859,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return TrySubmitAndWaitForTransactionCoreAsync(

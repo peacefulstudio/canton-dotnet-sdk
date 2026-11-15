@@ -1,0 +1,40 @@
+<Project>
+
+  <PropertyGroup>
+    <SpliceSnapshotDarsRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..').Replace('\', '/'))</SpliceSnapshotDarsRepositoryRoot>
+    <SpliceSnapshotDarsDirectory Condition="'$(SPLICE_SNAPSHOT_DARS_DIR)' != ''">$(SPLICE_SNAPSHOT_DARS_DIR.Replace('\', '/').TrimEnd('/'))</SpliceSnapshotDarsDirectory>
+    <SpliceSnapshotDarsDirectory Condition="'$(SpliceSnapshotDarsDirectory)' == ''">$(SpliceSnapshotDarsRepositoryRoot)/output/splice-snapshot-dars</SpliceSnapshotDarsDirectory>
+    <SpliceSnapshotDarsBash Condition="'$(SpliceSnapshotDarsBash)' == '' and '$(SPLICE_SNAPSHOT_DARS_BASH)' != ''">$(SPLICE_SNAPSHOT_DARS_BASH)</SpliceSnapshotDarsBash>
+    <SpliceSnapshotDarsSearchPath Condition="'$(SpliceSnapshotDarsSearchPath)' == ''">$(PATH)</SpliceSnapshotDarsSearchPath>
+    <SpliceSnapshotDarsWindowsDirectory Condition="'$(SpliceSnapshotDarsWindowsDirectory)' == ''">$(windir)</SpliceSnapshotDarsWindowsDirectory>
+    <SpliceSnapshotDarsBashFileName Condition="$([MSBuild]::IsOSPlatform('Windows'))">bash.exe</SpliceSnapshotDarsBashFileName>
+    <SpliceSnapshotDarsBashFileName Condition="'$(SpliceSnapshotDarsBashFileName)' == ''">bash</SpliceSnapshotDarsBashFileName>
+    <SpliceSnapshotDarsRequireBash Condition="'$(SpliceSnapshotDarsRequireBash)' == ''">$([MSBuild]::IsOSPlatform('Windows'))</SpliceSnapshotDarsRequireBash>
+  </PropertyGroup>
+
+  <!-- Workaround for the WSL launcher: on Windows, a bare bash resolves to System32\bash.exe (or the WindowsApps alias) ahead of Git Bash, so the first bash on PATH outside those directories is used. -->
+  <Target Name="LocateBashForSpliceSnapshotDars">
+    <ItemGroup Condition="'$(SpliceSnapshotDarsBash)' == ''">
+      <SpliceSnapshotDarsSearchEntry Include="$(SpliceSnapshotDarsSearchPath.Split('$([System.IO.Path]::PathSeparator)'))" />
+      <SpliceSnapshotDarsBashCandidate Include="%(SpliceSnapshotDarsSearchEntry.Identity)/$(SpliceSnapshotDarsBashFileName)"
+                                       Condition="!$([System.String]::new('%(SpliceSnapshotDarsSearchEntry.Identity)/').Replace('\', '/').ToLowerInvariant().Contains('/windowsapps/'))
+                                              and ('$(SpliceSnapshotDarsWindowsDirectory)' == ''
+                                                   or !$([System.String]::new('%(SpliceSnapshotDarsSearchEntry.Identity)/').Replace('\', '/').ToLowerInvariant().StartsWith('$(SpliceSnapshotDarsWindowsDirectory.Replace('\', '/').TrimEnd('/').ToLowerInvariant())/'))
+                                                  )
+                                              and Exists('%(SpliceSnapshotDarsSearchEntry.Identity)/$(SpliceSnapshotDarsBashFileName)')" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(SpliceSnapshotDarsBash)' == ''">
+      <SpliceSnapshotDarsBashCandidates>@(SpliceSnapshotDarsBashCandidate)</SpliceSnapshotDarsBashCandidates>
+      <SpliceSnapshotDarsBash Condition="'$(SpliceSnapshotDarsBashCandidates)' != ''">$(SpliceSnapshotDarsBashCandidates.Split(';')[0])</SpliceSnapshotDarsBash>
+      <SpliceSnapshotDarsBash Condition="'$(SpliceSnapshotDarsBash)' == '' and '$(SpliceSnapshotDarsRequireBash)' != 'true'">bash</SpliceSnapshotDarsBash>
+    </PropertyGroup>
+    <Error Condition="'$(SpliceSnapshotDarsBash)' == ''"
+           Text="Git Bash was not found on PATH outside the Windows directory; install Git for Windows or set SPLICE_SNAPSHOT_DARS_BASH to its bash.exe." />
+  </Target>
+
+  <Target Name="FetchSpliceSnapshotDars" BeforeTargets="BeforeBuild" DependsOnTargets="LocateBashForSpliceSnapshotDars">
+    <Exec Command="&quot;$(SpliceSnapshotDarsBash)&quot; &quot;$(SpliceSnapshotDarsRepositoryRoot)/scripts/fetch-splice-snapshot-dars.sh&quot; --dir &quot;$(SpliceSnapshotDarsDirectory)&quot;"
+          StandardOutputImportance="low" />
+  </Target>
+
+</Project>

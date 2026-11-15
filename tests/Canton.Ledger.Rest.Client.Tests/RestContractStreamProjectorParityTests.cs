@@ -35,6 +35,14 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
         return RestContractStreamProjector.ProjectActiveContractEntry<TemplateMarker>(response, logger: null, SnapshotOffsetOf(scenario)).ToList();
     }
 
+    protected override async Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectActiveContractEntryAsync(
+        ActiveContractScenario scenario, ILogger logger)
+    {
+        var response = await ActiveContractsResponseAsync(scenario);
+
+        return RestContractStreamProjector.ProjectActiveContractEntry<TemplateMarker>(response, logger, SnapshotOffsetOf(scenario)).ToList();
+    }
+
     protected override async Task<IReadOnlyList<InterfaceStreamEvent<InterfaceMarker, InterfaceMarkerView>>> ProjectActiveContractEntryAsInterfaceAsync(
         ActiveContractScenario scenario)
     {
@@ -82,6 +90,17 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
     {
         IReadOnlyList<ContractStreamEvent<InterfaceKindTemplateMarker>> projected = RestContractStreamProjector
             .ProjectTransactionEvents<InterfaceKindTemplateMarker>(UpdateFrom(TransactionJson(scenario)).Transaction).ToList();
+        return Task.FromResult(projected);
+    }
+
+    protected override Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectMalformedCheckpointAsync(
+        ILogger logger)
+    {
+        const string malformedCheckpoint = """{"update": {"OffsetCheckpoint": {"value": {"offset": "-1"}}}}""";
+        var response = JsonSerializer.Deserialize<GetUpdatesResponse>(
+            malformedCheckpoint, RestRefitSettings.SerializerOptions)!;
+        IReadOnlyList<ContractStreamEvent<TemplateMarker>> projected =
+            RestContractStreamProjector.ProjectUpdate<TemplateMarker>(response, logger).ToList();
         return Task.FromResult(projected);
     }
 
@@ -142,7 +161,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
               "update": {
                 "Transaction": {
                   "value": {
-                    "offset": "{{Wire(TransactionEventScenario.TransactionOffset)}}",
+                    "offset": "{{(scenario.MalformedUpdateOffset ? "-1" : Wire(TransactionEventScenario.TransactionOffset))}}",
                     {{OptionalField("synchronizerId", scenario.Synchronizer)}}
                     "events": [{{TransactionEventJson(scenario)}}{{trailing}}]
                   }
@@ -159,7 +178,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
         {
             TransactionEventShape.Created =>
                 $$"""
-                {"CreatedEvent": {{CreatedEventJson(scenario.EntityName, eventOffset, scenario.OmitTemplateId, scenario.InterfaceView, scenario.OmitCreateArguments)}}}
+                {"CreatedEvent": {{CreatedEventJson(scenario.EntityName, eventOffset, scenario.OmitTemplateId, scenario.InterfaceView, scenario.OmitCreateArguments, scenario.OmitContractId)}}}
                 """,
             TransactionEventShape.Archived =>
                 $$"""
@@ -167,7 +186,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
                   "ArchivedEvent": {
                     {{OffsetField(eventOffset)}}
                     "nodeId": 0,
-                    "contractId": "{{ActiveContractScenario.ContractId}}",
+                    {{ContractIdField(scenario.OmitContractId)}}
                     {{TemplateIdField(scenario.EntityName, scenario.OmitTemplateId)}}
                     {{ImplementedInterfacesField(scenario.ImplementsSubscribedInterface)}}
                     {{WitnessPartiesField}}
@@ -180,7 +199,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
                   "ExercisedEvent": {
                     {{OffsetField(eventOffset)}}
                     "nodeId": 0,
-                    "contractId": "{{ActiveContractScenario.ContractId}}",
+                    {{ContractIdField(scenario.OmitContractId)}}
                     {{TemplateIdField(scenario.EntityName, scenario.OmitTemplateId)}}
                     {{ImplementedInterfacesField(scenario.ImplementsSubscribedInterface)}}
                     "choice": "{{TransactionEventScenario.ChoiceName}}",
@@ -209,7 +228,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
               "update": {
                 "Reassignment": {
                   "value": {
-                    "offset": "{{Wire(ReassignmentEventScenario.ReassignmentOffset)}}",
+                    "offset": "{{(scenario.MalformedUpdateOffset ? "-1" : Wire(ReassignmentEventScenario.ReassignmentOffset))}}",
                     "events": [{{ReassignmentEventJson(scenario)}}{{trailing}}]
                   }
                 }
@@ -230,7 +249,7 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
                     {{OptionalField("source", scenario.Source)}}
                     {{OptionalField("target", scenario.Target)}}
                     "reassignmentId": "{{ReassignmentEventScenario.ReassignmentId}}",
-                    "reassignmentCounter": "{{Wire(ReassignmentEventScenario.ReassignmentCounter)}}"
+                    "reassignmentCounter": "{{scenario.ReassignmentCounterOnWire.ToString(CultureInfo.InvariantCulture)}}"
                     {{(scenario.OmitCreatedEvent
                         ? string.Empty
                         : ", \"createdEvent\": " + CreatedEventJson(
@@ -238,7 +257,8 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
                             eventOffset,
                             scenario.OmitTemplateId,
                             scenario.InterfaceView,
-                            scenario.OmitCreateArguments))}}
+                            scenario.OmitCreateArguments,
+                            scenario.OmitContractId))}}
                   }
                 }
                 """,
@@ -255,10 +275,10 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
             "value": {
               {{OptionalField("source", scenario.Source)}}
               {{OptionalField("target", scenario.Target)}}
-              "contractId": "{{ActiveContractScenario.ContractId}}",
+              {{ContractIdField(scenario.OmitContractId)}}
               {{TemplateIdField(scenario.EntityName, scenario.OmitTemplateId)}}
               "reassignmentId": "{{ReassignmentEventScenario.ReassignmentId}}",
-              "reassignmentCounter": "{{Wire(ReassignmentEventScenario.ReassignmentCounter)}}",
+              "reassignmentCounter": "{{scenario.ReassignmentCounterOnWire.ToString(CultureInfo.InvariantCulture)}}",
               {{OffsetField(offset)}}
               {{WitnessPartiesField}}
             }
@@ -271,12 +291,13 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
         long? offset,
         bool omitTemplateId,
         InterfaceViewRendering interfaceView = InterfaceViewRendering.None,
-        bool omitCreateArguments = false) =>
+        bool omitCreateArguments = false,
+        bool omitContractId = false) =>
         $$"""
         {
           {{OffsetField(offset)}}
           "nodeId": 0,
-          "contractId": "{{ActiveContractScenario.ContractId}}",
+          {{ContractIdField(omitContractId)}}
           {{TemplateIdField(entityName, omitTemplateId)}}
           {{(omitCreateArguments ? string.Empty : $"\"createArgument\": {PayloadRecordJson(ActiveContractScenario.CreateArgumentValue)},")}}
           "contractKey": "{{ActiveContractScenario.ContractKeyParty}}",
@@ -304,8 +325,9 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
               },
               """;
 
-    private string OffsetField(long? offset) =>
-        offset is { } value
+    private string OffsetField(long? offset, bool malformed = false) =>
+        malformed ? "\"offset\": \"-1\","
+        : offset is { } value
             ? $"\"offset\": \"{Wire(value)}\","
             : omittedOffsetWire == OmittedOffsetWire.Zero ? "\"offset\": \"0\"," : string.Empty;
 
@@ -348,9 +370,9 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
                         {{OptionalField("contractId", scenario.OmitUnassignedContractId ? null : ActiveContractScenario.ContractId)}}
                         {{OptionalField("source", scenario.Synchronizer)}}
                         "target": "{{ActiveContractScenario.CounterpartSynchronizerId}}",
-                        {{OffsetField(scenario.OmitUnassignedEventOffset ? null : ActiveContractScenario.UnassignedOffset)}}
+                        {{OffsetField(scenario.OmitUnassignedEventOffset ? null : ActiveContractScenario.UnassignedOffset, scenario.MalformedUnassignedEventOffset)}}
                         "reassignmentId": "{{ActiveContractScenario.ReassignmentId}}",
-                        "reassignmentCounter": "{{ActiveContractScenario.ReassignmentCounter.ToString(CultureInfo.InvariantCulture)}}"
+                        "reassignmentCounter": "{{scenario.UnassignedReassignmentCounterOnWire.ToString(CultureInfo.InvariantCulture)}}"
                       }
                     }
                   }
@@ -375,13 +397,16 @@ public sealed class RestContractStreamProjectorParityTests : ContractStreamProje
         };
     }
 
+    private static string ContractIdField(bool omit) =>
+        OptionalField("contractId", omit ? null : ActiveContractScenario.ContractId);
+
     private static string OptionalField(string name, string? value) =>
         value is null ? string.Empty : $"\"{name}\": \"{value}\",";
 
     private string CreatedEventJson(ActiveContractScenario scenario) =>
         $$"""
         {
-          {{OffsetField(scenario.OmitCreatedEventOffset ? null : ActiveContractScenario.CreatedOffset)}}
+          {{OffsetField(scenario.OmitCreatedEventOffset ? null : ActiveContractScenario.CreatedOffset, scenario.MalformedCreatedEventOffset)}}
           "nodeId": 0,
           "contractId": "{{ActiveContractScenario.ContractId}}",
           "packageName": "{{ActiveContractScenario.PackageName}}",

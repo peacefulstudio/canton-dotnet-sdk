@@ -14,4 +14,12 @@ public sealed class LedgerProblemOptions
     /// tagged.
     /// </summary>
     public bool EmitErrorMetadataSpanTags { get; set; }
+
+    /// <summary>
+    /// Whether a <c>400</c> answer's <c>detail</c> is the participant's error message, and whether the handler logs
+    /// the ledger failure with its message. Off by default, because the participant's message can name parties and
+    /// contracts: a <c>400</c> then carries a fixed detail per error category plus the Daml error id, and the
+    /// logged exception keeps only its type and stack trace. Turn it on in development only.
+    /// </summary>
+    public bool IncludeLedgerErrorMessages { get; set; }
 }

@@ -178,11 +178,9 @@ public abstract class LedgerDeduplicationParityTests
         var (client, submitter) = lane.Capability;
         for (var attempt = 1; attempt <= CompletionDrainAttempts; attempt++)
         {
-            using var window = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            window.CancelAfter(DrainTimeout);
             var endedOnStaleAuthorization = false;
 
-            using var streamHold = await lane.HoldStreamAsync(cancellationToken);
+            using var window = await lane.HoldStreamWithBudgetAsync(DrainTimeout, cancellationToken);
             try
             {
                 await foreach (var streamEvent in client.CompletionStreamAsync(submitter, beginExclusive, window.Token))
@@ -199,7 +197,7 @@ public abstract class LedgerDeduplicationParityTests
                 }
             }
             catch (OperationCanceledException)
-                when (window.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                when (window.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 return null;
             }

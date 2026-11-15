@@ -24,6 +24,23 @@ public class RetryPipelineFactoryTests
     }
 
     [Fact]
+    public void Create_returns_the_empty_pipeline_when_enabled_with_zero_retry_attempts()
+    {
+        var pipeline = RetryPipelineFactory.Create(new RetryOptions { Enabled = true, MaxRetryAttempts = 0 });
+
+        pipeline.Should().BeSameAs(ResiliencePipeline.Empty);
+    }
+
+    [Fact]
+    public void Create_builds_a_pipeline_when_enabled_with_a_delay_of_exactly_one_day()
+    {
+        var act = () => RetryPipelineFactory.Create(
+            new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromDays(1) });
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void Create_throws_when_options_null()
     {
         var act = () => RetryPipelineFactory.Create(null!);

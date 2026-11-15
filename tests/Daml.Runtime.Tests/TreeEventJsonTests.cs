@@ -41,12 +41,12 @@ public class TreeEventJsonTests
 
     private const string CreatedJson =
         """{"$case":"Created","EventId":"1:1","ContractId":"00c0ffee","TemplateId":""" + IouJson
-        + ""","CreateArguments":{"RecordId":null,"Fields":[{"Label":"n","Value":{"$case":"DamlInt64","Value":1}}]},"WitnessParties":["Alice"],"Signatories":["Alice"],"Observers":[],"ContractKey":null,"CreatedAt":null,"InterfaceIds":[],"UndecodedCreateArguments":null,"PackageName":null}""";
+        + ""","CreateArguments":{"RecordId":null,"Fields":[{"Label":"n","Value":{"$case":"DamlInt64","Value":1}}]},"WitnessParties":["Alice"],"Signatories":["Alice"],"Observers":[],"ContractKey":null,"CreatedAt":null,"InterfaceIds":[],"UndecodedCreateArguments":null,"PackageName":null,"AcsDelta":true}""";
 
     private const string ExercisedJson =
         """{"$case":"Exercised","EventId":"1:0","ContractId":"00c0ffee","TemplateId":""" + IouJson
         + ""","InterfaceId":null,"ChoiceName":"Archive","ChoiceArgument":{"$case":"DamlUnit"},"ExerciseResult":{"$case":"DamlText","Value":"done"},"Consuming":true,"ActingParties":["Alice"],"WitnessParties":["Alice"],"ChildEvents":["""
-        + CreatedJson + """],"PackageName":"pkg-name"}""";
+        + CreatedJson + """],"PackageName":"pkg-name","AcsDelta":true}""";
 
     private static TreeEvent.Created Created =>
         new("1:1", "00c0ffee", Iou, DamlRecord.Create(DamlField.Create("n", new DamlInt64(1))), Eq(new Party("Alice")), Eq(new Party("Alice")), Eq<Party>());
@@ -100,6 +100,31 @@ public class TreeEventJsonTests
     }
 
     [Fact]
+    public void TreeEvent_an_event_outside_the_acs_delta_reads_back_outside_it()
+    {
+        TreeEvent value = Exercised with
+        {
+            AcsDelta = false,
+            ChildEvents = Eq<TreeEvent>(Created with { AcsDelta = false }),
+        };
+
+        var json = JsonSerializer.Serialize(value);
+
+        json.Should().Contain("\"AcsDelta\":false");
+        JsonSerializer.Deserialize<TreeEvent>(json).Should().Be(value);
+    }
+
+    [Fact]
+    public void TreeEvent_json_without_an_AcsDelta_member_reads_as_inside_the_acs_delta()
+    {
+        var json = CreatedJson.Replace(""","AcsDelta":true}""", "}", StringComparison.Ordinal);
+
+        json.Should().NotContain("AcsDelta");
+        JsonSerializer.Deserialize<TreeEvent>(json)
+            .Should().BeOfType<TreeEvent.Created>().Which.AcsDelta.Should().BeTrue();
+    }
+
+    [Fact]
     public void TreeEvent_nested_exercised_children_read_back_equal_on_default_and_AddDamlConverters_options()
     {
         TreeEvent value = NestedExercised;
@@ -144,7 +169,7 @@ public class TreeEventJsonTests
     public void TreeEvent_members_may_arrive_in_any_order()
     {
         var json = ExercisedJson.Replace("""{"$case":"Exercised",""", "{", StringComparison.Ordinal)
-            .Replace(""","PackageName":"pkg-name"}""", ""","PackageName":"pkg-name","$case":"Exercised"}""", StringComparison.Ordinal);
+            .Replace(""","PackageName":"pkg-name","AcsDelta":true}""", ""","PackageName":"pkg-name","AcsDelta":true,"$case":"Exercised"}""", StringComparison.Ordinal);
 
         JsonSerializer.Deserialize<TreeEvent>(json).Should().Be(Exercised);
     }
@@ -363,7 +388,7 @@ public class TreeEventJsonTests
     }
 
     private static string ChainLinkJson(int level, string children) =>
-        $$"""{"$case":"Exercised","EventId":"{{level}}","ContractId":"00c0ffee","TemplateId":{{IouJson}},"InterfaceId":null,"ChoiceName":"Archive","ChoiceArgument":{"$case":"DamlUnit"},"ExerciseResult":{"$case":"DamlUnit"},"Consuming":false,"ActingParties":[],"WitnessParties":[],"ChildEvents":[{{children}}],"PackageName":null}""";
+        $$"""{"$case":"Exercised","EventId":"{{level}}","ContractId":"00c0ffee","TemplateId":{{IouJson}},"InterfaceId":null,"ChoiceName":"Archive","ChoiceArgument":{"$case":"DamlUnit"},"ExerciseResult":{"$case":"DamlUnit"},"Consuming":false,"ActingParties":[],"WitnessParties":[],"ChildEvents":[{{children}}],"PackageName":null,"AcsDelta":true}""";
 
     private static string LeafExercisedJson(int level) => ChainLinkJson(level, string.Empty);
 

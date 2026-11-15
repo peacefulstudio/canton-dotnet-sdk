@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
@@ -15,8 +16,11 @@ internal sealed partial class LedgerClient
     /// <inheritdoc />
     public Task<LedgerOffset> GetLedgerEndAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        _invoker.ExecuteTracedAsync<LedgerClient, LedgerOffset>(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _invoker.ExecuteTracedAsync<LedgerClient, LedgerOffset>(
             LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             StateService.Descriptor,
@@ -31,6 +35,7 @@ internal sealed partial class LedgerClient
                 return LedgerWireConversions.ToLedgerOffset(response.Offset);
             },
             cancellationToken);
+    }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<ConnectedSynchronizer>> GetConnectedSynchronizersAsync(
@@ -39,6 +44,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new GetConnectedSynchronizersRequest();
         if (party is { } requestedParty)
             request.Party = requestedParty.Value;
@@ -68,8 +75,11 @@ internal sealed partial class LedgerClient
     /// <inheritdoc />
     public Task<string> GetLedgerApiVersionAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        _invoker.InvokeTracedAsync<LedgerClient, GetLedgerApiVersionResponse, string>(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _invoker.InvokeTracedAsync<LedgerClient, GetLedgerApiVersionResponse, string>(
             LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             VersionService.Descriptor,
@@ -78,4 +88,5 @@ internal sealed partial class LedgerClient
             response => response.Version,
             cancellationToken,
             timeout: timeout);
+    }
 }

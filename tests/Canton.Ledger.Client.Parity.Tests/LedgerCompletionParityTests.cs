@@ -102,7 +102,7 @@ public abstract class LedgerCompletionParityTests
             lane,
             firstWindow.HighestObservedOffset,
             int.MaxValue,
-            DrainTimeout,
+            ReopenWindowBudget(firstWindowSawTheCompletion: firstWindow.Accepted is not null),
             TestContext.Current.CancellationToken);
 
         (firstWindow.Accepted ?? reopened.Accepted).Should().NotBeNull(
@@ -168,6 +168,9 @@ public abstract class LedgerCompletionParityTests
         reopened.Accepted.Should().BeNull("a window opened past a completion's offset never carries that completion");
     }
 
+    internal static TimeSpan ReopenWindowBudget(bool firstWindowSawTheCompletion) =>
+        firstWindowSawTheCompletion ? ReopenBudget : DrainTimeout;
+
     private delegate IAsyncEnumerable<CompletionStreamEvent> CompletionStreamOpener(
         CompletionProbe probe, LedgerOffset fromOffset, CancellationToken cancellationToken);
 
@@ -216,18 +219,15 @@ public abstract class LedgerCompletionParityTests
         CompletionStreamOpener openStream,
         CancellationToken cancellationToken)
     {
-        using var windowBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        windowBudget.CancelAfter(budget);
-
         var observed = new List<CompletionStreamEvent>();
         var highestObservedOffset = fromOffset;
         CompletionStreamEvent.CommandAccepted? accepted = null;
         var probe = lane.Capability;
 
-        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
+        using var window = await lane.HoldStreamWithBudgetAsync(budget, cancellationToken);
         try
         {
-            await foreach (var streamEvent in openStream(probe, LedgerOffset.At(fromOffset), windowBudget.Token))
+            await foreach (var streamEvent in openStream(probe, LedgerOffset.At(fromOffset), window.Token))
             {
                 observed.Add(streamEvent);
 
@@ -250,7 +250,7 @@ public abstract class LedgerCompletionParityTests
             }
         }
         catch (OperationCanceledException)
-            when (windowBudget.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            when (window.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
             return new CompletionFollow(observed, highestObservedOffset, accepted, RanOutOfBudget: true);
         }

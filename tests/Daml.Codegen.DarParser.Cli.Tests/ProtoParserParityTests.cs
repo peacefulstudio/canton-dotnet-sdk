@@ -66,9 +66,7 @@ public class ProtoParserParityTests
         File.Exists(darPath).Should().BeTrue($"fixture DAR must ship at {darPath}");
         File.Exists(protoPath).Should().BeTrue(
             $"the JVM-helper-produced IntermediateDar snapshot must ship at {protoPath}; " +
-            "refresh with `java -jar jvm-helper/target/scala-2.13/daml-dar-to-proto.jar " +
-            $"--dar tests/Daml.Codegen.CSharp.Tests/Snapshots/{snapshotName}/{snapshotName}.dar " +
-            $"--out tests/Daml.Codegen.CSharp.Tests/Snapshots/{snapshotName}/intermediate.binpb`");
+            $"refresh with `scripts/regenerate.sh write --only snapshots --snapshot {snapshotName}`");
 
         var generator = new CSharpCodeGenerator(new CodeGenOptions());
 
@@ -122,9 +120,7 @@ public class ProtoParserParityTests
         File.Exists(darPath).Should().BeTrue($"fixture DAR must ship at {darPath}");
         File.Exists(protoPath).Should().BeTrue(
             $"the JVM-helper-produced IntermediateDar snapshot must ship at {protoPath}; " +
-            "refresh with `java -jar jvm-helper/target/scala-2.13/daml-dar-to-proto.jar " +
-            $"--dar tests/Daml.Codegen.CSharp.Tests/Snapshots/{snapshotName}/{snapshotName}.dar " +
-            $"--out tests/Daml.Codegen.CSharp.Tests/Snapshots/{snapshotName}/intermediate.binpb`");
+            $"refresh with `scripts/regenerate.sh write --only snapshots --snapshot {snapshotName}`");
 
         var parserDirect = await DarArchive.ReadAsync(darPath, TestContext.Current.CancellationToken);
 

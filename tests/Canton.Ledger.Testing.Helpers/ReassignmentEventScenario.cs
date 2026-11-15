@@ -42,6 +42,9 @@ public sealed record ReassignmentEventScenario
     /// <summary>The reassignment counter the event carries.</summary>
     public const long ReassignmentCounter = 3L;
 
+    /// <summary>The reassignment counter the rendered event carries on the wire, whatever its sign once decoded.</summary>
+    public ulong ReassignmentCounterOnWire { get; init; } = (ulong)ReassignmentCounter;
+
     /// <summary>Which event shape to render.</summary>
     public required ReassignmentEventShape Event { get; init; }
 
@@ -61,11 +64,20 @@ public sealed record ReassignmentEventScenario
     public bool OmitTemplateId { get; init; }
 
     /// <summary>
+    /// Renders the event with no contract id: the field a transport that can carry an absent value
+    /// leaves out and one that cannot sends as an empty string.
+    /// </summary>
+    public bool OmitContractId { get; init; }
+
+    /// <summary>
     /// Renders the event with no offset of its own — the unset field every transport encodes as
     /// zero — so a resume offset read off the event rather than off the reassignment is visible as
     /// the beginning of the ledger.
     /// </summary>
     public bool OmitEventOffset { get; init; }
+
+    /// <summary>Renders the reassignment itself with a malformed (negative) offset, which no participant sends.</summary>
+    public bool MalformedUpdateOffset { get; init; }
 
     /// <summary>
     /// The interface view the created event of an <see cref="ReassignmentEventShape.Assigned"/>

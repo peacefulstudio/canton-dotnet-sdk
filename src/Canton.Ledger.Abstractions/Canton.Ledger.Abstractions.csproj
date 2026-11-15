@@ -9,6 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Canton.Ledger.AspNetCore" />
+    <InternalsVisibleTo Include="Canton.Ledger.Kernel" />
+    <InternalsVisibleTo Include="Canton.Ledger.Kernel.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Pqs.Client" />
     <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client" />
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client" />

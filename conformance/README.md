@@ -143,6 +143,20 @@ default is 2.3. Its generated output is pinned by the `nonserializable` drift
 snapshot under `tests/Daml.Codegen.CSharp.Tests/Snapshots`; rebuild its DAR as
 described in `conformance/nonserializable/README.md`.
 
+The `lf24` and `lf25rc1` packages are one-template fixtures that build with `--target=2.4` and
+`--target=2.5-rc1`, so the main package of each is Daml-LF 2.4 and 2.5-rc1, the two newest
+versions the codegen accepts. They prove those versions on the read path (the C# DAR parser
+and the JVM helper write byte-identical Intermediate DARs) and on the emit path (the
+`lf24` and `lf25rc1` drift snapshots under `tests/Daml.Codegen.CSharp.Tests/Snapshots`).
+Rebuild a DAR with the command below, then run `scripts/regenerate.sh write`:
+
+    cd conformance/lf24 && dpm build && cp .daml/dist/lf24-*.dar ./lf24.dar
+    cd conformance/lf25rc1 && dpm build && cp .daml/dist/lf25rc1-*.dar ./lf25rc1.dar
+
+A Daml SDK bump that drops `2.5-rc1` from the targets `damlc` accepts fails the `lf25rc1`
+build; retarget the fixture along with the parser's allow-list. The package ids of both are
+pinned in `ConformancePackageIdentityDriftTests`.
+
 The `defaulttarget` package is a single boring template whose only job is
 to be compiled with **no `build-options:` block at all**. `damlc` picks a
 Daml-LF target when a project does not request one, and it announces that

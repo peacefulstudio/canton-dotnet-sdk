@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
@@ -33,6 +34,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return _calls.SendAsync<ServedPrepareSubmissionResponse, PreparedSubmission>(
@@ -56,6 +59,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return _calls.SendAsync(
@@ -81,6 +86,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return _calls.SendAsync<Raw.ExecuteSubmissionAndWaitResponse, ExecutedSubmission>(
@@ -111,6 +118,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return _calls.SendAsync<Raw.ExecuteSubmissionAndWaitForTransactionResponse, TransactionResult>(
@@ -120,7 +129,7 @@ internal sealed partial class RestLedgerClient
                 "executed transaction",
                 LedgerCallKind.EffectAppliedWrite,
                 submission.Prepared),
-            body => RestTransactionResultProjector.Project(
+            body => RestTransactionResultProjector.ProjectAcsDelta(
                 body.Transaction ?? throw MalformedResponse.MissingRequiredField("The response carries no transaction")),
             timeout,
             cancellationToken);
@@ -136,6 +145,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(requirements);
 
         var request = new Raw.GetPreferredPackagesRequest

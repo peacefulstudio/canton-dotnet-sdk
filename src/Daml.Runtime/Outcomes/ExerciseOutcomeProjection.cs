@@ -138,8 +138,11 @@ public static class ExerciseOutcomeProjection
     /// <returns><see cref="ExerciseOutcome{T}.One"/> carrying the resolved contract id and the decoded result,
     /// or <see cref="ExerciseOutcome{T}.CommittedUndecodable"/> when decoding fails.</returns>
     /// <exception cref="InvalidOperationException">The transaction has no single root exercise of the choice
-    /// on <typeparamref name="TOwner"/>: a custom writer dropped exercised events or their node ids, or the
-    /// transaction was requested without exercised events (<c>ACS_DELTA</c>).</exception>
+    /// on <typeparamref name="TOwner"/>: a custom writer dropped exercised events, or returned several exercised
+    /// events without node ids, or the transaction was requested without exercised events (<c>ACS_DELTA</c>). Node ids
+    /// cannot be set from outside the SDK, so a custom writer whose transaction nests exercises builds a
+    /// <see cref="TransactionTree"/> and returns <see cref="TransactionTreeExtensions.ToTransactionResult"/>
+    /// of it, which numbers the nodes.</exception>
     public static ExerciseOutcome<ByKeyExercise<TOwner, TResult>> ProjectByKeyExercise<TOwner, TArg, TResult>(
         this TransactionResult transaction,
         Choice<TOwner, TArg, TResult> choice)

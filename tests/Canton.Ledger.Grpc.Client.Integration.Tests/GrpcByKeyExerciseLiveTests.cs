@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Codegen.Testing.Conformance.ContractKeys;
 using Daml.Ledger.Abstractions.Extensions;
@@ -59,7 +60,7 @@ public class GrpcByKeyExerciseLiveTests
             custodian,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var exercise = Assert.IsType<ExerciseOutcome<ByKeyExercise<Account, ContractId<Account>>>.One>(outcome).Result;
+        var exercise = ExerciseOutcomeAssert.IsOne(outcome).Result;
         var resolved = exercise.ResolvedContractId.Value;
         Assert.Contains(resolved, new[] { first.Value, second.Value });
         var untouched = resolved == first.Value ? second.Value : first.Value;
@@ -79,6 +80,6 @@ public class GrpcByKeyExerciseLiveTests
             new Account(custodian, label, 100L),
             custodian,
             cancellationToken: TestContext.Current.CancellationToken);
-        return Assert.IsType<ExerciseOutcome<ContractId<Account>>.One>(outcome).Result;
+        return ExerciseOutcomeAssert.IsOne(outcome).Result;
     }
 }

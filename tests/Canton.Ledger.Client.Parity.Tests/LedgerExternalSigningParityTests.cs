@@ -227,13 +227,11 @@ public abstract class LedgerExternalSigningParityTests
         string submissionId,
         CancellationToken cancellationToken)
     {
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(CompletionBudget);
-        using var streamHold = await lane.HoldStreamAsync(cancellationToken);
+        using var window = await lane.HoldStreamWithBudgetAsync(CompletionBudget, cancellationToken);
         try
         {
             await foreach (var streamEvent in lane.Capability.Client.CompletionStreamAsync(
-                new SubmitterInfo(party), beginExclusive, budget.Token))
+                new SubmitterInfo(party), beginExclusive, window.Token))
             {
                 switch (streamEvent)
                 {
@@ -245,7 +243,7 @@ public abstract class LedgerExternalSigningParityTests
                 }
             }
         }
-        catch (OperationCanceledException) when (budget.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (window.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
         }
 

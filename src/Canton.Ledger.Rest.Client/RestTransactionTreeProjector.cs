@@ -81,6 +81,7 @@ internal static class RestTransactionTreeProjector
             children)
         {
             PackageName = exercised.PackageName,
+            AcsDelta = exercised.AcsDelta is true,
         };
     }
 
@@ -113,6 +114,7 @@ internal static class RestTransactionTreeProjector
             InterfaceIds = ToInterfaceIds(created),
             UndecodedCreateArguments = payload.Undecoded,
             PackageName = created.PackageName,
+            AcsDelta = created.AcsDelta is true,
         };
     }
 

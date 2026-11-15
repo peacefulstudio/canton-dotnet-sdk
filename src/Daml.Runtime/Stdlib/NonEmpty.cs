@@ -122,8 +122,8 @@ public sealed record NonEmpty<T>(T Hd, IReadOnlyList<T> Tl)
     /// </summary>
     public bool Equals(NonEmpty<T>? other) =>
         other is not null
-        && EqualityComparer<T>.Default.Equals(Hd, other.Hd)
-        && Tl.SequenceEqual(other.Tl);
+        && DamlEqualityComparer<T>.Default.Equals(Hd, other.Hd)
+        && Tl.SequenceEqual(other.Tl, DamlEqualityComparer<T>.Default);
 
     /// <inheritdoc/>
     public override int GetHashCode()

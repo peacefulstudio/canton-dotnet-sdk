@@ -24,8 +24,8 @@ generated headers carry no `#pragma warning disable CS8019`.
 
 ## Refreshing the snapshot
 
-`scripts/regenerate.sh write --only snapshots` regenerates `intermediate.binpb` from the vendored
-DAR with a JVM helper assembled from the working tree's sources, then
+`scripts/regenerate.sh write --only snapshots` regenerates `intermediate.binpb` from the
+digest-pinned DAR with a JVM helper assembled from the working tree's sources, then
 regenerates the `expected/` tree from that proto with the current codegen
 source. Pass `--keep-protos` to keep the vendored proto and refresh only
 `expected/`. Run it from the repo root (POSIX shell; on Windows, use WSL or Git
@@ -35,15 +35,17 @@ Bash):
 scripts/regenerate.sh write --only snapshots --snapshot splice-api-token-holding-v1
 ```
 
-## The vendored inputs
+## The inputs
 
-`intermediate.binpb` is the canonical codegen input for the drift test;
-`splice-api-token-holding-v1.dar` is the upstream Splice archive it was
-derived from (`splice-api-token-holding-v1-1.0.0.dar` from the Splice `0.9.1`
-`splice-node` release tarball), kept alongside as the frozen upstream artifact
-and used as the regeneration input. Do not hand-edit `intermediate.binpb`: the
-refresh script regenerates it from this DAR on every run, and CI regenerates it
-the same way and fails on any byte delta. If the upstream Splice package
-genuinely needs to advance, replace the files in place, refresh the snapshot per
-the procedure above, and call out the version bump in the pull request
-description.
+`intermediate.binpb` is the canonical codegen input for the drift test. The
+Splice archive it was derived from, `splice-api-token-holding-v1-1.0.0.dar`, is not vendored:
+`Snapshots/splice-dars.manifest` pins its sha256 and the upstream Splice commit it
+is fetched from, and `scripts/fetch-splice-snapshot-dars.sh` downloads it into
+`output/splice-snapshot-dars/splice-api-token-holding-v1.dar`, refusing any digest mismatch. The tests
+and `scripts/regenerate.sh` read that cached copy. Do not hand-edit
+`intermediate.binpb`: the refresh script regenerates it from that DAR on every
+run, and CI regenerates it the same way and fails on any byte delta. If the
+upstream Splice package genuinely needs to advance, update its line in the
+manifest (file name and sha256, and the commit when the DAR comes from a newer
+one), refresh the snapshot per the procedure above, and call out the version bump
+in the pull request description.

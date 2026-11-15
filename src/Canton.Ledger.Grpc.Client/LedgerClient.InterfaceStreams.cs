@@ -170,6 +170,8 @@ internal sealed partial class LedgerClient
             foreach (var projected in GrpcInterfaceStreamProjector.ProjectUpdate<TInterface, TView>(stream.Current, _logger))
             {
                 yield return projected;
+
+                if (projected is InterfaceStreamEvent<TInterface, TView>.StreamError) yield break;
             }
         }
     }

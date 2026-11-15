@@ -27,10 +27,6 @@ internal static class RestWireConversions
         return EquatableArray.Create(result);
     }
 
-    public static ContractId<T> ToContractId<T>(string wireContractId)
-        where T : IDamlType =>
-        MalformedResponse.Decoding(wireContractId, id => new ContractId<T>(id));
-
     public static RuntimeIdentifier ToRuntimeIdentifier(WireIdentifier identifier) =>
         new(identifier.PackageId, identifier.ModuleName, identifier.EntityName);
 
@@ -51,7 +47,9 @@ internal static class RestWireConversions
     public static long ParseOffset(string? wireOffset) => ParseNonNegativeInt64(wireOffset, "offset");
 
     public static long ParseReassignmentCounter(string? wireCounter) =>
-        ParseNonNegativeInt64(wireCounter, "reassignment counter");
+        ulong.TryParse(wireCounter, NumberStyles.None, CultureInfo.InvariantCulture, out var counter)
+            ? WireValues.ReassignmentCounter(counter)
+            : throw new FormatException($"Cannot parse wire reassignment counter '{wireCounter}' as a non-negative integer.");
 
     public static long ParsePaidTrafficCost(string? wireCost) =>
         ParseNonNegativeInt64(wireCost, "paid traffic cost");

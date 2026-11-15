@@ -63,7 +63,7 @@ public sealed class RestLedgerClientTokenFailureCooldownTests : IDisposable
     public async Task SubmitAndWaitAsync_inside_the_cooldown_window_is_reported_never_sent_like_the_failure_that_opened_it_without_calling_the_identity_provider()
     {
         await AssertNeverSent();
-        _time.Advance(TimeSpan.FromMilliseconds(499));
+        _time.Advance(TimeSpan.FromMilliseconds(249));
 
         await AssertNeverSent();
 

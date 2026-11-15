@@ -279,6 +279,8 @@ internal sealed partial class LedgerClient
             foreach (var typedEvent in GrpcContractStreamProjector.ProjectUpdate<T>(stream.Current, _logger))
             {
                 yield return typedEvent;
+
+                if (typedEvent is ContractStreamEvent<T>.StreamError) yield break;
             }
         }
     }

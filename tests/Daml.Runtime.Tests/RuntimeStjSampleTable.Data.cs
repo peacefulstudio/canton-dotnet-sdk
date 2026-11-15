@@ -22,6 +22,10 @@ internal static partial class RuntimeStjSampleTable
         [
             new DamlInt64(42),
             new DamlNumeric(1234.5678m),
+            ParseNumeric("99999999999999999999999999999999999999."),
+            ParseNumeric("-99999999999999999999999999999999999999."),
+            ParseNumeric("0.0000000000000000000000000000000000001"),
+            ParseNumeric("12345678901234567890.123456789012345678"),
             new DamlText("hello"),
             new DamlBool(true),
             DamlUnit.Instance,
@@ -43,4 +47,9 @@ internal static partial class RuntimeStjSampleTable
             SampleUndecodedJson,
         ];
     }
+
+    private static DamlNumeric ParseNumeric(string canonical) =>
+        DamlNumeric.TryParseCanonical(canonical, out var numeric)
+            ? numeric
+            : throw new InvalidOperationException($"Not a canonical Numeric: {canonical}");
 }

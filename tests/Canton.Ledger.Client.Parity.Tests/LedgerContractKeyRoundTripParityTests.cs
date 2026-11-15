@@ -154,12 +154,10 @@ public abstract class LedgerContractKeyRoundTripParityTests
         ContractStreamEvent<T>.Created? created = null;
         ContractStreamEvent<T>.Archived? archived = null;
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(SubscribeBudget);
-        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
+        using var subscription = await lane.HoldStreamWithBudgetAsync(SubscribeBudget, TestContext.Current.CancellationToken);
         try
         {
-            await foreach (var streamEvent in client.SubscribeAsync<T>(reader, fromExclusive, endOffset, cts.Token))
+            await foreach (var streamEvent in client.SubscribeAsync<T>(reader, fromExclusive, endOffset, subscription.Token))
             {
                 FailOnStreamFault(streamEvent, contractIdValue);
 
@@ -179,7 +177,7 @@ public abstract class LedgerContractKeyRoundTripParityTests
             }
         }
         catch (OperationCanceledException) when (
-            cts.IsCancellationRequested && !TestContext.Current.CancellationToken.IsCancellationRequested)
+            subscription.Token.IsCancellationRequested && !TestContext.Current.CancellationToken.IsCancellationRequested)
         {
             Assert.Fail(
                 $"the {typeof(T).Name} subscribe stream over ({fromExclusive}, {endOffset}] did not deliver both a "
@@ -223,13 +221,11 @@ public abstract class LedgerContractKeyRoundTripParityTests
         var client = lane.Capability.Client;
         var endOffset = await client.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(SubscribeBudget);
-        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
+        using var subscription = await lane.HoldStreamWithBudgetAsync(SubscribeBudget, TestContext.Current.CancellationToken);
         try
         {
             await foreach (var streamEvent in client.SubscribeAsync(
-                IStewardship.View, reader, fromExclusive, endOffset, cts.Token))
+                IStewardship.View, reader, fromExclusive, endOffset, subscription.Token))
             {
                 FailOnInterfaceStreamFault(streamEvent, contractIdValue);
 
@@ -241,7 +237,7 @@ public abstract class LedgerContractKeyRoundTripParityTests
             }
         }
         catch (OperationCanceledException) when (
-            cts.IsCancellationRequested && !TestContext.Current.CancellationToken.IsCancellationRequested)
+            subscription.Token.IsCancellationRequested && !TestContext.Current.CancellationToken.IsCancellationRequested)
         {
             Assert.Fail(
                 $"the IStewardship subscribe stream over ({fromExclusive}, {endOffset}] did not deliver a "

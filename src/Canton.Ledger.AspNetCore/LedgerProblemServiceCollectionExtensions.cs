@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Canton.Ledger.AspNetCore;
 
@@ -11,7 +12,9 @@ public static class LedgerProblemServiceCollectionExtensions
     /// <summary>
     /// Answers a <see cref="Daml.Ledger.Abstractions.LedgerOperationException"/> escaping an endpoint
     /// with an RFC 9457 <c>application/problem+json</c> response, for minimal APIs and MVC
-    /// controllers alike. The host must also call <c>UseExceptionHandler()</c>.
+    /// controllers alike. The host must also call <c>UseExceptionHandler()</c>, or
+    /// <see cref="LedgerProblemApplicationBuilderExtensions.UseCantonLedgerProblemDetails"/> when it has its
+    /// own catch-all exception handling.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configure">An action to configure <see cref="LedgerProblemOptions"/>.</param>
@@ -24,6 +27,7 @@ public static class LedgerProblemServiceCollectionExtensions
 
         services.AddProblemDetails();
         services.AddExceptionHandler<LedgerOperationExceptionHandler>();
+        services.TryAddSingleton<LedgerOperationExceptionHandler>();
         var options = services.AddOptions<LedgerProblemOptions>();
         if (configure is not null)
             options.Configure(configure);

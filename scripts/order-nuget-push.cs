@@ -1,6 +1,8 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+#:property PublishAot=false
+
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml;

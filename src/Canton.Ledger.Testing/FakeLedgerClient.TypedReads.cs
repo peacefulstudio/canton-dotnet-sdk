@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using RuntimeCommands = Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -18,37 +19,53 @@ public sealed partial class FakeLedgerClient
     /// <inheritdoc />
     public Task<CreatedContract<T>> GetContractAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-        where T : ITemplate, IDamlRecord<T> =>
-        Answering(() => TypedReads.Contracts.TryGetValue((typeof(T), contractId.Value), out var contract)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => TypedReads.Contracts.TryGetValue((typeof(T), contractId.Value), out var contract)
             ? (CreatedContract<T>)contract
             : throw StagingMissing($"contract '{contractId.Value}'", nameof(GetContractAsync), $"WithContract<{typeof(T).Name}>"));
+    }
 
     /// <inheritdoc />
     public Task<ContractLifecycle<T>> GetEventsByContractIdAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-        where T : ITemplate, IDamlRecord<T> =>
-        Answering(() => TypedReads.ContractLifecycles.TryGetValue((typeof(T), contractId.Value), out var lifecycle)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => TypedReads.ContractLifecycles.TryGetValue((typeof(T), contractId.Value), out var lifecycle)
             ? (ContractLifecycle<T>)lifecycle
             : throw StagingMissing(
                 $"events for contract '{contractId.Value}'", nameof(GetEventsByContractIdAsync), $"WithContractLifecycle<{typeof(T).Name}>"));
+    }
 
     /// <inheritdoc />
     public Task<InterfaceContractLifecycle<TInterface, TView>> GetEventsByContractIdAsync<TInterface, TView>(
         ContractId<TInterface> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where TInterface : IDamlInterface, IHasView<TView>
-        where TView : IDamlRecord<TView> =>
-        Answering(() => TypedReads.ContractLifecycles.TryGetValue((typeof(TInterface), contractId.Value), out var lifecycle)
+        where TView : IDamlRecord<TView>
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => TypedReads.ContractLifecycles.TryGetValue((typeof(TInterface), contractId.Value), out var lifecycle)
             ? (InterfaceContractLifecycle<TInterface, TView>)lifecycle
             : throw StagingMissing(
                 $"events for contract '{contractId.Value}'",
                 nameof(GetEventsByContractIdAsync),
                 $"WithInterfaceContractLifecycle<{typeof(TInterface).Name}, {typeof(TView).Name}>"));
+    }
 
     /// <inheritdoc />
     public Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
-        where T : IDamlType =>
-        Answering(() => TypedReads.Disclosures.GetValueOrDefault(contractId.Value));
+        where T : IDamlType
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => TypedReads.Disclosures.GetValueOrDefault(contractId.Value));
+    }
 
     /// <inheritdoc />
     public Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
@@ -56,6 +73,8 @@ public sealed partial class FakeLedgerClient
         bool includeDisclosure = false, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         return Answering(() =>
         {
             if (activeAtOffset == LedgerOffset.Begin)
@@ -72,15 +91,21 @@ public sealed partial class FakeLedgerClient
     }
 
     /// <inheritdoc />
-    public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
-        Answering(() => TypedReads.PrunedOffsets ?? throw StagingMissing(
+    public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => TypedReads.PrunedOffsets ?? throw StagingMissing(
             "pruned offsets", nameof(GetLatestPrunedOffsetsAsync), "WithPrunedOffsets"));
+    }
 
     /// <inheritdoc />
     public Task<UpdatesPage> GetUpdatesPageAsync(
         RuntimeCommands.SubmitterInfo submitter, LedgerOffset? beginExclusive = null, LedgerOffset? endInclusive = null, int? maxPageSize = null,
         bool descendingOrder = false, LedgerPageToken? pageToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         return Answering(() =>
         {
             var pages = TypedReads.UpdatesPages ?? throw StagingMissing(

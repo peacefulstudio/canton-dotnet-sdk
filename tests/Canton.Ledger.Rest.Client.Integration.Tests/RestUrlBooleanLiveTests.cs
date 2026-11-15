@@ -11,18 +11,16 @@ using Xunit;
 namespace Canton.Ledger.Rest.Client.Integration.Tests;
 
 /// <summary>
-/// LocalNet conformance coverage for how the participant reads a boolean query parameter. Refit's
-/// default formatter spells a boolean <c>True</c> or <c>False</c>, where <c>JsonUrlParameterFormatter</c>
-/// spells it <c>true</c> or <c>false</c>; the formatter's boolean spelling is needed only while the
-/// participant refuses the capitalised spelling.
+/// LocalNet conformance coverage for how the participant reads a boolean query parameter. The typed
+/// client sends a boolean as Refit's <c>DefaultUrlParameterFormatter</c> spells it, <c>True</c> or
+/// <c>False</c>, where JSON and the specification spell it <c>true</c> or <c>false</c>; that is correct
+/// only while the participant reads the parameter case-insensitively.
 /// <para>
 /// The same DAR is uploaded under three spellings of <c>vetAllPackages</c>. The typed client's
 /// spelling must be accepted. A spelling that is not a boolean at all must be refused, which proves the
 /// participant parses the parameter rather than ignoring it, so what the third leg shows is not vacuous.
-/// The capitalised spelling is the one Refit's default would put on the wire: it is accepted today,
-/// which means the participant already reads it and the formatter has nothing left to compensate for.
-/// That leg is the retirement instrument, and it would start failing only if the participant began
-/// refusing the capitalised spelling.
+/// The capitalised spelling is sent literally and must be accepted: the day the participant refuses it,
+/// the typed client needs a URL parameter formatter that spells booleans lowercase again.
 /// </para>
 /// </summary>
 [Trait("Category", "Integration")]
@@ -31,7 +29,6 @@ public class RestUrlBooleanLiveTests
     private const string UploadDarPath = "/v2/dars";
 
     [Fact]
-    [Trait("Retires", nameof(JsonUrlParameterFormatter))]
     public async Task A_boolean_query_parameter_is_parsed_by_the_participant_and_read_in_either_capitalisation()
     {
         await using var lane = await RestLiveLane.OpenAsync(TestContext.Current.CancellationToken);
@@ -47,8 +44,7 @@ public class RestUrlBooleanLiveTests
             + "that the participant ignores the parameter");
         capitalised.Should().Be(
             HttpStatusCode.OK,
-            "the spelling Refit's default formatter produces must be accepted for the formatter to have "
-            + "nothing left to compensate for");
+            "the typed client sends Refit's default capitalised spelling, so the participant must read it");
     }
 
     private static async Task UploadThroughTypedClientAsync(RestLiveLane lane, CancellationToken cancellationToken)

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
@@ -19,6 +20,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         var sent = Recorded(submission, timeout);
         return Answering(() => sent.CommandId!.Value);
@@ -30,6 +33,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         var sent = RecordedReassignment(submission, timeout);
         return Answering(() => sent.CommandId!.Value);
@@ -42,6 +47,8 @@ public sealed partial class FakeLedgerClient
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         var sent = RecordedReassignment(submission, timeout);
         return AnsweringTry(() =>
@@ -57,6 +64,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         var sent = Recorded(submission.WithSubmitter(submitter), timeout);
         return AnsweringTry(() =>
@@ -81,16 +90,24 @@ public sealed partial class FakeLedgerClient
         Party? party = null,
         string? participantId = null,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        Answering(() => _canton.ConnectedSynchronizers ?? throw StagingMissing(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => _canton.ConnectedSynchronizers ?? throw StagingMissing(
             "connected synchronizers", nameof(GetConnectedSynchronizersAsync), "WithConnectedSynchronizers"));
+    }
 
     /// <inheritdoc />
     public Task<string> GetLedgerApiVersionAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        Answering(() => _canton.LedgerApiVersion ?? throw StagingMissing(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => _canton.LedgerApiVersion ?? throw StagingMissing(
             "Ledger API version", nameof(GetLedgerApiVersionAsync), "WithLedgerApiVersion"));
+    }
 
     /// <inheritdoc />
     public Task<TransactionResult> GetUpdateByOffsetAsync(
@@ -99,6 +116,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
         return Answering(() => _canton.UpdatesByOffset.TryGetValue(offset, out var result)
             ? result
@@ -112,6 +131,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(updateId);
         return Answering(() => _canton.UpdatesById.TryGetValue(updateId, out var result)
             ? result
@@ -125,6 +146,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
         return Answering(() => _canton.UpdateTreesByOffset.TryGetValue(offset, out var tree)
             ? tree
@@ -140,6 +163,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         _trafficCostEstimates.Enqueue(new RecordedTrafficCostEstimate(submission, timeout));
         return Answering(() => _canton.TrafficCostEstimate is { } staged

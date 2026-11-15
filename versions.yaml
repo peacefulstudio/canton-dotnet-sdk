@@ -3,9 +3,9 @@ dpm: 1.0.20
 daml-sdk-sha256: a60bec6d91e91da1acaaf1c147f0caea0c4a1fe54192f8bf619287384c1394cd
 damlc-sha256: adb0af97327020638d6e7d00437b8aa58e12c593f573bad51cd30cd68e175ff8
 daml-script-sha256: 9eb8c662042b4f7fb98999541b3f883785eb767f15d526bee21e45286c83b5de
-canton: 3.7.1
-canton-localnet: v0.10.0-1
-canton-localnet-commit: 8a1345a2015c39148fff80ff003f9bcd17c997d8
+canton: 3.7.2
+canton-localnet: v0.10.1-2
+canton-localnet-commit: 63ca008f87ca5cab00915e15ce6cbde4fd9e00e3
 splice: 0.10.0
 splice-sha256: 6fec4b6fbc5e91b820f3164e91b10aed61bbd75906786cf79f5f9609042114ec
 splice-openapi-sha256: cf4cf6db743ce90dd53d15c8df42a0ad7e7e4ec0431c8401668b2439169bd695

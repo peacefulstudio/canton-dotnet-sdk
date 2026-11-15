@@ -5,6 +5,8 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <Import Project="SpliceSnapshotDars.targets" />
+
   <ItemGroup>
     <Compile Include="..\Shared\Roslyn\*.cs" Link="Shared\%(Filename)%(Extension)" />
   </ItemGroup>
@@ -64,5 +66,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <Target Name="IncludeSpliceSnapshotDars" AfterTargets="FetchSpliceSnapshotDars" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <SpliceSnapshotDar Include="$(SpliceSnapshotDarsDirectory)/*.dar" />
+      <Content Include="@(SpliceSnapshotDar)" Link="Snapshots\%(Filename)\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 
 </Project>

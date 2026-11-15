@@ -5,7 +5,7 @@ Transport-agnostic abstractions for Daml ledger clients, part of the [Canton .NE
 ## Installation
 
 ```bash
-dotnet add package Daml.Ledger.Abstractions --version 0.8.0
+dotnet add package Daml.Ledger.Abstractions --version 0.8.1
 ```
 
 `ILedgerClient` is the composition of three capability interfaces, each

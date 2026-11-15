@@ -61,7 +61,7 @@ internal static partial class RestProjectionCore
         }
         else if (response.Update?.OffsetCheckpoint is { } checkpoint)
         {
-            yield return TArms.Checkpoint(LedgerOffset.At(RestWireConversions.ParseOffset(checkpoint.Offset)));
+            yield return ProjectCheckpoint<TArms, TEvent, TMarker, TPayload>(checkpoint.Offset, logger);
         }
         else
         {
@@ -72,6 +72,18 @@ internal static partial class RestProjectionCore
         }
     }
 
+    private static TEvent ProjectCheckpoint<TArms, TEvent, TMarker, TPayload>(string? wireCheckpointOffset, ILogger? logger)
+        where TArms : IStreamArms<TEvent, TMarker, TPayload>
+        where TMarker : IDamlType
+        where TPayload : IDamlRecord<TPayload>
+    {
+        var wireOffset = WireOffset.FromRequiredText(wireCheckpointOffset);
+        return StreamOffsets.TryRequired(wireOffset, out var checkpointOffset)
+            ? TArms.Checkpoint(LedgerOffset.At(checkpointOffset))
+            : TArms.StreamError(StreamEventClassifier.UndecodableCheckpoint(
+                typeof(TMarker).Name, logger, wireOffset.ToMalformedResponse("checkpoint offset")));
+    }
+
     public static IEnumerable<TEvent> ProjectTransactionEvents<TArms, TEvent, TMarker, TPayload>(
         WireTransaction transaction,
         ILogger? logger)
@@ -79,10 +91,12 @@ internal static partial class RestProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload>
     {
-        if (!RestWireConversions.TryParseOffset(transaction.Offset, out var transactionOffset))
+        var wireOffset = WireOffset.FromRequiredText(transaction.Offset);
+        if (!StreamOffsets.TryRequired(wireOffset, out var transactionOffset))
         {
             yield return Refused<TArms, TEvent, TMarker, TPayload>(
-                UnparseableOffsetRefusal(typeof(TMarker).Name, transaction.Offset, logger));
+                StreamEventClassifier.UndecodableUpdateOffset(
+                    typeof(TMarker).Name, logger, wireOffset.ToMalformedResponse("transaction offset")));
             yield break;
         }
 
@@ -111,10 +125,12 @@ internal static partial class RestProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload>
     {
-        if (!RestWireConversions.TryParseOffset(reassignment.Offset, out var reassignmentOffset))
+        var wireOffset = WireOffset.FromRequiredText(reassignment.Offset);
+        if (!StreamOffsets.TryRequired(wireOffset, out var reassignmentOffset))
         {
             yield return Refused<TArms, TEvent, TMarker, TPayload>(
-                UnparseableOffsetRefusal(typeof(TMarker).Name, reassignment.Offset, logger));
+                StreamEventClassifier.UndecodableUpdateOffset(
+                    typeof(TMarker).Name, logger, wireOffset.ToMalformedResponse("reassignment offset")));
             yield break;
         }
 
@@ -142,17 +158,21 @@ internal static partial class RestProjectionCore
         where TPayload : IDamlRecord<TPayload>
     {
         var entry = ActiveEntryOf(response);
-        var unassignmentWireOffset = entry.Unassigned?.Offset;
+        var unassignmentOffset = WireOffset.FromText(entry.Unassigned?.Offset);
+        var refusalOffset = StreamOffsets.AcsRefusalOffset(unassignmentOffset, snapshotOffset);
 
-        if (!TryParseOptionalOffset(unassignmentWireOffset, snapshotOffset, out var entryResumeOffset))
+        if (!StreamOffsets.TryAcsEntryResume(
+                unassignmentOffset, (snapshotOffset ?? LedgerOffset.Begin).Value, out var entryResumeOffset))
         {
-            yield return Refused<TArms, TEvent, TMarker, TPayload>(UnparseableOffsetInSnapshotRefusal(
-                typeof(TMarker).Name, unassignmentWireOffset, snapshotOffset, logger));
+            yield return DecodeFailed<TArms, TEvent, TMarker, TPayload>(
+                refusalOffset,
+                logger,
+                unassignmentOffset.ToMalformedResponse("unassigned event offset"));
             yield break;
         }
 
         var (createdEvent, admittedAsCreated) = ClassifyActiveCreated<TArms, TEvent, TMarker, TPayload>(
-            entry, entryResumeOffset, snapshotOffset, logger);
+            entry, entryResumeOffset, refusalOffset, logger);
         yield return createdEvent;
 
         if (!admittedAsCreated || entry.Unassigned is not { } unassigned)
@@ -209,7 +229,7 @@ internal static partial class RestProjectionCore
         {
             RequireTemplateId(archivedEvent.TemplateId, nameof(Raw.ArchivedEvent), archivedEvent.ContractId);
             archived = TArms.Archived(
-                RestWireConversions.ToContractId<TMarker>(archivedEvent.ContractId),
+                WireValues.ContractId<TMarker>(archivedEvent.ContractId),
                 LedgerOffset.At(RestWireConversions.ParseOffset(archivedEvent.Offset)),
                 RequireSynchronizer(response.Archived.SynchronizerId, archivedEvent.ContractId),
                 RestWireConversions.ToPartyList(archivedEvent.WitnessParties));
@@ -230,9 +250,6 @@ internal static partial class RestProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload>
     {
-        var contractId = created.ContractId
-            ?? throw MalformedResponse.MissingRequiredField(
-                $"{nameof(Raw.CreatedEvent)} at offset {offset} has no contractId");
         if (!TryResolvePayload<TMarker, TPayload>(created, out var payload))
         {
             return (
@@ -241,7 +258,7 @@ internal static partial class RestProjectionCore
         }
         return (
             TArms.Created(
-                RestWireConversions.ToContractId<TMarker>(contractId),
+                WireValues.ContractId<TMarker>(created.ContractId),
                 payload,
                 ContractKeyOf(created),
                 LedgerOffset.At(offset),
@@ -321,10 +338,8 @@ internal static partial class RestProjectionCore
             {
                 return Refused<TArms, TEvent, TMarker, TPayload>(refusal);
             }
-            var archivedContractId = archived.ContractId
-                ?? throw new InvalidOperationException("Archived event has no contract id.");
             return TArms.Archived(
-                RestWireConversions.ToContractId<TMarker>(archivedContractId),
+                WireValues.ContractId<TMarker>(archived.ContractId),
                 LedgerOffset.At(offset),
                 scope,
                 RestWireConversions.ToPartyList(archived.WitnessParties));
@@ -343,12 +358,10 @@ internal static partial class RestProjectionCore
             {
                 return Refused<TArms, TEvent, TMarker, TPayload>(refusal);
             }
-            var exercisedContractId = exercised.ContractId
-                ?? throw new InvalidOperationException("Exercised event has no contract id.");
             var payloads = RestPayloadDecoder.ExercisePayloadsOf(
                 exercised, RestWireConversions.ToRuntimeIdentifier(exercised.TemplateId));
             return TArms.Exercised(
-                RestWireConversions.ToContractId<TMarker>(exercisedContractId),
+                WireValues.ContractId<TMarker>(exercised.ContractId),
                 new ChoiceName(exercised.Choice),
                 payloads.Argument,
                 payloads.Result,
@@ -388,15 +401,13 @@ internal static partial class RestProjectionCore
             {
                 return Refused<TArms, TEvent, TMarker, TPayload>(refusal);
             }
-            var assignedContractId = created.ContractId
-                ?? throw new InvalidOperationException("Assigned event's created event has no contract id.");
             if (!TryResolvePayload<TMarker, TPayload>(created, out var payload))
             {
                 return TArms.Unclassified(
                     LedgerOffset.At(createdOffset), UnclassifiedKind.InterfaceViewUnavailable, rawKind: null);
             }
             return TArms.Assigned(
-                RestWireConversions.ToContractId<TMarker>(assignedContractId),
+                WireValues.ContractId<TMarker>(created.ContractId),
                 payload,
                 ContractKeyOf(created),
                 LedgerOffset.At(createdOffset),
@@ -430,7 +441,7 @@ internal static partial class RestProjectionCore
     private static (TEvent Event, bool AdmittedAsCreated) ClassifyActiveCreated<TArms, TEvent, TMarker, TPayload>(
         RestActiveEntry entry,
         long entryResumeOffset,
-        LedgerOffset? snapshotOffset,
+        LedgerOffset? refusalOffset,
         ILogger? logger)
         where TArms : IStreamArms<TEvent, TMarker, TPayload>
         where TMarker : IDamlType
@@ -442,14 +453,14 @@ internal static partial class RestProjectionCore
                 TArms.Unclassified(LedgerOffset.At(entryResumeOffset), UnclassifiedKind.Unknown, entry.RawKind),
                 false);
         }
-        if (created.Offset is not null && !RestWireConversions.TryParseOffset(created.Offset, out _))
+        var createdWireOffset = WireOffset.FromText(created.Offset);
+        if (!StreamOffsets.TryAcsCreatedResume(createdWireOffset, entryResumeOffset, out var offset))
         {
             return (
-                Refused<TArms, TEvent, TMarker, TPayload>(UnparseableOffsetInSnapshotRefusal(
-                    typeof(TMarker).Name, created.Offset, snapshotOffset, logger)),
+                DecodeFailed<TArms, TEvent, TMarker, TPayload>(
+                    refusalOffset, logger, createdWireOffset.ToMalformedResponse("created event offset")),
                 false);
         }
-        var offset = EventOffsetOrUpdateOffset(created.Offset, entryResumeOffset);
         var decoded = new DecodedStreamEvent<SynchronizerId>(
             offset,
             RestMarkerMatcher<TMarker>.MatchesCreated(created),
@@ -504,10 +515,8 @@ internal static partial class RestProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload>
     {
-        var unassignedContractId = unassigned.ContractId
-            ?? throw new InvalidOperationException("Unassigned event has no contract id.");
         return TArms.Unassigned(
-            RestWireConversions.ToContractId<TMarker>(unassignedContractId),
+            WireValues.ContractId<TMarker>(unassigned.ContractId),
             LedgerOffset.At(offset),
             scope.Source,
             scope.Target,
@@ -523,6 +532,16 @@ internal static partial class RestProjectionCore
         TArms.Unclassified(refusal.Offset, refusal.Kind, rawKind: null);
 
     private static TEvent DecodeFailed<TArms, TEvent, TMarker, TPayload>(
+        LedgerOffset? offset,
+        ILogger? logger,
+        Exception cause)
+        where TArms : IStreamArms<TEvent, TMarker, TPayload>
+        where TMarker : IDamlType
+        where TPayload : IDamlRecord<TPayload> =>
+        Refused<TArms, TEvent, TMarker, TPayload>(
+            StreamEventClassifier.DecodeFailure(typeof(TMarker).Name, offset, logger, cause));
+
+    private static TEvent DecodeFailed<TArms, TEvent, TMarker, TPayload>(
         long offset,
         ILogger? logger,
         Exception cause)
@@ -532,55 +551,9 @@ internal static partial class RestProjectionCore
         Refused<TArms, TEvent, TMarker, TPayload>(
             StreamEventClassifier.DecodeFailure(typeof(TMarker).Name, offset, logger, cause));
 
-    private static long EventOffsetOrUpdateOffset(long eventOffset, long updateOffset) =>
-        eventOffset > 0 ? eventOffset : updateOffset;
-
     private static long EventOffsetOrUpdateOffset(string? wireEventOffset, long updateOffset) =>
-        wireEventOffset is null
-            ? updateOffset
-            : EventOffsetOrUpdateOffset(RestWireConversions.ParseOffset(wireEventOffset), updateOffset);
-
-    private static bool TryParseOptionalOffset(string? wireOffset, LedgerOffset? snapshotOffset, out long offset)
-    {
-        var snapshotResumeOffset = (snapshotOffset ?? LedgerOffset.Begin).Value;
-        offset = snapshotResumeOffset;
-        if (wireOffset is null)
-        {
-            return true;
-        }
-        if (!RestWireConversions.TryParseOffset(wireOffset, out var parsedOffset))
-        {
-            return false;
-        }
-        offset = EventOffsetOrUpdateOffset(parsedOffset, snapshotResumeOffset);
-        return true;
-    }
-
-    private static StreamEntryRefusal UnparseableOffsetRefusal(string markerName, string? wireOffset, ILogger? logger)
-    {
-        LogOffsetParseFailed(logger ?? NullLogger.Instance, markerName, wireOffset);
-        return new StreamEntryRefusal(null, UnclassifiedKind.DecodeFailure);
-    }
-
-    private static StreamEntryRefusal UnparseableOffsetInSnapshotRefusal(
-        string markerName,
-        string? wireOffset,
-        LedgerOffset? snapshotOffset,
-        ILogger? logger)
-    {
-        if (snapshotOffset is not { } resumeOffset)
-        {
-            return UnparseableOffsetRefusal(markerName, wireOffset, logger);
-        }
-        LogSnapshotOffsetParseFailed(logger ?? NullLogger.Instance, markerName, wireOffset, resumeOffset.Value);
-        return new StreamEntryRefusal(resumeOffset, UnclassifiedKind.DecodeFailure);
-    }
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not parse the wire offset '{WireOffset}' on the {TemplateType} stream — surfaced as Unclassified (decode-failure) carrying no offset, so a consumer must not persist this event as a resume point")]
-    private static partial void LogOffsetParseFailed(ILogger logger, string templateType, string? wireOffset);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not parse the wire offset '{WireOffset}' on the {TemplateType} active-contract snapshot — surfaced as Unclassified (decode-failure) carrying the snapshot offset {SnapshotOffset}, so a consumer resuming from this event resumes where the snapshot ended instead of re-reading the stream from the start")]
-    private static partial void LogSnapshotOffsetParseFailed(ILogger logger, string templateType, string? wireOffset, long snapshotOffset);
+        StreamOffsets.EventOrUpdate(
+            wireEventOffset is null ? null : RestWireConversions.ParseOffset(wireEventOffset), updateOffset);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Subscribe stream for {TemplateType} skipped variant {Variant}")]
     private static partial void LogStreamVariantSkipped(ILogger logger, string templateType, string variant);

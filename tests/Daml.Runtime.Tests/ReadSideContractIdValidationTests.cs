@@ -191,7 +191,7 @@ public class ReadSideContractIdValidationTests
 
         json.Should().Be(
             "{\"UpdateId\":\"u-1\",\"CompletionOffset\":" + System.Text.Json.JsonSerializer.Serialize(LedgerOffset.At(1))
-            + ",\"CreatedContracts\":[],\"ArchivedContractIds\":[\"cid-1\"],\"CommandId\":null,\"ExercisedEvents\":[],\"PaidTrafficCost\":null}");
+            + ",\"CreatedContracts\":[],\"ArchivedContractIds\":[\"cid-1\"],\"CommandId\":null,\"ExercisedEvents\":[],\"PaidTrafficCost\":null,\"RequestedInterfaces\":[]}");
     }
 
     [Theory]

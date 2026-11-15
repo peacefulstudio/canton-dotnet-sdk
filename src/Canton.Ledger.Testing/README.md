@@ -15,7 +15,7 @@ transport, no `Canton.Ledger.Kernel`, no PostgreSQL driver.
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Testing --version 0.8.0
+dotnet add package Canton.Ledger.Testing --version 0.8.1
 ```
 
 Every fake replays canned data staged ahead of time — none of them is a semantic ledger/PQS

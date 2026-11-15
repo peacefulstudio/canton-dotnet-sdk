@@ -335,8 +335,8 @@ public sealed class DamlPrimitiveCatalogTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        shippedBinpbs.Should().HaveCount(17,
-            "the repo ships exactly one intermediate.binpb per snapshot family (16) plus the Quickstart " +
+        shippedBinpbs.Should().HaveCount(19,
+            "the repo ships exactly one intermediate.binpb per snapshot family (18) plus the Quickstart " +
             "sample, the conformance corpora among them; the determinism-gate intermediate is a " +
             "SHA-pinned transient produced by scripts/regenerate.sh, not a shipped file");
 

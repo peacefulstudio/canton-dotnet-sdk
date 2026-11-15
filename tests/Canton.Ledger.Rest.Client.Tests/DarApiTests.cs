@@ -49,7 +49,7 @@ public class DarApiTests
             TestContext.Current.CancellationToken);
 
         transport.LastRequest!.RequestUri!.PathAndQuery
-            .Should().Be("/v2/dars?vetAllPackages=true&synchronizerId=sync%3A%3Ans1");
+            .Should().Be("/v2/dars?vetAllPackages=True&synchronizerId=sync%3A%3Ans1");
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class DarApiTests
 
         await api.UploadDar(Dar(), vetAllPackages: false, cancellationToken: TestContext.Current.CancellationToken);
 
-        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/dars?vetAllPackages=false");
+        transport.LastRequest!.RequestUri!.PathAndQuery.Should().Be("/v2/dars?vetAllPackages=False");
     }
 
     [Fact]

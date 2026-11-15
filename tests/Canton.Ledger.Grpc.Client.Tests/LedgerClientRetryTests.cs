@@ -128,6 +128,20 @@ public sealed class LedgerClientRetryTests : IDisposable
     }
 
     [Fact]
+    public async Task TrySubmitAndWaitForTransactionAsync_sends_once_when_retry_is_enabled_with_zero_attempts()
+    {
+        EnableRetry(maxAttempts: 0);
+        StubSubmitAndWaitForTransaction(Faulted<SubmitAndWaitForTransactionResponse>(Unavailable()));
+
+        var client = CreateClient();
+        var outcome = await client.TrySubmitAndWaitForTransactionAsync(Create(), cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.InfraError>();
+        _ = _commandService.Received(1).SubmitAndWaitForTransactionAsync(
+            Arg.Any<SubmitAndWaitForTransactionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task TrySubmitAndWaitForTransactionAsync_retries_transient_failure_up_to_max_attempts_when_enabled()
     {
         EnableRetry(maxAttempts: 2);
