@@ -32,6 +32,19 @@ public sealed record Tuple7<TT1, TT2, TT3, TT4, TT5, TT6, TT7>(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("_7")] TT7 _7
 ) where TT1 : notnull where TT2 : notnull where TT3 : notnull where TT4 : notnull where TT5 : notnull where TT6 : notnull where TT7 : notnull
 {
+    /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
+    /// <param name="other">The value to compare against.</param>
+    /// <returns><c>true</c> when every member is equal.</returns>
+    public bool Equals(Tuple7<TT1, TT2, TT3, TT4, TT5, TT6, TT7>? other) =>
+        other is not null
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT1>.Default.Equals(_1, other._1)
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT2>.Default.Equals(_2, other._2)
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT3>.Default.Equals(_3, other._3)
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT4>.Default.Equals(_4, other._4)
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT5>.Default.Equals(_5, other._5)
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT6>.Default.Equals(_6, other._6)
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TT7>.Default.Equals(_7, other._7);
+
     /// <inheritdoc />
     public override int GetHashCode()
     {

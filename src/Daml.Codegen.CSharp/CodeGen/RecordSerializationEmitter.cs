@@ -84,7 +84,8 @@ internal sealed class RecordSerializationEmitter(
             mapper.MapType(field.Type),
             mapper.ClassifyCollection(field.Type),
             $"The Daml field <c>{field.Name}</c>.",
-            field.Name)),
+            field.Name,
+            field.Type is DamlTypeVar)),
     ];
 
     /// <summary>

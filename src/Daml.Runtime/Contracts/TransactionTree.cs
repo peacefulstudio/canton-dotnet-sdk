@@ -161,6 +161,16 @@ public abstract record TreeEvent
         /// <see cref="CreatedContract.PackageName"/> by <see cref="TransactionTreeExtensions.ToTransactionResult"/>.
         /// </summary>
         public string? PackageName { get; init; }
+
+        /// <summary>
+        /// Whether the ledger reports this event as part of the ACS_DELTA-shaped stream of the same
+        /// transaction (Canton <c>CreatedEvent.acs_delta</c>), the events that change which contracts are
+        /// active. <see langword="false"/> for a contract created and archived within the one transaction.
+        /// <see cref="TransactionTreeExtensions.ToTransactionResult"/> keeps a created contract only when this
+        /// is <see langword="true"/>. Defaults to <see langword="true"/> for a tree built by hand; the ledger
+        /// client transports always set it from the wire.
+        /// </summary>
+        public bool AcsDelta { get; init; } = true;
     }
 
     /// <summary>
@@ -219,6 +229,17 @@ public abstract record TreeEvent
         public string? PackageName { get; init; }
 
         /// <summary>
+        /// Whether the ledger reports this event as part of the ACS_DELTA-shaped stream of the same
+        /// transaction (Canton <c>ExercisedEvent.acs_delta</c>). A consuming exercise of a contract created
+        /// within the same transaction is <see langword="false"/>.
+        /// <see cref="TransactionTreeExtensions.ToTransactionResult"/> lists the target of a consuming
+        /// exercise in <see cref="TransactionResult.ArchivedContractIds"/> only when this is
+        /// <see langword="true"/>. Defaults to <see langword="true"/> for a tree built by hand; the ledger
+        /// client transports always set it from the wire.
+        /// </summary>
+        public bool AcsDelta { get; init; } = true;
+
+        /// <summary>
         /// Hashes the declared fields, folding in the number of <see cref="ChildEvents"/> rather
         /// than the children themselves. Equal nodes still hash alike, since equal trees have
         /// equal child counts, but hashing a node costs the node rather than its subtree, so a
@@ -254,6 +275,7 @@ public abstract record TreeEvent
             hash.Add(ActingParties);
             hash.Add(WitnessParties);
             hash.Add(PackageName);
+            hash.Add(AcsDelta);
             hash.Add(ChildEvents.Count);
             return hash.ToHashCode();
         }
@@ -277,6 +299,7 @@ public abstract record TreeEvent
                 .Append(", ActingParties = ").Append(ActingParties)
                 .Append(", WitnessParties = ").Append(WitnessParties)
                 .Append(", PackageName = ").Append(PackageName)
+                .Append(", AcsDelta = ").Append(AcsDelta)
                 .Append(", ChildEvents.Count = ").Append(ChildEvents.Count);
             return true;
         }

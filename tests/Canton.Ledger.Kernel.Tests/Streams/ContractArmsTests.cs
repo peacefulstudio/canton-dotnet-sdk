@@ -7,6 +7,7 @@ using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Xunit;
 
@@ -118,5 +119,21 @@ public class ContractArmsTests
 
         projected.Should().Be(new ContractStreamEvent<TemplateMarker>.Checkpoint(LedgerOffset.At(13)));
         projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Checkpoint>().Which.Offset.Value.Should().Be(13);
+    }
+
+    [Fact]
+    public void StreamError_carries_the_fault_into_the_terminal_stream_error_arm()
+    {
+        var cause = new InvalidOperationException("bad checkpoint");
+        var fault = StreamFault.FromUndecodableBody("could not decode", cause);
+
+        var projected = ContractArms<TemplateMarker>.StreamError(fault);
+
+        var streamError = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.StreamError>().Subject;
+        streamError.Status.Should().Be(new TransportStatus.UndecodableBody());
+        streamError.Message.Should().Be("could not decode");
+        streamError.Category.Should().BeNull();
+        streamError.ErrorId.Should().BeNull();
+        streamError.SourceException.Should().BeSameAs(cause);
     }
 }

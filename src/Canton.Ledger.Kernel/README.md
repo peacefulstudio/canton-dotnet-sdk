@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Kernel --version 0.8.0
+dotnet add package Canton.Ledger.Kernel --version 0.8.1
 ```
 
 ## Key Types
@@ -44,7 +44,7 @@ services.AddCantonAuth(configuration.GetSection("Canton:Auth"));
 
 `Audience`, when set, must equal the participant's `target-audience`; by default Canton accepts `https://daml.com/jwt/aud/participant/<participant-id>`. Leave it unset only if your identity provider stamps that audience into the token itself.
 
-`Domain` accepts either a bare hostname (e.g. `dev-peaceful.eu.auth0.com`) or an absolute https URL (e.g. `https://auth.example.com`, or `https://auth.example.com/tenant-a` for per-tenant subpaths). If `Domain` is a bare hostname, it is treated as `https://{hostname}`. If it is an absolute URL, that URL is used as the base. In both cases, `/oauth/token` is appended, preserving any existing path (`https://auth.example.com/tenant-a` → `https://auth.example.com/tenant-a/oauth/token`). Userinfo, query, and fragments are rejected. `ClientCredentialsProvider` caches tokens until `expires_in - SafetyMargin` (default 30s) and concurrent callers share a single HTTP request during refresh. After a failed fetch, calls fail at once with that failure, without reaching the identity provider, for a cooldown window of `TokenFailureCooldown.InitialDelay` (500 ms by default) that doubles per consecutive failure up to `MaxDelay` (30 s) and resets on success; set `TokenFailureCooldown.Enabled` to `false` to fetch on every call that finds no cached token. It never re-sends a ledger call or a token request; it only makes calls fail fast for the window after a failed token fetch.
+`Domain` accepts either a bare hostname (e.g. `dev-peaceful.eu.auth0.com`) or an absolute https URL (e.g. `https://auth.example.com`, or `https://auth.example.com/tenant-a` for per-tenant subpaths). If `Domain` is a bare hostname, it is treated as `https://{hostname}`. If it is an absolute URL, that URL is used as the base. In both cases, `/oauth/token` is appended, preserving any existing path (`https://auth.example.com/tenant-a` → `https://auth.example.com/tenant-a/oauth/token`). Userinfo, query, and fragments are rejected. `ClientCredentialsProvider` caches tokens until `expires_in - SafetyMargin` (default 30s) and concurrent callers share a single HTTP request during refresh. After a failed fetch, calls fail at once with that failure, without reaching the identity provider, for a cooldown window of `TokenFailureCooldown.InitialDelay` (500 ms by default) that doubles per consecutive failure up to `MaxDelay` (30 s) and resets on success, each window shortened by a random amount of up to half its length so clients that failed together do not all fetch again at once; set `TokenFailureCooldown.Enabled` to `false` to fetch on every call that finds no cached token. It never re-sends a ledger call or a token request; it only makes calls fail fast for the window after a failed token fetch.
 
 Plaintext `http` endpoints (whether from `Domain` or `TokenEndpoint`) are rejected by default, because the token request POSTs the client secret in cleartext — anyone on the network path could read it. To accept the risk against a local endpoint (e.g. `http://localhost:8080` during development), set `AllowInsecureTokenEndpoint` to `true`; the provider then logs a warning at construction.
 

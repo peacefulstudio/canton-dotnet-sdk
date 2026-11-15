@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using AwesomeAssertions;
+using Canton.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Commands;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -54,6 +56,14 @@ public abstract class ContractStreamProjectorParityTests
 
     /// <summary>
     /// Renders <paramref name="scenario"/> into this transport's wire shape, runs it through that
+    /// transport's active-contract projection, logging to <paramref name="logger"/>, and returns the
+    /// projected events in order.
+    /// </summary>
+    protected abstract Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectActiveContractEntryAsync(
+        ActiveContractScenario scenario, ILogger logger);
+
+    /// <summary>
+    /// Renders <paramref name="scenario"/> into this transport's wire shape, runs it through that
     /// transport's active-contract projection subscribed as an interface marker, and returns the
     /// projected events in order.
     /// </summary>
@@ -89,6 +99,14 @@ public abstract class ContractStreamProjectorParityTests
     /// </summary>
     protected abstract Task<IReadOnlyList<InterfaceEvent>> ProjectReassignmentEventsAsInterfaceAsync(
         ReassignmentEventScenario scenario, ILogger logger);
+
+    /// <summary>
+    /// Renders an offset checkpoint with a malformed (negative) offset into this transport's wire
+    /// shape, runs it through that transport's update projection, logging to
+    /// <paramref name="logger"/>, and returns the projected events in order.
+    /// </summary>
+    protected abstract Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectMalformedCheckpointAsync(
+        ILogger logger);
 
     private async Task<ContractStreamEvent<TemplateMarker>> ProjectOnlyEventAsync(ActiveContractScenario scenario)
     {
@@ -741,6 +759,60 @@ public abstract class ContractStreamProjectorParityTests
         ShouldBeUnclassified(projected[0]).Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         projected[1].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unassigned>()
             .Which.Offset.Should().Be(LedgerOffset.At(ReassignmentEventScenario.TrailingEventOffset));
+    }
+
+    [Theory]
+    [InlineData(ReassignmentEventShape.Assigned)]
+    [InlineData(ReassignmentEventShape.Unassigned)]
+    public async Task ProjectReassignmentEvents_carries_a_reassignment_counter_of_long_MaxValue(
+        ReassignmentEventShape shape)
+    {
+        var projected = await ProjectOnlyReassignmentEventAsync(new ReassignmentEventScenario
+        {
+            Event = shape,
+            ReassignmentCounterOnWire = 9223372036854775807UL,
+        });
+
+        var counter = projected switch
+        {
+            ContractStreamEvent<TemplateMarker>.Assigned assigned => assigned.ReassignmentCounter,
+            ContractStreamEvent<TemplateMarker>.Unassigned unassigned => unassigned.ReassignmentCounter,
+            _ => throw new InvalidOperationException($"Unexpected projection {projected}."),
+        };
+        counter.Should().Be(9223372036854775807L);
+    }
+
+    [Theory]
+    [InlineData(ReassignmentEventShape.Assigned, 9223372036854775808UL)]
+    [InlineData(ReassignmentEventShape.Assigned, ulong.MaxValue)]
+    [InlineData(ReassignmentEventShape.Unassigned, 9223372036854775808UL)]
+    [InlineData(ReassignmentEventShape.Unassigned, ulong.MaxValue)]
+    public async Task ProjectReassignmentEvents_surfaces_a_reassignment_counter_above_long_MaxValue_as_Unclassified_DecodeFailure(
+        ReassignmentEventShape shape, ulong counterOnWire)
+    {
+        var projected = await ProjectOnlyReassignmentEventAsync(new ReassignmentEventScenario
+        {
+            Event = shape,
+            ReassignmentCounterOnWire = counterOnWire,
+        });
+
+        ShouldBeUnclassified(projected).Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+    }
+
+    [Fact]
+    public async Task ProjectActiveContractEntry_surfaces_an_Unassigned_reassignment_counter_above_long_MaxValue_as_Unclassified_DecodeFailure_after_its_Created()
+    {
+        var projected = await ProjectActiveContractEntryAsync(new ActiveContractScenario
+        {
+            Entry = ActiveContractEntry.IncompleteUnassigned,
+            UnassignedReassignmentCounterOnWire = 9223372036854775808UL,
+        });
+
+        projected.Should().HaveCount(2);
+        ShouldBeTheCreatedScopedToTheEntrysSynchronizer(projected[0]);
+        var unclassified = projected[1].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        unclassified.Offset.Should().Be(LedgerOffset.At(ActiveContractScenario.UnassignedOffset));
     }
 
     private async Task<(IReadOnlyList<InterfaceEvent> Projected, CapturingLoggerFactory Logs)> ProjectInterfaceTransactionAsync(
@@ -1645,5 +1717,253 @@ public abstract class ContractStreamProjectorParityTests
         projected.Should().HaveCount(2);
         projected[0].Should().BeOfType<InterfaceEvent.Created>().Which.Offset.Should().Be(LedgerOffset.At(42L));
         projected[1].Should().BeOfType<InterfaceEvent.Unassigned>().Which.Offset.Should().Be(LedgerOffset.At(77L));
+    }
+
+    private async Task<(IReadOnlyList<ContractStreamEvent<TemplateMarker>> Projected, CapturingLoggerFactory Logs)>
+        ProjectMalformedActiveEntryAsync(ActiveContractScenario scenario)
+    {
+        var logs = new CapturingLoggerFactory();
+        var projected = await ProjectActiveContractEntryAsync(scenario, logs.CreateLogger("parity"));
+        return (projected, logs);
+    }
+
+    private static void ShouldHaveLoggedOneMalformedResponseDecodeFailure(CapturingLoggerFactory logs)
+    {
+        var record = logs.Records.Should().ContainSingle().Subject;
+        record.Level.Should().Be(LogLevel.Warning);
+        record.Exception.Should().BeOfType<MalformedResponseException>();
+    }
+
+    [Theory]
+    [InlineData(77L)]
+    [InlineData(null)]
+    public async Task ProjectActiveContractEntry_refuses_an_IncompleteUnassigned_with_a_malformed_unassignment_offset_as_one_Unclassified_DecodeFailure_at_the_snapshot_offset(
+        long? snapshotOffset)
+    {
+        var (projected, logs) = await ProjectMalformedActiveEntryAsync(new ActiveContractScenario
+        {
+            Entry = ActiveContractEntry.IncompleteUnassigned,
+            MalformedUnassignedEventOffset = true,
+            SnapshotOffset = snapshotOffset,
+        });
+
+        var refused = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().Be(snapshotOffset is { } offset ? LedgerOffset.At(offset) : null);
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
+    }
+
+    [Fact]
+    public async Task ProjectActiveContractEntry_refuses_the_whole_IncompleteUnassigned_when_both_its_unassignment_and_created_offsets_are_malformed()
+    {
+        var (projected, logs) = await ProjectMalformedActiveEntryAsync(new ActiveContractScenario
+        {
+            Entry = ActiveContractEntry.IncompleteUnassigned,
+            MalformedUnassignedEventOffset = true,
+            MalformedCreatedEventOffset = true,
+            SnapshotOffset = 77L,
+        });
+
+        var refused = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().Be(LedgerOffset.At(77L));
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
+    }
+
+    [Fact]
+    public async Task ProjectActiveContractEntry_reports_a_malformed_created_offset_of_an_IncompleteUnassigned_as_one_DecodeFailure_at_the_entrys_own_unassignment_offset()
+    {
+        var (projected, logs) = await ProjectMalformedActiveEntryAsync(new ActiveContractScenario
+        {
+            Entry = ActiveContractEntry.IncompleteUnassigned,
+            MalformedCreatedEventOffset = true,
+            SnapshotOffset = 77L,
+        });
+
+        var refused = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().Be(LedgerOffset.At(43L));
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
+    }
+
+    [Theory]
+    [InlineData(ActiveContractEntry.Active, 77L)]
+    [InlineData(ActiveContractEntry.IncompleteAssigned, 77L)]
+    [InlineData(ActiveContractEntry.Active, null)]
+    [InlineData(ActiveContractEntry.IncompleteAssigned, null)]
+    public async Task ProjectActiveContractEntry_reports_a_malformed_created_offset_of_an_entry_without_an_unassignment_as_one_DecodeFailure_at_the_snapshot_offset(
+        ActiveContractEntry entry, long? snapshotOffset)
+    {
+        var (projected, logs) = await ProjectMalformedActiveEntryAsync(new ActiveContractScenario
+        {
+            Entry = entry,
+            MalformedCreatedEventOffset = true,
+            SnapshotOffset = snapshotOffset,
+        });
+
+        var refused = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().Be(snapshotOffset is { } offset ? LedgerOffset.At(offset) : null);
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
+    }
+
+    private const string MissingContractIdMessage =
+        "Malformed response from ledger: the event has no contract_id, though the Ledger API marks the field as required.";
+
+
+    [Theory]
+    [InlineData(TransactionEventShape.Created)]
+    [InlineData(TransactionEventShape.Archived)]
+    [InlineData(TransactionEventShape.Exercised)]
+    public async Task ProjectTransactionEvents_surfaces_an_event_with_no_contract_id_as_Unclassified_DecodeFailure_at_the_transactions_offset(
+        TransactionEventShape shape)
+    {
+        var projected = await ProjectOnlyTransactionEventAsync(
+            new TransactionEventScenario { Event = shape, OmitContractId = true });
+
+        var unclassified = ShouldBeUnclassified(projected);
+        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        unclassified.Offset.Should().Be(LedgerOffset.At(TransactionEventScenario.TransactionOffset));
+    }
+
+    [Theory]
+    [InlineData(TransactionEventShape.Created)]
+    [InlineData(TransactionEventShape.Archived)]
+    [InlineData(TransactionEventShape.Exercised)]
+    public async Task ProjectTransactionEventsAsInterface_logs_an_event_with_no_contract_id_as_a_MissingRequiredField(
+        TransactionEventShape shape)
+    {
+        var (projected, logs) = await ProjectInterfaceTransactionAsync(
+            InterfaceTransactionEvent(shape) with { OmitContractId = true });
+
+        ShouldBeUnclassifiedInterfaceEvent(projected.Should().ContainSingle().Subject)
+            .Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        ShouldHaveLoggedTheMissingContractId(logs);
+    }
+
+    [Theory]
+    [InlineData(TransactionEventShape.Created)]
+    [InlineData(TransactionEventShape.Archived)]
+    [InlineData(TransactionEventShape.Exercised)]
+    public async Task ProjectTransactionEvents_refuses_a_transaction_with_a_malformed_offset_as_one_Unclassified_DecodeFailure_carrying_no_offset(
+        TransactionEventShape shape)
+    {
+        var logs = new CapturingLoggerFactory();
+
+        var projected = await ProjectTransactionEventsAsInterfaceAsync(
+            new TransactionEventScenario
+            {
+                Event = shape,
+                MalformedUpdateOffset = true,
+                FollowedByMatchingCreated = true,
+            },
+            logs.CreateLogger("parity"));
+
+        var refused = projected.Should().ContainSingle().Which.Should().BeOfType<InterfaceEvent.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().BeNull();
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
+    }
+
+    [Fact]
+    public async Task ProjectTransactionEvents_surfaces_a_transaction_with_a_malformed_offset_in_band_on_the_contract_lane()
+    {
+        var projected = await ProjectTransactionEventsAsync(
+            new TransactionEventScenario { Event = TransactionEventShape.Created, MalformedUpdateOffset = true });
+
+        var refused = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(ReassignmentEventShape.Assigned)]
+    [InlineData(ReassignmentEventShape.Unassigned)]
+    public async Task ProjectReassignmentEvents_surfaces_an_event_with_no_contract_id_as_Unclassified_DecodeFailure_at_the_reassignments_offset(
+        ReassignmentEventShape shape)
+    {
+        var projected = await ProjectOnlyReassignmentEventAsync(
+            new ReassignmentEventScenario { Event = shape, OmitContractId = true });
+
+        var unclassified = ShouldBeUnclassified(projected);
+        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        unclassified.Offset.Should().Be(LedgerOffset.At(ReassignmentEventScenario.ReassignmentOffset));
+    }
+
+    [Theory]
+    [InlineData(ReassignmentEventShape.Assigned)]
+    [InlineData(ReassignmentEventShape.Unassigned)]
+    public async Task ProjectReassignmentEventsAsInterface_logs_an_event_with_no_contract_id_as_a_MissingRequiredField(
+        ReassignmentEventShape shape)
+    {
+        var (projected, logs) = await ProjectInterfaceReassignmentAsync(
+            InterfaceReassignmentEvent(shape) with { OmitContractId = true });
+
+        ShouldBeUnclassifiedInterfaceEvent(projected.Should().ContainSingle().Subject)
+            .Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        ShouldHaveLoggedTheMissingContractId(logs);
+    }
+
+    private static void ShouldHaveLoggedTheMissingContractId(CapturingLoggerFactory logs)
+    {
+        var record = logs.Records.Should().ContainSingle().Subject;
+        record.Exception.Should().BeOfType<MalformedResponseException>()
+            .Which.Message.Should().Be(MissingContractIdMessage);
+    }
+
+    [Theory]
+    [InlineData(ReassignmentEventShape.Assigned)]
+    [InlineData(ReassignmentEventShape.Unassigned)]
+    public async Task ProjectReassignmentEvents_refuses_a_reassignment_with_a_malformed_offset_as_one_Unclassified_DecodeFailure_carrying_no_offset(
+        ReassignmentEventShape shape)
+    {
+        var logs = new CapturingLoggerFactory();
+
+        var projected = await ProjectReassignmentEventsAsInterfaceAsync(
+            new ReassignmentEventScenario
+            {
+                Event = shape,
+                MalformedUpdateOffset = true,
+                FollowedByMatchingUnassigned = true,
+            },
+            logs.CreateLogger("parity"));
+
+        var refused = projected.Should().ContainSingle().Which.Should().BeOfType<InterfaceEvent.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().BeNull();
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
+    }
+
+    [Fact]
+    public async Task ProjectReassignmentEvents_surfaces_a_reassignment_with_a_malformed_offset_in_band_on_the_contract_lane()
+    {
+        var projected = await ProjectReassignmentEventsAsync(
+            new ReassignmentEventScenario { Event = ReassignmentEventShape.Unassigned, MalformedUpdateOffset = true });
+
+        var refused = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        refused.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refused.Offset.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProjectUpdate_ends_the_stream_with_an_UndecodableBody_StreamError_on_a_checkpoint_with_a_malformed_offset()
+    {
+        var logs = new CapturingLoggerFactory();
+
+        var projected = await ProjectMalformedCheckpointAsync(logs.CreateLogger("parity"));
+
+        var error = projected.Should().ContainSingle().Which
+            .Should().BeOfType<ContractStreamEvent<TemplateMarker>.StreamError>().Subject;
+        error.Status.Should().Be(new TransportStatus.UndecodableBody());
+        error.Message.Should().Be(
+            "Could not decode the offset checkpoint on the update stream: checkpoint offset '-1' is not a valid ledger offset");
+        error.SourceException.Should().BeOfType<MalformedResponseException>();
+        ShouldHaveLoggedOneMalformedResponseDecodeFailure(logs);
     }
 }

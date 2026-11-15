@@ -70,6 +70,7 @@ internal static class GrpcTransactionTreeProjector
             children)
         {
             PackageName = exercised.PackageName,
+            AcsDelta = exercised.AcsDelta,
         };
     }
 
@@ -104,6 +105,7 @@ internal static class GrpcTransactionTreeProjector
         {
             InterfaceIds = ToInterfaceIds(created),
             PackageName = created.PackageName,
+            AcsDelta = created.AcsDelta,
         };
     }
 

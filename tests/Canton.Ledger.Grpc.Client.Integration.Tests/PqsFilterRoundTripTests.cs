@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Pqs.Client;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Contracts;
@@ -230,14 +231,14 @@ public class PqsFilterRoundTripTests
         var owner = await ScribeReadablePartyAsync(ledgerServices.GetRequiredService<IAdminClient>(), userId);
         var ledger = ledgerServices.GetRequiredService<ICantonLedgerClient>();
 
-        var marker = Assert.IsType<ExerciseOutcome<ContractId<Marker>>.One>(
+        var marker = ExerciseOutcomeAssert.IsOne(
             await ledger.TryCreateAsync(new Marker(owner), cancellationToken: cancellationToken)).Result;
-        var asset = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(
+        var asset = ExerciseOutcomeAssert.IsOne(
             await ledger.TryCreateAsync(new Asset(owner, 100m), cancellationToken: cancellationToken)).Result;
         var holding = new ContractId<IHolding>(asset.Value);
 
         var label = $"pqs-filter-{Guid.NewGuid():N}";
-        Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(await ledger.TryCreateAsync(
+        ExerciseOutcomeAssert.IsOne(await ledger.TryCreateAsync(
             new RichRecord(
                 Owner: owner,
                 Count: 42L,
@@ -262,7 +263,7 @@ public class PqsFilterRoundTripTests
             cancellationToken: cancellationToken));
 
         var pendingLabel = $"pqs-filter-{Guid.NewGuid():N}";
-        Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(await ledger.TryCreateAsync(
+        ExerciseOutcomeAssert.IsOne(await ledger.TryCreateAsync(
             new RichRecord(
                 Owner: owner,
                 Count: 1L,
@@ -289,12 +290,12 @@ public class PqsFilterRoundTripTests
         var countsLabel = $"pqs-filter-{Guid.NewGuid():N}";
         foreach (long? count in new long?[] { null, 0L, 7L })
         {
-            Assert.IsType<ExerciseOutcome<ContractId<OptionalCounts>>.One>(await ledger.TryCreateAsync(
+            ExerciseOutcomeAssert.IsOne(await ledger.TryCreateAsync(
                 new OptionalCounts(owner, countsLabel, count), cancellationToken: cancellationToken));
         }
 
         var leftPairKey = $"pqs-filter-{Guid.NewGuid():N}";
-        Assert.IsType<ExerciseOutcome<ContractId<TypeCorners>>.One>(await ledger.TryCreateAsync(
+        ExerciseOutcomeAssert.IsOne(await ledger.TryCreateAsync(
             new TypeCorners(
                 Owner: owner,
                 BoxedText: new Box<string>("boxed"),
@@ -315,7 +316,7 @@ public class PqsFilterRoundTripTests
             cancellationToken: cancellationToken));
 
         var pairKey = $"pqs-filter-{Guid.NewGuid():N}";
-        Assert.IsType<ExerciseOutcome<ContractId<TypeCorners>>.One>(await ledger.TryCreateAsync(
+        ExerciseOutcomeAssert.IsOne(await ledger.TryCreateAsync(
             new TypeCorners(
                 Owner: owner,
                 BoxedText: new Box<string>("boxed"),

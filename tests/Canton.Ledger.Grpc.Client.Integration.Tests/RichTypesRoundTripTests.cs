@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime.Commands;
@@ -54,13 +55,13 @@ public class RichTypesRoundTripTests
         var client = services.GetRequiredService<ICantonLedgerClient>();
 
         var markerOutcome = await client.TryCreateAsync(new Marker(owner), cancellationToken: TestContext.Current.CancellationToken);
-        var markerCid = Assert.IsType<ExerciseOutcome<ContractId<Marker>>.One>(markerOutcome).Result;
+        var markerCid = ExerciseOutcomeAssert.IsOne(markerOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(markerCid.Value), "created Marker ContractId is empty");
 
         var firstAssetOutcome = await client.TryCreateAsync(new Asset(owner, 100m), cancellationToken: TestContext.Current.CancellationToken);
-        var firstAssetCid = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(firstAssetOutcome).Result;
+        var firstAssetCid = ExerciseOutcomeAssert.IsOne(firstAssetOutcome).Result;
         var secondAssetOutcome = await client.TryCreateAsync(new Asset(owner, 250m), cancellationToken: TestContext.Current.CancellationToken);
-        var secondAssetCid = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(secondAssetOutcome).Result;
+        var secondAssetCid = ExerciseOutcomeAssert.IsOne(secondAssetOutcome).Result;
         var holdingCid = new ContractId<IHolding>(firstAssetCid.Value);
         var holdingCids = new[] { holdingCid, new ContractId<IHolding>(secondAssetCid.Value) };
 
@@ -89,7 +90,7 @@ public class RichTypesRoundTripTests
             Fee: 0.05m);
 
         var createOutcome = await client.TryCreateAsync(payload, cancellationToken: TestContext.Current.CancellationToken);
-        var createdCid = Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(createOutcome).Result;
+        var createdCid = ExerciseOutcomeAssert.IsOne(createOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(createdCid.Value), "created RichRecord ContractId is empty");
 
         var seen = await ReadBackAsync(client, userId, owner, createdCid.Value);
@@ -147,10 +148,10 @@ public class RichTypesRoundTripTests
         var client = services.GetRequiredService<ICantonLedgerClient>();
 
         var markerOutcome = await client.TryCreateAsync(new Marker(owner), cancellationToken: TestContext.Current.CancellationToken);
-        var markerCid = Assert.IsType<ExerciseOutcome<ContractId<Marker>>.One>(markerOutcome).Result;
+        var markerCid = ExerciseOutcomeAssert.IsOne(markerOutcome).Result;
 
         var assetOutcome = await client.TryCreateAsync(new Asset(owner, 100m), cancellationToken: TestContext.Current.CancellationToken);
-        var assetCid = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(assetOutcome).Result;
+        var assetCid = ExerciseOutcomeAssert.IsOne(assetOutcome).Result;
         var holdingCid = new ContractId<IHolding>(assetCid.Value);
 
         var payload = new RichRecord(
@@ -176,14 +177,14 @@ public class RichTypesRoundTripTests
             Fee: 1.00m);
 
         var createOutcome = await client.TryCreateAsync(payload, cancellationToken: TestContext.Current.CancellationToken);
-        var createdCid = Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(createOutcome).Result;
+        var createdCid = ExerciseOutcomeAssert.IsOne(createOutcome).Result;
 
         var relabelOutcome = await createdCid.TryRelabelAsync(
             client,
             new RichRecord.Relabel(NewLabel: "renamed"),
             owner,
             cancellationToken: TestContext.Current.CancellationToken);
-        var relabelledCid = Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(relabelOutcome).Result;
+        var relabelledCid = ExerciseOutcomeAssert.IsOne(relabelOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(relabelledCid.Value), "relabelled ContractId is empty");
         Assert.NotEqual(createdCid.Value, relabelledCid.Value);
 
@@ -220,10 +221,10 @@ public class RichTypesRoundTripTests
         var client = services.GetRequiredService<ICantonLedgerClient>();
 
         var markerOutcome = await client.TryCreateAsync(new Marker(owner), cancellationToken: TestContext.Current.CancellationToken);
-        var markerCid = Assert.IsType<ExerciseOutcome<ContractId<Marker>>.One>(markerOutcome).Result;
+        var markerCid = ExerciseOutcomeAssert.IsOne(markerOutcome).Result;
 
         var assetOutcome = await client.TryCreateAsync(new Asset(owner, 100m), cancellationToken: TestContext.Current.CancellationToken);
-        var assetCid = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(assetOutcome).Result;
+        var assetCid = ExerciseOutcomeAssert.IsOne(assetOutcome).Result;
         var holdingCid = new ContractId<IHolding>(assetCid.Value);
 
         var payload = new RichRecord(
@@ -249,7 +250,7 @@ public class RichTypesRoundTripTests
             Fee: 1.00m);
 
         var createOutcome = await client.TryCreateAsync(payload, cancellationToken: TestContext.Current.CancellationToken);
-        var createdCid = Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(createOutcome).Result;
+        var createdCid = ExerciseOutcomeAssert.IsOne(createOutcome).Result;
 
         var command = new ExerciseCommand(
             RichRecord.TemplateId,
@@ -260,7 +261,7 @@ public class RichTypesRoundTripTests
         var exerciseOutcome = await client.TryExerciseAsync<ContractId<RichRecord>>(
             command, owner, cancellationToken: TestContext.Current.CancellationToken);
 
-        var relabelledCid = Assert.IsType<ExerciseOutcome<ContractId<RichRecord>>.One>(exerciseOutcome).Result;
+        var relabelledCid = ExerciseOutcomeAssert.IsOne(exerciseOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(relabelledCid.Value), "relabelled ContractId is empty");
         Assert.NotEqual(createdCid.Value, relabelledCid.Value);
 

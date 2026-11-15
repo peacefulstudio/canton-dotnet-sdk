@@ -18,8 +18,9 @@ internal static class RetryPipelineFactory
     /// <summary>
     /// Creates a <see cref="ResiliencePipeline"/> from <paramref name="options"/>.
     /// Returns <see cref="ResiliencePipeline.Empty"/> — a genuine no-op — when
-    /// <see cref="RetryOptions.Enabled"/> is <see langword="false"/>, so a caller who has
-    /// not opted in observes no behavioral change.
+    /// <see cref="RetryOptions.Enabled"/> is <see langword="false"/> or
+    /// <see cref="RetryOptions.MaxRetryAttempts"/> is zero, so a caller who has not opted in, or who
+    /// opted in with no retries, observes no behavioral change.
     /// </summary>
     /// <param name="options">The retry configuration.</param>
     /// <param name="shouldRetry">
@@ -44,7 +45,7 @@ internal static class RetryPipelineFactory
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        if (!options.Enabled)
+        if (!options.Enabled || options.MaxRetryAttempts == 0)
             return ResiliencePipeline.Empty;
 
         var retryStrategy = new RetryStrategyOptions

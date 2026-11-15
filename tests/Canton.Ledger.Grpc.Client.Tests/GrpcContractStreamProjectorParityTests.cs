@@ -23,7 +23,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
 {
     private const long UnsetOffset = 0L;
 
-    private long omittedCreatedEventOffset = UnsetOffset;
+    private const long MalformedOffset = -1L;
 
     protected override Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectActiveContractEntryAsync(
         ActiveContractScenario scenario)
@@ -31,6 +31,15 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         var response = BuildResponse(scenario);
         IReadOnlyList<ContractStreamEvent<TemplateMarker>> projected =
             GrpcContractStreamProjector.ProjectActiveContractEntry<TemplateMarker>(response, logger: null, SnapshotOffsetOf(scenario)).ToList();
+        return Task.FromResult(projected);
+    }
+
+    protected override Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectActiveContractEntryAsync(
+        ActiveContractScenario scenario, ILogger logger)
+    {
+        var response = BuildResponse(scenario);
+        IReadOnlyList<ContractStreamEvent<TemplateMarker>> projected =
+            GrpcContractStreamProjector.ProjectActiveContractEntry<TemplateMarker>(response, logger, SnapshotOffsetOf(scenario)).ToList();
         return Task.FromResult(projected);
     }
 
@@ -83,47 +92,13 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         return Task.FromResult(projected);
     }
 
-    [Theory]
-    [InlineData(ActiveContractEntry.Active, 77L)]
-    [InlineData(ActiveContractEntry.IncompleteAssigned, 77L)]
-    [InlineData(ActiveContractEntry.IncompleteUnassigned, 43L)]
-    public async Task ProjectActiveContractEntry_reports_a_Created_with_a_negative_event_offset_as_a_DecodeFailure_at_the_entrys_resume_offset(
-        ActiveContractEntry entry, long expectedOffset)
+    protected override Task<IReadOnlyList<ContractStreamEvent<TemplateMarker>>> ProjectMalformedCheckpointAsync(
+        ILogger logger)
     {
-        omittedCreatedEventOffset = -1L;
-
-        var projected = await ProjectActiveContractEntryAsync(new ActiveContractScenario
-        {
-            Entry = entry,
-            OmitCreatedEventOffset = true,
-            SnapshotOffset = 77L,
-        });
-
-        var failure = projected[0].Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
-        failure.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
-        failure.Offset.Should().Be(Daml.Runtime.LedgerOffset.At(expectedOffset));
-    }
-
-    [Theory]
-    [InlineData(ActiveContractEntry.Active, 77L)]
-    [InlineData(ActiveContractEntry.IncompleteAssigned, 77L)]
-    [InlineData(ActiveContractEntry.IncompleteUnassigned, 43L)]
-    public async Task ProjectActiveContractEntryAsInterface_reports_a_Created_with_a_negative_event_offset_as_a_DecodeFailure_at_the_entrys_resume_offset(
-        ActiveContractEntry entry, long expectedOffset)
-    {
-        omittedCreatedEventOffset = -1L;
-
-        var projected = await ProjectActiveContractEntryAsInterfaceAsync(new ActiveContractScenario
-        {
-            Entry = entry,
-            OmitCreatedEventOffset = true,
-            SnapshotOffset = 77L,
-            InterfaceView = InterfaceViewRendering.Computed,
-        });
-
-        var failure = projected[0].Should().BeOfType<InterfaceEvent.Unclassified>().Subject;
-        failure.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
-        failure.Offset.Should().Be(Daml.Runtime.LedgerOffset.At(expectedOffset));
+        var response = new GetUpdatesResponse { OffsetCheckpoint = new OffsetCheckpoint { Offset = MalformedOffset } };
+        IReadOnlyList<ContractStreamEvent<TemplateMarker>> projected =
+            GrpcContractStreamProjector.ProjectUpdate<TemplateMarker>(response, logger).ToList();
+        return Task.FromResult(projected);
     }
 
     private static Daml.Runtime.LedgerOffset? SnapshotOffsetOf(ActiveContractScenario scenario) =>
@@ -133,7 +108,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
     {
         var transaction = new Transaction
         {
-            Offset = TransactionEventScenario.TransactionOffset,
+            Offset = scenario.MalformedUpdateOffset ? MalformedOffset : TransactionEventScenario.TransactionOffset,
             SynchronizerId = scenario.Synchronizer ?? string.Empty,
         };
         transaction.Events.Add(BuildTransactionEvent(scenario));
@@ -163,14 +138,15 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                     eventOffset,
                     scenario.OmitTemplateId,
                     scenario.InterfaceView,
-                    scenario.OmitCreateArguments),
+                    scenario.OmitCreateArguments,
+                    scenario.OmitContractId),
             },
             TransactionEventShape.Archived => new Event
             {
                 Archived = WithImplementedInterfaces(
                     new ProtoArchivedEvent
                     {
-                        ContractId = ActiveContractScenario.ContractId,
+                        ContractId = ContractIdOf(scenario.OmitContractId),
                         TemplateId = templateId,
                         PackageName = ActiveContractScenario.PackageName,
                         Offset = eventOffset,
@@ -182,7 +158,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                 Exercised = WithImplementedInterfaces(
                     new ProtoExercisedEvent
                     {
-                        ContractId = ActiveContractScenario.ContractId,
+                        ContractId = ContractIdOf(scenario.OmitContractId),
                         TemplateId = templateId,
                         PackageName = ActiveContractScenario.PackageName,
                         Choice = TransactionEventScenario.ChoiceName,
@@ -223,7 +199,10 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
 
     private static Reassignment BuildReassignment(ReassignmentEventScenario scenario)
     {
-        var reassignment = new Reassignment { Offset = ReassignmentEventScenario.ReassignmentOffset };
+        var reassignment = new Reassignment
+        {
+            Offset = scenario.MalformedUpdateOffset ? MalformedOffset : ReassignmentEventScenario.ReassignmentOffset,
+        };
         reassignment.Events.Add(BuildReassignmentEvent(scenario));
         if (scenario.FollowedByMatchingUnassigned)
         {
@@ -249,7 +228,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                     Source = scenario.Source ?? string.Empty,
                     Target = scenario.Target ?? string.Empty,
                     ReassignmentId = ReassignmentEventScenario.ReassignmentId,
-                    ReassignmentCounter = (ulong)ReassignmentEventScenario.ReassignmentCounter,
+                    ReassignmentCounter = scenario.ReassignmentCounterOnWire,
                     CreatedEvent = scenario.OmitCreatedEvent
                         ? null
                         : MatchingCreatedEvent(
@@ -257,7 +236,8 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                             eventOffset,
                             scenario.OmitTemplateId,
                             scenario.InterfaceView,
-                            scenario.OmitCreateArguments),
+                            scenario.OmitCreateArguments,
+                            scenario.OmitContractId),
                 },
             },
             ReassignmentEventShape.Unassigned => new ReassignmentEvent
@@ -273,14 +253,14 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
     {
         var unassigned = new UnassignedEvent
         {
-            ContractId = ActiveContractScenario.ContractId,
+            ContractId = ContractIdOf(scenario.OmitContractId),
             TemplateId = scenario.OmitTemplateId ? null : TemplateIdFor(scenario.EntityName),
             PackageName = ActiveContractScenario.PackageName,
             Source = scenario.Source ?? string.Empty,
             Target = scenario.Target ?? string.Empty,
             Offset = offset,
             ReassignmentId = ReassignmentEventScenario.ReassignmentId,
-            ReassignmentCounter = (ulong)ReassignmentEventScenario.ReassignmentCounter,
+            ReassignmentCounter = scenario.ReassignmentCounterOnWire,
         };
         unassigned.WitnessParties.AddRange(WitnessParties);
         return unassigned;
@@ -291,11 +271,12 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         long offset,
         bool omitTemplateId = false,
         InterfaceViewRendering interfaceView = InterfaceViewRendering.None,
-        bool omitCreateArguments = false)
+        bool omitCreateArguments = false,
+        bool omitContractId = false)
     {
         var created = new ProtoCreatedEvent
         {
-            ContractId = ActiveContractScenario.ContractId,
+            ContractId = ContractIdOf(omitContractId),
             TemplateId = omitTemplateId ? null : TemplateIdFor(entityName),
             PackageName = ActiveContractScenario.PackageName,
             CreateArguments = omitCreateArguments ? null : PayloadRecord(ActiveContractScenario.CreateArgumentValue),
@@ -311,12 +292,24 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
         return created;
     }
 
+    private static string ContractIdOf(bool omit) => omit ? string.Empty : ActiveContractScenario.ContractId;
+
     private static ProtoIdentifier TemplateIdFor(string entityName) => new()
     {
         PackageId = "tmpl-pkg",
         ModuleName = ActiveContractScenario.ModuleName,
         EntityName = entityName,
     };
+
+    private static long CreatedWireOffset(ActiveContractScenario scenario) =>
+        scenario.MalformedCreatedEventOffset ? MalformedOffset
+        : scenario.OmitCreatedEventOffset ? UnsetOffset
+        : ActiveContractScenario.CreatedOffset;
+
+    private static long UnassignedWireOffset(ActiveContractScenario scenario) =>
+        scenario.MalformedUnassignedEventOffset ? MalformedOffset
+        : scenario.OmitUnassignedEventOffset ? UnsetOffset
+        : ActiveContractScenario.UnassignedOffset;
 
     private GetActiveContractsResponse BuildResponse(ActiveContractScenario scenario)
     {
@@ -341,9 +334,9 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                         ContractId = scenario.OmitUnassignedContractId ? string.Empty : ActiveContractScenario.ContractId,
                         Source = scenario.Synchronizer ?? string.Empty,
                         Target = ActiveContractScenario.CounterpartSynchronizerId,
-                        Offset = scenario.OmitUnassignedEventOffset ? UnsetOffset : ActiveContractScenario.UnassignedOffset,
+                        Offset = UnassignedWireOffset(scenario),
                         ReassignmentId = ActiveContractScenario.ReassignmentId,
-                        ReassignmentCounter = (ulong)ActiveContractScenario.ReassignmentCounter,
+                        ReassignmentCounter = scenario.UnassignedReassignmentCounterOnWire,
                     },
                 },
             },
@@ -376,7 +369,7 @@ public sealed class GrpcContractStreamProjectorParityTests : ContractStreamProje
                 EntityName = scenario.EntityName,
             },
             CreateArguments = PayloadRecord(ActiveContractScenario.CreateArgumentValue),
-            Offset = scenario.OmitCreatedEventOffset ? omittedCreatedEventOffset : ActiveContractScenario.CreatedOffset,
+            Offset = CreatedWireOffset(scenario),
         };
         if (BuildInterfaceView(scenario.InterfaceView) is { } interfaceView)
         {

@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
@@ -104,20 +105,42 @@ public sealed class RestLedgerClientAttemptTimeoutTests
         endpoint.Attempts.Should().Be(1);
     }
 
+    // SocketsHttpHandler starts ConnectTimeout before it enters ConnectCallback, so a stalled thread can
+    // expire a connect the callback never sees: attempts are counted above the handler instead.
+    private sealed class FailedAttemptRecorder : DelegatingHandler
+    {
+        private readonly ConcurrentQueue<Exception> _failures = new();
+
+        public IReadOnlyCollection<Exception> Failures => _failures;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await base.SendAsync(request, cancellationToken);
+            }
+            catch (Exception failure)
+            {
+                _failures.Enqueue(failure);
+                throw;
+            }
+        }
+    }
+
     [Fact]
     public async Task GetLedgerEndAsync_retries_a_connect_that_exceeds_the_ConnectTimeout_of_a_host_supplied_SocketsHttpHandler()
     {
-        var connects = 0;
         using var primary = new SocketsHttpHandler
         {
             ConnectTimeout = TimeSpan.FromMilliseconds(100),
             ConnectCallback = async (_, cancellationToken) =>
             {
-                Interlocked.Increment(ref connects);
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
                 throw new InvalidOperationException("A hanging connect never completes.");
             }
         };
+        var attempts = new FailedAttemptRecorder();
         var services = new ServiceCollection();
         services.AddRestLedgerClient(options =>
         {
@@ -125,7 +148,8 @@ public sealed class RestLedgerClientAttemptTimeoutTests
             options.Retry = new RetryOptions { Enabled = true, MaxRetryAttempts = 2, Delay = TimeSpan.Zero };
         });
         services.AddHttpClient(RestClientRegistration.HttpClientName)
-            .ConfigurePrimaryHttpMessageHandler(() => primary);
+            .ConfigurePrimaryHttpMessageHandler(() => primary)
+            .AddHttpMessageHandler(() => attempts);
         using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredService<ICantonLedgerClient>();
 
@@ -133,6 +157,9 @@ public sealed class RestLedgerClientAttemptTimeoutTests
 
         var thrown = (await act.Should().ThrowExactlyAsync<LedgerOperationException>()).Which;
         thrown.Status.Should().Be(new TransportStatus.NoResponse());
-        Volatile.Read(ref connects).Should().Be(3);
+        attempts.Failures.Should().HaveCount(3).And.AllSatisfy(failure =>
+            failure.Should().BeOfType<TaskCanceledException>()
+                .Which.InnerException.Should().BeOfType<TimeoutException>()
+                .Which.Message.Should().Be("A connection could not be established within the configured ConnectTimeout."));
     }
 }

@@ -86,6 +86,11 @@ public class HandWrittenEqualityMemberSensitivityTests
 
     private static IEnumerable<string> Violations(HandWrittenEqualityGuardEntry entry, MemberInfo member)
     {
+        if (entry.NamedExclusions.ContainsKey(member.Name) && !HasSetter(member))
+        {
+            yield break;
+        }
+
         if (!entry.Alternates.TryGetValue(member.Name, out var alternate))
         {
             yield return $"{member.Name}: the guard table has no alternate value for it";
@@ -116,6 +121,13 @@ public class HandWrittenEqualityMemberSensitivityTests
             yield return $"{member.Name}: GetHashCode includes it, though it is excluded from equality";
         }
     }
+
+    private static bool HasSetter(MemberInfo member) => member switch
+    {
+        PropertyInfo property => property.SetMethod is not null,
+        FieldInfo field => !field.IsInitOnly,
+        _ => false,
+    };
 
     private static bool TrySet(object target, MemberInfo member, object? value)
     {

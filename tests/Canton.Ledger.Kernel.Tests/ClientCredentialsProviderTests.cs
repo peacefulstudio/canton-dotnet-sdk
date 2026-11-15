@@ -27,7 +27,8 @@ public class ClientCredentialsProviderTests
         ClientCredentialsOptions options,
         FakeHttpHandler handler,
         TimeProvider? timeProvider = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        double cooldownJitterSample = 0)
     {
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient("CantonAuth").Returns(_ => new HttpClient(handler));
@@ -35,6 +36,7 @@ public class ClientCredentialsProviderTests
             Options.Create(options),
             factory,
             timeProvider ?? TimeProvider.System,
+            () => cooldownJitterSample,
             loggerFactory is null ? null : new Logger<ClientCredentialsProvider>(loggerFactory));
     }
 
@@ -311,6 +313,23 @@ public class ClientCredentialsProviderTests
     }
 
     [Fact]
+    public async Task GetTokenAsync_shortens_the_cooldown_window_by_the_jitter_sample_times_half_the_window()
+    {
+        var handler = UnavailableIdentityProvider();
+        var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        using var provider = CreateProvider(CreateOptions(), handler, time, cooldownJitterSample: 0.5);
+
+        await ObserveFailureAsync(provider.GetTokenAsync(TestContext.Current.CancellationToken));
+        time.Advance(TimeSpan.FromMilliseconds(374));
+        await ObserveFailureAsync(provider.GetTokenAsync(TestContext.Current.CancellationToken));
+        handler.CallCount.Should().Be(1, "a jitter sample of 0.5 shortens the 500 millisecond window to 375");
+
+        time.Advance(TimeSpan.FromMilliseconds(1));
+        await ObserveFailureAsync(provider.GetTokenAsync(TestContext.Current.CancellationToken));
+        handler.CallCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task GetTokenAsync_doubles_the_cooldown_window_on_each_consecutive_failure()
     {
         var handler = UnavailableIdentityProvider();
@@ -505,6 +524,26 @@ public class ClientCredentialsProviderTests
 
         outcomes.Should().AllBeOfType<HttpRequestException>();
         handler.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_concurrent_callers_through_a_ten_second_outage_send_five_backed_off_token_requests()
+    {
+        var handler = UnavailableIdentityProvider();
+        var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        using var provider = CreateProvider(CreateOptions(), handler, time, cooldownJitterSample: 0.5);
+
+        for (var tick = 0; tick <= 100; tick++)
+        {
+            var concurrentCalls = Enumerable.Range(0, 20)
+                .Select(_ => provider.GetTokenAsync(TestContext.Current.CancellationToken))
+                .ToArray();
+            var outcomes = await Task.WhenAll(concurrentCalls.Select(ObserveFailureAsync));
+            outcomes.Should().AllBeOfType<HttpRequestException>();
+            time.Advance(TimeSpan.FromMilliseconds(100));
+        }
+
+        handler.CallCount.Should().Be(5, "2020 calls fetch at 0, 400, 1200, 2700 and 5700 milliseconds, behind windows of 375, 750, 1500, 3000 and 6000");
     }
 
     [Fact]

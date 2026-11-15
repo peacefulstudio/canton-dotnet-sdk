@@ -16,29 +16,38 @@ internal sealed record LedgerProblem(
     string? UpdateId = null)
 {
     private const string ContractNotFoundErrorId = "CONTRACT_NOT_FOUND";
+    private const string InactiveContractsErrorId = "LOCAL_VERDICT_INACTIVE_CONTRACTS";
 
-    internal static LedgerProblem For(LedgerOperationException exception) =>
+    internal static LedgerProblem For(LedgerOperationException exception, bool includeLedgerErrorMessages) =>
         exception.CommitState switch
         {
             CommitState.Committed => CommittedUnreadable(exception),
             CommitState.Unknown when exception.RejectedAfterRetry => OutcomeUnknown(exception),
-            CommitState.Unknown => DefinitelyRefusedWithoutDetail(exception) ?? OutcomeUnknown(exception),
-            _ => Refused(exception),
+            CommitState.Unknown => DefinitelyRefusedWithoutDetail(exception, includeLedgerErrorMessages) ?? OutcomeUnknown(exception),
+            _ => Refused(exception, includeLedgerErrorMessages),
         };
 
-    private static LedgerProblem? DefinitelyRefusedWithoutDetail(LedgerOperationException exception) =>
+    private static LedgerProblem? DefinitelyRefusedWithoutDetail(
+        LedgerOperationException exception, bool includeLedgerErrorMessages) =>
         (exception.Category, exception.Status) switch
         {
             (DamlErrorCategory.InsufficientPermission, _)
                 or (_, TransportStatus.Grpc { StatusCode: GrpcStatusCode.PermissionDenied })
                 or (_, TransportStatus.Http { StatusCode: HttpStatusCode.Forbidden }) => Forbidden(),
             (_, TransportStatus.Grpc { StatusCode: GrpcStatusCode.InvalidArgument })
-                or (_, TransportStatus.Http { StatusCode: HttpStatusCode.BadRequest }) => new(
-                "Bad Request",
-                exception.Message,
-                StatusCodes.Status400BadRequest),
+                or (_, TransportStatus.Http { StatusCode: HttpStatusCode.BadRequest }) => BadRequest(
+                exception, includeLedgerErrorMessages, "The ledger rejected the command as invalid"),
             _ => null,
         };
+
+    private static LedgerProblem BadRequest(
+        LedgerOperationException exception, bool includeLedgerErrorMessages, string fixedDetail) => new(
+        "Bad Request",
+        includeLedgerErrorMessages ? exception.Message : WithErrorId(fixedDetail, exception.ErrorId),
+        StatusCodes.Status400BadRequest);
+
+    private static string WithErrorId(string fixedDetail, string? errorId) =>
+        errorId is null ? $"{fixedDetail}." : $"{fixedDetail} ({errorId}).";
 
     private static LedgerProblem Forbidden() => new(
         "Forbidden",
@@ -58,7 +67,7 @@ internal sealed record LedgerProblem(
         StatusCodes.Status502BadGateway,
         exception.CommandId?.Value);
 
-    private static LedgerProblem Refused(LedgerOperationException exception) =>
+    private static LedgerProblem Refused(LedgerOperationException exception, bool includeLedgerErrorMessages) =>
         exception.Category switch
         {
             DamlErrorCategory.ContentionOnSharedResources => new(
@@ -67,7 +76,7 @@ internal sealed record LedgerProblem(
                 StatusCodes.Status409Conflict),
 
             DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing
-                when exception.ErrorId == ContractNotFoundErrorId => new(
+                when exception.ErrorId is ContractNotFoundErrorId or InactiveContractsErrorId => new(
                 "Conflict",
                 "The contract was already consumed or never existed.",
                 StatusCodes.Status409Conflict),
@@ -82,12 +91,14 @@ internal sealed record LedgerProblem(
                 "The contract this submission would create already exists.",
                 StatusCodes.Status409Conflict),
 
-            DamlErrorCategory.InvalidIndependentOfSystemState
-                or DamlErrorCategory.SecurityAlert
-                or DamlErrorCategory.InvalidGivenCurrentSystemStateOther => new(
-                "Bad Request",
-                exception.Message,
-                StatusCodes.Status400BadRequest),
+            DamlErrorCategory.InvalidIndependentOfSystemState => BadRequest(
+                exception, includeLedgerErrorMessages, "The ledger rejected the command as invalid"),
+
+            DamlErrorCategory.InvalidGivenCurrentSystemStateOther => BadRequest(
+                exception, includeLedgerErrorMessages, "The ledger rejected the command in its current state"),
+
+            DamlErrorCategory.SecurityAlert => BadRequest(
+                exception, includeLedgerErrorMessages, "The ledger refused the request as malformed"),
 
             DamlErrorCategory.InsufficientPermission => Forbidden(),
 

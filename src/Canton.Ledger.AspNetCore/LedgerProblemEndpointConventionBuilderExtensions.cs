@@ -15,7 +15,7 @@ public static class LedgerProblemEndpointConventionBuilderExtensions
     /// answered with: <c>202</c> as a <see cref="CommittedCommandProblem"/> (the command committed; the
     /// caller must not retry), <c>400</c>, <c>403</c>, <c>404</c>, <c>409</c> and <c>502</c> as
     /// <c>ProblemDetails</c>. <c>404</c> means a resource other than a contract is missing (a user, a DAR,
-    /// an identity provider config); a contract that is gone (<c>CONTRACT_NOT_FOUND</c>) is <c>409</c>. Applies to a minimal-API endpoint or route group; an MVC controller declares
+    /// an identity provider config); a contract that is gone (<c>CONTRACT_NOT_FOUND</c> or <c>LOCAL_VERDICT_INACTIVE_CONTRACTS</c>) is <c>409</c>. Applies to a minimal-API endpoint or route group; an MVC controller declares
     /// the same responses with <see cref="ProducesLedgerProblemsAttribute"/>.
     /// </summary>
     /// <typeparam name="TBuilder">The endpoint convention builder type.</typeparam>

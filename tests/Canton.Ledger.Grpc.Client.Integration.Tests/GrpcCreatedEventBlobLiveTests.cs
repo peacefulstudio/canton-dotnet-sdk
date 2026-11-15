@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Wire;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Codegen.Testing.Conformance.ContractKeys;
 using Daml.Ledger.Abstractions.Extensions;
@@ -56,7 +57,7 @@ public class GrpcCreatedEventBlobLiveTests
             new Account(custodian, label, 100L),
             custodian,
             cancellationToken: TestContext.Current.CancellationToken);
-        var accountId = Assert.IsType<ExerciseOutcome<ContractId<Account>>.One>(created).Result;
+        var accountId = ExerciseOutcomeAssert.IsOne(created).Result;
 
         var submitter = new RuntimeCommands.SubmitterInfo(new HashSet<Party> { custodian }, new HashSet<Party>());
         var disclosure = await client.GetDisclosureAsync(

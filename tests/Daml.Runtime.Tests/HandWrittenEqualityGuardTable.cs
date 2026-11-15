@@ -54,7 +54,49 @@ internal static class HandWrittenEqualityGuardTable
         [typeof(Formula<>.Disjunction)] = "a generated stdlib arm over a list, compared by element",
     };
 
-    private static Dictionary<Type, HandWrittenEqualityGuardEntry> Build() =>
+    private const string TagReason = "derived from the constructor: every value of one arm carries the same tag";
+
+    private const int FirstGeneratedTupleArity = 4;
+
+    private const int LastGeneratedTupleArity = 20;
+
+    private static Dictionary<Type, HandWrittenEqualityGuardEntry> Build()
+    {
+        var entries = BuildHandWritten();
+        AddGeneratedTypeParameterRecords(entries);
+        return entries;
+    }
+
+    private static void AddGeneratedTypeParameterRecords(Dictionary<Type, HandWrittenEqualityGuardEntry> entries)
+    {
+        entries[typeof(Down<string>)] = new(new Down<string>("carried"), Alternates(("Unpack", "other")), NoExclusions);
+        entries[typeof(Max<string>)] = new(new Max<string>("carried"), Alternates(("Unpack", "other")), NoExclusions);
+        entries[typeof(Min<string>)] = new(new Min<string>("carried"), Alternates(("Unpack", "other")), NoExclusions);
+        entries[typeof(Product<string>)] = new(new Product<string>("carried"), Alternates(("Unpack", "other")), NoExclusions);
+        entries[typeof(Sum<string>)] = new(new Sum<string>("carried"), Alternates(("Unpack", "other")), NoExclusions);
+        entries[typeof(Unit<string>)] = new(new Unit<string>("carried"), Alternates(("_1", "other")), NoExclusions);
+        entries[typeof(Formula<string>.Proposition)] = new(
+            new Formula<string>.Proposition("carried"),
+            Alternates(("Value", "other")),
+            new Dictionary<string, string> { ["Tag"] = TagReason });
+        entries[typeof(Validation<string, string>.Success)] = new(
+            new Validation<string, string>.Success("carried"),
+            Alternates(("Value", "other")),
+            new Dictionary<string, string> { ["Tag"] = TagReason });
+
+        for (var arity = FirstGeneratedTupleArity; arity <= LastGeneratedTupleArity; arity++)
+        {
+            var positions = Enumerable.Range(1, arity).ToArray();
+            var definition = typeof(Tuple4<,,,>).Assembly.GetType($"Daml.Runtime.Stdlib.Tuple{arity}`{arity}")!;
+            var closed = definition.MakeGenericType([.. positions.Select(_ => typeof(string))]);
+            entries[closed] = new(
+                Activator.CreateInstance(closed, [.. positions.Select(position => (object)$"v{position}")])!,
+                Alternates([.. positions.Select(position => ($"_{position}", (object?)$"other-v{position}"))]),
+                NoExclusions);
+        }
+    }
+
+    private static Dictionary<Type, HandWrittenEqualityGuardEntry> BuildHandWritten() =>
         new()
         {
             [typeof(ExerciseOutcome<string>.InfraError)] = new(
@@ -123,6 +165,26 @@ internal static class HandWrittenEqualityGuardTable
                     ("TemplateId", OtherIdentifier),
                     ("CreatedEventBlob", new ReadOnlyMemory<byte>(new byte[] { 4, 5, 6 })),
                     ("SynchronizerId", new SynchronizerId("private::1220ee"))),
+                NoExclusions),
+            [typeof(Tuple2<string, string>)] = new(
+                new Tuple2<string, string>("first", "second"),
+                Alternates(("_1", "other-first"), ("_2", "other-second")),
+                NoExclusions),
+            [typeof(Tuple3<string, string, string>)] = new(
+                new Tuple3<string, string, string>("first", "second", "third"),
+                Alternates(("_1", "other-first"), ("_2", "other-second"), ("_3", "other-third")),
+                NoExclusions),
+            [typeof(Optional<string>.Some)] = new(
+                new Optional<string>.Some("carried"),
+                Alternates(("Value", "other")),
+                new Dictionary<string, string> { ["HasValue"] = "derived from the arm: a Some always has a value, so there is nothing to vary" }),
+            [typeof(Either<string, string>.Left)] = new(
+                new Either<string, string>.Left("carried"),
+                Alternates(("Value", "other")),
+                NoExclusions),
+            [typeof(Either<string, string>.Right)] = new(
+                new Either<string, string>.Right("carried"),
+                Alternates(("Value", "other")),
                 NoExclusions),
         };
 

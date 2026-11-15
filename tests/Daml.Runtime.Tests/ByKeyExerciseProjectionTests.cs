@@ -53,6 +53,27 @@ public class ByKeyExerciseProjectionTests
             LastDescendantNodeId = lastDescendantNodeId,
         };
 
+    private static TreeEvent.Exercised TreeExercised(
+        string contractId,
+        string choiceName,
+        DamlValue result,
+        EquatableArray<TreeEvent> children) =>
+        new(
+            EventId: $"evt-{contractId}",
+            ContractId: contractId,
+            TemplateId: new Identifier("pkg-v1", "Test.Ledger", "Account"),
+            InterfaceId: null,
+            ChoiceName: new ChoiceName(choiceName),
+            ChoiceArgument: DamlUnit.Instance,
+            ExerciseResult: result,
+            Consuming: false,
+            ActingParties: [],
+            WitnessParties: [],
+            ChildEvents: children)
+        {
+            PackageName = "ledger",
+        };
+
     private static TransactionResult TransactionWith(params ExercisedEvent[] events) =>
         new("update-9", LedgerOffset.At(1), [], [], default)
         {
@@ -70,6 +91,20 @@ public class ByKeyExerciseProjectionTests
         var tx = nestedListedFirst ? TransactionWith(nested, root) : TransactionWith(root, nested);
 
         var outcome = tx.ProjectByKeyExercise(GetBalance);
+
+        var exercise = outcome.Should().BeOfType<ExerciseOutcome<ByKeyExercise<LedgerAccount, long>>.One>().Which.Result;
+        exercise.ResolvedContractId.Value.Should().Be("root-contract");
+        exercise.Result.Should().Be(10L);
+    }
+
+    [Fact]
+    public void ProjectByKeyExercise_resolves_the_root_of_a_projected_tree_whose_choice_exercises_another_choice()
+    {
+        var nested = TreeExercised("nested-contract", "Reset", new DamlInt64(0), children: []);
+        var root = TreeExercised("root-contract", "GetBalance", new DamlInt64(10), children: [nested]);
+        var tree = new TransactionTree("update-9", LedgerOffset.At(1), [root]);
+
+        var outcome = tree.ToTransactionResult().ProjectByKeyExercise(GetBalance);
 
         var exercise = outcome.Should().BeOfType<ExerciseOutcome<ByKeyExercise<LedgerAccount, long>>.One>().Which.Result;
         exercise.ResolvedContractId.Value.Should().Be("root-contract");

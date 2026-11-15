@@ -29,7 +29,19 @@ public sealed class CapabilityLane<TCapability>(
             : AwaitAdmissionAsync(admission);
     }
 
+    internal ValueTask<BudgetedStreamHold> HoldStreamWithBudgetAsync(TimeSpan budget, CancellationToken cancellationToken)
+    {
+        var admission = HoldStreamAsync(cancellationToken);
+        return admission.IsCompletedSuccessfully
+            ? ValueTask.FromResult(BudgetedStreamHold.StartBudget(admission.Result, budget, cancellationToken))
+            : AwaitBudgetedAdmissionAsync(admission, budget, cancellationToken);
+    }
+
     public ValueTask DisposeAsync() => disposeAsync();
+
+    private static async ValueTask<BudgetedStreamHold> AwaitBudgetedAdmissionAsync(
+        ValueTask<StreamHold?> admission, TimeSpan budget, CancellationToken cancellationToken) =>
+        BudgetedStreamHold.StartBudget(await admission.ConfigureAwait(false), budget, cancellationToken);
 
     private static async ValueTask<StreamHold?> AwaitAdmissionAsync(ValueTask<StreamHold> admission) =>
         await admission.ConfigureAwait(false);

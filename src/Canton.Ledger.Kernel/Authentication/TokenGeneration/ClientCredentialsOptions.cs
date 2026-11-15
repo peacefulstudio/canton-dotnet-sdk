@@ -90,8 +90,8 @@ public sealed class ClientCredentialsOptions : IValidatableObject
     /// <summary>
     /// How the provider cools down after a failed token fetch: calls fail fast with the failure that
     /// opened the window, without reaching the identity provider, for 500 milliseconds after the
-    /// first failure, doubling per consecutive failure up to 30 seconds, and a successful fetch
-    /// resets it. It never re-sends a ledger call or a token request: it only makes calls fail fast for the window after a failed token fetch. On by default; see <see cref="TokenFailureCooldownOptions"/> to tune or disable it.
+    /// first failure, doubling per consecutive failure up to 30 seconds, each window shortened by a
+    /// random amount of up to half its length, and a successful fetch resets it. It never re-sends a ledger call or a token request: it only makes calls fail fast for the window after a failed token fetch. On by default; see <see cref="TokenFailureCooldownOptions"/> to tune or disable it.
     /// </summary>
     public TokenFailureCooldownOptions TokenFailureCooldown { get; set; } = new();
 

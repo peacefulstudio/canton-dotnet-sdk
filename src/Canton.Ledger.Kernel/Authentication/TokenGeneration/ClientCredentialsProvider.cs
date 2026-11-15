@@ -18,7 +18,8 @@ namespace Canton.Ledger.Kernel.Authentication.TokenGeneration;
 /// <see cref="ClientCredentialsOptions.SafetyMargin"/>, with that margin capped at half of
 /// <c>expires_in</c>. After a failed fetch, calls fail fast with that failure for a cooldown window
 /// instead of reaching the identity provider, as <see cref="ClientCredentialsOptions.TokenFailureCooldown"/>
-/// configures.
+/// configures. Each window is shortened by a random amount of up to half its length, so clients that
+/// failed together do not all fetch again at the same moment.
 /// </summary>
 public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposable
 {
@@ -29,6 +30,7 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     private readonly Uri _tokenEndpoint;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ClientCredentialsProvider> _logger;
+    private readonly Func<double> _cooldownJitterSample;
     private readonly object _refreshGate = new();
     private int _disposed;
     private readonly CancellationTokenSource _disposal = new();
@@ -67,11 +69,22 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
         IHttpClientFactory httpClientFactory,
         TimeProvider timeProvider,
         ILogger<ClientCredentialsProvider>? logger = null)
+        : this(options, httpClientFactory, timeProvider, Random.Shared.NextDouble, logger)
+    {
+    }
+
+    internal ClientCredentialsProvider(
+        IOptions<ClientCredentialsOptions> options,
+        IHttpClientFactory httpClientFactory,
+        TimeProvider timeProvider,
+        Func<double> cooldownJitterSample,
+        ILogger<ClientCredentialsProvider>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
+        _cooldownJitterSample = cooldownJitterSample;
         _options = options.Value;
         _tokenEndpoint = _options.TokenGenerationEndpoint;
         _httpClientFactory = httpClientFactory;
@@ -157,9 +170,11 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
         {
             _cooldownWindow = NextCooldownWindow(cooldown, _cooldownWindow);
             _cooldownFailure = ObservedFailure(failure);
-            _cooldownEndsAtTicks = (_timeProvider.GetUtcNow() + _cooldownWindow).Ticks;
+            _cooldownEndsAtTicks = (_timeProvider.GetUtcNow() + Jittered(_cooldownWindow)).Ticks;
         }
     }
+
+    private TimeSpan Jittered(TimeSpan window) => window - window / 2 * _cooldownJitterSample();
 
     private static Task<string> ObservedFailure(Exception failure)
     {

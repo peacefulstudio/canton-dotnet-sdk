@@ -70,6 +70,7 @@ public static class CommandBatchExtensions
         Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(batch);
         WriterExtensionHelpers.ThrowIfDefault(commandId);

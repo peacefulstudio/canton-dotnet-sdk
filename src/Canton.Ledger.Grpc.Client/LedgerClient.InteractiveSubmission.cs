@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Runtime;
@@ -23,6 +24,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         var request = BuildPrepareSubmissionRequest(submission, estimateTrafficCost: false, hashingSchemeVersion);
@@ -46,6 +49,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = BuildExecuteSubmissionRequest(submission);
         var commandId = PreparedTransactionCommandId.Of(request.PreparedTransaction);
 
@@ -71,6 +76,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = BuildExecuteSubmissionAndWaitRequest(submission);
         var commandId = PreparedTransactionCommandId.Of(request.PreparedTransaction);
 
@@ -98,6 +105,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = BuildExecuteSubmissionAndWaitForTransactionRequest(submission, submitter);
         var commandId = PreparedTransactionCommandId.Of(request.PreparedTransaction);
 
@@ -131,6 +140,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(requirements);
 
         var request = new Interactive.GetPreferredPackagesRequest
@@ -294,7 +305,7 @@ internal sealed partial class LedgerClient
 
         try
         {
-            return GrpcTransactionResultProjector.Project(transaction);
+            return GrpcTransactionResultProjector.ProjectAcsDelta(transaction);
         }
         catch (Exception decodeFailure) when (MalformedResponse.IsWireDecodeFailure(decodeFailure))
         {

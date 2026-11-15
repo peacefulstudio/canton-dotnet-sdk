@@ -12,10 +12,12 @@ internal sealed class CapturedActivities : IDisposable
 
     private readonly List<Activity> _stopped = [];
     private readonly List<(string ErrorId, TaskCompletionSource<Activity> Stopped)> _waiters = [];
+    private readonly ActivityTraceId _traceId;
     private readonly ActivityListener _listener;
 
-    internal CapturedActivities()
+    internal CapturedActivities(ActivityTraceId traceId)
     {
+        _traceId = traceId;
         _listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Microsoft.AspNetCore",
@@ -44,8 +46,8 @@ internal sealed class CapturedActivities : IDisposable
 
     public void Dispose() => _listener.Dispose();
 
-    private static bool IsFailingWith(Activity activity, string errorId) =>
-        activity.GetTagItem("daml.error_id") as string == errorId;
+    private bool IsFailingWith(Activity activity, string errorId) =>
+        activity.TraceId == _traceId && activity.GetTagItem("daml.error_id") as string == errorId;
 
     private void OnStopped(Activity activity)
     {

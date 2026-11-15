@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Abstractions;
+using Daml.Ledger.Abstractions;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using RuntimeCommands = Daml.Runtime.Commands;
@@ -17,6 +18,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return Answering(() => _interactive.PreparedSubmission ?? throw StagingMissing(
             "prepared submission", nameof(PrepareSubmissionAsync), "WithPreparedSubmission"));
@@ -28,6 +31,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         RecordSigned(submission, timeout);
         return ThrowingCallFailure is { } failure ? Task.FromException(failure) : Task.CompletedTask;
     }
@@ -38,6 +43,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         RecordSigned(submission, timeout);
         return Answering(() =>
         {
@@ -55,6 +62,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         RecordSigned(submission, timeout);
         return Answering(() =>
         {
@@ -73,6 +82,8 @@ public sealed partial class FakeLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(requirements);
         return Answering(() => _interactive.PreferredPackages ?? throw StagingMissing(
             "preferred packages", nameof(GetPreferredPackagesAsync), "WithPreferredPackages"));

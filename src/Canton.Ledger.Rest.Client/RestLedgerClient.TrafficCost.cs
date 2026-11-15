@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Daml.Ledger.Abstractions;
 using RuntimeCommands = Daml.Runtime.Commands;
 using WireCostEstimation = Canton.Ledger.Rest.Client.Raw.CostEstimation;
@@ -56,6 +57,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return _calls.SendAsync<ServedPrepareSubmissionResponse, TrafficCostEstimate?>(

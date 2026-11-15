@@ -774,6 +774,51 @@ public sealed class LedgerClientInteractiveSubmissionTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteSubmissionAndWaitForTransactionAsync_reports_only_the_acsDelta_creates_and_the_archives_of_consuming_exercises()
+    {
+        var churn = new Wire.Transaction { UpdateId = "u-churn", Offset = 9L };
+        churn.Events.Add(new Wire.Event
+        {
+            Exercised = new Wire.ExercisedEvent
+            {
+                NodeId = 0,
+                LastDescendantNodeId = 2,
+                ContractId = "00retiring",
+                TemplateId = new Wire.Identifier { PackageId = "pkg", ModuleName = "Module", EntityName = "Ephemeral" },
+                Choice = "Archive",
+                ChoiceArgument = new Wire.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
+                ExerciseResult = new Wire.Value { Unit = new Google.Protobuf.WellKnownTypes.Empty() },
+                Consuming = true,
+                AcsDelta = true,
+            },
+        });
+        foreach (var (nodeId, contractId, acsDelta) in new[] { (1, "00kept", true), (2, "00transient", false) })
+        {
+            churn.Events.Add(new Wire.Event
+            {
+                Created = new Wire.CreatedEvent
+                {
+                    NodeId = nodeId,
+                    ContractId = contractId,
+                    TemplateId = new Wire.Identifier { PackageId = "pkg", ModuleName = "Module", EntityName = "Ephemeral" },
+                    CreateArguments = new Wire.Record(),
+                    AcsDelta = acsDelta,
+                },
+            });
+        }
+        _service.ExecuteSubmissionAndWaitForTransactionAsync(
+                Arg.Any<Interactive.ExecuteSubmissionAndWaitForTransactionRequest>(),
+                Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Ok(new Interactive.ExecuteSubmissionAndWaitForTransactionResponse { Transaction = churn }));
+
+        var result = await CreateClient().ExecuteSubmissionAndWaitForTransactionAsync(
+            Signed(), Submitter(), cancellationToken: Ct);
+
+        result.CreatedContracts.Select(created => created.ContractId).Should().Equal("00kept");
+        result.ArchivedContractIds.Should().Equal("00retiring");
+    }
+
+    [Fact]
     public async Task ExecuteSubmissionAndWaitForTransactionAsync_surfaces_a_participant_rejection_as_an_unknown_commit_ledger_operation_failure()
     {
         _service.ExecuteSubmissionAndWaitForTransactionAsync(

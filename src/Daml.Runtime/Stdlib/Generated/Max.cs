@@ -20,6 +20,13 @@ public sealed record Max<TA>(
     [property: global::Daml.Runtime.Data.DamlFieldAttribute("unpack")] TA Unpack
 ) where TA : notnull
 {
+    /// <summary>Compares by content, reading list members element by element and map members key by key independently of insertion order.</summary>
+    /// <param name="other">The value to compare against.</param>
+    /// <returns><c>true</c> when every member is equal.</returns>
+    public bool Equals(Max<TA>? other) =>
+        other is not null
+        && global::Daml.Runtime.Data.DamlEqualityComparer<TA>.Default.Equals(Unpack, other.Unpack);
+
     /// <inheritdoc />
     public override int GetHashCode()
     {

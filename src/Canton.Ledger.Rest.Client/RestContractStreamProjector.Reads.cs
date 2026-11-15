@@ -31,7 +31,7 @@ internal static partial class RestContractStreamProjector
         }
 
         return new CreatedContract<T>(
-            RestWireConversions.ToContractId<T>(created.ContractId),
+            WireValues.ContractId<T>(created.ContractId),
             payload,
             RestProjectionCore.ContractKeyOf(created),
             RestWireConversions.ToPartyList(created.WitnessParties));

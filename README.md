@@ -102,7 +102,7 @@ SDK's NuGet packages share one version, so pin them together:
 name: quickstart-codegen
 version: 0.0.1
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.8.0
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.8.1
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -152,6 +152,7 @@ the SDK's end-to-end integration test, and its README covers the setup.
 | Intermediate DAR | [intermediate-dar.md](docs/public/intermediate-dar.md) | diff your own Daml decoder against ours in CI |
 | Benchmarks | [benchmarks](docs/public/benchmarks/README.md) | compare submission, stream and read performance over gRPC, REST and PQS |
 | Proposal Appendix A | [proposal-appendix-a-as-shipped.md](docs/public/proposal-appendix-a-as-shipped.md) | compare the grant proposal's examples to the real API |
+| Package signatures | [verifying-packages.md](docs/public/verifying-packages.md) | verify a package's nuget.org signature and pin the `peaceful` owner |
 | Status and roadmap | [status-and-roadmap.md](docs/public/status-and-roadmap.md) | check platform support, coverage and what is planned |
 | Building from source | [building-from-source.md](docs/public/building-from-source.md) | build, test or navigate the repository |
 

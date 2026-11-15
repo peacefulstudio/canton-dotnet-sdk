@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -24,19 +25,27 @@ internal sealed class LedgerApiHost : IAsyncDisposable
         _client = client;
     }
 
+    internal ActivityTraceId TraceId { get; } = ActivityTraceId.CreateRandom();
+
     internal static async Task<LedgerApiHost> StartAsync(
         Action<WebApplication> mapEndpoints,
         Action<IServiceCollection>? configureServices = null,
-        bool optIntoErrorMetadataTags = false)
+        bool optIntoErrorMetadataTags = false,
+        bool optIntoLedgerErrorMessages = false,
+        Action<WebApplication>? usePipeline = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
-        builder.Services.AddCantonLedgerProblemDetails(options => options.EmitErrorMetadataSpanTags = optIntoErrorMetadataTags);
+        builder.Services.AddCantonLedgerProblemDetails(options =>
+        {
+            options.EmitErrorMetadataSpanTags = optIntoErrorMetadataTags;
+            options.IncludeLedgerErrorMessages = optIntoLedgerErrorMessages;
+        });
         configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
-        app.UseExceptionHandler();
+        (usePipeline ?? (host => host.UseExceptionHandler()))(app);
         mapEndpoints(app);
         await app.StartAsync(TestContext.Current.CancellationToken);
 
@@ -49,6 +58,7 @@ internal sealed class LedgerApiHost : IAsyncDisposable
     internal Task<HttpResponseMessage> GetAsync(string path, string? accept = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.Add("traceparent", $"00-{TraceId}-{ActivitySpanId.CreateRandom()}-01");
         if (accept is not null)
             request.Headers.TryAddWithoutValidation("Accept", accept);
         return _client.SendAsync(request, TestContext.Current.CancellationToken);

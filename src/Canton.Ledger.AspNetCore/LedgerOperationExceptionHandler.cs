@@ -33,7 +33,7 @@ internal sealed partial class LedgerOperationExceptionHandler(
         if (exception is not LedgerOperationException failure)
             return false;
 
-        var problem = LedgerProblem.For(failure);
+        var problem = LedgerProblem.For(failure, options.Value.IncludeLedgerErrorMessages);
         Log(httpContext, failure, problem);
         TagSpan(Activity.Current, failure, problem);
 
@@ -84,8 +84,12 @@ internal sealed partial class LedgerOperationExceptionHandler(
     private void Log(HttpContext httpContext, LedgerOperationException failure, LedgerProblem problem)
     {
         var level = problem.Status >= StatusCodes.Status500InternalServerError ? LogLevel.Error : LogLevel.Warning;
+        if (!_logger.IsEnabled(level))
+            return;
+
+        var loggedException = failure.RedactingUnless(options.Value.IncludeLedgerErrorMessages);
         LedgerFailureAnswered(
-            _logger, level, failure,
+            _logger, level, loggedException,
             failure.Operation ?? "unknown", failure.CommitState, failure.ErrorId ?? "none",
             httpContext.Request.Method, httpContext.Request.Path, problem.Status);
     }

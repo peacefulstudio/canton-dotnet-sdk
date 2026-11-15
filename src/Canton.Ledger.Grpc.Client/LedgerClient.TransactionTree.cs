@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Kernel.Resilience;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Outcomes;
 using RuntimeCommands = Daml.Runtime.Commands;
@@ -30,6 +31,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return _submissionClient.TrySubmitAndWaitForTransactionTreeAsync(
             submission, submitter, timeout, cancellationToken);

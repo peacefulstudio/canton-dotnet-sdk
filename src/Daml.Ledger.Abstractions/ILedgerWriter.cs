@@ -42,10 +42,17 @@ public interface ILedgerWriter
     /// Optional deadline for each attempt of the call, applied best-effort by the transport.
     /// <c>null</c> falls back to the client-wide <c>Timeout</c> option of the registered
     /// transport, 30 seconds unless the host changes it, on gRPC and JSON/REST alike; that option
-    /// set to <c>null</c> applies no deadline, leaving <paramref name="cancellationToken"/> as the
-    /// only bound. gRPC transports map the deadline to <c>CallOptions.Deadline</c>, which bounds
-    /// server-side call duration — still not a hard guarantee that participant-side work stops the
-    /// instant the deadline elapses. Transports without a server-side deadline, such as JSON/REST,
+    /// set to <c>null</c> applies no SDK-side deadline, leaving <paramref name="cancellationToken"/>
+    /// as the only bound on gRPC and, on JSON/REST, the named <c>HttpClient</c>'s own
+    /// <c>Timeout</c>, 100 seconds unless the host changes it, as well. Both transports read a
+    /// <paramref name="timeout"/> by one rule: <see cref="Timeout.InfiniteTimeSpan"/> also applies
+    /// no SDK-side deadline, with the same remaining bounds; zero or any other negative value is a
+    /// caller error, so the call itself throws <see cref="ArgumentOutOfRangeException"/> for
+    /// <c>timeout</c>, before a task exists and before anything reaches the participant, as a null
+    /// argument does; and a deadline longer than the longest timer wait, 4294967294 milliseconds
+    /// (about 49.7 days), is shortened to that wait. gRPC transports map the deadline to
+    /// <c>CallOptions.Deadline</c>, which bounds server-side call duration — still not a hard
+    /// guarantee that participant-side work stops the instant the deadline elapses. Transports without a server-side deadline, such as JSON/REST,
     /// apply a client-side bound only and cannot stop the participant working on the call. An
     /// overrun is a transport failure and surfaces as an
     /// <see cref="ExerciseOutcome{TResult}.InfraError"/> outcome. When the transport's retry

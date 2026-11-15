@@ -17,10 +17,11 @@ internal static class ParitySnapshots
         return data;
     }
 
-    public static IReadOnlyList<string> Discovered()
-    {
-        var snapshotsRoot = Path.Combine(AppContext.BaseDirectory, "Snapshots");
+    public static IReadOnlyList<string> Discovered() =>
+        Discovered(Path.Combine(AppContext.BaseDirectory, "Snapshots"));
 
+    public static IReadOnlyList<string> Discovered(string snapshotsRoot)
+    {
         if (!Directory.Exists(snapshotsRoot))
             throw new DirectoryNotFoundException(
                 $"Snapshots root not found at '{snapshotsRoot}'. " +
@@ -28,9 +29,18 @@ internal static class ParitySnapshots
 
         var names = Directory.EnumerateDirectories(snapshotsRoot)
             .Select(directory => Path.GetFileName(directory)!)
-            .Where(name => File.Exists(ProtoPath(name)) && File.Exists(DarPath(name)))
+            .Where(name => File.Exists(ProtoPath(snapshotsRoot, name)) || File.Exists(DarPath(snapshotsRoot, name)))
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
+
+        var incomplete = names
+            .Where(name => !File.Exists(ProtoPath(snapshotsRoot, name)) || !File.Exists(DarPath(snapshotsRoot, name)))
+            .ToList();
+        if (incomplete.Count > 0)
+            throw new InvalidOperationException(
+                $"Snapshot(s) {string.Join(", ", incomplete)} under '{snapshotsRoot}' lack a .dar or an intermediate.binpb. " +
+                "The Splice DARs are not vendored: run scripts/fetch-splice-snapshot-dars.sh, or build this project, " +
+                "which runs it. A parity theory must not shrink silently.");
 
         if (names.Count == 0)
             throw new InvalidOperationException(
@@ -41,8 +51,14 @@ internal static class ParitySnapshots
     }
 
     public static string DarPath(string snapshotName) =>
-        Path.Combine(AppContext.BaseDirectory, "Snapshots", snapshotName, $"{snapshotName}.dar");
+        DarPath(Path.Combine(AppContext.BaseDirectory, "Snapshots"), snapshotName);
 
     public static string ProtoPath(string snapshotName) =>
-        Path.Combine(AppContext.BaseDirectory, "Snapshots", snapshotName, "intermediate.binpb");
+        ProtoPath(Path.Combine(AppContext.BaseDirectory, "Snapshots"), snapshotName);
+
+    private static string DarPath(string snapshotsRoot, string snapshotName) =>
+        Path.Combine(snapshotsRoot, snapshotName, $"{snapshotName}.dar");
+
+    private static string ProtoPath(string snapshotsRoot, string snapshotName) =>
+        Path.Combine(snapshotsRoot, snapshotName, "intermediate.binpb");
 }

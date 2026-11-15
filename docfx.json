@@ -84,15 +84,19 @@
     "globalMetadata": {
       "_appTitle": "Canton .NET SDK",
       "_appFooter": "Copyright 2026 Peaceful Studio OÜ. Apache-2.0.",
+      "_appLogoPath": "icon.png",
+      "_appFaviconPath": "icon.png",
       "_enableSearch": true
     },
     "template": [
       "default",
-      "modern"
+      "modern",
+      "docs/public/site/template"
     ],
     "resource": [
       {
         "files": [
+          "icon.png",
           "LICENSE",
           "NOTICE",
           "global.json",

@@ -167,6 +167,43 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
         }
         """;
 
+    private const string ServedChurnTransactionBody =
+        """
+        {
+          "transaction": {
+            "updateId": "upd-churn",
+            "commandId": "cmd-churn",
+            "offset": "7",
+            "events": [
+              {
+                "ExercisedEvent": {
+                  "offset": "7", "nodeId": 0, "lastDescendantNodeId": 2,
+                  "contractId": "00retiring", "packageName": "pkg-name",
+                  "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"},
+                  "choice": "Archive", "choiceArgument": {}, "exerciseResult": {},
+                  "consuming": true, "acsDelta": true,
+                  "actingParties": ["party::alice"], "witnessParties": ["party::alice"]
+                }
+              },
+              {
+                "CreatedEvent": {
+                  "offset": "7", "contractId": "00kept", "nodeId": 1, "packageName": "pkg-name",
+                  "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"},
+                  "createArgument": {"owner": "party::alice"}, "acsDelta": true
+                }
+              },
+              {
+                "CreatedEvent": {
+                  "offset": "7", "contractId": "00transient", "nodeId": 2, "packageName": "pkg-name",
+                  "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "OwnedTemplate"},
+                  "createArgument": {"owner": "party::alice"}, "acsDelta": false
+                }
+              }
+            ]
+          }
+        }
+        """;
+
     [Fact]
     public async Task PrepareSubmissionAsync_posts_the_served_prepare_body_without_asking_for_a_cost_estimate()
     {
@@ -747,6 +784,18 @@ public sealed class RestLedgerClientInteractiveSubmissionTests : IDisposable
         format.GetProperty("eventFormat").GetProperty("filtersByParty").EnumerateObject()
             .Select(party => party.Name).Should().Equal("party::alice");
         body.RootElement.GetProperty("preparedTransaction").GetString().Should().Be("CgM=");
+    }
+
+    [Fact]
+    public async Task ExecuteSubmissionAndWaitForTransactionAsync_reports_only_the_acsDelta_creates_and_the_archives_of_consuming_exercises()
+    {
+        var client = ClientWith(TransportServing(ServedChurnTransactionBody));
+
+        var result = await client.ExecuteSubmissionAndWaitForTransactionAsync(
+            Signed(), new RuntimeCommands.SubmitterInfo(Alice), cancellationToken: TestContext.Current.CancellationToken);
+
+        result.CreatedContracts.Select(created => created.ContractId).Should().Equal("00kept");
+        result.ArchivedContractIds.Should().Equal("00retiring");
     }
 
     [Fact]

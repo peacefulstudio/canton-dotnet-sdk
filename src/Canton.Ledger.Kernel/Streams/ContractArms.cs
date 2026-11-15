@@ -72,4 +72,8 @@ internal sealed class ContractArms<T> : IStreamArms<ContractStreamEvent<T>, T, T
 
     public static ContractStreamEvent<T> Checkpoint(LedgerOffset offset) =>
         new ContractStreamEvent<T>.Checkpoint(offset);
+
+    public static ContractStreamEvent<T> StreamError(StreamFault fault) =>
+        new ContractStreamEvent<T>.StreamError(
+            fault.Status, fault.Message, fault.Category, fault.ErrorId, fault.SourceException);
 }

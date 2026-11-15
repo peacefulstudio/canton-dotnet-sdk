@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="xunit.v3.assert" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Grpc.Net.Client" />
   </ItemGroup>

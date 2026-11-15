@@ -21,6 +21,8 @@ internal static partial class RuntimeStjSampleTable
         new("00c0ffee", SampleIdentifier, OtherIdentifier, new ChoiceName("Transfer"), new DamlParty(Bob.Value), new DamlInt64(5), true, Eq(Alice, Carol), Witnesses)
         {
             PackageName = "sample-package",
+            NodeId = 3,
+            LastDescendantNodeId = 5,
         };
 
     private static CreatedContract SampleCreatedContract =>
@@ -29,6 +31,7 @@ internal static partial class RuntimeStjSampleTable
             InterfaceIds = Eq(SampleIdentifier, OtherIdentifier),
             UndecodedPayload = SampleUndecodedJson,
             PackageName = "sample-package",
+            NodeId = 4,
         };
 
     private static TreeEvent.Created SampleTreeCreated =>
@@ -115,6 +118,7 @@ internal static partial class RuntimeStjSampleTable
                 new CommandId("cmd-1"))
             {
                 ExercisedEvents = Eq(SampleExercisedEvent, SampleExercisedEvent with { Consuming = false }),
+                RequestedInterfaces = Eq(OtherIdentifier),
                 PaidTrafficCost = 4096L,
             },
             new TransactionResult(

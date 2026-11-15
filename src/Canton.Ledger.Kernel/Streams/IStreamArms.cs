@@ -63,4 +63,6 @@ internal interface IStreamArms<TEvent, TMarker, TPayload>
         string? rawKind);
 
     static abstract TEvent Checkpoint(LedgerOffset offset);
+
+    static abstract TEvent StreamError(StreamFault fault);
 }

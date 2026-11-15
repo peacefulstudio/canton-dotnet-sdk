@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Wire;
 using Daml.Ledger.Abstractions;
@@ -47,6 +48,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return SubmitCoreAsync(submission, timeout, cancellationToken);
@@ -75,6 +78,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return SubmitReassignmentCoreAsync(submission, timeout, cancellationToken);
@@ -113,6 +118,8 @@ internal sealed partial class RestLedgerClient
         CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         var submitter = new RuntimeCommands.SubmitterInfo(
@@ -310,8 +317,11 @@ internal sealed partial class RestLedgerClient
         Party? party = null,
         string? participantId = null,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        _calls.SendAsync<Raw.GetConnectedSynchronizersResponse, IReadOnlyList<ConnectedSynchronizer>>(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _calls.SendAsync<Raw.GetConnectedSynchronizersResponse, IReadOnlyList<ConnectedSynchronizer>>(
             new RestCall(
                 HttpMethod.Get, BuildConnectedSynchronizersPath(party, participantId), Body: null,
                 MissingBody("connected synchronizers"), MalformedBody("connected synchronizers"),
@@ -319,6 +329,7 @@ internal sealed partial class RestLedgerClient
             ProjectConnectedSynchronizers,
             timeout,
             cancellationToken);
+    }
 
     private static IReadOnlyList<ConnectedSynchronizer> ProjectConnectedSynchronizers(
         Raw.GetConnectedSynchronizersResponse body) =>
@@ -329,8 +340,11 @@ internal sealed partial class RestLedgerClient
     /// <inheritdoc />
     public Task<string> GetLedgerApiVersionAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        _calls.SendAsync<Raw.GetLedgerApiVersionResponse, string>(
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _calls.SendAsync<Raw.GetLedgerApiVersionResponse, string>(
             new RestCall(
                 HttpMethod.Get, LedgerApiVersionPath, Body: null,
                 MissingBody("Ledger API version"), MalformedBody("Ledger API version"),
@@ -339,6 +353,7 @@ internal sealed partial class RestLedgerClient
                 ?? throw new JsonException("no version was present for the Ledger API version query."),
             timeout,
             cancellationToken);
+    }
 
     /// <inheritdoc />
     public Task<TransactionResult> GetUpdateByOffsetAsync(
@@ -347,6 +362,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
 
         var request = new Raw.GetUpdateByOffsetRequest
@@ -356,7 +373,7 @@ internal sealed partial class RestLedgerClient
         };
 
         return GetUpdateAsync(
-            UpdateByOffsetPath, request, $"offset {offset.Value}", RestTransactionResultProjector.Project,
+            UpdateByOffsetPath, request, $"offset {offset.Value}", RestTransactionResultProjector.ProjectAcsDelta,
             timeout, cancellationToken);
     }
 
@@ -367,6 +384,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(updateId);
 
         var request = new Raw.GetUpdateByIdRequest
@@ -376,7 +395,7 @@ internal sealed partial class RestLedgerClient
         };
 
         return GetUpdateAsync(
-            UpdateByIdPath, request, $"id {updateId}", RestTransactionResultProjector.Project,
+            UpdateByIdPath, request, $"id {updateId}", RestTransactionResultProjector.ProjectAcsDelta,
             timeout, cancellationToken);
     }
 

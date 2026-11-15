@@ -47,8 +47,17 @@ public static class TransactionTreeExtensions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <see cref="TreeEvent.Created"/> nodes project losslessly:
-    /// <see cref="CreatedContract"/> mirrors that node field for field.
+    /// The created and archived lists are the transaction's ACS delta, the same contracts the flat
+    /// overload of <c>TrySubmitAndWaitForTransactionAsync</c> reports: a node the ledger does not mark
+    /// <see cref="TreeEvent.Created.AcsDelta"/> (or <see cref="TreeEvent.Exercised.AcsDelta"/>) is left
+    /// out of them. A contract created and archived within the one transaction therefore appears in
+    /// neither list, while the exercise that archived it stays in
+    /// <see cref="TransactionResult.ExercisedEvents"/>, which lists every exercise.
+    /// </para>
+    /// <para>
+    /// A <see cref="TreeEvent.Created"/> node that is projected does so losslessly:
+    /// <see cref="CreatedContract"/> mirrors that node field for field, apart from
+    /// <see cref="TreeEvent.Created.AcsDelta"/>, which decides whether the node is projected at all.
     /// </para>
     /// <para>
     /// Exercise nodes do not. <see cref="ExercisedEvent"/> has no slot for
@@ -59,6 +68,12 @@ public static class TransactionTreeExtensions
     /// <para>
     /// Hierarchy is flattened either way: the parent/child structure of the tree is not
     /// recoverable from the projected lists.
+    /// </para>
+    /// <para>
+    /// Each projected event is numbered by its depth-first pre-order position in the tree, the
+    /// way the ledger numbers nodes, so
+    /// <see cref="Outcomes.ExerciseOutcomeProjection.ProjectByKeyExercise{TOwner, TArg, TResult}"/>
+    /// can tell the root exercise from the exercises nested under it.
     /// </para>
     /// <para>
     /// <see cref="TransactionResult.CommandId"/> is <c>null</c> here because
@@ -73,10 +88,16 @@ public static class TransactionTreeExtensions
         var archivedContractIds = new List<string>();
         var exercisedEvents = new List<ExercisedEvent>();
 
-        foreach (var treeEvent in tree.AllEvents())
+        var preOrderNodes = tree.AllEvents().ToList();
+        var lastDescendantNodeIds = LastDescendantNodeIds(preOrderNodes);
+
+        for (var nodeId = 0; nodeId < preOrderNodes.Count; nodeId++)
         {
+            var treeEvent = preOrderNodes[nodeId];
             switch (treeEvent)
             {
+                case TreeEvent.Created { AcsDelta: false }:
+                    break;
                 case TreeEvent.Created created:
                     createdContracts.Add(new CreatedContract(
                         created.EventId,
@@ -92,6 +113,7 @@ public static class TransactionTreeExtensions
                         InterfaceIds = created.InterfaceIds,
                         UndecodedPayload = created.UndecodedCreateArguments,
                         PackageName = created.PackageName,
+                        NodeId = nodeId,
                     });
                     break;
                 case TreeEvent.Exercised exercised:
@@ -107,8 +129,10 @@ public static class TransactionTreeExtensions
                         exercised.WitnessParties)
                     {
                         PackageName = exercised.PackageName,
+                        NodeId = nodeId,
+                        LastDescendantNodeId = lastDescendantNodeIds[nodeId],
                     });
-                    if (exercised.Consuming)
+                    if (exercised is { Consuming: true, AcsDelta: true })
                     {
                         archivedContractIds.Add(exercised.ContractId);
                     }
@@ -130,4 +154,27 @@ public static class TransactionTreeExtensions
             PaidTrafficCost = tree.PaidTrafficCost,
         };
     }
+
+    private static int[] LastDescendantNodeIds(IReadOnlyList<TreeEvent> preOrderNodes)
+    {
+        var lastDescendantNodeIds = new int[preOrderNodes.Count];
+        var subtreeSizesOfLaterSiblings = new Stack<int>();
+
+        for (var nodeId = preOrderNodes.Count - 1; nodeId >= 0; nodeId--)
+        {
+            var subtreeSize = 1;
+            for (var child = 0; child < ChildCount(preOrderNodes[nodeId]); child++)
+            {
+                subtreeSize += subtreeSizesOfLaterSiblings.Pop();
+            }
+
+            subtreeSizesOfLaterSiblings.Push(subtreeSize);
+            lastDescendantNodeIds[nodeId] = nodeId + subtreeSize - 1;
+        }
+
+        return lastDescendantNodeIds;
+    }
+
+    private static int ChildCount(TreeEvent node) =>
+        node is TreeEvent.Exercised exercised ? exercised.ChildEvents.Count : 0;
 }

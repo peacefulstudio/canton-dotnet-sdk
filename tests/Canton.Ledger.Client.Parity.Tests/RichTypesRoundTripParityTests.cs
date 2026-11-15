@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Canton.Ledger.Abstractions;
 using Daml.Ledger.Abstractions;
 using Daml.Ledger.Abstractions.Extensions;
+using Daml.Runtime;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
@@ -129,6 +130,72 @@ public abstract class RichTypesRoundTripParityTests
         result.ArchivedContractIds.Should().Equal(retiring.Value);
         result.ExercisedEvents.Select(exercised => exercised.ChoiceName.Value)
             .Should().Contain("Churn");
+    }
+
+    [Fact]
+    public async Task Churn_tree_projects_to_the_same_created_and_archived_lists_as_the_flat_submit()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var factory = await CreateAsync(client, owner, new EphemeralFactory(owner));
+        var retiringForFlat = await CreateAsync(client, owner, new Ephemeral(owner, "retiring"));
+        var retiringForTree = await CreateAsync(client, owner, new Ephemeral(owner, "retiring"));
+        var flatOutcome = await client.TrySubmitSingleAsync(
+            factory.ChurnCommand(new EphemeralFactory.Churn(retiringForFlat)), owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var flat = flatOutcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the choice committed; got {0}", flatOutcome).Subject.Result;
+
+        var treeOutcome = await client.TrySubmitAndWaitForTransactionTreeAsync(
+            RuntimeCommands.CommandsSubmission.Single(factory.ChurnCommand(new EphemeralFactory.Churn(retiringForTree))),
+            owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var tree = treeOutcome.Should().BeOfType<ExerciseOutcome<TransactionTree>.One>(
+            "the choice committed; got {0}", treeOutcome).Subject.Result;
+
+        var projected = tree.ToTransactionResult();
+
+        projected.CreatedContracts.Select(created => Ephemeral.FromRecord(created.Payload).Tag)
+            .Should().Equal(flat.CreatedContracts.Select(created => Ephemeral.FromRecord(created.Payload).Tag))
+            .And.Equal("kept");
+        projected.ArchivedContractIds.Should().Equal(retiringForTree.Value);
+        flat.ArchivedContractIds.Should().Equal(retiringForFlat.Value);
+    }
+
+    [Fact]
+    public async Task Churn_point_reads_report_the_same_created_and_archived_lists_as_the_flat_submit()
+    {
+        await using var lane = await OpenClientAsync(TestContext.Current.CancellationToken);
+        var (client, owner) = lane.Capability;
+        var factory = await CreateAsync(client, owner, new EphemeralFactory(owner));
+        var retiring = await CreateAsync(client, owner, new Ephemeral(owner, "retiring"));
+        var outcome = await client.TrySubmitSingleAsync(
+            factory.ChurnCommand(new EphemeralFactory.Churn(retiring)), owner,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var submitted = outcome.Should().BeOfType<ExerciseOutcome<TransactionResult>.One>(
+            "the choice committed; got {0}", outcome).Subject.Result;
+        var submitter = new RuntimeCommands.SubmitterInfo(owner);
+
+        var byOffset = await client.GetUpdateByOffsetAsync(
+            submitted.CompletionOffset, submitter, cancellationToken: TestContext.Current.CancellationToken);
+        var byId = await client.GetUpdateByIdAsync(
+            submitted.UpdateId, submitter, cancellationToken: TestContext.Current.CancellationToken);
+
+        var page = await client.GetUpdatesPageAsync(
+            submitter,
+            beginExclusive: LedgerOffset.At(submitted.CompletionOffset.Value - 1),
+            endInclusive: submitted.CompletionOffset,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var byPage = page.Updates.Should().ContainSingle().Subject;
+
+        foreach (var pointRead in new[] { byOffset, byId, byPage })
+        {
+            pointRead.UpdateId.Should().Be(submitted.UpdateId);
+            pointRead.CreatedContracts.Select(created => Ephemeral.FromRecord(created.Payload).Tag)
+                .Should().Equal(submitted.CreatedContracts.Select(created => Ephemeral.FromRecord(created.Payload).Tag))
+                .And.Equal("kept");
+            pointRead.ArchivedContractIds.Should().Equal(submitted.ArchivedContractIds).And.Equal(retiring.Value);
+        }
     }
 
     [Fact]
@@ -394,10 +461,8 @@ public abstract class RichTypesRoundTripParityTests
         where T : ITemplate, IDamlRecord<T>
     {
         var client = lane.Capability.Client;
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        budget.CancelAfter(ReadBackBudget);
-        using var streamHold = await lane.HoldStreamAsync(TestContext.Current.CancellationToken);
-        await foreach (var entry in client.SubscribeActiveAsync<T>(owner, cancellationToken: budget.Token))
+        using var read = await lane.HoldStreamWithBudgetAsync(ReadBackBudget, TestContext.Current.CancellationToken);
+        await foreach (var entry in client.SubscribeActiveAsync<T>(owner, cancellationToken: read.Token))
         {
             if (entry is AcsSnapshotEntry<T>.Created created && created.ContractId.Value == createdCid.Value)
             {

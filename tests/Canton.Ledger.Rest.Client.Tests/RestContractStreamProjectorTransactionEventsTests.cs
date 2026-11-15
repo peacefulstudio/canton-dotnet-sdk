@@ -510,7 +510,9 @@ public class RestContractStreamProjectorTransactionEventsTests
         var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         loggerFactory.Records.Should().ContainSingle(
-            record => record.Level == LogLevel.Warning && record.Message.Contains("not-a-number"));
+            record => record.Level == LogLevel.Warning
+                && record.Exception is MalformedResponseException
+                && record.Exception.Message.Contains("not-a-number"));
     }
 
     [Fact]
@@ -644,7 +646,9 @@ public class RestContractStreamProjectorTransactionEventsTests
         var unclassified = projected.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
         unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
         loggerFactory.Records.Should().ContainSingle(
-            record => record.Level == LogLevel.Warning && record.Message.Contains("not-a-number"));
+            record => record.Level == LogLevel.Warning
+                && record.Exception is MalformedResponseException
+                && record.Exception.Message.Contains("not-a-number"));
     }
 
     [Fact]

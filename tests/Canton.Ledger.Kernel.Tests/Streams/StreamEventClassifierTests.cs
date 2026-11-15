@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Canton.Ledger.Kernel.Streams;
 using Daml.Runtime;
 using Daml.Runtime.Data;
+using Daml.Runtime.Outcomes;
 using Daml.Runtime.Streams;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -153,5 +154,61 @@ public class StreamEventClassifierTests
     public void IsNotCancellation_covers_any_other_exception_so_no_event_is_dropped()
     {
         StreamEventClassifier.IsNotCancellation(new FormatException()).Should().BeTrue();
+    }
+
+    [Fact]
+    public void UndecodableCheckpoint_ends_the_stream_with_an_UndecodableBody_fault_naming_the_cause()
+    {
+        var cause = WireOffset.FromProto(-1L).ToMalformedResponse("checkpoint offset");
+
+        var fault = StreamEventClassifier.UndecodableCheckpoint("StreamMarker", logger: null, cause);
+
+        fault.Status.Should().Be(new TransportStatus.UndecodableBody());
+        fault.Message.Should().Be(
+            "Could not decode the offset checkpoint on the update stream: checkpoint offset '-1' is not a valid ledger offset");
+        fault.SourceException.Should().BeSameAs(cause);
+        fault.Category.Should().BeNull();
+        fault.ErrorId.Should().BeNull();
+    }
+
+    [Fact]
+    public void UndecodableCheckpoint_warns_once_naming_the_subscribed_type_and_the_cause()
+    {
+        using var loggerFactory = new CapturingLoggerFactory();
+        var cause = WireOffset.FromProto(-1L).ToMalformedResponse("checkpoint offset");
+
+        StreamEventClassifier.UndecodableCheckpoint("StreamMarker", loggerFactory.CreateLogger("stream"), cause);
+
+        var record = loggerFactory.Records.Should().ContainSingle().Subject;
+        record.Level.Should().Be(LogLevel.Warning);
+        record.Message.Should().Be(
+            "Could not decode the offset checkpoint on the StreamMarker update stream — ended with StreamError (undecodable-body)");
+        record.Exception.Should().BeSameAs(cause);
+    }
+
+    [Fact]
+    public void UndecodableUpdateOffset_refuses_with_DecodeFailure_carrying_no_offset()
+    {
+        var cause = WireOffset.FromProto(-1L).ToMalformedResponse("transaction offset");
+
+        var refusal = StreamEventClassifier.UndecodableUpdateOffset("StreamMarker", logger: null, cause);
+
+        refusal.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+        refusal.Offset.Should().BeNull();
+    }
+
+    [Fact]
+    public void UndecodableUpdateOffset_warns_once_that_the_refusal_is_no_resume_point_and_names_the_cause()
+    {
+        using var loggerFactory = new CapturingLoggerFactory();
+        var cause = WireOffset.FromProto(-1L).ToMalformedResponse("transaction offset");
+
+        StreamEventClassifier.UndecodableUpdateOffset("StreamMarker", loggerFactory.CreateLogger("stream"), cause);
+
+        var record = loggerFactory.Records.Should().ContainSingle().Subject;
+        record.Level.Should().Be(LogLevel.Warning);
+        record.Message.Should().Be(
+            "Could not decode the offset of an update on the StreamMarker stream — surfaced as Unclassified (decode-failure) carrying no offset, so a consumer must not persist this event as a resume point");
+        record.Exception.Should().BeSameAs(cause);
     }
 }

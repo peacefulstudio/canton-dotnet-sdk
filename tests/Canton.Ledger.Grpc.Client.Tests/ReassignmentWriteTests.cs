@@ -159,6 +159,64 @@ public sealed class LedgerClientReassignmentWriteTests : IDisposable
     }
 
     [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_surfaces_a_reassignment_with_a_negative_offset_as_a_DecodeFailure_Unclassified_without_an_offset()
+    {
+        StubSubmitAndWaitForReassignment(new ProtoV2.SubmitAndWaitForReassignmentResponse
+        {
+            Reassignment = new ProtoV2.Reassignment
+            {
+                Offset = -1L,
+                Events =
+                {
+                    new ProtoV2.ReassignmentEvent
+                    {
+                        Unassigned = new ProtoV2.UnassignedEvent
+                        {
+                            ContractId = "00holding",
+                            PackageName = "token-impl",
+                            TemplateId = new ProtoV2.Identifier { PackageId = "tmpl-pkg", ModuleName = "Sample.Token", EntityName = "Holding" },
+                            Source = "sync::source",
+                            Target = "sync::target",
+                            Offset = 7L,
+                        },
+                    },
+                },
+            },
+        });
+
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00holding", Source, Target), Submitter);
+
+        var outcome = await CreateClient()
+            .TrySubmitAndWaitForReassignmentAsync<TemplateMarker>(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var unclassified = outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TemplateMarker>>.One>()
+            .Which.Result.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        unclassified.Offset.Should().BeNull();
+        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+    }
+
+    [Fact]
+    public async Task TrySubmitAndWaitForReassignmentAsync_surfaces_an_empty_reassignment_with_a_negative_offset_as_a_DecodeFailure_Unclassified_without_an_offset()
+    {
+        StubSubmitAndWaitForReassignment(new ProtoV2.SubmitAndWaitForReassignmentResponse
+        {
+            Reassignment = new ProtoV2.Reassignment { Offset = -1L },
+        });
+
+        var submission = ReassignmentSubmission.Of(
+            new UnassignCommand("00holding", Source, Target), Submitter);
+
+        var outcome = await CreateClient()
+            .TrySubmitAndWaitForReassignmentAsync<TemplateMarker>(submission, cancellationToken: TestContext.Current.CancellationToken);
+
+        var unclassified = outcome.Should().BeOfType<ExerciseOutcome<ContractStreamEvent<TemplateMarker>>.One>()
+            .Which.Result.Should().BeOfType<ContractStreamEvent<TemplateMarker>.Unclassified>().Subject;
+        unclassified.Offset.Should().BeNull();
+        unclassified.Kind.Should().Be(UnclassifiedKind.DecodeFailure);
+    }
+
+    [Fact]
     public async Task TrySubmitAndWaitForReassignmentAsync_reports_an_undecodable_response_as_CommittedUndecodable_and_records_an_activity_error()
     {
         StubSubmitAndWaitForReassignment(new ProtoV2.SubmitAndWaitForReassignmentResponse());

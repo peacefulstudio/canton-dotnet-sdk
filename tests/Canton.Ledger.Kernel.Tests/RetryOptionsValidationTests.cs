@@ -37,6 +37,27 @@ public class RetryOptionsValidationTests
     }
 
     [Fact]
+    public void Delay_is_rejected_when_longer_than_one_day()
+    {
+        var results = Validate(new RetryOptions { Enabled = true, Delay = TimeSpan.FromDays(1) + TimeSpan.FromTicks(1) });
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Contain(nameof(RetryOptions.Delay));
+    }
+
+    [Fact]
+    public void Delay_of_exactly_one_day_passes_validation()
+    {
+        Validate(new RetryOptions { Enabled = true, Delay = TimeSpan.FromDays(1) }).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Zero_MaxRetryAttempts_passes_validation()
+    {
+        Validate(new RetryOptions { Enabled = true, MaxRetryAttempts = 0 }).Should().BeEmpty();
+    }
+
+    [Fact]
     public void Default_configuration_passes_validation()
     {
         Validate(new RetryOptions()).Should().BeEmpty();

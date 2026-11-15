@@ -166,7 +166,7 @@ public class TransactionTreeTests
             + $"TemplateId = {FooTemplateId}, InterfaceId = , ChoiceName = DoThing, "
             + $"ChoiceArgument = {DamlUnit.Instance}, ExerciseResult = {DamlUnit.Instance}, "
             + "Consuming = False, ActingParties = [alice], WitnessParties = [alice], "
-            + "PackageName = , ChildEvents.Count = 2 }");
+            + "PackageName = , AcsDelta = True, ChildEvents.Count = 2 }");
     }
 
     [Fact]
@@ -414,6 +414,37 @@ public class TransactionTreeTests
     }
 
     [Fact]
+    public void ToTransactionResult_numbers_exercised_nodes_in_pre_order_with_their_last_descendant()
+    {
+        var innerExercise = MakeExercised("00inner", children: [MakeCreated("00leaf")], choiceName: "Inner");
+        var outerExercise = MakeExercised("00outer", children: [innerExercise, MakeCreated("00sibling")], choiceName: "Outer");
+        var laterExercise = MakeExercised("00later", children: [], choiceName: "Later");
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [outerExercise, MakeCreated("00root"), laterExercise]);
+
+        var result = tree.ToTransactionResult();
+
+        result.ExercisedEvents.Select(e => (e.ContractId, e.NodeId, e.LastDescendantNodeId)).Should().Equal(
+            ("00outer", 0, 3),
+            ("00inner", 1, 2),
+            ("00later", 5, 5));
+    }
+
+    [Fact]
+    public void ToTransactionResult_numbers_created_nodes_in_pre_order()
+    {
+        var innerExercise = MakeExercised("00inner", children: [MakeCreated("00leaf")], choiceName: "Inner");
+        var outerExercise = MakeExercised("00outer", children: [innerExercise, MakeCreated("00sibling")], choiceName: "Outer");
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [outerExercise, MakeCreated("00root")]);
+
+        var result = tree.ToTransactionResult();
+
+        result.CreatedContracts.Select(c => (c.ContractId, c.NodeId)).Should().Equal(
+            ("00leaf", 2),
+            ("00sibling", 3),
+            ("00root", 4));
+    }
+
+    [Fact]
     public void ToTransactionResult_collects_archived_contract_ids_from_consuming_exercises()
     {
         var consuming = MakeExercised("00consumed", children: [], consuming: true);
@@ -423,6 +454,70 @@ public class TransactionTreeTests
         var result = tree.ToTransactionResult();
 
         result.ArchivedContractIds.Should().ContainSingle().Which.Should().Be("00consumed");
+    }
+
+    [Fact]
+    public void ToTransactionResult_drops_a_contract_created_and_archived_in_the_same_transaction()
+    {
+        var inner = MakeExercised("00bb", children: [], choiceName: "Inner", consuming: true);
+        var transientCreate = MakeCreated("00cc") with { AcsDelta = false };
+        var transientArchive = MakeExercised("00cc", children: [], choiceName: "Archive", consuming: true)
+            with { AcsDelta = false };
+        var outer = MakeExercised("00aa", children: [inner, transientCreate, transientArchive], choiceName: "Outer");
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [outer]);
+
+        var result = tree.ToTransactionResult();
+
+        result.CreatedContracts.Should().BeEmpty();
+        result.ArchivedContractIds.Should().Equal("00bb");
+    }
+
+    [Fact]
+    public void ToTransactionResult_keeps_every_exercise_numbered_in_pre_order_when_a_transient_contract_is_dropped()
+    {
+        var transientCreate = MakeCreated("00cc") with { AcsDelta = false };
+        var transientArchive = MakeExercised("00cc", children: [], choiceName: "Archive", consuming: true)
+            with { AcsDelta = false };
+        var outer = MakeExercised("00aa", children: [transientCreate, transientArchive], choiceName: "Outer");
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [outer]);
+
+        var result = tree.ToTransactionResult();
+
+        result.ExercisedEvents.Select(e => (e.ContractId, e.NodeId, e.LastDescendantNodeId)).Should().Equal(
+            ("00aa", 0, 2),
+            ("00cc", 2, 2));
+    }
+
+    [Fact]
+    public void ToTransactionResult_keeps_only_the_created_events_the_ledger_marks_as_acs_delta()
+    {
+        var inDelta = MakeCreated("00kept") with { AcsDelta = true };
+        var outsideDelta = MakeCreated("00dropped") with { AcsDelta = false };
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [inDelta, outsideDelta]);
+
+        var result = tree.ToTransactionResult();
+
+        result.CreatedContracts.Should().ContainSingle().Which.ContractId.Should().Be("00kept");
+    }
+
+    [Fact]
+    public void ToTransactionResult_archives_only_the_consuming_exercises_the_ledger_marks_as_acs_delta()
+    {
+        var inDelta = MakeExercised("00kept", children: [], consuming: true) with { AcsDelta = true };
+        var outsideDelta = MakeExercised("00dropped", children: [], consuming: true) with { AcsDelta = false };
+        var tree = new TransactionTree("u1", LedgerOffset.At(1), [inDelta, outsideDelta]);
+
+        var result = tree.ToTransactionResult();
+
+        result.ArchivedContractIds.Should().Equal("00kept");
+        result.ExercisedEvents.Select(e => e.ContractId).Should().Equal("00kept", "00dropped");
+    }
+
+    [Fact]
+    public void TreeEvent_is_in_the_acs_delta_unless_the_transport_says_otherwise()
+    {
+        MakeCreated("00solo").AcsDelta.Should().BeTrue();
+        MakeExercised("00solo", children: []).AcsDelta.Should().BeTrue();
     }
 
     [Fact]

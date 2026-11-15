@@ -47,6 +47,7 @@ public abstract class LedgerTransactionTreeParityTests
             .Should().BeOfType<TreeEvent.Created>().Subject;
         root.ContractId.Should().NotBeNullOrWhiteSpace();
         root.TemplateId.EntityName.Should().Be(Marker.TemplateId.EntityName);
+        root.AcsDelta.Should().BeTrue("a plain create is part of the ACS delta");
         root.DescendantEvents().Should().BeEmpty();
     }
 

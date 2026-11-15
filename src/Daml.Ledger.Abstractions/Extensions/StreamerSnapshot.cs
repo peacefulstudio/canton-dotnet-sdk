@@ -112,7 +112,7 @@ public static class StreamerSnapshot
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<ActiveSnapshot<Contract<T>>> SnapshotAsync<T>(
+    public static Task<ActiveSnapshot<Contract<T>>> SnapshotAsync<T>(
         this ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
@@ -123,10 +123,9 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken)
-            .ConfigureAwait(false);
+        var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken);
 
-        return rows.Select(row => row.ToContract());
+        return SelectAsync(rows, row => row.ToContract());
     }
 
     /// <summary>
@@ -201,7 +200,7 @@ public static class StreamerSnapshot
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<ActiveSnapshot<ActiveContract<Contract<T>>>> SnapshotActiveAsync<T>(
+    public static Task<ActiveSnapshot<ActiveContract<Contract<T>>>> SnapshotActiveAsync<T>(
         this ILedgerStreamer streamer,
         SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
@@ -213,10 +212,9 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken)
-            .ConfigureAwait(false);
+        var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken);
 
-        return rows.Select(row => row.ToActiveContract());
+        return SelectAsync(rows, row => row.ToActiveContract());
     }
 
     /// <summary>
@@ -282,7 +280,7 @@ public static class StreamerSnapshot
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<ActiveSnapshot<Contract<T, TKey>>> SnapshotAsync<T, TKey>(
+    public static Task<ActiveSnapshot<Contract<T, TKey>>> SnapshotAsync<T, TKey>(
         this ILedgerStreamer streamer,
         KeyDescriptor<T, TKey> key,
         SubmitterInfo submitter,
@@ -296,10 +294,9 @@ public static class StreamerSnapshot
         ArgumentNullException.ThrowIfNull(key);
         _ = key;
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken)
-            .ConfigureAwait(false);
+        var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken);
 
-        return rows.Select(ToKeyedContract<T, TKey>);
+        return SelectAsync(rows, ToKeyedContract<T, TKey>);
     }
 
     /// <summary>
@@ -370,7 +367,7 @@ public static class StreamerSnapshot
     /// exception, never as a gracefully-completed stream and never as an in-band terminal
     /// error event, so a caller draining into a list never observes a silently partial result.
     /// </exception>
-    public static async Task<ActiveSnapshot<ActiveContract<Contract<T, TKey>>>> SnapshotActiveAsync<T, TKey>(
+    public static Task<ActiveSnapshot<ActiveContract<Contract<T, TKey>>>> SnapshotActiveAsync<T, TKey>(
         this ILedgerStreamer streamer,
         KeyDescriptor<T, TKey> key,
         SubmitterInfo submitter,
@@ -384,16 +381,24 @@ public static class StreamerSnapshot
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
 
-        var rows = await TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken)
-            .ConfigureAwait(false);
+        var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken);
 
-        return rows.Select(row => new ActiveContract<Contract<T, TKey>>(
+        return SelectAsync(rows, row => new ActiveContract<Contract<T, TKey>>(
             ToKeyedContract<T, TKey>(row),
             row.Offset,
             row.SynchronizerId)
         {
             Disclosure = row.Disclosure,
         });
+    }
+
+    private static async Task<ActiveSnapshot<TProjected>> SelectAsync<TRow, TProjected>(
+        Task<ActiveSnapshot<TRow>> pending,
+        Func<TRow, TProjected> project)
+    {
+        var rows = await pending.ConfigureAwait(false);
+
+        return rows.Select(project);
     }
 
     private static Contract<T, TKey> ToKeyedContract<T, TKey>(AcsSnapshotEntry<T>.Created created)

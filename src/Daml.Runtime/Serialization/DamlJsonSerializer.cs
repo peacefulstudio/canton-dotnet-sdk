@@ -358,7 +358,7 @@ public static class DamlJsonSerializer
             : JsonNodeToValue(n, limits, depth + 1)).ToList()),
         JsonObject obj when IsVariantShape(obj) =>
             new DamlVariant(null, obj[VariantTagKey]!.GetValue<string>(),
-                obj[VariantValueKey] is null ? DamlUnit.Instance : JsonNodeToValue(obj[VariantValueKey]!, limits, depth + 1)),
+                obj[VariantValueKey] is null ? DamlOptional.None :JsonNodeToValue(obj[VariantValueKey]!, limits, depth + 1)),
         JsonObject obj => JsonObjectToRecord(obj, limits, depth),
         _ => throw new JsonException($"Cannot deserialize {node.GetType().Name}")
     };

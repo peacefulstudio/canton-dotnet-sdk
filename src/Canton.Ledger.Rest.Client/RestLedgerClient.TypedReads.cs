@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Streams;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
@@ -29,6 +30,8 @@ internal sealed partial class RestLedgerClient
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new Raw.GetContractRequest
         {
             ContractId = contractId.Value,
@@ -47,6 +50,8 @@ internal sealed partial class RestLedgerClient
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new Raw.GetEventsByContractIdRequest
         {
             ContractId = contractId.Value,
@@ -66,6 +71,8 @@ internal sealed partial class RestLedgerClient
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new Raw.GetEventsByContractIdRequest
         {
             ContractId = contractId.Value,
@@ -80,8 +87,17 @@ internal sealed partial class RestLedgerClient
     }
 
     /// <inheritdoc />
-    public async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
+    public Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : IDamlType
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return GetDisclosureAsyncCore<T>(contractId, submitter, timeout, cancellationToken);
+    }
+
+    private async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsyncCore<T>(
+        ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout, CancellationToken cancellationToken)
         where T : IDamlType
     {
         var request = new Raw.GetEventsByContractIdRequest
@@ -108,9 +124,19 @@ internal sealed partial class RestLedgerClient
         rejection is { Category: DamlErrorCategory.InvalidGivenCurrentSystemStateResourceMissing, ErrorId: "CONTRACT_EVENTS_NOT_FOUND" };
 
     /// <inheritdoc />
-    public async Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
+    public Task<AcsPage<T>> GetActiveContractsPageAsync<T>(
         RuntimeCommands.SubmitterInfo submitter, LedgerOffset? activeAtOffset = null, int? maxPageSize = null, LedgerPageToken? pageToken = null,
         bool includeDisclosure = false, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return GetActiveContractsPageAsyncCore<T>(submitter, activeAtOffset, maxPageSize, pageToken, includeDisclosure, timeout, cancellationToken);
+    }
+
+    private async Task<AcsPage<T>> GetActiveContractsPageAsyncCore<T>(
+        RuntimeCommands.SubmitterInfo submitter, LedgerOffset? activeAtOffset, int? maxPageSize, LedgerPageToken? pageToken,
+        bool includeDisclosure, TimeSpan? timeout, CancellationToken cancellationToken)
         where T : ITemplate, IDamlRecord<T>
     {
         // Workaround: Canton 3.5.18's POST /v2/state/active-contracts-page reads an activeAtOffset of
@@ -154,8 +180,11 @@ internal sealed partial class RestLedgerClient
     }
 
     /// <inheritdoc />
-    public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
-        _calls.SendAsync<Raw.GetLatestPrunedOffsetsResponse, PrunedOffsets>(
+    public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _calls.SendAsync<Raw.GetLatestPrunedOffsetsResponse, PrunedOffsets>(
             new RestCall(
                 HttpMethod.Get,
                 LatestPrunedOffsetsPath,
@@ -168,12 +197,15 @@ internal sealed partial class RestLedgerClient
                 PrunedOffsetOf(response.AllDivulgedContractsPrunedUpToInclusive)),
             timeout,
             cancellationToken);
+    }
 
     /// <inheritdoc />
     public Task<UpdatesPage> GetUpdatesPageAsync(
         RuntimeCommands.SubmitterInfo submitter, LedgerOffset? beginExclusive = null, LedgerOffset? endInclusive = null, int? maxPageSize = null,
         bool descendingOrder = false, LedgerPageToken? pageToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new Raw.GetUpdatesPageRequest
         {
             BeginOffsetExclusive = beginExclusive?.Value.ToString(CultureInfo.InvariantCulture)!,
@@ -194,7 +226,7 @@ internal sealed partial class RestLedgerClient
     private static UpdatesPage ProjectUpdatesPage(Raw.GetUpdatesPageResponse response) =>
         new(
             (response.Updates ?? [])
-                .Select((update, index) => ProjectPointRead(update, $"page position {index}", RestTransactionResultProjector.Project))
+                .Select((update, index) => ProjectPointRead(update, $"page position {index}", RestTransactionResultProjector.ProjectAcsDelta))
                 .ToList(),
             LedgerOffset.At(RestWireConversions.ParseOffset(response.LowestPageOffsetExclusive)),
             LedgerOffset.At(RestWireConversions.ParseOffset(response.HighestPageOffsetInclusive)),

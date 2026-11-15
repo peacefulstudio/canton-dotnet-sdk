@@ -34,7 +34,7 @@ public static class CreateByExercise
     /// <see cref="TryCreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>
     /// when the choice is expected to create any number of <typeparamref name="TTemplate"/> contracts.
     /// </summary>
-    public static async Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateOneByExerciseAsync<TTemplate>(
+    public static Task<ExerciseOutcome<ContractId<TTemplate>>> TryCreateOneByExerciseAsync<TTemplate>(
         this ILedgerWriter writer,
         ExerciseCommand choice,
         SubmitterInfo submitter,
@@ -45,13 +45,12 @@ public static class CreateByExercise
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
 
-        var outcome = await writer
-            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, RequestingViewOf<TTemplate>(configure), cancellationToken)
-            .ConfigureAwait(false);
+        var submission = writer.TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, RequestingViewOf<TTemplate>(configure), cancellationToken);
 
-        return outcome.ProjectCommitted(ProjectSingleCreated<TTemplate>);
+        return ProjectCommittedAsync(submission, ProjectSingleCreated<TTemplate>);
     }
 
     /// <summary>
@@ -68,7 +67,7 @@ public static class CreateByExercise
     /// only reachable from a non-conforming writer and is propagated faithfully rather
     /// than collapsed.
     /// </summary>
-    public static async Task<ExerciseOutcome<EquatableArray<ContractId<TTemplate>>>> TryCreateManyByExerciseAsync<TTemplate>(
+    public static Task<ExerciseOutcome<EquatableArray<ContractId<TTemplate>>>> TryCreateManyByExerciseAsync<TTemplate>(
         this ILedgerWriter writer,
         ExerciseCommand choice,
         SubmitterInfo submitter,
@@ -79,13 +78,13 @@ public static class CreateByExercise
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
 
-        var outcome = await writer
-            .TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, RequestingViewOf<TTemplate>(configure), cancellationToken)
-            .ConfigureAwait(false);
+        var submission = writer.TrySubmitSingleAsync(choice, submitter, workflowId, commandId, timeout, RequestingViewOf<TTemplate>(configure), cancellationToken);
 
-        return outcome.ProjectCommitted(
+        return ProjectCommittedAsync(
+            submission,
             result => new ExerciseOutcome<EquatableArray<ContractId<TTemplate>>>.One(result.All<TTemplate>()));
     }
 
@@ -99,7 +98,7 @@ public static class CreateByExercise
     /// instead), or on a Daml or infrastructure error. For structured handling, use
     /// <see cref="TryCreateOneByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>.
     /// </summary>
-    public static async Task<ContractId<TTemplate>> CreateOneByExerciseAsync<TTemplate>(
+    public static Task<ContractId<TTemplate>> CreateOneByExerciseAsync<TTemplate>(
         this ILedgerWriter writer,
         ExerciseCommand choice,
         SubmitterInfo submitter,
@@ -110,10 +109,21 @@ public static class CreateByExercise
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+        ArgumentNullException.ThrowIfNull(writer);
         var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
-        var outcome = await writer
-            .TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken)
-            .ConfigureAwait(false);
+        var pending = writer.TryCreateOneByExerciseAsync<TTemplate>(choice, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken);
+
+        return UnwrapSingleCreatedAsync<TTemplate>(pending, submittedCommandId, cancellationToken);
+    }
+
+    private static async Task<ContractId<TTemplate>> UnwrapSingleCreatedAsync<TTemplate>(
+        Task<ExerciseOutcome<ContractId<TTemplate>>> pending,
+        CommandId submittedCommandId,
+        CancellationToken cancellationToken)
+        where TTemplate : IDamlType
+    {
+        var outcome = await pending.ConfigureAwait(false);
 
         return OutcomeUnwrapPolicy.Value(
             outcome,
@@ -138,7 +148,7 @@ public static class CreateByExercise
     /// handling, use
     /// <see cref="TryCreateManyByExerciseAsync{TTemplate}(ILedgerWriter,ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/>.
     /// </summary>
-    public static async Task<EquatableArray<ContractId<TTemplate>>> CreateManyByExerciseAsync<TTemplate>(
+    public static Task<EquatableArray<ContractId<TTemplate>>> CreateManyByExerciseAsync<TTemplate>(
         this ILedgerWriter writer,
         ExerciseCommand choice,
         SubmitterInfo submitter,
@@ -149,10 +159,21 @@ public static class CreateByExercise
         CancellationToken cancellationToken = default)
         where TTemplate : IDamlType
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+        ArgumentNullException.ThrowIfNull(writer);
         var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
-        var outcome = await writer
-            .TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken)
-            .ConfigureAwait(false);
+        var pending = writer.TryCreateManyByExerciseAsync<TTemplate>(choice, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken);
+
+        return UnwrapAllCreatedAsync<TTemplate>(pending, submittedCommandId, cancellationToken);
+    }
+
+    private static async Task<EquatableArray<ContractId<TTemplate>>> UnwrapAllCreatedAsync<TTemplate>(
+        Task<ExerciseOutcome<EquatableArray<ContractId<TTemplate>>>> pending,
+        CommandId submittedCommandId,
+        CancellationToken cancellationToken)
+        where TTemplate : IDamlType
+    {
+        var outcome = await pending.ConfigureAwait(false);
 
         return OutcomeUnwrapPolicy.Value(
             outcome,
@@ -162,6 +183,15 @@ public static class CreateByExercise
             static count => $"Exercising the choice yielded Many ({count}) for {typeof(TTemplate).Name}; a conforming writer returns One carrying every created contract.",
             submittedCommandId,
             cancellationToken);
+    }
+
+    internal static async Task<ExerciseOutcome<TProjected>> ProjectCommittedAsync<TProjected>(
+        Task<ExerciseOutcome<TransactionResult>> submission,
+        Func<TransactionResult, ExerciseOutcome<TProjected>> project)
+    {
+        var outcome = await submission.ConfigureAwait(false);
+
+        return outcome.ProjectCommitted(project);
     }
 
     private static Func<CommandsSubmission, CommandsSubmission>? RequestingViewOf<T>(

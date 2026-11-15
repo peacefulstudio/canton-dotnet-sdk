@@ -200,6 +200,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(command);
         var effectiveCommandId = RecordSingleCommandSubmission(
             command, submitter, workflowId ?? $"exercise-{command.Choice.Value.ToLowerInvariant()}", commandId, timeout);
@@ -220,6 +222,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         CancellationToken cancellationToken = default)
         where TTemplate : ITemplate
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(payload);
         var effectiveCommandId = RecordSingleCommandSubmission(
             CreateCommand.For(payload),
@@ -240,6 +244,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         var sent = Recorded(submission, timeout);
         return Answering(() =>
@@ -258,6 +264,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return SubmitAndWaitAsync(submission.WithSubmitter(submitter), timeout, cancellationToken);
     }
@@ -268,6 +276,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         var sent = Recorded(submission, timeout);
         return AnsweringTry(() =>
@@ -284,6 +294,8 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
         return TrySubmitAndWaitForTransactionAsync(submission.WithSubmitter(submitter), timeout, cancellationToken);
     }
@@ -302,12 +314,16 @@ public sealed partial class FakeLedgerClient : ICantonLedgerClient, IUnboundedSt
     /// </remarks>
     public Task<LedgerOffset> GetLedgerEndAsync(
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        Answering(() => _ledgerEnd is { } seeded
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
+
+        return Answering(() => _ledgerEnd is { } seeded
             ? LedgerOffset.At(seeded.Value + Interlocked.Read(ref _committedWrites))
             : throw new NotSupportedException(
                 $"FakeLedgerClient has no ledger end staged for '{nameof(GetLedgerEndAsync)}'. Stage one with " +
                 "FakeLedgerClient.Create().WithLedgerEnd(...).Build() before exercising this path."));
+    }
 
     /// <inheritdoc />
     public void Dispose()

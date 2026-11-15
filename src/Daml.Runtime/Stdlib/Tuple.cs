@@ -39,6 +39,15 @@ public sealed record Tuple2<T1, T2>(T1 _1, T2 _2)
     where T1 : notnull
     where T2 : notnull
 {
+    /// <summary>
+    /// Compares the components by content: a list or dictionary component is compared by its
+    /// entries, not by reference.
+    /// </summary>
+    public bool Equals(Tuple2<T1, T2>? other) =>
+        other is not null
+        && DamlEqualityComparer<T1>.Default.Equals(_1, other._1)
+        && DamlEqualityComparer<T2>.Default.Equals(_2, other._2);
+
     /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(
         DamlEqualityComparer<T1>.Default.GetHashCode(_1),
@@ -110,6 +119,16 @@ public sealed record Tuple3<T1, T2, T3>(T1 _1, T2 _2, T3 _3)
     where T2 : notnull
     where T3 : notnull
 {
+    /// <summary>
+    /// Compares the components by content: a list or dictionary component is compared by its
+    /// entries, not by reference.
+    /// </summary>
+    public bool Equals(Tuple3<T1, T2, T3>? other) =>
+        other is not null
+        && DamlEqualityComparer<T1>.Default.Equals(_1, other._1)
+        && DamlEqualityComparer<T2>.Default.Equals(_2, other._2)
+        && DamlEqualityComparer<T3>.Default.Equals(_3, other._3);
+
     /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(
         DamlEqualityComparer<T1>.Default.GetHashCode(_1),

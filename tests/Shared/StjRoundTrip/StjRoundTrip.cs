@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AwesomeAssertions;
 using AwesomeAssertions.Equivalency;
+using Daml.Runtime.Data;
 using Daml.Runtime.Serialization;
 
 namespace Daml.Testing.StjRoundTrip;
@@ -20,7 +21,8 @@ internal static class StjRoundTrip
 {
     /// <summary>
     /// Asserts the sample reads back equivalent by runtime member types, with byte memory
-    /// compared by its contents, then equal, then with an equal hash code. A sample with no public
+    /// compared by its contents and a <c>DamlNumeric</c> by its canonical string, since its
+    /// <c>Value</c> cannot narrow a wide Numeric, then equal, then with an equal hash code. A sample with no public
     /// members skips the equivalence step, which would have nothing to compare. A failure names
     /// the case, the leg and the step that broke.
     /// </summary>
@@ -44,7 +46,10 @@ internal static class StjRoundTrip
                         .Excluding(member => IsJsonIgnored(member))
                         .Using<ReadOnlyMemory<byte>>(
                             context => context.Subject.ToArray().Should().Equal(context.Expectation.ToArray()))
-                        .WhenTypeIs<ReadOnlyMemory<byte>>()));
+                        .WhenTypeIs<ReadOnlyMemory<byte>>()
+                        .Using<DamlNumeric>(
+                            context => context.Subject.ToCanonicalString().Should().Be(context.Expectation.ToCanonicalString()))
+                        .WhenTypeIs<DamlNumeric>()));
         }
 
         Step(roundTripCase, leg, "equality", () => restored.Should().Be(sample));

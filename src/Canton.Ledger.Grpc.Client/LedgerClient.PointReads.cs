@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
 using Com.Daml.Ledger.Api.V2;
@@ -17,8 +18,12 @@ internal sealed partial class LedgerClient
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        GetTransactionByOffsetAsync(offset, submitter, [], GrpcTransactionResultProjector.Project, timeout, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return GetTransactionByOffsetAsync(offset, submitter, [], GrpcTransactionResultProjector.ProjectAcsDelta, timeout, cancellationToken);
+    }
 
     internal Task<Transaction> ReadTransactionByOffsetAsync(
         LedgerOffset offset,
@@ -66,6 +71,8 @@ internal sealed partial class LedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(updateId);
 
         var request = new GetUpdateByIdRequest
@@ -95,11 +102,15 @@ internal sealed partial class LedgerClient
         LedgerOffset offset,
         RuntimeCommands.SubmitterInfo submitter,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default) =>
-        GetTransactionByOffsetAsync(offset, submitter, [], GrpcTransactionTreeProjector.Project, timeout, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return GetTransactionByOffsetAsync(offset, submitter, [], GrpcTransactionTreeProjector.Project, timeout, cancellationToken);
+    }
 
     private static TransactionResult ProjectPointReadTransaction(GetUpdateResponse response, string lookupDescription) =>
-        ProjectPointRead(response, lookupDescription, GrpcTransactionResultProjector.Project);
+        ProjectPointRead(response, lookupDescription, GrpcTransactionResultProjector.ProjectAcsDelta);
 
     internal static TProjection ProjectPointRead<TProjection>(
         GetUpdateResponse response,

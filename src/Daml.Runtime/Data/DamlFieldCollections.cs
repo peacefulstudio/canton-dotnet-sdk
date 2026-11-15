@@ -64,7 +64,7 @@ public static class DamlFieldCollections
         {
             return false;
         }
-        var comparer = EqualityComparer<T>.Default;
+        var comparer = DamlEqualityComparer<T>.Default;
         for (var index = 0; index < left.Count; index++)
         {
             if (!comparer.Equals(left[index], right[index]))
@@ -94,7 +94,7 @@ public static class DamlFieldCollections
         {
             return false;
         }
-        var comparer = EqualityComparer<TValue>.Default;
+        var comparer = DamlEqualityComparer<TValue>.Default;
         foreach (var (key, value) in left)
         {
             if (!right.TryGetValue(key, out var otherValue) || !comparer.Equals(value, otherValue))

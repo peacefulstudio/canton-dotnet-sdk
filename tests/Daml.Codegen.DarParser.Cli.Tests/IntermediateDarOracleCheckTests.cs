@@ -16,7 +16,7 @@ namespace Daml.Codegen.DarParser.Cli.Tests;
 /// </summary>
 public class IntermediateDarOracleCheckTests
 {
-    private const int LeastOracleFixturesWorthChecking = 12;
+    private const int LeastOracleFixturesWorthChecking = 18;
 
     public static TheoryData<string> OracleFixtureNames() => ParitySnapshots.Names();
 

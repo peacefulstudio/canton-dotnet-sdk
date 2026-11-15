@@ -273,8 +273,13 @@ some compiler. A fixture proves more than one thing and they are counted separat
 version its target names is proven on the **emit** path *and* on the **read** path, because
 the main package is decoded at that version — so 2.3 is read-proven by the main
 packages of `defaulttarget` and `contractkeys`, and 2.2 by the main package of
-`nonserializable`, which pins `--target=2.2` because the default is 2.3. Each would move with
-its fixture if retargeted. The versions its dependency packages carry are proven on the **read** path only.
+`nonserializable`, which pins `--target=2.2` because the default is 2.3. 2.4 and 2.5-rc1 are
+proven the same way by the main packages of `lf24` and `lf25rc1`, each the smallest template
+that builds at `--target=2.4` and `--target=2.5-rc1`. The released range is therefore Daml-LF 2.1
+through 2.5-rc1, each version named by the fixture behind it in the table of
+`docs/public/cross-version-matrix.md`. Each would move with its fixture if retargeted, and
+`lf25rc1` retargets with the allow-list when a Daml SDK bump drops `2.5-rc1` from the targets
+`damlc` accepts. The versions its dependency packages carry are proven on the **read** path only.
 At the pinned SDK the per-module component packages behind `daml-prim` and `daml-stdlib` are
 Daml-LF 2.1 and travel unchanged inside every DAR that toolchain builds whatever its target,
 so 2.1 alone is read-proven by every fixture in the tree and no retarget can remove it. A

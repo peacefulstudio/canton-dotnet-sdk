@@ -7,6 +7,7 @@ using Canton.Ledger.Abstractions;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Pqs.Client;
 using Canton.Ledger.Rest.Client;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
@@ -136,13 +137,13 @@ public class PqsRoundTripTests
 
             var createOutcome = await ledger.TryCreateAsync(
                 new Asset(issuer, OpenTelemetryAssetAmount), cancellationToken: TestContext.Current.CancellationToken);
-            var created = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(createOutcome).Result;
+            var created = ExerciseOutcomeAssert.IsOne(createOutcome).Result;
 
             var afterOffset = await ledger.GetLedgerEndAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             var restOutcome = await restServices.GetRequiredService<ICantonLedgerClient>().TryCreateAsync(
                 new Asset(issuer, OpenTelemetryAssetAmount), cancellationToken: TestContext.Current.CancellationToken);
-            Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(restOutcome);
+            ExerciseOutcomeAssert.IsOne(restOutcome);
 
             using (await LedgerUserRightsGate.Shared.HoldStreamAsync(userId, TestContext.Current.CancellationToken))
             {
@@ -245,7 +246,7 @@ public class PqsRoundTripTests
         var ledger = services.GetRequiredService<ICantonLedgerClient>();
 
         var createOutcome = await ledger.TryCreateAsync(new Asset(issuer, AssetAmount), cancellationToken: TestContext.Current.CancellationToken);
-        var createdCid = Assert.IsType<ExerciseOutcome<ContractId<Asset>>.One>(createOutcome).Result;
+        var createdCid = ExerciseOutcomeAssert.IsOne(createOutcome).Result;
         Assert.False(string.IsNullOrWhiteSpace(createdCid.Value), "created Asset ContractId is empty");
 
         return (issuer, createdCid.Value);

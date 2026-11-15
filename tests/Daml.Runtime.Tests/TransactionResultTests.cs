@@ -447,6 +447,7 @@ public class TransactionResultTests
     {
         var mirror = InitOnlySlotsOutsideTheConstructor(typeof(CreatedContract));
         var source = InitOnlySlotsOutsideTheConstructor(typeof(TreeEvent.Created))
+            .Where(slot => slot.Name != nameof(TreeEvent.Created.AcsDelta))
             .Select(slot => slot.Name == "UndecodedCreateArguments" ? ("UndecodedPayload", slot.Type) : slot)
             .OrderBy(slot => slot.Item1, StringComparer.Ordinal)
             .ToList();

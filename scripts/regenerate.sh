@@ -39,9 +39,11 @@ the C# emitter CLI is rebuilt in Release, so a stale binary can never stage stal
 output.
 
 Entries (default: all):
-  snapshots        every Snapshots/<name>/intermediate.binpb (JVM helper, from the
-                   DAR vendored beside it, or from conformance/<name>/<name>.dar for
-                   ${CORPUS_SNAPSHOTS[*]}) and Snapshots/<name>/expected/ (emitter;
+  snapshots        every Snapshots/<name>/intermediate.binpb (JVM helper, from
+                   conformance/<name>/<name>.dar for ${CORPUS_SNAPSHOTS[*]}, otherwise
+                   from the Splice DAR that scripts/fetch-splice-snapshot-dars.sh
+                   caches by the digest Snapshots/splice-dars.manifest pins; nothing
+                   is fetched with --keep-protos) and Snapshots/<name>/expected/ (emitter;
                    none for ${SHIPPED_PACKAGES[*]}, whose expected tree is the
                    conformance entry's Generated folders)
   quickstart       QuickstartSample/intermediate.binpb (JVM helper, from the vendored
@@ -77,6 +79,10 @@ Options:
                         (default: built from src/Daml.Codegen.CSharp.Cli, Release)
 
 Environment:
+  SPLICE_SNAPSHOT_DARS_DIR       Cache directory of the Splice snapshot DARs.
+                          (default: output/splice-snapshot-dars)
+  SPLICE_SNAPSHOT_DARS_BASE_URL  Where the Splice snapshot DARs are downloaded from.
+                          (default: raw.githubusercontent.com/canton-network/splice)
   REGENERATE_DECODER_BIN  Daml.Codegen.DarParser.Cli binary. Setting it skips the rebuild;
                           you own the binary's currency.
                           (default: built from src/Daml.Codegen.DarParser.Cli, Release)
@@ -93,7 +99,9 @@ die() {
 SHIPPED_PACKAGES=(richtypes contractkeys defaulttarget)
 
 SNAPSHOTS_REL="tests/Daml.Codegen.CSharp.Tests/Snapshots"
-CORPUS_SNAPSHOTS=(crossmodulecollision richtypes contractkeys defaulttarget nonserializable)
+SPLICE_MANIFEST_REL="$SNAPSHOTS_REL/splice-dars.manifest"
+SPLICE_DARS_DIR=""
+CORPUS_SNAPSHOTS=(crossmodulecollision richtypes contractkeys defaulttarget nonserializable lf24 lf25rc1)
 QUICKSTART_DAR_REL="tests/Daml.Codegen.CSharp.Tests/QuickstartSample/quickstart-0.0.1.dar"
 QUICKSTART_PROTO_REL="tests/Daml.Codegen.CSharp.Tests/QuickstartSample/intermediate.binpb"
 QUICKSTART_GENERATED_REL="samples/QuickstartExample/Generated"
@@ -287,9 +295,20 @@ resolve_snapshot_families() {
   [[ ${#FAMILIES[@]} -gt 0 ]] || die "no snapshot families found under $SNAPSHOTS_REL"
 }
 
+snapshots_need_splice_dars() {
+  local family
+  resolve_snapshot_families
+  for family in "${FAMILIES[@]}"; do
+    is_listed "$family" "${CORPUS_SNAPSHOTS[@]}" || return 0
+  done
+  return 1
+}
+
 tools_snapshots() {
   echo emitter
-  [[ "$KEEP_PROTOS" == true ]] || echo helper
+  [[ "$KEEP_PROTOS" == true ]] && return 0
+  echo helper
+  ! snapshots_need_splice_dars || echo splice-dars
 }
 
 tools_quickstart() { tools_snapshots; }
@@ -329,6 +348,10 @@ prepare_decoder() {
   [[ -x "$DECODER_BIN" ]] || die "DAR decoder not found or not executable: $DECODER_BIN"
 }
 
+prepare_splice_dars() {
+  SPLICE_DARS_DIR="$("$SCRIPT_DIR/fetch-splice-snapshot-dars.sh" --manifest "$PROJECT_ROOT/$SPLICE_MANIFEST_REL")"
+}
+
 prepare_tools() {
   local entry tool needed=""
   for entry in $SELECTED; do
@@ -340,7 +363,9 @@ prepare_tools() {
 }
 
 input_path() {
-  if [[ -e "$STAGE/out/$1" ]]; then
+  if [[ "$1" == /* ]]; then
+    printf '%s\n' "$1"
+  elif [[ -e "$STAGE/out/$1" ]]; then
     printf '%s\n' "$STAGE/out/$1"
   else
     printf '%s\n' "$PROJECT_ROOT/$1"
@@ -380,7 +405,7 @@ snapshot_dar_rel() {
   if is_listed "$family" "${CORPUS_SNAPSHOTS[@]}"; then
     printf 'conformance/%s/%s.dar\n' "$family" "$family"
   else
-    printf '%s/%s/%s.dar\n' "$SNAPSHOTS_REL" "$family" "$family"
+    printf '%s/%s.dar\n' "$SPLICE_DARS_DIR" "$family"
   fi
 }
 

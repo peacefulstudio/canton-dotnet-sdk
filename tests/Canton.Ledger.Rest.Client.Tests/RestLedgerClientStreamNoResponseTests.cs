@@ -315,6 +315,41 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
         error.SourceException.Should().BeSameAs(ConnectionRefused);
     }
 
+    private const string CheckpointThenMalformedCheckpointWindow =
+        """[{"update": {"OffsetCheckpoint": {"value": {"offset": "11"}}}}, {"update": {"OffsetCheckpoint": {"value": {"offset": "-1"}}}}]""";
+
+    [Fact]
+    public async Task SubscribeAsync_ends_with_an_UndecodableBody_StreamError_at_a_checkpoint_with_a_malformed_offset_without_opening_another_window()
+    {
+        var transport = new ScriptedTransport(ScriptedTransport.Ok(CheckpointThenMalformedCheckpointWindow), ConnectionRefused);
+        var client = ClientOver(transport);
+
+        var events = await DrainAsync(client.SubscribeAsync<TestTemplate>(
+            AliceSubmitter, LedgerOffset.At(5), toOffset: null, TestContext.Current.CancellationToken));
+
+        events.Should().HaveCount(2);
+        events[0].Should().BeOfType<ContractStreamEvent<TestTemplate>.Checkpoint>().Which.Offset.Value.Should().Be(11L);
+        events[1].Should().BeOfType<ContractStreamEvent<TestTemplate>.StreamError>()
+            .Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        transport.RequestsSeen.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Interface_SubscribeAsync_ends_with_an_UndecodableBody_StreamError_at_a_checkpoint_with_a_malformed_offset_without_opening_another_window()
+    {
+        var transport = new ScriptedTransport(ScriptedTransport.Ok(CheckpointThenMalformedCheckpointWindow), ConnectionRefused);
+        var client = ClientOver(transport);
+
+        var events = await DrainAsync(client.SubscribeAsync<IViewedInterfaceMarker, ViewedInterfaceView>(
+            ViewedInterface, Alice, LedgerOffset.At(5), toOffset: null, TestContext.Current.CancellationToken));
+
+        events.Should().HaveCount(2);
+        events[0].Should().BeOfType<InterfaceStreamEvent<IViewedInterfaceMarker, ViewedInterfaceView>.Checkpoint>();
+        events[1].Should().BeOfType<InterfaceStreamEvent<IViewedInterfaceMarker, ViewedInterfaceView>.StreamError>()
+            .Which.Status.Should().Be(new TransportStatus.UndecodableBody());
+        transport.RequestsSeen.Should().Be(1);
+    }
+
     [Fact]
     public async Task Interface_SubscribeAsync_delivers_the_first_window_then_ends_with_StreamError_NoResponse_when_the_next_never_reaches_the_participant()
     {

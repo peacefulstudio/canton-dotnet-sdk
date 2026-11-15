@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Daml.Ledger.Abstractions;
 using Daml.Runtime;
 using Daml.Runtime.Contracts;
@@ -36,6 +37,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentNullException.ThrowIfNull(submission);
 
         return TrySubmitAndWaitForTransactionCoreAsync(
@@ -61,6 +64,8 @@ internal sealed partial class RestLedgerClient
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         ArgumentOutOfRangeException.ThrowIfEqual(offset, LedgerOffset.Begin);
 
         var request = new Raw.GetUpdateByOffsetRequest

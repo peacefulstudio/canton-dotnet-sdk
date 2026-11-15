@@ -3,6 +3,7 @@
 
 using System.Runtime.CompilerServices;
 using Canton.Ledger.Abstractions;
+using Canton.Ledger.Kernel.Resilience;
 using Canton.Ledger.Kernel.Streams;
 using Canton.Ledger.Kernel.Telemetry;
 using Canton.Ledger.Kernel.Wire;
@@ -20,8 +21,17 @@ namespace Canton.Ledger.Grpc.Client;
 internal sealed partial class LedgerClient
 {
     /// <inheritdoc />
-    public async Task<CreatedContract<T>> GetContractAsync<T>(
+    public Task<CreatedContract<T>> GetContractAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : ITemplate, IDamlRecord<T>
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return GetContractAsyncCore<T>(contractId, submitter, timeout, cancellationToken);
+    }
+
+    private async Task<CreatedContract<T>> GetContractAsyncCore<T>(
+        ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout, CancellationToken cancellationToken)
         where T : ITemplate, IDamlRecord<T>
     {
         var request = new GetContractRequest { ContractId = contractId.Value };
@@ -57,6 +67,8 @@ internal sealed partial class LedgerClient
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new GetEventsByContractIdRequest
         {
             ContractId = contractId.Value,
@@ -87,6 +99,8 @@ internal sealed partial class LedgerClient
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new GetEventsByContractIdRequest
         {
             ContractId = contractId.Value,
@@ -112,8 +126,17 @@ internal sealed partial class LedgerClient
     }
 
     /// <inheritdoc />
-    public async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
+    public Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsync<T>(
         ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        where T : IDamlType
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return GetDisclosureAsyncCore<T>(contractId, submitter, timeout, cancellationToken);
+    }
+
+    private async Task<RuntimeCommands.DisclosedContract?> GetDisclosureAsyncCore<T>(
+        ContractId<T> contractId, RuntimeCommands.SubmitterInfo submitter, TimeSpan? timeout, CancellationToken cancellationToken)
         where T : IDamlType
     {
         var request = new GetEventsByContractIdRequest
@@ -156,6 +179,8 @@ internal sealed partial class LedgerClient
         bool includeDisclosure = false, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         where T : ITemplate, IDamlRecord<T>
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         // Workaround: Canton 3.5.18's StateService.GetActiveContractsPage reads an active_at_offset of
         // 0 as unset and answers at the ledger end, where its own documentation answers the empty
         // snapshot of ledger begin.
@@ -207,8 +232,11 @@ internal sealed partial class LedgerClient
     }
 
     /// <inheritdoc />
-    public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
-        _invoker.InvokeTracedAsync<LedgerClient, GetLatestPrunedOffsetsResponse, PrunedOffsets>(
+    public Task<PrunedOffsets> GetLatestPrunedOffsetsAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
+        return _invoker.InvokeTracedAsync<LedgerClient, GetLatestPrunedOffsetsResponse, PrunedOffsets>(
             LedgerCallKind.Read,
             LedgerCallInvoker.Source,
             StateService.Descriptor,
@@ -219,12 +247,15 @@ internal sealed partial class LedgerClient
                 LedgerWireConversions.ToLedgerOffset(response.AllDivulgedContractsPrunedUpToInclusive)),
             cancellationToken,
             timeout: timeout);
+    }
 
     /// <inheritdoc />
     public Task<UpdatesPage> GetUpdatesPageAsync(
         RuntimeCommands.SubmitterInfo submitter, LedgerOffset? beginExclusive = null, LedgerOffset? endInclusive = null, int? maxPageSize = null,
         bool descendingOrder = false, LedgerPageToken? pageToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
+        PerCallTimeout.ThrowIfInvalid(timeout);
+
         var request = new GetUpdatesPageRequest
         {
             UpdateFormat = GrpcSubscribeRequestBuilder.BuildTransactionUpdateFormat(submitter),
@@ -250,7 +281,7 @@ internal sealed partial class LedgerClient
     private static UpdatesPage ProjectUpdatesPage(GetUpdatesPageResponse response) =>
         new(
             response.Updates
-                .Select((update, index) => ProjectPointRead(update, $"page position {index}", GrpcTransactionResultProjector.Project))
+                .Select((update, index) => ProjectPointRead(update, $"page position {index}", GrpcTransactionResultProjector.ProjectAcsDelta))
                 .ToList(),
             LedgerWireConversions.ToLedgerOffset(response.LowestPageOffsetExclusive),
             LedgerWireConversions.ToLedgerOffset(response.HighestPageOffsetInclusive),

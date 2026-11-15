@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Daml.Runtime.Commands;
+using Daml.Runtime.Contracts;
 using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 
@@ -22,7 +23,7 @@ public static class ThrowingExercise
     /// For structured error handling, use
     /// <see cref="ILedgerWriter.TryExerciseAsync{TResult}(ExerciseCommand,SubmitterInfo,string?,CommandId?,TimeSpan?,CancellationToken)"/> instead.
     /// </summary>
-    public static async Task<TResult> ExerciseAsync<TResult>(
+    public static Task<TResult> ExerciseAsync<TResult>(
         this ILedgerWriter writer,
         ExerciseCommand command,
         SubmitterInfo submitter,
@@ -31,9 +32,21 @@ public static class ThrowingExercise
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(command);
         var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
-        var outcome = await writer.TryExerciseAsync<TResult>(command, submitter, workflowId, submittedCommandId, timeout, cancellationToken).ConfigureAwait(false);
+        var pending = writer.TryExerciseAsync<TResult>(command, submitter, workflowId, submittedCommandId, timeout, cancellationToken);
+
+        return UnwrapResultAsync(pending, submittedCommandId, cancellationToken);
+    }
+
+    private static async Task<TResult> UnwrapResultAsync<TResult>(
+        Task<ExerciseOutcome<TResult>> pending,
+        CommandId submittedCommandId,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await pending.ConfigureAwait(false);
         return outcome.GetResultOrThrow(submittedCommandId, cancellationToken);
     }
 
@@ -53,7 +66,7 @@ public static class ThrowingExercise
     /// For structured error handling, use
     /// <see cref="SingleCommandExtensions.TrySubmitSingleAsync(ILedgerWriter,ICommand,SubmitterInfo,string?,CommandId?,TimeSpan?,Func{CommandsSubmission,CommandsSubmission}?,CancellationToken)"/> instead.
     /// </summary>
-    public static async Task ExerciseAsync(
+    public static Task ExerciseAsync(
         this ILedgerWriter writer,
         ExerciseCommand command,
         SubmitterInfo submitter,
@@ -63,11 +76,20 @@ public static class ThrowingExercise
         Func<CommandsSubmission, CommandsSubmission>? configure = null,
         CancellationToken cancellationToken = default)
     {
+        PerCallTimeoutRule.ThrowIfInvalid(timeout);
         ArgumentNullException.ThrowIfNull(writer);
         var submittedCommandId = WriterExtensionHelpers.CommandIdOrMint(commandId);
-        var outcome = await writer
-            .TrySubmitSingleAsync(command, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken)
-            .ConfigureAwait(false);
+        var pending = writer.TrySubmitSingleAsync(command, submitter, workflowId, submittedCommandId, timeout, configure, cancellationToken);
+
+        return DiscardOutcomeAsync(pending, submittedCommandId, cancellationToken);
+    }
+
+    private static async Task DiscardOutcomeAsync(
+        Task<ExerciseOutcome<TransactionResult>> pending,
+        CommandId submittedCommandId,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await pending.ConfigureAwait(false);
         OutcomeUnwrapPolicy.Discard(outcome, DiscardIntent.RejectNone, "TrySubmitSingleAsync", submittedCommandId, cancellationToken);
     }
 

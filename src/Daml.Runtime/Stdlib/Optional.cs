@@ -162,6 +162,15 @@ public abstract record Optional<T>
     /// <param name="Value">The carried value.</param>
     public sealed record Some(T Value) : Optional<T>
     {
+        /// <summary>
+        /// Compares the carried values by content: a list or dictionary value is compared by its
+        /// entries, not by reference.
+        /// </summary>
+        public bool Equals(Some? other) =>
+            other is not null
+            && base.Equals(other)
+            && DamlEqualityComparer<T>.Default.Equals(Value, other.Value);
+
         /// <inheritdoc />
         public override int GetHashCode()
         {

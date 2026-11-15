@@ -24,7 +24,7 @@ Before `0.6.0` the `Canton.Ledger.*` packages had their own version line:
 | 0.2.x | 3.4.x |
 | 0.1.x | 3.4.x |
 
-The clients support Canton 3.7 only. Running them against a participant older than 3.7 is untested and unsupported. If you're still on 3.6, use 0.7.x. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.7.1`. Any `3.7.x` patch works for both clients, because the vendored surface is stable within the minor. The clients are exercised on synchronizers at protocol version 36 and 37.
+The clients support Canton 3.7 only. Running them against a participant older than 3.7 is untested and unsupported. If you're still on 3.6, use 0.7.x. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.7.2`. Any `3.7.x` patch works for both clients, because the vendored surface is stable within the minor. The clients are exercised on synchronizers at protocol version 36 and 37.
 
 A weekly cross-version matrix, described below, runs the live-ledger suites against every Canton 3.7 patch that's live on a Canton Network (MainNet, TestNet or DevNet), plus a non-gating LocalNet unreleased (`dev`) cell. It publishes a results table per run.
 
@@ -81,3 +81,23 @@ both formats is pinned offline instead: the `SynchronizerIdWireFormatTests` clas
 reads or writes a synchronizer id (stream projection, active-contract reads, reassignment
 source and target, command and disclosed-contract submission, vetted-package reads) and
 assert each id comes through verbatim.
+
+## Codegen: supported Daml-LF input
+
+The codegen reads DARs, not participants, so it has no Canton axis. What it supports is the
+set of Daml-LF versions a DAR's packages are compiled at. A version is supported when a
+conformance fixture exercised in CI proves it.
+
+| Daml-LF | Proven by |
+|---|---|
+| 2.1 | every fixture (the `daml-prim` / `daml-stdlib` packages are 2.1), and `richtypes` |
+| 2.2 | `nonserializable` |
+| 2.3 | `defaulttarget` (the compiler's default) and `contractkeys` |
+| 2.4 | `lf24` |
+| 2.5-rc1 | `lf25rc1` |
+
+The fixtures are built with Daml SDK 3.7. In `Standalone` mode, the default of
+`Daml.Codegen.CSharp.MSBuild`, a DAR compiled at any other Daml-LF version is rejected with an
+error that names the version. `dpm codegen-cs`, which `Dpm` mode runs, does not check the
+version: it decodes any version Daml's `daml-lf-archive` reader accepts, and code generated
+from a version outside this table is not covered by this claim.

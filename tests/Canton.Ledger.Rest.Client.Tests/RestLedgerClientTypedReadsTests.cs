@@ -298,7 +298,7 @@ public sealed class RestLedgerClientTypedReadsTests : IDisposable
         thrown.Status.Should().Be(new TransportStatus.UndecodableBody());
         thrown.CommitState.Should().Be(CommitState.NotCommitted);
         thrown.InnerException.Should().BeOfType<MalformedResponseException>()
-            .Which.InnerException.Should().BeOfType<ArgumentException>();
+            .Which.Detail.Should().Be("the event has no contract_id, though the Ledger API marks the field as required.");
     }
 
     private static async Task AssertUndecodable<T>(Func<Task<T>> act, string detail)

@@ -5,6 +5,8 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <Import Project="..\Daml.Codegen.CSharp.Tests\SpliceSnapshotDars.targets" />
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Codegen.DarParser.Cli\Daml.Codegen.DarParser.Cli.csproj" />
     <ProjectReference Include="..\..\src\Daml.Codegen.DarParser\Daml.Codegen.DarParser.csproj" />
@@ -15,10 +17,7 @@
     <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\*\intermediate.binpb" Link="Snapshots\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Daml.Codegen.CSharp.Tests\Snapshots\*\*.dar" Link="Snapshots\%(RecursiveDir)%(Filename)%(Extension)">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\conformance\richtypes\richtypes.dar;..\..\conformance\contractkeys\contractkeys.dar;..\..\conformance\defaulttarget\defaulttarget.dar;..\..\conformance\nonserializable\nonserializable.dar;..\..\conformance\crossmodulecollision\crossmodulecollision.dar" Link="Snapshots\%(Filename)\%(Filename)%(Extension)">
+    <Content Include="..\..\conformance\richtypes\richtypes.dar;..\..\conformance\contractkeys\contractkeys.dar;..\..\conformance\defaulttarget\defaulttarget.dar;..\..\conformance\nonserializable\nonserializable.dar;..\..\conformance\crossmodulecollision\crossmodulecollision.dar;..\..\conformance\lf24\lf24.dar;..\..\conformance\lf25rc1\lf25rc1.dar" Link="Snapshots\%(Filename)\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\Canton.Ledger.Client.Parity.SpliceBindings\Fixtures\splice-wallet-0.1.25.binpb" Link="Fixtures\splice-wallet-0.1.25.binpb">
@@ -34,5 +33,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <Target Name="IncludeSpliceSnapshotDars" AfterTargets="FetchSpliceSnapshotDars" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <SpliceSnapshotDar Include="$(SpliceSnapshotDarsDirectory)/*.dar" />
+      <Content Include="@(SpliceSnapshotDar)" Link="Snapshots\%(Filename)\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 
 </Project>

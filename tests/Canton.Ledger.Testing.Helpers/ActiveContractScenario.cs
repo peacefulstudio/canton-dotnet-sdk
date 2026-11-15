@@ -140,8 +140,17 @@ public sealed record ActiveContractScenario
     /// <summary>Renders the created event with no event offset, the way a participant that leaves it unset does.</summary>
     public bool OmitCreatedEventOffset { get; init; }
 
+    /// <summary>The reassignment counter the unassigned event of an <see cref="ActiveContractEntry.IncompleteUnassigned"/> entry carries on the wire.</summary>
+    public ulong UnassignedReassignmentCounterOnWire { get; init; } = (ulong)ReassignmentCounter;
+
     /// <summary>Renders the unassigned event of an <see cref="ActiveContractEntry.IncompleteUnassigned"/> entry with no event offset.</summary>
     public bool OmitUnassignedEventOffset { get; init; }
+
+    /// <summary>Renders the created event with a malformed (negative) event offset, which no participant sends.</summary>
+    public bool MalformedCreatedEventOffset { get; init; }
+
+    /// <summary>Renders the unassigned event of an <see cref="ActiveContractEntry.IncompleteUnassigned"/> entry with a malformed (negative) event offset.</summary>
+    public bool MalformedUnassignedEventOffset { get; init; }
 
     /// <summary>The offset of the snapshot the entry is projected under, or <c>null</c> to project it under no snapshot offset.</summary>
     public long? SnapshotOffset { get; init; }

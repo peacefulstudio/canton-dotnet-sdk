@@ -8,6 +8,7 @@ namespace Canton.Ledger.AspNetCore.Tests;
 internal sealed class CapturedLogs : ILoggerProvider
 {
     private readonly List<(LogLevel Level, string Message)> _entries = [];
+    private readonly List<Exception> _exceptions = [];
 
     internal IReadOnlyList<(LogLevel Level, string Message)> Entries
     {
@@ -15,6 +16,15 @@ internal sealed class CapturedLogs : ILoggerProvider
         {
             lock (_entries)
                 return [.. _entries];
+        }
+    }
+
+    internal IReadOnlyList<Exception> Exceptions
+    {
+        get
+        {
+            lock (_entries)
+                return [.. _exceptions];
         }
     }
 
@@ -39,7 +49,11 @@ internal sealed class CapturedLogs : ILoggerProvider
             Func<TState, Exception?, string> formatter)
         {
             lock (owner._entries)
+            {
                 owner._entries.Add((logLevel, formatter(state, exception)));
+                if (exception is not null)
+                    owner._exceptions.Add(exception);
+            }
         }
     }
 }

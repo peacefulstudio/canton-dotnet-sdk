@@ -35,7 +35,8 @@ internal static partial class GrpcProjectionCore
                 }
                 break;
             case GetUpdatesResponse.UpdateOneofCase.OffsetCheckpoint:
-                yield return TArms.Checkpoint(LedgerOffset.At(response.OffsetCheckpoint.Offset));
+                yield return ProjectCheckpoint<TArms, TEvent, TMarker, TPayload>(
+                    response.OffsetCheckpoint.Offset, logger);
                 break;
             case GetUpdatesResponse.UpdateOneofCase.Reassignment:
                 foreach (var projected in ProjectReassignmentEvents<TArms, TEvent, TMarker, TPayload>(
@@ -50,6 +51,18 @@ internal static partial class GrpcProjectionCore
         }
     }
 
+    private static TEvent ProjectCheckpoint<TArms, TEvent, TMarker, TPayload>(long wireCheckpointOffset, ILogger? logger)
+        where TArms : IStreamArms<TEvent, TMarker, TPayload>
+        where TMarker : IDamlType
+        where TPayload : IDamlRecord<TPayload>
+    {
+        var wireOffset = WireOffset.FromProto(wireCheckpointOffset);
+        return StreamOffsets.TryRequired(wireOffset, out var checkpointOffset)
+            ? TArms.Checkpoint(LedgerOffset.At(checkpointOffset))
+            : TArms.StreamError(StreamEventClassifier.UndecodableCheckpoint(
+                typeof(TMarker).Name, logger, wireOffset.ToMalformedResponse("checkpoint offset")));
+    }
+
     public static IEnumerable<TEvent> ProjectTransactionEvents<TArms, TEvent, TMarker, TPayload>(
         Transaction transaction,
         ILogger? logger)
@@ -57,6 +70,15 @@ internal static partial class GrpcProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload>
     {
+        var wireOffset = WireOffset.FromProto(transaction.Offset);
+        if (!StreamOffsets.TryRequired(wireOffset, out var transactionOffset))
+        {
+            yield return Refused<TArms, TEvent, TMarker, TPayload>(
+                StreamEventClassifier.UndecodableUpdateOffset(
+                    typeof(TMarker).Name, logger, wireOffset.ToMalformedResponse("transaction offset")));
+            yield break;
+        }
+
         var synchronizerId = StreamEventClassifier.Synchronizer(transaction.SynchronizerId);
         foreach (var evt in transaction.Events)
         {
@@ -64,11 +86,11 @@ internal static partial class GrpcProjectionCore
             try
             {
                 projected = ProjectTransactionEvent<TArms, TEvent, TMarker, TPayload>(
-                    evt, synchronizerId, transaction.Offset);
+                    evt, synchronizerId, transactionOffset);
             }
             catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
             {
-                projected = DecodeFailed<TArms, TEvent, TMarker, TPayload>(transaction.Offset, logger, decodeFailure);
+                projected = DecodeFailed<TArms, TEvent, TMarker, TPayload>(transactionOffset, logger, decodeFailure);
             }
             yield return projected;
         }
@@ -81,16 +103,25 @@ internal static partial class GrpcProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload>
     {
+        var wireOffset = WireOffset.FromProto(reassignment.Offset);
+        if (!StreamOffsets.TryRequired(wireOffset, out var reassignmentOffset))
+        {
+            yield return Refused<TArms, TEvent, TMarker, TPayload>(
+                StreamEventClassifier.UndecodableUpdateOffset(
+                    typeof(TMarker).Name, logger, wireOffset.ToMalformedResponse("reassignment offset")));
+            yield break;
+        }
+
         foreach (var evt in reassignment.Events)
         {
             TEvent projected;
             try
             {
-                projected = ProjectReassignmentEvent<TArms, TEvent, TMarker, TPayload>(evt, reassignment.Offset);
+                projected = ProjectReassignmentEvent<TArms, TEvent, TMarker, TPayload>(evt, reassignmentOffset);
             }
             catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
             {
-                projected = DecodeFailed<TArms, TEvent, TMarker, TPayload>(reassignment.Offset, logger, decodeFailure);
+                projected = DecodeFailed<TArms, TEvent, TMarker, TPayload>(reassignmentOffset, logger, decodeFailure);
             }
             yield return projected;
         }
@@ -106,18 +137,29 @@ internal static partial class GrpcProjectionCore
     {
         var snapshotResumeOffset = (snapshotOffset ?? LedgerOffset.Begin).Value;
         var (created, wireSynchronizerId) = ActiveEntryOf(response);
-        var entryResumeOffset = UnassignmentOffsetOr(response.IncompleteUnassigned, snapshotResumeOffset);
+        var unassignmentOffset = response.IncompleteUnassigned?.UnassignedEvent is { } entryUnassigned
+            ? WireOffset.FromProto(entryUnassigned.Offset)
+            : WireOffset.Absent;
+        var refusalOffset = StreamOffsets.AcsRefusalOffset(unassignmentOffset, snapshotOffset);
+
+        if (!StreamOffsets.TryAcsEntryResume(unassignmentOffset, snapshotResumeOffset, out var entryResumeOffset))
+        {
+            yield return DecodeFailed<TArms, TEvent, TMarker, TPayload>(
+                refusalOffset,
+                logger,
+                unassignmentOffset.ToMalformedResponse("unassigned event offset"));
+            yield break;
+        }
 
         var (createdEvent, admittedAsCreated) = ClassifyActiveCreated<TArms, TEvent, TMarker, TPayload>(
-            response.ContractEntryCase, created, wireSynchronizerId, entryResumeOffset, logger);
+            response.ContractEntryCase, created, wireSynchronizerId, entryResumeOffset, refusalOffset, logger);
         yield return createdEvent;
 
         if (!admittedAsCreated || response.IncompleteUnassigned?.UnassignedEvent is not { } unassigned)
         {
             yield break;
         }
-        yield return ClassifyActiveUnassigned<TArms, TEvent, TMarker, TPayload>(
-            unassigned, UnassignedOffsetOr(unassigned, snapshotResumeOffset), logger);
+        yield return ClassifyActiveUnassigned<TArms, TEvent, TMarker, TPayload>(unassigned, entryResumeOffset, logger);
     }
 
     public static (ProtoCreatedEvent? Created, string? WireSynchronizerId) ActiveEntryOf(
@@ -158,7 +200,7 @@ internal static partial class GrpcProjectionCore
         {
             RequireTemplateId(archivedEvent.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archivedEvent.ContractId);
             archived = TArms.Archived(
-                LedgerWireConversions.ToContractId<TMarker>(archivedEvent.ContractId),
+                WireValues.ContractId<TMarker>(archivedEvent.ContractId),
                 LedgerWireConversions.ToLedgerOffset(archivedEvent.Offset),
                 RequireSynchronizer(archivedEnvelope.SynchronizerId, archivedEvent.ContractId),
                 LedgerWireConversions.ToPartyList(archivedEvent.WitnessParties));
@@ -188,7 +230,7 @@ internal static partial class GrpcProjectionCore
         }
         return (
             TArms.Created(
-                LedgerWireConversions.ToContractId<TMarker>(created.ContractId),
+                WireValues.ContractId<TMarker>(created.ContractId),
                 payload,
                 ContractKeyOf(created),
                 LedgerWireConversions.ToLedgerOffset(offset),
@@ -257,7 +299,7 @@ internal static partial class GrpcProjectionCore
                 {
                     var created = evt.Created;
                     RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
-                    var eventOffset = EventOffsetOrUpdateOffset(created.Offset, transactionOffset);
+                    var eventOffset = StreamOffsets.EventOrUpdate(created.Offset, transactionOffset);
                     var decoded = new DecodedStreamEvent<SynchronizerId>(
                         eventOffset,
                         GrpcMarkerMatcher<TMarker>.MatchesProtoCreated(created),
@@ -273,7 +315,7 @@ internal static partial class GrpcProjectionCore
                 {
                     var archived = evt.Archived;
                     RequireTemplateId(archived.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ArchivedEvent), archived.ContractId);
-                    var eventOffset = EventOffsetOrUpdateOffset(archived.Offset, transactionOffset);
+                    var eventOffset = StreamOffsets.EventOrUpdate(archived.Offset, transactionOffset);
                     var decoded = new DecodedStreamEvent<SynchronizerId>(
                         eventOffset,
                         GrpcMarkerMatcher<TMarker>.MatchesProtoArchived(archived),
@@ -284,7 +326,7 @@ internal static partial class GrpcProjectionCore
                         return Refused<TArms, TEvent, TMarker, TPayload>(refusal);
                     }
                     return TArms.Archived(
-                        LedgerWireConversions.ToContractId<TMarker>(archived.ContractId),
+                        WireValues.ContractId<TMarker>(archived.ContractId),
                         LedgerWireConversions.ToLedgerOffset(eventOffset),
                         scope,
                         LedgerWireConversions.ToPartyList(archived.WitnessParties));
@@ -293,7 +335,7 @@ internal static partial class GrpcProjectionCore
                 {
                     var exercised = evt.Exercised;
                     RequireTemplateId(exercised.TemplateId, nameof(Com.Daml.Ledger.Api.V2.ExercisedEvent), exercised.ContractId);
-                    var eventOffset = EventOffsetOrUpdateOffset(exercised.Offset, transactionOffset);
+                    var eventOffset = StreamOffsets.EventOrUpdate(exercised.Offset, transactionOffset);
                     var decoded = new DecodedStreamEvent<SynchronizerId>(
                         eventOffset,
                         GrpcMarkerMatcher<TMarker>.MatchesProtoExercised(exercised),
@@ -303,12 +345,12 @@ internal static partial class GrpcProjectionCore
                     {
                         return Refused<TArms, TEvent, TMarker, TPayload>(refusal);
                     }
-                    var argument = DamlValueConverter.FromProtoValue(
+                    var argument = GrpcValueDecoder.ToDamlValue(
                         GrpcTransactionResultProjector.RequireChoiceArgument(exercised));
-                    var result = DamlValueConverter.FromProtoValue(
+                    var result = GrpcValueDecoder.ToDamlValue(
                         GrpcTransactionResultProjector.RequireExerciseResult(exercised));
                     return TArms.Exercised(
-                        LedgerWireConversions.ToContractId<TMarker>(exercised.ContractId),
+                        WireValues.ContractId<TMarker>(exercised.ContractId),
                         new ChoiceName(exercised.Choice),
                         argument,
                         result,
@@ -342,7 +384,7 @@ internal static partial class GrpcProjectionCore
                             LedgerWireConversions.ToLedgerOffset(reassignmentOffset), UnclassifiedKind.AssignedEvent, rawKind: null);
                     }
                     RequireTemplateId(created.TemplateId, nameof(Com.Daml.Ledger.Api.V2.CreatedEvent), created.ContractId);
-                    var eventOffset = EventOffsetOrUpdateOffset(created.Offset, reassignmentOffset);
+                    var eventOffset = StreamOffsets.EventOrUpdate(created.Offset, reassignmentOffset);
                     var decoded = new DecodedStreamEvent<ReassignmentScope>(
                         eventOffset,
                         GrpcMarkerMatcher<TMarker>.MatchesProtoCreated(created),
@@ -358,21 +400,21 @@ internal static partial class GrpcProjectionCore
                             LedgerWireConversions.ToLedgerOffset(eventOffset), UnclassifiedKind.InterfaceViewUnavailable, rawKind: null);
                     }
                     return TArms.Assigned(
-                        LedgerWireConversions.ToContractId<TMarker>(created.ContractId),
+                        WireValues.ContractId<TMarker>(created.ContractId),
                         payload,
                         ContractKeyOf(created),
                         LedgerWireConversions.ToLedgerOffset(eventOffset),
                         scope.Source,
                         scope.Target,
                         assigned.ReassignmentId,
-                        (long)assigned.ReassignmentCounter,
+                        WireValues.ReassignmentCounter(assigned.ReassignmentCounter),
                         LedgerWireConversions.ToPartyList(created.WitnessParties));
                 }
             case ReassignmentEvent.EventOneofCase.Unassigned:
                 {
                     var unassigned = evt.Unassigned;
                     RequireTemplateId(unassigned.TemplateId, nameof(Com.Daml.Ledger.Api.V2.UnassignedEvent), unassigned.ContractId);
-                    var eventOffset = EventOffsetOrUpdateOffset(unassigned.Offset, reassignmentOffset);
+                    var eventOffset = StreamOffsets.EventOrUpdate(unassigned.Offset, reassignmentOffset);
                     var decoded = new DecodedStreamEvent<ReassignmentScope>(
                         eventOffset,
                         GrpcMarkerMatcher<TMarker>.MatchesProtoUnassigned(unassigned),
@@ -395,6 +437,7 @@ internal static partial class GrpcProjectionCore
         ProtoCreatedEvent? created,
         string? wireSynchronizerId,
         long entryResumeOffset,
+        LedgerOffset? refusalOffset,
         ILogger? logger)
         where TArms : IStreamArms<TEvent, TMarker, TPayload>
         where TMarker : IDamlType
@@ -407,9 +450,16 @@ internal static partial class GrpcProjectionCore
                     LedgerWireConversions.ToLedgerOffset(entryResumeOffset), UnclassifiedKind.Unknown, entryCase.ToString()),
                 false);
         }
-        var resumeOffset = created.Offset > 0 ? created.Offset : entryResumeOffset;
+        var createdWireOffset = WireOffset.FromProto(created.Offset);
+        if (!StreamOffsets.TryAcsCreatedResume(createdWireOffset, entryResumeOffset, out var createdOffset))
+        {
+            return (
+                DecodeFailed<TArms, TEvent, TMarker, TPayload>(
+                    refusalOffset, logger, createdWireOffset.ToMalformedResponse("created event offset")),
+                false);
+        }
         var decoded = new DecodedStreamEvent<SynchronizerId>(
-            resumeOffset,
+            createdOffset,
             GrpcMarkerMatcher<TMarker>.MatchesProtoCreated(created),
             StreamEventClassifier.Synchronizer(wireSynchronizerId),
             UnclassifiedKind.CreatedEvent);
@@ -419,12 +469,11 @@ internal static partial class GrpcProjectionCore
         }
         try
         {
-            return CreatedFromProto<TArms, TEvent, TMarker, TPayload>(
-                created, scope, EventOffsetOrUpdateOffset(created.Offset, entryResumeOffset));
+            return CreatedFromProto<TArms, TEvent, TMarker, TPayload>(created, scope, createdOffset);
         }
         catch (Exception decodeFailure) when (StreamEventClassifier.IsNotCancellation(decodeFailure))
         {
-            return (DecodeFailed<TArms, TEvent, TMarker, TPayload>(resumeOffset, logger, decodeFailure), false);
+            return (DecodeFailed<TArms, TEvent, TMarker, TPayload>(createdOffset, logger, decodeFailure), false);
         }
     }
 
@@ -463,12 +512,12 @@ internal static partial class GrpcProjectionCore
         where TMarker : IDamlType
         where TPayload : IDamlRecord<TPayload> =>
         TArms.Unassigned(
-            LedgerWireConversions.ToContractId<TMarker>(unassigned.ContractId),
+            WireValues.ContractId<TMarker>(unassigned.ContractId),
             LedgerWireConversions.ToLedgerOffset(offset),
             scope.Source,
             scope.Target,
             unassigned.ReassignmentId,
-            (long)unassigned.ReassignmentCounter,
+            WireValues.ReassignmentCounter(unassigned.ReassignmentCounter),
             LedgerWireConversions.ToPartyList(unassigned.WitnessParties));
 
     private static TEvent Refused<TArms, TEvent, TMarker, TPayload>(StreamEntryRefusal refusal)
@@ -487,21 +536,20 @@ internal static partial class GrpcProjectionCore
         Refused<TArms, TEvent, TMarker, TPayload>(
             StreamEventClassifier.DecodeFailure(typeof(TMarker).Name, offset, logger, cause));
 
+    private static TEvent DecodeFailed<TArms, TEvent, TMarker, TPayload>(
+        LedgerOffset? offset,
+        ILogger? logger,
+        Exception cause)
+        where TArms : IStreamArms<TEvent, TMarker, TPayload>
+        where TMarker : IDamlType
+        where TPayload : IDamlRecord<TPayload> =>
+        Refused<TArms, TEvent, TMarker, TPayload>(
+            StreamEventClassifier.DecodeFailure(typeof(TMarker).Name, offset, logger, cause));
+
     private static Record RequireCreateArguments(ProtoCreatedEvent created) =>
         created.CreateArguments
         ?? throw MalformedResponse.MissingRequiredField(
             $"CreatedEvent for contract '{created.ContractId}' has no create_arguments");
-
-    private static long EventOffsetOrUpdateOffset(long eventOffset, long updateOffset) =>
-        eventOffset == 0 ? updateOffset : eventOffset;
-
-    private static long UnassignmentOffsetOr(IncompleteUnassigned? entry, long snapshotResumeOffset) =>
-        entry?.UnassignedEvent is { } unassigned
-            ? UnassignedOffsetOr(unassigned, snapshotResumeOffset)
-            : snapshotResumeOffset;
-
-    private static long UnassignedOffsetOr(UnassignedEvent unassigned, long snapshotResumeOffset) =>
-        unassigned.Offset > 0 ? unassigned.Offset : snapshotResumeOffset;
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Subscribe stream for {TemplateType} skipped variant {Variant}")]
     private static partial void LogStreamVariantSkipped(ILogger logger, string templateType, GetUpdatesResponse.UpdateOneofCase variant);
