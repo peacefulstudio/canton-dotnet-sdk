@@ -186,7 +186,7 @@ jobs:
           : > "${RUNNER_TEMP}/manifest-entries.jsonl"
 
           mapfile -t dars < <(find conformance -name '*.dar' | LC_ALL=C sort)
-          expected_dars=7
+          expected_dars=9
           if [ "${#dars[@]}" -ne "${expected_dars}" ]; then
             echo "::error::expected ${expected_dars} corpus DAR(s) under conformance/, found ${#dars[@]} — a new/removed corpus DAR needs this count updated deliberately, not silently."
             printf '  found: %s\n' "${dars[@]:-<none>}"
@@ -400,7 +400,7 @@ jobs:
       - name: Smoke test bundle
         shell: bash
         env:
-          FIXTURE_DAR: tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-api-token-holding-v1/splice-api-token-holding-v1.dar
+          FIXTURE_DAR: conformance/richtypes/richtypes.dar
         run: |
           set -euo pipefail
           OUT="${RUNNER_TEMP}/smoke-out"
