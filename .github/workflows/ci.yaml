@@ -84,6 +84,189 @@ jobs:
       - name: Assert richtypes.dar full-decode matches the determinism oracle
         run: .github/scripts/check-intermediate-oracle.sh jvm-helper/target/scala-2.13/daml-dar-to-proto.jar
 
+  net10-runtime-tests:
+    name: Library tests on the .NET 10 runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SDK_TEST_ALL_TARGET_FRAMEWORKS: "true"
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK 11 and the .NET 10 runtime
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Require SDK 11 and a .NET 10 runtime
+        run: |
+          set -euo pipefail
+          case "$(dotnet --version)" in
+            11.*) ;;
+            *) echo "::error::expected SDK 11, got $(dotnet --version)"; exit 1 ;;
+          esac
+          dotnet --list-runtimes | grep -E '^Microsoft\.NETCore\.App 10\.'
+
+      - name: Build both targets
+        run: dotnet build --configuration Release
+
+      - name: Test the net10.0 assemblies without rolling forward onto a newer runtime
+        env:
+          DOTNET_ROLL_FORWARD: LatestPatch
+        run: |
+          set -euo pipefail
+          ran=0
+          for project in tests/*/*.Tests.csproj; do
+            [ -d "$(dirname "${project}")/bin/Release/net10.0" ] || continue
+            dotnet test --project "${project}" --configuration Release --no-build --framework net10.0 \
+              --minimum-expected-tests 1 --filter 'FullyQualifiedName!~IntermediateDarOracleCheckTests'
+            ran=$((ran + 1))
+          done
+          [ "${ran}" -gt 0 ] || { echo "::error::no test project was built for net10.0"; exit 1; }
+
+  net10-consumer-pack:
+    name: Pack the libraries with SDK 11
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK 11
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '11.0.x'
+
+      - name: Pack every published package into a local feed
+        run: |
+          set -euo pipefail
+          feed="${RUNNER_TEMP}/net10-consumer-feed"
+          mkdir -p "${feed}"
+          while IFS= read -r package_id; do
+            [ -n "${package_id}" ] || continue
+            dotnet pack "src/${package_id}/${package_id}.csproj" --configuration Release \
+              --artifacts-path "${RUNNER_TEMP}/net10-consumer-artifacts" --output "${feed}"
+          done < scripts/published-package-ids.txt
+
+      - name: Upload the feed
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: net10-consumer-feed
+          path: ${{ runner.temp }}/net10-consumer-feed
+          if-no-files-found: error
+          retention-days: 1
+
+  net10-consumer-build:
+    name: Consumer build with only the .NET 10 SDK
+    needs: net10-consumer-pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK 10
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download the feed
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: net10-consumer-feed
+          path: ${{ runner.temp }}/net10-consumer-feed
+
+      - name: Restore the packed packages into a net10.0 consumer, generate bindings from a DAR, build and run
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/net10-consumer"
+          feed="${RUNNER_TEMP}/net10-consumer-feed"
+          rm -rf "${work}"
+          mkdir -p "${work}"
+          cp conformance/richtypes/richtypes.dar "${work}/richtypes.dar"
+
+          cat > "${work}/global.json" <<'EOF'
+          { "sdk": { "version": "10.0.100", "rollForward": "latestFeature" } }
+          EOF
+          cat > "${work}/nuget.config" <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="feed" value="${feed}" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="feed">
+                <package pattern="Daml.*" />
+                <package pattern="Canton.*" />
+              </packageSource>
+              <packageSource key="nuget.org">
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+
+          cd "${work}"
+          case "$(dotnet --version)" in
+            10.*) ;;
+            *) echo "::error::expected SDK 10, got $(dotnet --version)"; exit 1 ;;
+          esac
+          if dotnet --list-sdks | grep -q '^11\.'; then
+            echo "::error::an SDK 11 is installed on this runner"
+            exit 1
+          fi
+
+          umbrella="$(find "${feed}" -maxdepth 1 -name 'Daml.Codegen.CSharp.MSBuild.*.nupkg' -print -quit)"
+          version="$(basename "${umbrella}" .nupkg)"
+          version="${version#Daml.Codegen.CSharp.MSBuild.}"
+
+          cat > Consumer.csproj <<EOF
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <DamlCodegenMode>Standalone</DamlCodegenMode>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Daml.Codegen.CSharp.MSBuild" Version="${version}" PrivateAssets="all" />
+              <PackageReference Include="Daml.Runtime" Version="${version}" />
+              <PackageReference Include="Daml.Ledger.Abstractions" Version="${version}" />
+              <DamlArchive Include="richtypes.dar" />
+            </ItemGroup>
+          </Project>
+          EOF
+          cat > Program.cs <<'EOF'
+          using System.Reflection;
+          using System.Runtime.InteropServices;
+
+          var generated = typeof(Program).Assembly.GetTypes().Count(type => type.Namespace?.StartsWith("RichTypes", StringComparison.Ordinal) == true);
+          var runtime = RuntimeInformation.FrameworkDescription;
+          Console.WriteLine($"{runtime} generated={generated}");
+          return generated > 0 && runtime.StartsWith(".NET 10.", StringComparison.Ordinal) ? 0 : 1;
+          EOF
+
+          dotnet restore
+          dotnet build --no-restore
+          dotnet run --no-build
+
   badges:
     needs: [csharp-ci, jvm-helper-ci, assemble-badge-data]
     if: ${{ github.ref == 'refs/heads/main' && !cancelled() }}
