@@ -172,6 +172,8 @@ jobs:
     needs: net10-consumer-pack
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet-sdk10
     permissions:
       contents: read
     steps:
