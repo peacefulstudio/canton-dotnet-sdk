@@ -26,7 +26,8 @@ internal static class ConsumerProjectWriter
         bool includeDependencies = false,
         string? itemNamespace = null,
         bool? itemIncludeDependencies = null,
-        IReadOnlyList<DamlProjectItem>? damlProjects = null)
+        IReadOnlyList<DamlProjectItem>? damlProjects = null,
+        string? targetFramework = null)
     {
         var itemMetadata = ItemMetadataAttributes(itemNamespace, itemIncludeDependencies);
         var archiveItems = string.Join('\n', (darPaths ?? []).Select(dar =>
@@ -56,7 +57,7 @@ internal static class ConsumerProjectWriter
             <Project Sdk="Microsoft.NET.Sdk">
               <Import Project="{EscapeXml(propsFile)}" />
               <PropertyGroup>
-                <TargetFramework>net10.0</TargetFramework>
+                <TargetFramework>{targetFramework ?? TestTargetFramework.Moniker}</TargetFramework>
                 <OutputType>Library</OutputType>
                 <Nullable>enable</Nullable>
             {properties}

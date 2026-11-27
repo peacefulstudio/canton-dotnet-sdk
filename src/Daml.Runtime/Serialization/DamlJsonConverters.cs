@@ -218,23 +218,11 @@ public static class DamlJsonConverters
         foreach (var property in typeInfo.Properties)
         {
             if (property.AssociatedParameter is { HasDefaultValue: false, IsNullable: false }
-                && AbsenceBindsAnUnstatedValue(property.PropertyType))
+                && AbsenceBindsAnUnstatedValueAttribute.IsDefinedOn(property.PropertyType))
             {
                 property.IsRequired = true;
                 property.ShouldSerialize = static (_, _) => true;
             }
         }
     }
-
-    private static bool AbsenceBindsAnUnstatedValue(Type type) =>
-        EquatableArrayJsonConverterFactory.IsClosedEquatableArray(type)
-        || type == typeof(LedgerOffset)
-        || type == typeof(TransportStatus)
-        || IsClosedGeneric(type, typeof(Set<>))
-        || IsClosedGeneric(type, typeof(Map<,>))
-        || IsClosedGeneric(type, typeof(NonEmpty<>));
-
-    private static bool IsClosedGeneric(Type type, Type definition) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == definition;
 }

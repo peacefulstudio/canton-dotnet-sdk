@@ -24,7 +24,7 @@ Before `0.6.0` the `Canton.Ledger.*` packages had their own version line:
 | 0.2.x | 3.4.x |
 | 0.1.x | 3.4.x |
 
-The clients support Canton 3.7 only. Running them against a participant older than 3.7 is untested and unsupported. If you're still on 3.6, use 0.7.x. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.7.2`. Any `3.7.x` patch works for both clients, because the vendored surface is stable within the minor. The clients are exercised on synchronizers at protocol version 36 and 37.
+The clients support Canton 3.7 only. Running them against a participant older than 3.7 is untested and unsupported. If you're still on 3.6, use 0.7.x. This release's vendored protos and JSON Ledger API spec are pinned at Canton `3.7.4`. Any `3.7.x` patch works for both clients, because the vendored surface is stable within the minor. The clients are exercised on synchronizers at protocol version 36 and 37.
 
 A weekly cross-version matrix, described below, runs the live-ledger suites against every Canton 3.7 patch that's live on a Canton Network (MainNet, TestNet or DevNet), plus a non-gating LocalNet unreleased (`dev`) cell. It publishes a results table per run.
 

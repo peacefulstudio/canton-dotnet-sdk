@@ -23,14 +23,18 @@ public class DamlProjectTests : DamlProjectStepContractTests
         ConsumerProjectWriter.Write(projectDirectory, _fx.PropsFile, _fx.TargetsFile, damlProjects: damlProjects, damlCodegenMode: "Dpm",
             damlCodegenBundleDigest: "sha256:9d056e899e4d1ff071d2b438785650a1e81bdd6c26f613e42d3afd1081211432");
 
-    [Fact]
-    public void DamlProject_full_dotnet_build_compiles_the_generated_bindings_into_the_consumer_assembly()
+    [Theory]
+    [InlineData("net10.0")]
+    [InlineData("net11.0")]
+    public void DamlProject_full_dotnet_build_compiles_the_generated_bindings_into_the_consumer_assembly(string consumerTargetFramework)
     {
         var damlDirectory = Path.Combine(ConsumerDirectory, "daml");
         Directory.CreateDirectory(damlDirectory);
         File.WriteAllText(Path.Combine(damlDirectory, "daml.yaml"), "name: fake\n");
         File.WriteAllText(Path.Combine(damlDirectory, "Main.daml"), "module Main where\n");
-        WriteConsumerProject(ConsumerDirectory, [new DamlProjectItem("daml")]);
+        ConsumerProjectWriter.Write(ConsumerDirectory, _fx.PropsFile, _fx.TargetsFile, damlProjects: [new DamlProjectItem("daml")], damlCodegenMode: "Dpm",
+            damlCodegenBundleDigest: "sha256:9d056e899e4d1ff071d2b438785650a1e81bdd6c26f613e42d3afd1081211432",
+            targetFramework: consumerTargetFramework);
         var toolsDirectory = Path.Combine(RootDirectory, "full-build-tools");
         _fx.SeedFakeToolsDir(toolsDirectory);
         var environment = new Dictionary<string, string?>
@@ -42,7 +46,7 @@ public class DamlProjectTests : DamlProjectStepContractTests
         var (exit, stdout, stderr) = MsBuildProcessRunner.RunDotnetBuild(ConsumerDirectory, "--verbosity minimal", environment);
 
         exit.Should().Be(0, $"a plain dotnet build must build the project, generate and compile.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}");
-        var assembly = Path.Combine(ConsumerDirectory, "bin", "Debug", "net10.0", "TestConsumer.dll");
+        var assembly = Path.Combine(ConsumerDirectory, "bin", "Debug", consumerTargetFramework, "TestConsumer.dll");
         File.ReadAllText(assembly, System.Text.Encoding.Latin1).Should().Contain("FakeDpmGenerated",
             "the marker class the fake codegen-cs emits must be compiled into the consumer assembly");
     }

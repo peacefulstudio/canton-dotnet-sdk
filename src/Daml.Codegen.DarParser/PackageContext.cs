@@ -224,7 +224,8 @@ internal sealed class PackageContext
     /// different matter — proto3 deserializes an unset message field to null, and
     /// a required field that is not there describes no reference at all — so those
     /// two fail with <see cref="InvalidDataException"/> rather than being read as
-    /// unresolvable, matching every other read in this class.
+    /// unresolvable, matching every other read in this class. A value definition in the
+    /// referenced module that carries no name-with-type fails the same way.
     /// </summary>
     public Com.DigitalAsset.Daml.Lf.Archive.DamlLf2.Expr? GetValueExpr(ValueId valueId)
     {
@@ -241,7 +242,7 @@ internal sealed class PackageContext
 
             foreach (var value in module.Values)
             {
-                if (value.NameWithType.NameInternedDname == valueId.NameInternedDname)
+                if (ValueNameInternedDname(value) == valueId.NameInternedDname)
                     return value.Expr;
             }
             return null;
@@ -504,6 +505,12 @@ internal sealed class PackageContext
 
     private static InvalidDataException InternedTypeIndexOutOfRange(int index, int available) =>
         new($"Daml-LF interned-type index {index} is out of range of the interned-type pool of size {available}. The archive is malformed.");
+
+    internal static int ValueNameInternedDname(DefValue value) =>
+        (value.NameWithType ?? throw ValueNameWithTypeAbsent()).NameInternedDname;
+
+    private static InvalidDataException ValueNameWithTypeAbsent() =>
+        new("Daml-LF value definition carries no name-with-type. The archive is malformed.");
 
     private static InvalidDataException ModuleReferenceAbsent(string referenceKind) =>
         new($"Daml-LF {referenceKind} reference carries no module reference. The archive is malformed.");

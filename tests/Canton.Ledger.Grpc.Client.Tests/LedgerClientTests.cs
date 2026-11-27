@@ -699,18 +699,18 @@ public sealed class LedgerClientTests : IDisposable
             "a caller-cancelled exercise must surface as OperationCanceledException, not a mapped InfraError");
     }
 
-    [Fact]
-    public void LedgerClient_constructor_does_not_throw_when_ITokenProvider_None()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LedgerClient_constructor_accepts_the_none_and_a_real_token_provider(bool realProvider)
     {
         using var channels = new LedgerChannelProvider(Options.Create(_options));
-        using var _ = new LedgerClient(Options.Create(_options), channels, ITokenProvider.None);
-    }
+        var provider = realProvider ? _tokenProvider : ITokenProvider.None;
 
-    [Fact]
-    public void LedgerClient_constructor_does_not_throw_when_real_provider_registered()
-    {
-        using var channels = new LedgerChannelProvider(Options.Create(_options));
-        using var _ = new LedgerClient(Options.Create(_options), channels, _tokenProvider);
+        var construct = () => new LedgerClient(Options.Create(_options), channels, provider);
+
+        using var client = construct.Should().NotThrow().Subject;
+        client.Should().BeAssignableTo<ICantonLedgerClient>();
     }
 
     [Fact]

@@ -186,16 +186,26 @@ public sealed class RestMalformedResponseSweepTests : MalformedResponseSweepTest
         var offset = field == MalformedField.OffsetNonNumeric ? "not-an-offset"
             : field == MalformedField.OffsetNegative ? "-1"
             : "42";
-        var events = field == MalformedField.ActingPartyEmpty
-            ? """
+        var events = field switch
+        {
+            MalformedField.ActingPartyEmpty => """
               [{"ExercisedEvent": {
                 "nodeId": 0, "contractId": "00aa",
                 "packageName": "pkg-name",
                 "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"},
                 "choice": "Accept", "choiceArgument": {}, "exerciseResult": {},
                 "actingParties": [""], "lastDescendantNodeId": 0}}]
-              """
-            : "[]";
+              """,
+            MalformedField.ChoiceBlank => """
+              [{"ExercisedEvent": {
+                "nodeId": 0, "contractId": "00aa",
+                "packageName": "pkg-name",
+                "templateId": {"packageId": "pkg", "moduleName": "Module", "entityName": "SweepTemplate"},
+                "choice": " ", "choiceArgument": {}, "exerciseResult": {},
+                "actingParties": ["party::alice"], "lastDescendantNodeId": 0}}]
+              """,
+            _ => "[]",
+        };
 
         return $$"""
             {"updateId": "u-1", "commandId": "{{commandId}}", "offset": "{{offset}}", "events": {{events}}}

@@ -5,7 +5,7 @@ High-level gRPC client for the Canton Ledger API with integration to `Daml.Runti
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Grpc.Client --version 0.8.1
+dotnet add package Canton.Ledger.Grpc.Client --version 0.8.2
 ```
 
 ## Key Types

@@ -7,7 +7,7 @@ It works with both MVC controllers and minimal APIs. It does not register the le
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.AspNetCore --version 0.8.1
+dotnet add package Canton.Ledger.AspNetCore --version 0.8.2
 ```
 
 ## Key Types
@@ -58,7 +58,7 @@ The request logging then records the mapped `409` as a response, not an exceptio
 | Status | When | Extensions |
 |--------|------|------------|
 | `202` | The command committed but the handler could not finish: the result did not decode, or the outcome held no or several results. | `commandId`, `updateId` |
-| `400` | The ledger rejected the command as invalid (`InvalidIndependentOfSystemState`, `InvalidGivenCurrentSystemStateOther`, `SecurityAlert`), or a redacted refusal that carries only gRPC `InvalidArgument` or HTTP `400`. The detail is fixed per category and names the Daml error id, such as `The ledger rejected the command as invalid (DAML_AUTHORIZATION_ERROR).` | |
+| `400` | The ledger rejected the command as invalid (`InvalidIndependentOfSystemState`, `InvalidGivenCurrentSystemStateOther`, `SecurityAlert`), or a redacted refusal that carries only gRPC `InvalidArgument` or HTTP `400`. The detail is fixed per category and names the Daml error id, such as `The ledger rejected the command as invalid (DAML_AUTHORIZATION_ERROR).`, when the id has the shape of an error code (`^[A-Z][A-Z0-9_]{0,127}$`); any other id is left out. | |
 | `403` | `InsufficientPermission`, or a redacted refusal that carries only gRPC `PermissionDenied` or HTTP `403`. | |
 | `404` | A missing resource other than a contract (`ResourceMissing`). | |
 | `409` | Contention, an existing resource, or a contract that is gone (`CONTRACT_NOT_FOUND`, `LOCAL_VERDICT_INACTIVE_CONTRACTS`). | |
@@ -66,4 +66,4 @@ The request logging then records the mapped `409` as a response, not an exceptio
 
 A `202` problem means the command is on the ledger. Re-read the resource and never resubmit.
 
-Problem details never carry Daml error metadata or the participant's error message, so a response does not leak party or contract ids. Each failure is logged with the operation name (`LedgerOperation.Label`, such as `ConnectionRequest.Accept`), the commit state and the error id, at warning below 500 and at error from 500. The logged exception keeps only its type and stack trace unless `IncludeLedgerErrorMessages` is on. A client that sends `Accept: text/html` still receives `application/problem+json`.
+Problem details never carry Daml error metadata or the participant's error message, so a response does not leak party or contract ids. Each failure is logged with the operation name (`LedgerOperation.Label`, such as `ConnectionRequest.Accept`), the commit state and the error id (`unrecognised` when the participant's id is not shaped like an error code, which also keeps it off the `daml.error_id` span tag), at warning below 500 and at error from 500. The logged exception keeps only its type and stack trace unless `IncludeLedgerErrorMessages` is on. A client that sends `Accept: text/html` still receives `application/problem+json`.

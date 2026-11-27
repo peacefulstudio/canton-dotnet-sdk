@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Abstractions --version 0.8.1
+dotnet add package Canton.Ledger.Abstractions --version 0.8.2
 ```
 
 ## Key Types

@@ -826,7 +826,7 @@ public sealed class RestLedgerClientTests : IDisposable
     }
 
     [Fact]
-    public async Task TryExerciseAsync_returns_CommittedUndecodable_with_the_committed_prefix_when_the_exercised_event_names_a_blank_choice()
+    public async Task TryExerciseAsync_returns_CommittedUndecodable_naming_the_missing_choice_when_the_exercised_event_names_a_blank_choice()
     {
         var blankChoiceResponse = MissingTemplateExercisedTransactionResponse.Replace("\"choice\": \"GetOwner\"", "\"choice\": \" \"");
         var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, blankChoiceResponse);
@@ -840,8 +840,8 @@ public sealed class RestLedgerClientTests : IDisposable
         var error = outcome.Should().BeOfType<ExerciseOutcome<Party>.CommittedUndecodable>().Subject;
         error.UpdateId.Should().Be("upd-1");
         error.Message.Should().Be(
-            "The command committed, but its transaction could not be decoded: No generated type is loaded for choice ' ' of 'missing-pkg:Missing.Module:Missing'; load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API. A host without a deps.json registers each generated assembly itself, once, with RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).");
-        error.SourceException.Should().BeOfType<TemplateTypeRequiredException>();
+            "Server returned a malformed transaction: Malformed response from ledger: ExercisedEvent for contract '00holding' has no choice, though the Ledger API marks the field as required.");
+        error.SourceException.Should().BeOfType<MalformedResponseException>();
     }
 
     [Fact]

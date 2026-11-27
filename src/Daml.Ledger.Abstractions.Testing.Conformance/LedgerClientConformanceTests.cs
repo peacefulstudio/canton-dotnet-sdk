@@ -605,6 +605,14 @@ public abstract class LedgerClientConformanceTests<TProbe>
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
+    private static async Task<bool> CompletesWithinAsync(Task task, TimeSpan window)
+    {
+        using var timerCancellation = new CancellationTokenSource();
+        var first = await Task.WhenAny(task, Task.Delay(window, timerCancellation.Token));
+        await timerCancellation.CancelAsync();
+        return first == task;
+    }
+
     private async Task CancelOnceIdle<TItem>(
         IAsyncEnumerable<TItem> stream, CancellationTokenSource cancellation, string subscriptionName)
     {
@@ -615,7 +623,7 @@ public abstract class LedgerClientConformanceTests<TProbe>
             var read = enumerator.MoveNextAsync().AsTask();
 
             if (!cancellation.IsCancellationRequested
-                && await Task.WhenAny(read, Task.Delay(LiveSubscriptionIdleWindow)) != read)
+                && !await CompletesWithinAsync(read, LiveSubscriptionIdleWindow))
             {
                 await cancellation.CancelAsync();
             }

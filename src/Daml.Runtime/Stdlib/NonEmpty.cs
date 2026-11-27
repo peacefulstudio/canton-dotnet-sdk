@@ -37,6 +37,14 @@ namespace Daml.Runtime.Stdlib;
 /// <see cref="Serialization.DamlJsonConverters.AddDamlConverters"/>, mirroring
 /// <see cref="Set{T}"/>'s <see cref="SetJsonConverter{T}"/>.
 /// </para>
+/// <para>
+/// A <see cref="JsonSerializerOptions.ReferenceHandler"/> is refused with a <see cref="JsonException"/>
+/// naming the type, on read and on write: the converter reaches its head and tail through nested
+/// <see cref="JsonSerializer"/> calls that each start their own reference resolver, so
+/// <see cref="ReferenceHandler.Preserve"/> would emit <c>$id</c> values colliding with the outer
+/// operation's and lose aliasing on read, and <see cref="ReferenceHandler.IgnoreCycles"/> would not see a
+/// cycle through this type.
+/// </para>
 /// </remarks>
 /// <typeparam name="T">Element type.</typeparam>
 [SuppressMessage(
@@ -44,6 +52,7 @@ namespace Daml.Runtime.Stdlib;
     "CA1000:Do not declare static members on generic types",
     Justification = "The static factory is the wire-decoding entry point for this Daml stdlib shape; generated code calls it as NonEmpty<...>.FromRecord, mirroring the Daml constructor it decodes.")]
 [JsonConverter(typeof(NonEmptyJsonConverterFactory))]
+[AbsenceBindsAnUnstatedValue]
 public sealed record NonEmpty<T>(T Hd, IReadOnlyList<T> Tl)
     where T : notnull
 {
@@ -169,8 +178,7 @@ internal sealed class NonEmptyJsonConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert) => IsClosedNonEmpty(typeToConvert);
 
     private static bool IsClosedNonEmpty(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(NonEmpty<>);
+        ClosedGenericType.IsOf(type, typeof(NonEmpty<>));
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
         (JsonConverter)Activator.CreateInstance(
@@ -193,6 +201,8 @@ internal sealed class NonEmptyJsonConverter<T> : JsonConverter<NonEmpty<T>>
 
     public override NonEmpty<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+        DiscriminatedUnionJson.EnsureNoReferenceHandler(options, TypeName);
+
         if (reader.TokenType != JsonTokenType.StartObject)
         {
             throw new JsonException($"Expected object token for {TypeName}, got {reader.TokenType}.");
@@ -264,6 +274,8 @@ internal sealed class NonEmptyJsonConverter<T> : JsonConverter<NonEmpty<T>>
 
     public override void Write(Utf8JsonWriter writer, NonEmpty<T> value, JsonSerializerOptions options)
     {
+        DiscriminatedUnionJson.EnsureNoReferenceHandler(options, TypeName);
+
         writer.WriteStartObject();
         if (!IsOmittedFromWrite(value.Hd, options))
         {

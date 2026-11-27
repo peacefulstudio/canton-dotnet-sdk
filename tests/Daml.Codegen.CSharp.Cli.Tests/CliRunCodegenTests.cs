@@ -17,6 +17,7 @@ public class CliRunCodegenTests : IDisposable
     private const string FixtureSnapshotName = "splice-api-token-holding-v1";
     private const string InterfaceFileName = "IHolding.cs";
     private const string RecordFileName = "InstrumentId.cs";
+    private const string ViewRecordFileName = "HoldingView.cs";
     private readonly string _workspace = Path.Combine(Path.GetTempPath(), $"cli-run-{Guid.NewGuid():N}");
 
     public CliRunCodegenTests()
@@ -51,7 +52,7 @@ public class CliRunCodegenTests : IDisposable
     }
 
     [Fact]
-    public async Task CliRunCodegen_root_filter_keeps_only_the_matching_interface_bindings()
+    public async Task CliRunCodegen_root_filter_still_emits_the_interface_whose_view_record_is_emitted()
     {
         var unfiltered = Path.Combine(_workspace, "unfiltered");
         var matching = Path.Combine(_workspace, "matching");
@@ -63,9 +64,7 @@ public class CliRunCodegenTests : IDisposable
 
         EmittedFileNames(unfiltered).Should().Contain(InterfaceFileName);
         EmittedFileNames(matching).Should().Contain(InterfaceFileName);
-        EmittedFileNames(nonMatching).Should().NotContain(InterfaceFileName,
-            "an interface whose Module:Name the --root pattern does not match is not emitted");
-        EmittedFileNames(nonMatching).Should().Contain(RecordFileName,
-            "the root filter selects templates and interfaces; plain records are still emitted");
+        EmittedFileNames(nonMatching).Should().Contain([RecordFileName, ViewRecordFileName, InterfaceFileName],
+            "records are always emitted, and the view record implements the interface marker, so the root filter's closure adds the interface for the output to compile");
     }
 }

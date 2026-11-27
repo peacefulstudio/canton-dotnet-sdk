@@ -4,7 +4,9 @@
     <OutputType>Library</OutputType>
     <UseMicrosoftTestingPlatformRunner>false</UseMicrosoftTestingPlatformRunner>
     <IsPackable>false</IsPackable>
-    <NoWarn>$(NoWarn);CA1707;CA2255</NoWarn>
+    <!-- NuGet raises NU1510 when every target prunes the reference; with the single net11.0 target of
+         GitHub Actions builds the net11.0 pruning covers it, while net10.0 still needs the package. -->
+    <NoWarn>$(NoWarn);CA1707;CA2255;NU1510</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,11 +14,13 @@
     <InternalsVisibleTo Include="Canton.Ledger.Grpc.Client.Integration.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Tests" />
     <InternalsVisibleTo Include="Canton.Ledger.Rest.Client.Integration.Tests" />
+    <InternalsVisibleTo Include="Canton.Ledger.Client.Parity.Tests" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Remove="xunit.v3.mtp-v2" />
     <PackageReference Remove="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Remove="Microsoft.Testing.Extensions.HangDump" />
   </ItemGroup>
 
   <ItemGroup>

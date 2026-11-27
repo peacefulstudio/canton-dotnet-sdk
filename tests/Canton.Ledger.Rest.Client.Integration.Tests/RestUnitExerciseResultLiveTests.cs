@@ -11,6 +11,7 @@ using Daml.Runtime.Data;
 using Daml.Runtime.Outcomes;
 using Peaceful.Canton.Localnet.Testing;
 using Canton.Ledger.Grpc.Client.Integration.Tests;
+using Canton.Ledger.Testing.Helpers;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Xunit;
 
@@ -68,7 +69,7 @@ public class RestUnitExerciseResultLiveTests
 
         var createOutcome = await lane.LedgerClient.TryCreateAsync(
             new Marker(owner), owner, cancellationToken: TestContext.Current.CancellationToken);
-        var markerCid = Assert.IsType<ExerciseOutcome<ContractId<Marker>>.One>(createOutcome).Result;
+        var markerCid = ExerciseOutcomeAssert.IsOne(createOutcome).Result;
 
         var served = await ArchiveAsync(wireClient, markerCid, owner, TestContext.Current.CancellationToken);
 

@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -19,7 +19,7 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
     <EnablePackageValidation Condition="$(MSBuildProjectName.StartsWith('Canton.Ledger.')) Or $([System.Text.RegularExpressions.Regex]::IsMatch('$(MSBuildProjectName)', '^Daml\.(Runtime|Ledger\.Abstractions|Ledger\.Abstractions\.Testing\.Conformance|Codegen\.CSharp|Codegen\.Intermediate|Codegen\.Testing\.Conformance)$'))">true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.8.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.8.1</PackageValidationBaselineVersion>
 
     <!-- Package metadata -->
     <Authors>Peaceful Studio OÜ</Authors>
@@ -31,9 +31,9 @@
     <RepositoryType>git</RepositoryType>
     <PackageIcon>icon.png</PackageIcon>
 
-    <CantonVersion>3.7.2</CantonVersion>
+    <CantonVersion>3.7.4</CantonVersion>
 
-    <Version>0.8.1</Version>
+    <Version>0.8.2</Version>
     <VersionReleasePrefix>$(Version)</VersionReleasePrefix>
     <VersionReleasePrefix Condition="$(VersionReleasePrefix.Contains('-'))">$(VersionReleasePrefix.Substring(0, $(VersionReleasePrefix.IndexOf('-'))))</VersionReleasePrefix>
     <VersionReleasePrefix Condition="$(VersionReleasePrefix.Contains('+'))">$(VersionReleasePrefix.Substring(0, $(VersionReleasePrefix.IndexOf('+'))))</VersionReleasePrefix>

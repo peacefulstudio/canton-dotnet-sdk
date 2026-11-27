@@ -87,14 +87,8 @@ internal sealed class GeneratedTypeRegistry
                 return;
             }
 
-            try
-            {
-                _loadBindings();
-            }
-            finally
-            {
-                _bindingsLoaded = true;
-            }
+            _loadBindings();
+            _bindingsLoaded = true;
         }
     }
 

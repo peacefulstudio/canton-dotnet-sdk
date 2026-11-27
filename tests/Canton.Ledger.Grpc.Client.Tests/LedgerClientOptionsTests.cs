@@ -37,6 +37,31 @@ public class LedgerClientOptionsTests
         options.Tls.IsConfigured.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Validate_rejects_a_Timeout_that_is_not_positive(int milliseconds)
+    {
+        var options = new LedgerClientOptions
+        {
+            GrpcAddress = "https://localhost:5001",
+            Timeout = TimeSpan.FromMilliseconds(milliseconds),
+        };
+
+        var results = options.Validate(new ValidationContext(options));
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Equal("Timeout");
+    }
+
+    [Fact]
+    public void Validate_accepts_a_null_Timeout_as_no_SDK_side_deadline()
+    {
+        var options = new LedgerClientOptions { GrpcAddress = "https://localhost:5001", Timeout = null };
+
+        options.Validate(new ValidationContext(options)).Should().BeEmpty();
+    }
+
     [Fact]
     public void GrpcAddress_is_rejected_by_data_annotations_when_missing()
     {

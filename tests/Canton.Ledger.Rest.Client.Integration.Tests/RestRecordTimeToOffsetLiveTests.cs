@@ -114,10 +114,10 @@ public class RestRecordTimeToOffsetLiveTests
     }
 
     private static string RfcSpelling(DateTimeOffset recordTime) =>
-        new JsonUrlParameterFormatter().Format(recordTime, typeof(DateTimeOffset), typeof(DateTimeOffset))!;
+        new JsonUrlParameterFormatter().Format(recordTime, GeneratedParameterAttributeProvider.Empty, typeof(DateTimeOffset))!;
 
     private static string RefitDefaultSpelling(DateTimeOffset recordTime) =>
-        new DefaultUrlParameterFormatter().Format(recordTime, typeof(DateTimeOffset), typeof(DateTimeOffset))!;
+        new DefaultUrlParameterFormatter().Format(recordTime, GeneratedParameterAttributeProvider.Empty, typeof(DateTimeOffset))!;
 
     private static string Escaped(string value) => Uri.EscapeDataString(value);
 }

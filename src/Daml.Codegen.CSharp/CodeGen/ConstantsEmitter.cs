@@ -23,6 +23,9 @@ internal static class ConstantsEmitter
 {
     internal const string ClassNameStem = "Constants";
 
+    /// <summary>The longest Numeric literal rendered: a legal Daml Numeric has at most 38 digits, so 80 characters leaves room for any spelling of one.</summary>
+    internal const int MaxNumericLiteralLength = 80;
+
     private const int MaxDecimalFractionDigits = 28;
 
     private static readonly BigInteger MaxDecimalUnscaled = (BigInteger.One << 96) - 1;
@@ -138,6 +141,12 @@ internal static class ConstantsEmitter
 
     private static bool TryDecimalLiteral(string plainDecimal, out string literal)
     {
+        if (plainDecimal.Length > MaxNumericLiteralLength)
+        {
+            literal = string.Empty;
+            return false;
+        }
+
         var negative = plainDecimal.StartsWith('-');
         var magnitude = negative ? plainDecimal[1..] : plainDecimal;
         var separator = magnitude.IndexOf('.', StringComparison.Ordinal);

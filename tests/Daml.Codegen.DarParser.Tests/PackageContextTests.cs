@@ -1158,6 +1158,29 @@ public sealed class PackageContextTests
     }
 
     [Fact]
+    public void GetValueExpr_rejects_a_value_definition_carrying_no_name_with_type()
+    {
+        var package = new Package();
+        var module = new Module { NameInternedDname = 0 };
+        module.Values.Add(new DefValue());
+        package.Modules.Add(module);
+        var ctx = new PackageContext(package);
+        var valueId = new ValueId
+        {
+            Module = new ModuleId
+            {
+                PackageId = new SelfOrImportedPackageId { SelfPackageId = new Unit() },
+                ModuleNameInternedDname = 0,
+            },
+        };
+
+        var act = () => ctx.GetValueExpr(valueId);
+
+        act.Should().Throw<InvalidDataException>()
+            .WithMessage("*value definition carries no name-with-type*");
+    }
+
+    [Fact]
     public void GetValueExpr_names_the_value_reference_rather_than_a_type_reference()
     {
         var ctx = new PackageContext(new Package());

@@ -36,9 +36,9 @@ public abstract class DamlProjectStepContractTests : IDisposable
 
     private string DamlDirectory => Path.Combine(ConsumerDirectory, "daml");
 
-    private string BuiltDar => Path.Combine(ConsumerDirectory, "obj", "Debug", "net10.0", "DamlBuild", "daml.dar");
+    private string BuiltDar => Path.Combine(ConsumerDirectory, "obj", "Debug", TestTargetFramework.Moniker, "DamlBuild", "daml.dar");
 
-    private string GeneratedDirectory => Path.Combine(ConsumerDirectory, "obj", "Debug", "net10.0", "DamlGenerated");
+    private string GeneratedDirectory => Path.Combine(ConsumerDirectory, "obj", "Debug", TestTargetFramework.Moniker, "DamlGenerated");
 
     protected abstract void SeedFakeTools(string toolsDirectory);
 

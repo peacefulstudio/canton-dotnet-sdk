@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Pqs.Client;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Contracts;
@@ -94,7 +95,7 @@ public sealed class LivePqsFilterParityTests : PqsFilterParityTests
 
     private static async Task<ContractId<T>> Created<T>(Task<ExerciseOutcome<ContractId<T>>> outcome)
         where T : IDamlType =>
-        Assert.IsType<ExerciseOutcome<ContractId<T>>.One>(await outcome).Result;
+        ExerciseOutcomeAssert.IsOne(await outcome).Result;
 
     private static async Task AwaitProjectionAsync<T>(
         PqsFilterTarget target, int expectedCount, SeededLedger ledger, CancellationToken cancellationToken)

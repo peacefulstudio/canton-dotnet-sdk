@@ -275,8 +275,7 @@ internal sealed class OptionalJsonConverterFactory : JsonConverterFactory, IDisc
         IsClosedOptional(typeToConvert) || IsArmOfClosedOptional(typeToConvert);
 
     private static bool IsClosedOptional(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(Optional<>);
+        ClosedGenericType.IsOf(type, typeof(Optional<>));
 
     private static bool IsArmOfClosedOptional(Type type) =>
         type.BaseType is { } baseType && IsClosedOptional(baseType);

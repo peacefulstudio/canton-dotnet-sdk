@@ -12,7 +12,7 @@ namespace Daml.Runtime.Tests;
 
 public class GeneratedStdlibBindingsTests
 {
-    private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement;
+    private static JsonElement Json(string text) => JsonElement.Parse(text);
 
     private static DamlLfJsonDecodeContext Root => DamlLfJsonDecodeContext.Root("test");
 

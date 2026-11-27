@@ -422,8 +422,7 @@ internal sealed class ContractStreamEventJsonConverterFactory : JsonConverterFac
         IsClosedContractStreamEvent(typeToConvert) || IsArmOfClosedContractStreamEvent(typeToConvert);
 
     private static bool IsClosedContractStreamEvent(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(ContractStreamEvent<>);
+        ClosedGenericType.IsOf(type, typeof(ContractStreamEvent<>));
 
     private static bool IsArmOfClosedContractStreamEvent(Type type) =>
         type.BaseType is { } baseType && IsClosedContractStreamEvent(baseType);

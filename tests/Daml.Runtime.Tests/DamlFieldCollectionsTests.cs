@@ -32,6 +32,37 @@ public class DamlFieldCollectionsTests
     }
 
     [Fact]
+    public void Copy_of_a_dictionary_cannot_be_downcast_to_a_mutable_Dictionary()
+    {
+        var copy = DamlFieldCollections.Copy((IReadOnlyDictionary<string, string>)new Dictionary<string, string> { ["k"] = "v" });
+
+        copy.Should().NotBeAssignableTo<Dictionary<string, string>>();
+    }
+
+    [Fact]
+    public void Copy_of_a_dictionary_refuses_an_entry_added_through_its_dictionary_interface()
+    {
+        var copy = DamlFieldCollections.Copy((IReadOnlyDictionary<string, string>)new Dictionary<string, string> { ["k"] = "v" });
+
+        var act = () => ((IDictionary<string, string>)copy)["added"] = "x";
+
+        act.Should().ThrowExactly<NotSupportedException>();
+        copy.Should().ContainSingle().Which.Key.Should().Be("k");
+    }
+
+    [Fact]
+    public void Copy_of_a_list_refuses_an_element_written_through_its_list_interface()
+    {
+        var copy = DamlFieldCollections.Copy((IReadOnlyList<string>)new List<string> { "a" });
+
+        var act = () => ((IList<string>)copy)[0] = "b";
+
+        copy.Should().NotBeAssignableTo<string[]>();
+        act.Should().ThrowExactly<NotSupportedException>();
+        copy.Should().Equal("a");
+    }
+
+    [Fact]
     public void Copy_passes_null_through()
     {
         DamlFieldCollections.Copy((IReadOnlyList<string>?)null).Should().BeNull();
@@ -41,7 +72,7 @@ public class DamlFieldCollectionsTests
     [Fact]
     public void Copy_of_an_empty_collection_returns_an_empty_independent_instance()
     {
-        DamlFieldCollections.Copy((IReadOnlyList<string>)[]).Should().BeEmpty();
+        DamlFieldCollections.Copy((IReadOnlyList<string>)[]).Should().BeEmpty().And.NotBeAssignableTo<Array>();
         DamlFieldCollections.Copy((IReadOnlyDictionary<string, string>)new Dictionary<string, string>()).Should().BeEmpty();
     }
 

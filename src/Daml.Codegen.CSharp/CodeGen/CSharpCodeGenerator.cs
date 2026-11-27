@@ -19,8 +19,6 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 {
     private readonly ILogger _log = logger ?? NullLogger<CSharpCodeGenerator>.Instance;
 
-    private readonly TypeRootFilter _rootFilter = new(options.RootFilter);
-
     private readonly PartyAnalysis _party = new();
 
     /// <summary>
@@ -38,13 +36,15 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
         var files = new List<GeneratedFile>();
 
-        var nameTables = new PackageNameTableCache(options, dar.MainPackage.PackageId, _log);
-        var resolver = new DarCrossPackageResolver(dar, nameTables);
-
-        var mainModules = PackageEmitContext.ForPackage(dar.MainPackage, nameTables);
         var emittedDependencies = options.IncludeDependencies
             ? dar.Dependencies.Where(dep => !IsProvidedByRuntime(dep)).ToList()
             : [];
+        var rootFilter = ClosedRootFilter(emittedDependencies.Prepend(dar.MainPackage).ToList());
+
+        var nameTables = new PackageNameTableCache(options, dar.MainPackage.PackageId, rootFilter, _log);
+        var resolver = new DarCrossPackageResolver(dar, nameTables);
+
+        var mainModules = PackageEmitContext.ForPackage(dar.MainPackage, nameTables);
         var dependencyModules = emittedDependencies
             .Select(dep => PackageEmitContext.ForPackage(dep, nameTables))
             .ToList();
@@ -54,12 +54,12 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
         var emittedModules = new List<EmittedModule>();
         var filePathClashes = new EmittedFilePathClashes();
-        files.AddRange(GeneratePackage(resolver, mainModules, emittedModules, filePathClashes));
+        files.AddRange(GeneratePackage(resolver, rootFilter, mainModules, emittedModules, filePathClashes));
 
         foreach (var (dep, modules) in emittedDependencies.Zip(dependencyModules))
         {
             LogGeneratingDependency(_log, dep.Name);
-            files.AddRange(GeneratePackage(resolver, modules, emittedModules, filePathClashes));
+            files.AddRange(GeneratePackage(resolver, rootFilter, modules, emittedModules, filePathClashes));
         }
 
         ModuleNamespaceGuards.Check(emittedModules);
@@ -99,13 +99,21 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
     private static bool IsPlaceholderPackageName(string packageName) => StdlibPackages.IsPlaceholderPackageName(packageName);
 
     /// <summary>
-    /// Whether <paramref name="typeName"/> in <paramref name="moduleName"/> passes
-    /// <see cref="CodeGenOptions.RootFilter"/> — the single place that answers this question, so
-    /// every file kind (template, its nested choice-argument types, interface) is filtered by the
-    /// same rule instead of by copies that could drift apart. An absent filter admits everything.
+    /// <see cref="CodeGenOptions.RootFilter"/> closed over <paramref name="emittedPackages"/> by
+    /// <see cref="RootFilterClosure"/> — the single filter every file kind (template, its nested
+    /// choice-argument types, interface, constant) and every name table is built under, so they
+    /// cannot drift apart. Each template or interface the closure adds is logged with the reason.
     /// </summary>
-    private bool IsIncludedByRootFilter(string moduleName, string typeName) =>
-        _rootFilter.Includes(moduleName, typeName);
+    private TypeRootFilter ClosedRootFilter(IReadOnlyList<DamlPackage> emittedPackages)
+    {
+        var requested = new TypeRootFilter(options.RootFilter);
+        var admitted = RootFilterClosure.Close(requested, emittedPackages);
+        foreach (var root in admitted)
+        {
+            LogAdmittingRoot(_log, root.Module, root.Name, root.Reason);
+        }
+        return requested.Admitting(admitted.Select(root => root.QualifiedName));
+    }
 
     private static EmittedModule EmittedModuleOf(PackageEmitContext context) =>
         EmittedModuleOf(context, context.NameTable.TopLevelTypeNames(context.Module.Name));
@@ -117,12 +125,12 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
     /// Generates C# code for a single package, one module at a time: every file of a module
     /// is written into that module's namespace and directory.
     /// </summary>
-    private IEnumerable<GeneratedFile> GeneratePackage(DarCrossPackageResolver resolver, IReadOnlyList<PackageEmitContext> moduleContexts, List<EmittedModule> emittedModules, EmittedFilePathClashes filePathClashes)
+    private IEnumerable<GeneratedFile> GeneratePackage(DarCrossPackageResolver resolver, TypeRootFilter rootFilter, IReadOnlyList<PackageEmitContext> moduleContexts, List<EmittedModule> emittedModules, EmittedFilePathClashes filePathClashes)
     {
         foreach (var context in moduleContexts)
         {
-            EmittedMemberNameClashes.RequireForModule(context, IsIncludedByRootFilter);
-            var moduleFiles = GenerateModule(resolver, context).ToList();
+            EmittedMemberNameClashes.RequireForModule(context, rootFilter.Includes);
+            var moduleFiles = GenerateModule(resolver, rootFilter, context).ToList();
             EmittedTypeNameClashes.Require(
                 context.Package.Name,
                 context.Module.Name,
@@ -142,31 +150,35 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
         }
     }
 
-    private IEnumerable<EmittedDeclarationFile> GenerateModule(DarCrossPackageResolver resolver, PackageEmitContext context)
+    private IEnumerable<EmittedDeclarationFile> GenerateModule(DarCrossPackageResolver resolver, TypeRootFilter rootFilter, PackageEmitContext context)
     {
-        var typeFiles = GenerateModuleTypes(resolver, context).ToList();
+        var typeFiles = GenerateModuleTypes(resolver, rootFilter, context).ToList();
         foreach (var typeFile in typeFiles)
         {
             yield return typeFile;
         }
 
-        if (GenerateConstants(context, typeFiles) is { } constantsFile)
+        if (GenerateConstants(rootFilter, context, typeFiles) is { } constantsFile)
         {
             yield return constantsFile;
         }
     }
 
-    private EmittedDeclarationFile? GenerateConstants(PackageEmitContext context, IReadOnlyList<EmittedDeclarationFile> typeFiles)
+    private EmittedDeclarationFile? GenerateConstants(TypeRootFilter rootFilter, PackageEmitContext context, IReadOnlyList<EmittedDeclarationFile> typeFiles)
     {
         var module = context.Module;
         var rendered = new List<RenderedConstant>();
         foreach (var constant in module.Constants
-            .Where(constant => IsIncludedByRootFilter(module.Name, constant.Name))
+            .Where(constant => rootFilter.Includes(module.Name, constant.Name))
             .OrderBy(constant => constant.Name, StringComparer.Ordinal))
         {
             if (ConstantsEmitter.Render(constant) is { } renderedConstant)
             {
                 rendered.Add(renderedConstant);
+            }
+            else if (((DamlNumericConstantValue)constant.Value).Value is { Length: > ConstantsEmitter.MaxNumericLiteralLength } overlong)
+            {
+                LogSkippingOverlongNumericConstant(_log, module.Name, constant.Name, overlong.Length, ConstantsEmitter.MaxNumericLiteralLength);
             }
             else
             {
@@ -199,7 +211,7 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
         return taken;
     }
 
-    private IEnumerable<EmittedDeclarationFile> GenerateModuleTypes(DarCrossPackageResolver resolver, PackageEmitContext context)
+    private IEnumerable<EmittedDeclarationFile> GenerateModuleTypes(DarCrossPackageResolver resolver, TypeRootFilter rootFilter, PackageEmitContext context)
     {
         var package = context.Package;
         var module = context.Module;
@@ -221,7 +233,7 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
         foreach (var template in module.Templates)
         {
-            if (!IsIncludedByRootFilter(module.Name, template.Name))
+            if (!rootFilter.Includes(module.Name, template.Name))
             {
                 LogSkippingTemplate(_log, module.Name, template.Name);
                 continue;
@@ -271,7 +283,7 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
         foreach (var template in module.Templates)
         {
-            if (!IsIncludedByRootFilter(module.Name, template.Name))
+            if (!rootFilter.Includes(module.Name, template.Name))
             {
                 continue;
             }
@@ -293,7 +305,7 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
         foreach (var iface in module.Interfaces)
         {
-            if (!IsIncludedByRootFilter(module.Name, iface.Name))
+            if (!rootFilter.Includes(module.Name, iface.Name))
             {
                 LogSkippingInterface(_log, module.Name, iface.Name);
                 continue;
@@ -392,6 +404,18 @@ public sealed partial class CSharpCodeGenerator(CodeGenOptions options, ILogger<
 
     [LoggerMessage(EventId = 1003, Level = LogLevel.Debug, Message = "Skipping interface {ModuleName}:{InterfaceName} (filtered)")]
     private static partial void LogSkippingInterface(ILogger logger, string moduleName, string interfaceName);
+
+    [LoggerMessage(
+        EventId = 1006,
+        Level = LogLevel.Information,
+        Message = "Skipping Daml value {ModuleName}:{ConstantName}: its Numeric literal is {Length} characters long, more than the {MaxLength} a Daml Numeric of at most 38 digits can take.")]
+    private static partial void LogSkippingOverlongNumericConstant(ILogger logger, string moduleName, string constantName, int length, int maxLength);
+
+    [LoggerMessage(
+        EventId = 1005,
+        Level = LogLevel.Information,
+        Message = "Emitting {ModuleName}:{TypeName}, which the root filter does not match, because {Reason}: without it the emitted code would not compile")]
+    private static partial void LogAdmittingRoot(ILogger logger, string moduleName, string typeName, string reason);
 
     [LoggerMessage(
         EventId = 1004,

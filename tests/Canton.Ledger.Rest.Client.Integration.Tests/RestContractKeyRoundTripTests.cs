@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using Canton.Ledger.Rest.Client.Raw;
+using Canton.Ledger.Testing.Helpers;
 using Daml.Codegen.Testing.Conformance;
 using Daml.Codegen.Testing.Conformance.ContractKeys;
 using Daml.Runtime;
@@ -65,7 +66,7 @@ public class RestContractKeyRoundTripTests
                 + $"{rejection.Status} {rejection.Message}");
         }
 
-        return Assert.IsType<ExerciseOutcome<ContractId<T>>.One>(outcome).Result;
+        return ExerciseOutcomeAssert.IsOne(outcome).Result;
     }
 
     private static async Task<Party> NewSignatoryAsync(RestLiveLane lane, CancellationToken cancellationToken)

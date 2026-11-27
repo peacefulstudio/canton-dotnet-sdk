@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Remove="xunit.v3.mtp-v2" />
     <PackageReference Remove="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Remove="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Remove="AwesomeAssertions" />
   </ItemGroup>
 
@@ -17,12 +18,11 @@
     <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
     <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Daml.Codegen.CSharp.Cli\Daml.Codegen.CSharp.Cli.csproj"
-                      ReferenceOutputAssembly="false"
-                      SkipGetTargetFrameworkProperties="true" />
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <Target Name="ResolveSpliceBindingsEmitter" AfterTargets="ResolveProjectReferences">
-    <MSBuild Projects="..\..\src\Daml.Codegen.CSharp.Cli\Daml.Codegen.CSharp.Cli.csproj" Targets="GetTargetPath">
+    <MSBuild Projects="..\..\src\Daml.Codegen.CSharp.Cli\Daml.Codegen.CSharp.Cli.csproj" Targets="GetTargetPath" RemoveProperties="TargetFramework">
       <Output TaskParameter="TargetOutputs" ItemName="_EmitterCliDll" />
     </MSBuild>
 

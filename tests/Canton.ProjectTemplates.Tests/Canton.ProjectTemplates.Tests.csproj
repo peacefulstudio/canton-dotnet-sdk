@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks></TargetFrameworks>
+    <TargetFramework>net11.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\MSBuild\MsBuildProcessRunner.cs" Link="Shared\MsBuildProcessRunner.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Canton.Ledger.Testing.Localnet\Canton.Ledger.Testing.Localnet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\scripts\published-package-ids.txt"
+          Link="published-package-ids.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -5,7 +5,7 @@ Part of the [Canton .NET SDK](https://github.com/peacefulstudio/canton-dotnet-sd
 ## Installation
 
 ```bash
-dotnet add package Canton.Ledger.Kernel --version 0.8.1
+dotnet add package Canton.Ledger.Kernel --version 0.8.2
 ```
 
 ## Key Types
@@ -136,7 +136,7 @@ Raw calls are the exception to "retried when enabled": the gRPC `CreateCallInvok
 - `IHttpClientFactory` named client `"CantonAuth"` — no `using` on the `HttpClient` (factory manages handler lifetime)
 - `TimeProvider` for testable time (pass `FakeTimeProvider` in tests)
 - `Volatile.Read`/`Volatile.Write` for cache fields — write order: token before expiry (matches read order)
-- Validates `expires_in > 0` and `access_token` non-empty after deserialization
+- Validates `access_token` non-empty and `expires_in` positive and at most `int.MaxValue` seconds after deserialization; a fractional or numeric-string `expires_in` is read as seconds, and a response with none is cached for 60 seconds with a warning
 - Token endpoint is resolved once at construction — unresolvable options (no `TokenEndpoint`, invalid `Domain`, plaintext `http` without `AllowInsecureTokenEndpoint`) throw `InvalidOperationException` when the provider is constructed, not at the first token request
 
 ## Related Packages

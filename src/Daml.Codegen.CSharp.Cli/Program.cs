@@ -56,6 +56,14 @@ internal static partial class Program
             Description = "Namespace prefix for the main package's generated code: each Daml module is emitted under <prefix>.<Module>, the prefix is elided when the module name already starts with it, and dependency packages are never prefixed (default: no prefix, the namespace is the module name)"
         };
         namespaceOption.Aliases.Add("--namespace");
+        namespaceOption.Validators.Add(result =>
+        {
+            var value = result.GetValue(namespaceOption);
+            if (value is not null && !Identifiers.IsDottedIdentifier(value))
+            {
+                result.AddError($"--namespace '{value}' is not a C# namespace: it must be one or more dot-separated identifiers, each starting with a letter or '_', holding only letters, digits and '_', and not a C# keyword (e.g. Acme.Ledger).");
+            }
+        });
 
         var verbosityOption = new Option<int>("-v")
         {
@@ -66,7 +74,7 @@ internal static partial class Program
 
         var rootOption = new Option<string?>("-r")
         {
-            Description = "Regular expression to filter which templates to generate (default: .*)"
+            Description = "Regular expression matched against Module:Name to select which templates and interfaces to generate; records, variants and enums are always generated, and every template or interface the generated code refers to is added so the output compiles (default: no filter, everything is generated)"
         };
         rootOption.Aliases.Add("--root");
 
@@ -182,22 +190,22 @@ internal static partial class Program
         Func<ParseResult, CancellationToken, Task<int>> action = (parseResult, cancellationToken) =>
             RunCodegen(
                 new CodegenArgs(
-                    parseResult.GetValue(intermediateOption)!,
-                    parseResult.GetValue(outputOption)!,
-                    parseResult.GetValue(namespaceOption),
-                    parseResult.GetValue(verbosityOption),
-                    parseResult.GetValue(rootOption),
-                    parseResult.GetValue(nullableOption),
-                    parseResult.GetValue(generateProjectOption),
-                    parseResult.GetValue(includeDepsOption),
-                    parseResult.GetValue(targetFrameworkOption)!,
-                    parseResult.GetValue(runtimeVersionOption),
-                    parseResult.GetValue(emitterCounterOption),
-                    parseResult.GetValue(releaseCountersOption),
-                    parseResult.GetValue(codegenVersionOption),
-                    parseResult.GetValue(packageLicenseOption)!,
-                    parseResult.GetValue(versionSuffixOption),
-                    parseResult.GetValue(repositoryUrlOption)),
+                    IntermediateFile: parseResult.GetValue(intermediateOption)!,
+                    OutputDirectory: parseResult.GetValue(outputOption)!,
+                    NamespacePrefix: parseResult.GetValue(namespaceOption),
+                    Verbosity: parseResult.GetValue(verbosityOption),
+                    RootFilter: parseResult.GetValue(rootOption),
+                    EnableNullable: parseResult.GetValue(nullableOption),
+                    GenerateProjectFile: parseResult.GetValue(generateProjectOption),
+                    IncludeDependencies: parseResult.GetValue(includeDepsOption),
+                    TargetFramework: parseResult.GetValue(targetFrameworkOption)!,
+                    RuntimePackageVersion: parseResult.GetValue(runtimeVersionOption),
+                    EmitterCounter: parseResult.GetValue(emitterCounterOption),
+                    ReleaseCountersFile: parseResult.GetValue(releaseCountersOption),
+                    CodegenVersion: parseResult.GetValue(codegenVersionOption),
+                    PackageLicenseExpression: parseResult.GetValue(packageLicenseOption)!,
+                    VersionSuffix: parseResult.GetValue(versionSuffixOption),
+                    RepositoryUrl: parseResult.GetValue(repositoryUrlOption)),
                 cancellationToken);
         rootCommand.SetAction(action);
 

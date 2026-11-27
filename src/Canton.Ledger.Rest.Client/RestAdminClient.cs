@@ -563,6 +563,11 @@ internal sealed partial class RestAdminClient : IAdminClient
                 cancellationToken));
     }
 
+    /// <inheritdoc />
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="expectedTopologySerial"/> names a prior serial above the <see cref="int.MaxValue"/> the
+    /// JSON Ledger API accepts.
+    /// </exception>
     public Task<VettedPackagesUpdateResult> UpdateVettedPackagesAsync(
         IReadOnlyList<VettedPackagesChange> changes,
         bool dryRun = false,
@@ -572,6 +577,8 @@ internal sealed partial class RestAdminClient : IAdminClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(changes);
+        if (expectedTopologySerial?.Prior is { } prior)
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(prior, (uint)int.MaxValue, nameof(expectedTopologySerial));
 
         var request = new WireUpdateVettedPackagesRequest(
             changes.Select(ToWire).ToList(),

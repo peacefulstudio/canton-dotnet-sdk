@@ -180,7 +180,7 @@ public class GenericChoiceResultJsonDecoderCorpusTests
         var choice = vaultType.GetProperty("ChoicePeekPair", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
         var resultJsonDecoder = (Delegate)choice.GetType().GetProperty("ResultJsonDecoder")!.GetValue(choice)!;
 
-        var json = JsonDocument.Parse("""{"first": "hello", "second": true}""").RootElement;
+        var json = JsonElement.Parse("""{"first": "hello", "second": true}""");
         var decoded = resultJsonDecoder.DynamicInvoke(json, DamlLfJsonDecodeContext.Root("$"))!;
 
         var pairOfStringBool = assembly.GetTypes().Single(t => t.Name == "Pair`2").MakeGenericType(typeof(string), typeof(bool));
@@ -209,7 +209,7 @@ public class GenericChoiceResultJsonDecoderCorpusTests
         var choice = vaultType.GetProperty("ChoicePeek", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
         var resultJsonDecoder = (Delegate)choice.GetType().GetProperty("ResultJsonDecoder")!.GetValue(choice)!;
 
-        var json = JsonDocument.Parse("""{"value": "hello"}""").RootElement;
+        var json = JsonElement.Parse("""{"value": "hello"}""");
         var decoded = resultJsonDecoder.DynamicInvoke(json, DamlLfJsonDecodeContext.Root("$"))!;
 
         var boxOfString = assembly.GetTypes().Single(t => t.Name == "Box`1").MakeGenericType(typeof(string));
@@ -225,7 +225,7 @@ public class GenericChoiceResultJsonDecoderCorpusTests
         var choice = vaultType.GetProperty("ChoicePeekVariant", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
         var resultJsonDecoder = (Delegate)choice.GetType().GetProperty("ResultJsonDecoder")!.GetValue(choice)!;
 
-        var json = JsonDocument.Parse("""{"tag": "Wrapped", "value": "hello"}""").RootElement;
+        var json = JsonElement.Parse("""{"tag": "Wrapped", "value": "hello"}""");
         var decoded = resultJsonDecoder.DynamicInvoke(json, DamlLfJsonDecodeContext.Root("$"))!;
 
         var wrapperOfString = assembly.GetTypes().Single(t => t.Name == "Wrapper`1").MakeGenericType(typeof(string));

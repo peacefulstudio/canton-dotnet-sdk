@@ -52,6 +52,7 @@ internal static class RetryPipelineFactory
         {
             MaxRetryAttempts = options.MaxRetryAttempts,
             Delay = options.Delay,
+            MaxDelay = options.MaxDelay,
             BackoffType = DelayBackoffType.Exponential,
             UseJitter = true
         };

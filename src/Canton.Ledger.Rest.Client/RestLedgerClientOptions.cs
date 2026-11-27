@@ -150,7 +150,8 @@ public sealed class RestLedgerClientOptions : IValidatableObject
     /// <summary>
     /// How long the participant holds one window open once no further entry arrives, sent as the
     /// <c>stream_idle_timeout_ms</c> query parameter on every window of an open-ended read and
-    /// rounded down to whole milliseconds. A read with an end offset sends none. Defaults to
+    /// rounded down to whole milliseconds. Must be at least one millisecond, so the value sent is never
+    /// <c>0</c>. A read with an end offset sends none. Defaults to
     /// <see cref="DefaultStreamWindowIdleTimeout"/>.
     /// </summary>
     /// <remarks>
@@ -275,10 +276,11 @@ public sealed class RestLedgerClientOptions : IValidatableObject
                 [nameof(StreamWindowLimit)]));
         }
 
-        if (StreamWindowIdleTimeout <= TimeSpan.Zero)
+        if (StreamWindowIdleTimeout < TimeSpan.FromMilliseconds(1))
         {
             results.Add(new ValidationResult(
-                $"{nameof(StreamWindowIdleTimeout)} must be positive, but was {StreamWindowIdleTimeout}.",
+                $"{nameof(StreamWindowIdleTimeout)} must be at least 1 millisecond, the unit the JSON API reads "
+                + $"as stream_idle_timeout_ms, but was {StreamWindowIdleTimeout}.",
                 [nameof(StreamWindowIdleTimeout)]));
         }
 

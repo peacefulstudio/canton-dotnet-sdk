@@ -821,18 +821,17 @@ public sealed class AdminClientTests : IDisposable
             .WithMessage("*returned an empty token*");
     }
 
-    [Fact]
-    public void AdminClient_constructor_does_not_throw_when_ITokenProvider_None()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AdminClient_constructor_accepts_the_none_and_a_real_token_provider(bool realProvider)
     {
         using var channels = new LedgerChannelProvider(Options.Create(_options));
-        _ = new AdminClient(Options.Create(_options), channels, ITokenProvider.None);
-    }
+        var provider = realProvider ? _tokenProvider : ITokenProvider.None;
 
-    [Fact]
-    public void AdminClient_constructor_does_not_throw_when_real_provider_registered()
-    {
-        using var channels = new LedgerChannelProvider(Options.Create(_options));
-        _ = new AdminClient(Options.Create(_options), channels, _tokenProvider);
+        var construct = () => new AdminClient(Options.Create(_options), channels, provider);
+
+        construct.Should().NotThrow().Subject.Should().BeAssignableTo<IAdminClient>();
     }
 
     [Fact]

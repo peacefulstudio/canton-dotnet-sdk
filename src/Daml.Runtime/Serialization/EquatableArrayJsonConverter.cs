@@ -63,8 +63,7 @@ public sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert) => IsClosedEquatableArray(typeToConvert);
 
     internal static bool IsClosedEquatableArray(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(EquatableArray<>);
+        ClosedGenericType.IsOf(type, typeof(EquatableArray<>));
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentException">
@@ -84,10 +83,9 @@ public sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
     }
 }
 
-internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableArray<T>>
+internal sealed class EquatableArrayJsonConverter<T>() : JsonArrayConverter<EquatableArray<T>, T>(
+    $"{nameof(EquatableArray)}<{DiscriminatedUnionJson.Describe(typeof(T))}>")
 {
-    private static readonly string TypeName = $"{nameof(EquatableArray)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
-
     /// <remarks>
     /// The struct has no <c>null</c> state to represent one with, so reading the null token is
     /// the only way to refuse it rather than let it become an empty array. That keeps the
@@ -105,69 +103,12 @@ internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableAr
                 $"{TypeName} cannot be null; write [] for an empty array, or declare the slot as {TypeName}? to accept an absent one.");
         }
 
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            throw new JsonException($"Expected array token for {TypeName}, got {reader.TokenType}.");
-        }
-
-        var items = new List<T>();
-        while (true)
-        {
-            if (!reader.Read())
-            {
-                throw new JsonException($"Unexpected end of JSON while reading {TypeName}.");
-            }
-
-            if (reader.TokenType == JsonTokenType.EndArray)
-            {
-                break;
-            }
-
-            items.Add(ReadElement(ref reader, items.Count, options));
-        }
-
-        try
-        {
-            return EquatableArray.Create(CollectionsMarshal.AsSpan(items));
-        }
-        catch (ArgumentException ex)
-        {
-            throw new JsonException($"Invalid element in {TypeName}: {ex.Message}", ex);
-        }
+        return ReadArray(ref reader, options);
     }
 
-    public override void Write(Utf8JsonWriter writer, EquatableArray<T> value, JsonSerializerOptions options)
-    {
-        writer.WriteStartArray();
-        var index = 0;
-        foreach (var item in value)
-        {
-            WriteElement(writer, item, index++, options);
-        }
-        writer.WriteEndArray();
-    }
+    public override void Write(Utf8JsonWriter writer, EquatableArray<T> value, JsonSerializerOptions options) =>
+        WriteArray(writer, value, options);
 
-    private static T ReadElement(ref Utf8JsonReader reader, int index, JsonSerializerOptions options)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<T>(ref reader, options)!;
-        }
-        catch (Exception ex)
-        {
-            throw new JsonException($"Cannot read element {index} of {TypeName}: {ex.Message}", ex);
-        }
-    }
-
-    private static void WriteElement(Utf8JsonWriter writer, T item, int index, JsonSerializerOptions options)
-    {
-        try
-        {
-            JsonSerializer.Serialize(writer, item, options);
-        }
-        catch (Exception ex)
-        {
-            throw new JsonException($"Cannot write element {index} of {TypeName}: {ex.Message}", ex);
-        }
-    }
+    protected override EquatableArray<T> Create(List<T> elements) =>
+        EquatableArray.Create(CollectionsMarshal.AsSpan(elements));
 }

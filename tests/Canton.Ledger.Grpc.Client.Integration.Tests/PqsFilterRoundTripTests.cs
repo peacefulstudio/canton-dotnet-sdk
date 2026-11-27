@@ -82,8 +82,11 @@ public class PqsFilterRoundTripTests
             r => r.Tags.Contains("urgent") && r.Tags.All(tag => tag != "blocked") && r.HoldingCids.Any())));
         Assert.Empty(await QueryRichRecordAsync(Filter.Where<RichRecord>(r => r.Tags.Any(tag => tag == "blocked"))));
 
+        // Workaround: the dotnet/roslyn-analyzers CA1860 analyzer fires inside expression trees; PqsPredicateTranslator only translates Enumerable.Any.
+        #pragma warning disable CA1860
         Assert.Single(await QueryTypeCornersAsync(Filter.Where<TypeCorners>(
             t => t.Branch.Children.Any(child => child.Label == "leaf" && !child.Children.Any()))));
+        #pragma warning restore CA1860
     }
 
     [Fact]

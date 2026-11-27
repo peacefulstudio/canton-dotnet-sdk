@@ -8,6 +8,7 @@
         <ModulePath>.*Daml\.Codegen\.CSharp\.MSBuild\.dll$</ModulePath>
         <ModulePath>.*Daml\.Codegen\.CSharp\.MSBuild\.Standalone\.dll$</ModulePath>
         <ModulePath>.*Canton\.Ledger\.Grpc\.dll$</ModulePath>
+        <ModulePath>.*Canton\.ProjectTemplates\.dll$</ModulePath>
         <ModulePath>.*Peaceful\.Canton\.Localnet\.Testing\.dll$</ModulePath>
       </Exclude>
     </ModulePaths>

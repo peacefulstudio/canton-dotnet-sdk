@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daml.Runtime.Serialization;
 
 namespace Daml.Runtime;
 
@@ -14,6 +15,7 @@ namespace Daml.Runtime;
 /// offsets so callers use <see cref="Begin"/> instead of a magic <c>0</c>/<c>null</c>.
 /// </summary>
 [JsonConverter(typeof(LedgerOffsetJsonConverter))]
+[AbsenceBindsAnUnstatedValue]
 public readonly record struct LedgerOffset
 {
     private LedgerOffset(long value) => Value = value;

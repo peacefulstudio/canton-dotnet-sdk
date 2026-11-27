@@ -49,4 +49,39 @@ public class CliOptionValidationTests : IDisposable
         Directory.GetFiles(_workspace, "*.cs", SearchOption.AllDirectories).Should().BeEmpty(
             "validation fails before generation starts");
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("1Acme")]
+    [InlineData("Acme Corp")]
+    [InlineData("Acme.")]
+    [InlineData(".Acme")]
+    [InlineData("Acme..Ledger")]
+    [InlineData("Acme.class")]
+    [InlineData("Acme-Ledger")]
+    [InlineData("Acme.@")]
+    [InlineData("@class.Acme")]
+    public async Task CliOptionValidation_namespace_that_is_not_a_dotted_csharp_identifier_is_rejected(string prefix)
+    {
+        var exit = await Program.Main(["--intermediate", FixtureIntermediate(), "-o", _workspace, "--namespace", prefix]);
+
+        exit.Should().NotBe(0, "a namespace prefix that is not a dotted C# identifier would emit a namespace declaration that does not compile");
+        Directory.GetFiles(_workspace, "*.cs", SearchOption.AllDirectories).Should().BeEmpty(
+            "validation fails before generation starts");
+    }
+
+    [Theory]
+    [InlineData("Acme.Ledger", "Acme/Ledger/Splice/Api/Token/HoldingV1/IHolding.cs")]
+    [InlineData("_Acme", "_Acme/Splice/Api/Token/HoldingV1/IHolding.cs")]
+    [InlineData("Société", "Société/Splice/Api/Token/HoldingV1/IHolding.cs")]
+    public async Task CliOptionValidation_namespace_that_is_a_dotted_csharp_identifier_prefixes_the_main_package(string prefix, string interfacePath)
+    {
+        var exit = await Program.Main(
+            ["--intermediate", FixtureIntermediate(), "-o", _workspace, "--namespace", prefix, "--root", @"^Splice\.Api\.Token\.HoldingV1:Holding$"]);
+
+        exit.Should().Be(0);
+        File.Exists(Path.Combine(_workspace, interfacePath)).Should().BeTrue(
+            "the --namespace value prefixes each module namespace and the --root value filters, never the other way round");
+    }
 }

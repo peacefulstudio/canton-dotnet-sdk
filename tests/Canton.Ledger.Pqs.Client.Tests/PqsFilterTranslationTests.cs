@@ -661,8 +661,11 @@ public class PqsFilterTranslationTests
     [Fact]
     public void Where_translates_nested_List_element_predicates_with_distinct_aliases()
     {
+        // Workaround: the dotnet/roslyn-analyzers CA1860 analyzer fires inside expression trees; PqsPredicateTranslator only translates Enumerable.Any.
+        #pragma warning disable CA1860
         var (sql, parameters) = Render(Filter.Where<TypeCorners>(
             t => t.Branch.Children.Any(child => child.Label == "leaf" && child.Children.Any())));
+        #pragma warning restore CA1860
 
         sql.Should().Be(
             "EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(payload->'branch'->'children') = 'array' " +

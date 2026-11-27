@@ -19,6 +19,8 @@ internal static partial class LiteralConstantReader
     [GeneratedRegex(@"\A(?:[A-Za-z0-9_]|\$u[0-9a-f]{4}|\$U[0-9a-f]{8})+\z")]
     private static partial Regex UserWrittenName();
 
+    private const int MaxNumericLiteralLength = 80;
+
     [GeneratedRegex(@"\A(?<sign>[+-]?)(?<integer>[0-9]+)(?:\.(?<fraction>[0-9]*))?\z")]
     private static partial Regex NumericLiteral();
 
@@ -27,7 +29,7 @@ internal static partial class LiteralConstantReader
         var constants = new List<DamlConstant>();
         foreach (var value in module.Values)
         {
-            var segments = ctx.GetDottedNameSegments(value.NameWithType.NameInternedDname);
+            var segments = ctx.GetDottedNameSegments(PackageContext.ValueNameInternedDname(value));
             if (segments.Count != 1 || !UserWrittenName().IsMatch(segments[0]))
             {
                 continue;
@@ -76,6 +78,13 @@ internal static partial class LiteralConstantReader
 
     private static string PlainDecimal(string archived, string name)
     {
+        if (archived.Length > MaxNumericLiteralLength)
+        {
+            throw new InvalidDataException(
+                $"Daml-LF value '{name}' holds a numeric literal of {archived.Length} characters, longer than " +
+                $"{MaxNumericLiteralLength} characters; a legal Numeric has at most 38 digits. The archive is malformed.");
+        }
+
         var match = NumericLiteral().Match(archived);
         if (!match.Success)
         {

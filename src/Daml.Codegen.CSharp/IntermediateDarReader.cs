@@ -42,6 +42,8 @@ namespace Daml.Codegen.CSharp;
 /// </summary>
 public static partial class IntermediateDarReader
 {
+    private const int MaxNumericLiteralLength = 80;
+
     [GeneratedRegex(@"\A[A-Za-z_$][A-Za-z0-9_$]*\z")]
     private static partial Regex IdentifierGrammar();
 
@@ -180,6 +182,12 @@ public static partial class IntermediateDarReader
 
     private static string RequirePlainDecimal(string value, string constantName)
     {
+        if (value.Length > MaxNumericLiteralLength)
+        {
+            throw new InvalidDataException(
+                $"IntermediateDar numeric constant '{constantName}' value is {value.Length} characters, longer than " +
+                $"{MaxNumericLiteralLength} characters; a legal Daml Numeric has at most 38 digits.");
+        }
         if (!PlainDecimalGrammar().IsMatch(value))
         {
             throw new InvalidDataException(

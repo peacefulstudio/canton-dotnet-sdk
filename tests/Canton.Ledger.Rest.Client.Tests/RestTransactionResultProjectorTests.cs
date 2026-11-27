@@ -557,11 +557,13 @@ public class RestTransactionResultProjectorTests
         exercised.LastDescendantNodeId.Should().Be(7);
     }
 
-    [Fact]
-    public void Project_refuses_an_exercised_event_with_no_choice_instead_of_throwing_a_raw_argument_exception()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Project_throws_a_malformed_response_when_an_exercised_event_has_a_blank_choice(string choice)
     {
         var transaction = TransactionFrom(
-            """
+            $$"""
             {
               "transaction": {
                 "updateId": "upd-1",
@@ -573,7 +575,7 @@ public class RestTransactionResultProjectorTests
                       "contractId": "00holding",
                       "packageName": "token-impl",
                       "templateId": {"packageId": "tmpl-pkg", "moduleName": "Sample.Token", "entityName": "ProjectedHolding"},
-                      "choice": "",
+                      "choice": "{{choice}}",
                       "choiceArgument": {},
                       "actingParties": ["alice::ns1"],
                       "consuming": true,
@@ -588,9 +590,8 @@ public class RestTransactionResultProjectorTests
 
         var act = () => RestTransactionResultProjector.Project(transaction);
 
-        act.Should().Throw<TemplateTypeRequiredException>().Which.Message.Should().Be(
-            "No generated type is loaded for choice '' of 'tmpl-pkg:Sample.Token:ProjectedHolding'; "
-            + "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API. A host without a deps.json registers each generated assembly itself, once, with RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).");
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: ExercisedEvent for contract '00holding' has no choice, though the Ledger API marks the field as required.");
     }
 
     [Fact]

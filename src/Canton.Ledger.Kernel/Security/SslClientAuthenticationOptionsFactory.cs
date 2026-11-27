@@ -164,6 +164,10 @@ internal static class SslClientAuthenticationOptionsFactory
 
         var certificateAuthorities = new X509Certificate2Collection();
         certificateAuthorities.ImportFromPemFile(options.CertificateAuthorityBundlePemPath!);
+        if (certificateAuthorities.Count == 0)
+            throw new CryptographicException(
+                $"The certificate authority bundle '{options.CertificateAuthorityBundlePemPath}' contains no PEM certificate.");
+
         return certificateAuthorities;
     }
 }

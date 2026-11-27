@@ -109,9 +109,10 @@ internal static class RestPayloadDecoder
 
     public static ExercisePayloads ExercisePayloadsOf(WireExercisedEvent exercised, RuntimeIdentifier templateId)
     {
-        var choiceName = exercised.Choice
-            ?? throw MalformedResponse.MissingRequiredField(
-                $"ExercisedEvent for contract '{exercised.ContractId}' has no choice");
+        var choiceName = string.IsNullOrWhiteSpace(exercised.Choice)
+            ? throw MalformedResponse.MissingRequiredField(
+                $"ExercisedEvent for contract '{exercised.ContractId}' has no choice")
+            : exercised.Choice;
         var choiceArgument = exercised.ChoiceArgument
             ?? throw MalformedResponse.MissingRequiredField(
                 $"ExercisedEvent for contract '{exercised.ContractId}' has no choiceArgument");
@@ -122,11 +123,6 @@ internal static class RestPayloadDecoder
         var ownerId = exercised.InterfaceId is { } interfaceId
             ? RestWireConversions.ToRuntimeIdentifier(interfaceId)
             : templateId;
-        if (string.IsNullOrWhiteSpace(choiceName))
-        {
-            throw new TemplateTypeRequiredException(Display(ownerId), choiceName);
-        }
-
         var ownerPackageName = exercised.InterfaceId is null ? exercised.PackageName : null;
         return GeneratedTypeReaders.FindChoice(ownerId, new ChoiceName(choiceName), ownerPackageName) switch
         {

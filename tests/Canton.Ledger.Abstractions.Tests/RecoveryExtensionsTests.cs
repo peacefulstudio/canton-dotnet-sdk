@@ -322,7 +322,7 @@ public sealed class RecoveryExtensionsTests
     }
 
     [Fact]
-    public async Task RecoverAsync_throws_a_LedgerOperationException_carrying_the_error_id_of_a_stream_error()
+    public async Task RecoverAsync_throws_a_stream_error_as_a_LedgerOperationException_whose_CommitState_stays_Unknown()
     {
         var client = ClientStreaming(
         [
@@ -340,7 +340,7 @@ public sealed class RecoveryExtensionsTests
         thrown.Category.Should().Be(DamlErrorCategory.TransientServerFailure);
         thrown.Status.Should().Be(new TransportStatus.Grpc(GrpcStatusCode.Unavailable));
         thrown.Message.Should().Be("stream broke");
-        thrown.CommitState.Should().Be(CommitState.NotCommitted);
+        thrown.CommitState.Should().Be(CommitState.Unknown);
     }
 
     [Fact]

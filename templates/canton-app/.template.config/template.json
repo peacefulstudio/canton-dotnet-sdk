@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Peaceful Studio",
+  "classifications": [ "Canton", "Daml", "Console" ],
+  "identity": "Canton.ProjectTemplates.CantonApp",
+  "name": "Canton app (Daml contract and ledger client)",
+  "description": "A minimal Canton application: one Daml contract, its generated C# bindings, and a console app that creates the contract on a LocalNet participant and reads it back.",
+  "shortName": "canton-app",
+  "sourceName": "CantonApp",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "primaryOutputs": [
+    { "path": "CantonApp.slnx" }
+  ],
+  "postActions": []
+}

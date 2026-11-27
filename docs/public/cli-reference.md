@@ -46,7 +46,7 @@ Options:
   -o, --output-directory <o>                Output directory for generated sources [default: the invoking directory]
   -n, --namespace <n>                       Namespace prefix for the main package's generated code: each Daml module is emitted under <prefix>.<Module>, the prefix is elided when the module name already starts with it, and dependency packages are never prefixed (default: no prefix, the namespace is the module name)
   -v, --verbosity <v>                       Verbosity level: 0=errors only, 1=warnings, 2=info, 3=debug [default: 1]
-  -r, --root <r>                            Regular expression to filter which templates to generate (default: .*)
+  -r, --root <r>                            Regular expression matched against Module:Name to select which templates and interfaces to generate; records, variants and enums are always generated, and every template or interface the generated code refers to is added so the output compiles (default: no filter, everything is generated)
   --nullable                                Enable nullable reference types in generated code
   --generate-project                        Generate a .csproj file for the generated code
   --include-dependencies                    Generate code for dependency packages as well
@@ -61,6 +61,18 @@ Options:
   -?, -h, --help                            Show help and usage information
   --version                                 Show version information
 ```
+
+`--namespace` must be a C# namespace: one or more dot-separated identifiers, each starting with a
+letter or `_`, holding only letters, digits and `_`, and not a C# keyword. Anything else (an empty
+value, a leading digit, a space or `-`, an empty segment, a verbatim `@` segment) fails before any file
+is written, rather than emitting a namespace declaration that does not compile.
+
+`--root` matches `Module:Name` (for example `^RichTypes:Asset$`) against templates, interfaces and
+Daml values, not only templates. Records, variants and enums are always generated. The selection
+is then closed over what the generated code names: the interfaces a selected template implements,
+the interface whose view type is a generated record, and any template or interface a generated
+field, key, choice argument or choice result refers to (for example through a `ContractId`). Each
+type added that way is logged at verbosity 2 with the reason, so a filtered run still compiles.
 
 Each run writes a `.codegen-manifest` file in the output directory: a first line
 `# package: <name>` naming the package that owns the directory, then every file it emitted,

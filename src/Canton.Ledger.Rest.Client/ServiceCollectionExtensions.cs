@@ -336,7 +336,7 @@ public static class ServiceCollectionExtensions
     }
 
     private static void AddApi<TApi>(IServiceCollection services) where TApi : class =>
-        services.TryAddTransient(static sp => RestService.For<TApi>(
+        services.TryAddTransient(static sp => RestService.ForGenerated<TApi>(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientName),
             RestRefitSettings.Create()));
 

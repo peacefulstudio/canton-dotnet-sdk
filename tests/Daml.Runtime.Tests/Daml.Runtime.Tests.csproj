@@ -11,8 +11,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\samples\QuickstartExample\Generated\**\*.cs" Link="QuickstartGenerated\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Daml.Runtime\Daml.Runtime.csproj" />
-    <ProjectReference Include="..\..\samples\QuickstartExample\QuickstartExample.csproj" />
+    <ProjectReference Include="..\..\src\Daml.Ledger.Abstractions\Daml.Ledger.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

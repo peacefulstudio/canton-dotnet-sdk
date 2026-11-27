@@ -72,6 +72,20 @@ public class PackageNameResolutionTests
     }
 
     [Fact]
+    public async Task ResolvePackageIdAsync_compares_version_components_above_int_MaxValue_numerically()
+    {
+        var resolver = ResolverOver(
+            Package("00earlier", HoldingPackageName, "1.0.20261031120000"),
+            Package("00later", HoldingPackageName, "1.0.20261031120001"),
+            Package("00small", HoldingPackageName, "1.0.9"));
+
+        var packageId = await resolver.ResolvePackageIdAsync(
+            HoldingPackageName, TestContext.Current.CancellationToken);
+
+        packageId.Should().Be("00later");
+    }
+
+    [Fact]
     public async Task ResolvePackageIdAsync_ignores_packages_carrying_a_different_name()
     {
         var resolver = ResolverOver(

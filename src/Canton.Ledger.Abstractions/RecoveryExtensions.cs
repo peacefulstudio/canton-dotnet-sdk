@@ -68,8 +68,9 @@ public static class RecoveryExtensions
     /// <returns>The verdict the completion stream gave.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="client"/> is <c>null</c>.</exception>
     /// <exception cref="LedgerOperationException">The completion stream faulted, the connected synchronizers
-    /// could not be read, or the participant reported none for the submitter. Reading changes nothing, so
-    /// <see cref="LedgerOperationException.CommitState"/> is always <see cref="CommitState.NotCommitted"/>.</exception>
+    /// could not be read, or the participant reported none for the submitter. A completion-stream fault carries
+    /// <see cref="CommitState.Unknown"/>: the recovered command's outcome is still undetermined, so resubmitting
+    /// it is not safe.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     public static async Task<RecoveryOutcome> RecoverAsync(
         this ICantonLedgerClient client,
@@ -141,7 +142,7 @@ public static class RecoveryExtensions
                         throw new LedgerOperationException(
                             error.Message,
                             error.Status,
-                            CommitState.NotCommitted,
+                            CommitState.Unknown,
                             error.Category,
                             error.ErrorId,
                             metadata: null,

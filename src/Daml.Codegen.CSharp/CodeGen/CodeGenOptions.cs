@@ -21,8 +21,11 @@ public sealed class CodeGenOptions
     public string? NamespacePrefix { get; init; }
 
     /// <summary>
-    /// Gets or sets a regex pattern to filter which templates to generate.
-    /// Default is ".*" (all templates).
+    /// Gets or sets a regular expression matched against <c>Module:Name</c> that selects which
+    /// templates, interfaces and Daml values are generated. Records, variants and enums are always
+    /// generated, and every template or interface the generated code refers to (an implemented
+    /// interface, the interface a generated record is the view of, a <c>ContractId</c> target) is
+    /// added so the output compiles. If null, everything is generated.
     /// </summary>
     public string? RootFilter { get; init; }
 

@@ -70,6 +70,17 @@ public sealed class DalfReaderLiteralConstantsTests
     }
 
     [Fact]
+    public void Parse_rejects_a_value_definition_carrying_no_name_with_type()
+    {
+        var builder = new DalfPackageBuilder();
+
+        var act = () => ConstantsOf(builder, new DefValue { Expr = Int64Literal(1) });
+
+        act.Should().Throw<InvalidDataException>()
+            .WithMessage("*value definition carries no name-with-type*");
+    }
+
+    [Fact]
     public void Parse_orders_constants_by_ordinal_name()
     {
         var builder = new DalfPackageBuilder();
@@ -242,5 +253,30 @@ public sealed class DalfReaderLiteralConstantsTests
         var act = () => DalfReader.Parse(DalfTestFixtures.SerializeArchive(builder.Package));
 
         act.Should().Throw<InvalidDataException>().WithMessage("*rate*numeric*");
+    }
+
+    [Fact]
+    public void Parse_keeps_a_numeric_literal_of_80_characters()
+    {
+        var builder = new DalfPackageBuilder();
+        var eightyCharacters = "-" + new string('1', 40) + "." + new string('2', 38);
+
+        var constants = ConstantsOfNamed(builder, "rate", NumericLiteral(builder, eightyCharacters));
+
+        constants.Should().Equal(new DamlConstant("rate", new DamlNumericConstantValue(eightyCharacters)));
+    }
+
+    [Theory]
+    [InlineData(81)]
+    [InlineData(4_000_000)]
+    public void Parse_rejects_a_numeric_literal_longer_than_80_characters(int digits)
+    {
+        var builder = new DalfPackageBuilder();
+        builder.Package.Modules.Add(new Module { NameInternedDname = builder.DottedName("M") });
+        builder.Package.Modules[0].Values.Add(ValueNamed(builder, ["rate"], NumericLiteral(builder, new string('9', digits))));
+
+        var act = () => DalfReader.Parse(DalfTestFixtures.SerializeArchive(builder.Package));
+
+        act.Should().Throw<InvalidDataException>().WithMessage("*rate*longer than 80 characters*");
     }
 }

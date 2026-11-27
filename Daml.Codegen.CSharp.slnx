@@ -18,6 +18,7 @@
     <Project Path="src/Canton.Ledger.Rest.Client/Canton.Ledger.Rest.Client.csproj" />
     <Project Path="src/Canton.Ledger.Rest/Canton.Ledger.Rest.csproj" />
     <Project Path="src/Canton.Ledger.Testing/Canton.Ledger.Testing.csproj" />
+    <Project Path="src/Canton.ProjectTemplates/Canton.ProjectTemplates.csproj" />
     <Project Path="src/Daml.Codegen.CSharp.Cli/Daml.Codegen.CSharp.Cli.csproj" />
     <Project Path="src/Daml.Codegen.CSharp.MSBuild/Daml.Codegen.CSharp.MSBuild.csproj" />
     <Project Path="src/Daml.Codegen.CSharp/Daml.Codegen.CSharp.csproj" />
@@ -48,6 +49,7 @@
     <Project Path="tests/Canton.Ledger.Testing.Localnet.Tests/Canton.Ledger.Testing.Localnet.Tests.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Localnet/Canton.Ledger.Testing.Localnet.csproj" />
     <Project Path="tests/Canton.Ledger.Testing.Tests/Canton.Ledger.Testing.Tests.csproj" />
+    <Project Path="tests/Canton.ProjectTemplates.Tests/Canton.ProjectTemplates.Tests.csproj" />
     <Project Path="tests/Daml.Codegen.CSharp.Cli.Tests/Daml.Codegen.CSharp.Cli.Tests.csproj" />
     <Project Path="tests/Daml.Codegen.CSharp.MSBuild.Tests/Daml.Codegen.CSharp.MSBuild.Tests.csproj" />
     <Project Path="tests/Daml.Codegen.CSharp.Tests/Daml.Codegen.CSharp.Tests.csproj" />

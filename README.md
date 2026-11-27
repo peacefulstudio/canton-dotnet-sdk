@@ -3,7 +3,7 @@
 [![CI](https://github.com/peacefulstudio/canton-dotnet-sdk/actions/workflows/ci.yaml/badge.svg)](https://github.com/peacefulstudio/canton-dotnet-sdk/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/v/release/peacefulstudio/canton-dotnet-sdk?label=latest%20stable)](https://github.com/peacefulstudio/canton-dotnet-sdk/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![.NET](https://img.shields.io/badge/.NET-10.0-white.svg)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-10.0%20%7C%2011.0-white.svg)](https://dotnet.microsoft.com/)
 
 Build .NET applications on a Canton/Daml ledger with full type safety. `dpm codegen-cs` turns a
 Daml `.dar` archive into strongly-typed C#: records for every template and data type, typed
@@ -16,7 +16,7 @@ Maintained by [Peaceful Studio](https://peaceful.studio), which also offers
 
 ## NuGet Packages
 
-All 17 packages share one version and publish together from one `v*` tag, alongside the
+All 18 packages share one version and publish together from one `v*` tag, alongside the
 `dpm codegen-cs` component of the same version. Upgrade them together.
 
 | Package | Use it for |
@@ -36,10 +36,27 @@ All 17 packages share one version and publish together from one `v*` tag, alongs
 | [`Canton.Ledger.Grpc`](https://www.nuget.org/packages/Canton.Ledger.Grpc/) | Raw gRPC stubs generated from the Canton Ledger API protos. |
 | [`Canton.Ledger.Rest`](https://www.nuget.org/packages/Canton.Ledger.Rest/) | Raw Refit surface over the JSON Ledger API (experimental, `CANTONREST001`). |
 | [`Canton.Ledger.Testing`](https://www.nuget.org/packages/Canton.Ledger.Testing/) | In-memory fakes (`FakeLedgerClient`, `FakeAdminClient`, `FakePqsClient`) for unit tests without a participant. |
+| [`Canton.ProjectTemplates`](https://www.nuget.org/packages/Canton.ProjectTemplates/) | `dotnet new canton-app`: a Daml contract, its generated C# bindings and a console app that creates the contract on a LocalNet participant and reads it back. |
 | [`Daml.Ledger.Abstractions.Testing.Conformance`](https://www.nuget.org/packages/Daml.Ledger.Abstractions.Testing.Conformance/) | An abstract xUnit suite any `ILedgerClient` implementation subclasses to verify the behavioral contract. |
 | [`Daml.Codegen.Testing.Conformance`](https://www.nuget.org/packages/Daml.Codegen.Testing.Conformance/) | The conformance corpus: generated types plus their DARs, for live-ledger round-trip tests. Not for production. |
 
 `Daml.Codegen.CSharp.Cli`, the emitter CLI inside `dpm codegen-cs`, is source-only, not on NuGet.
+
+## Supported .NET versions
+
+Every library targets each .NET version Microsoft supports, from .NET 10: `net10.0` and `net11.0`.
+Your project restores the asset built for its own framework.
+
+| | |
+|---|---|
+| Your project's target | `net10.0` or `net11.0` |
+| .NET SDK you need | 10.0.100 or later; the .NET 10 SDK alone restores, generates and builds a `net10.0` project |
+| Generated C# | compiles as both C# 14 and C# 15 |
+| Codegen CLIs | built for .NET 10 and rolled forward on newer runtimes, so a machine with only .NET 11 runs them too |
+
+A target is added in the first release after a .NET version reaches general availability and dropped
+in the first release after Microsoft ends its support, which is 2028-11-14 for .NET 10 and .NET 11.
+Dropping one is listed as a breaking change in the [CHANGELOG](CHANGELOG.md).
 
 ## Quick Start
 
@@ -52,7 +69,7 @@ Daml source to generated C# bindings. Neither step needs a ledger.
 
 | Tool | Version | Needed for |
 |---|---|---|
-| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.100 or later (`dotnet --version`) | building the generated C# into your app |
+| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.100 or later (`dotnet --version`); see [Supported .NET versions](#supported-net-versions) | building the generated C# into your app |
 | JDK | 17 or later on `PATH` (`java -version`) | `dpm codegen-cs`, which decodes the DAR with a bundled JVM helper |
 | dpm and Daml SDK 3.7.1 | dpm 1.0.20 or later | `dpm build` and `dpm codegen-cs` |
 
@@ -102,7 +119,7 @@ SDK's NuGet packages share one version, so pin them together:
 name: quickstart-codegen
 version: 0.0.1
 components:
-  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.8.1
+  - oci://ghcr.io/peacefulstudio/dpm-codegen-cs:0.8.2
 ```
 
 Other versions are on the [releases page](https://github.com/peacefulstudio/canton-dotnet-sdk/releases);
@@ -129,6 +146,16 @@ helpers. The checked-in output is in
 
 ### Run it against a ledger
 
+To start a new project instead of reading one, install the template and generate a contract plus a
+client that creates it on a LocalNet participant and reads it back (see
+[dotnet-new-template.md](docs/public/dotnet-new-template.md) for what each generated file does):
+
+```bash
+dpm install 3.7.1
+dotnet new install Canton.ProjectTemplates
+dotnet new canton-app --name MyCantonApp
+```
+
 The generated bindings are ready to submit commands. The
 [Canton .NET SDK mini demo](https://github.com/peacefulstudio/canton-dotnet-sdk-mini-demo) is the
 smallest program that takes a Daml contract to generated C# and a live Token Standard V2 two-step
@@ -139,6 +166,7 @@ the SDK's end-to-end integration test, and its README covers the setup.
 
 | Topic | Page | Read this when you want to... |
 |---|---|---|
+| New project template | [dotnet-new-template.md](docs/public/dotnet-new-template.md) | start from `dotnet new canton-app` and see what each generated file does |
 | Code generation | [codegen.md](docs/public/codegen.md) | see what `dpm codegen-cs` emits, or build commands by hand |
 | Type mappings | [type-mappings.md](docs/public/type-mappings.md) | know how a Daml type maps to C# (`Optional`, `Numeric`, `Party`) |
 | CLI reference | [cli-reference.md](docs/public/cli-reference.md) | look up a `dpm codegen-cs` or emitter flag |

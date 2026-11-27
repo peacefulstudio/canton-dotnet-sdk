@@ -118,7 +118,7 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
         transport.LastRequest!.Method.Should().Be(HttpMethod.Post);
         transport.LastRequest.RequestUri!.AbsolutePath.Should().Be(CompletionsPath);
 
-        var request = JsonDocument.Parse(transport.LastRequestBody!).RootElement;
+        var request = JsonElement.Parse(transport.LastRequestBody!);
         request.GetProperty("beginExclusive").GetString().Should().Be("17");
         request.GetProperty("userId").GetString().Should().Be("app-1");
         request.GetProperty("parties").EnumerateArray().Select(party => party.GetString())
@@ -135,7 +135,7 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
         await DrainUntilAsync(
             client.CompletionStreamAsync(AliceSubmitter, LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 1);
 
-        JsonDocument.Parse(transport.LastRequestBody!).RootElement
+        JsonElement.Parse(transport.LastRequestBody!)
             .TryGetProperty("userId", out _).Should().BeFalse();
     }
 
@@ -278,7 +278,7 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
 
         transport.LastRequest!.Method.Should().Be(HttpMethod.Post);
         transport.LastRequest.RequestUri!.AbsolutePath.Should().Be(GetCompletionsPath);
-        var request = JsonDocument.Parse(transport.LastRequestBody!).RootElement;
+        var request = JsonElement.Parse(transport.LastRequestBody!);
         request.GetProperty("beginExclusive").GetString().Should().Be("17");
         request.GetProperty("parties").EnumerateArray().Select(party => party.GetString())
             .Should().Equal("party::alice", "party::bob");
@@ -328,7 +328,7 @@ public sealed class RestLedgerClientCompletionStreamTests : IDisposable
 
         await DrainUntilAsync(client.GetCompletionsAsync([Alice], LedgerOffset.Begin, cancellation.Token), cancellation, stopAfter: 2);
 
-        JsonDocument.Parse(transport.LastRequestBody!).RootElement.GetProperty("beginExclusive").GetString().Should().Be("7");
+        JsonElement.Parse(transport.LastRequestBody!).GetProperty("beginExclusive").GetString().Should().Be("7");
     }
 
     [Fact]

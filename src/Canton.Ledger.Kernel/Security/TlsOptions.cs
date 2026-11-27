@@ -110,7 +110,9 @@ public sealed record TlsOptions : IValidatableObject
     /// <summary>
     /// Path to a PEM bundle of certificate authorities that replaces the operating system trust
     /// store for this client rather than adding to it. The authorities it holds become the only
-    /// roots trusted for the connection.
+    /// roots trusted for the connection. A bundle holding no PEM certificate is refused with a
+    /// <see cref="System.Security.Cryptography.CryptographicException"/> when the client builds its
+    /// transport, since an empty custom trust store rejects every peer.
     /// </summary>
     public string? CertificateAuthorityBundlePemPath { get; init; }
 

@@ -437,15 +437,14 @@ public class RestTransactionTreeProjectorTests
     }
 
     [Fact]
-    public void Project_refuses_an_exercised_event_with_no_choice_instead_of_throwing_a_raw_argument_exception()
+    public void Project_throws_a_malformed_response_when_an_exercised_event_has_no_choice()
     {
         var exercised = Exercised(nodeId: 0, lastDescendantNodeId: 0, "00rich", "");
 
         var act = () => RestTransactionTreeProjector.Project(Transaction(exercised));
 
-        act.Should().Throw<TemplateTypeRequiredException>().Which.Message.Should().Be(
-            "No generated type is loaded for choice '' of 'pkg:Token.Holding:Holding'; "
-            + "load exactly one assembly generated for its Daml package before reading this payload over the JSON Ledger API. A host without a deps.json registers each generated assembly itself, once, with RuntimeHelpers.RunModuleConstructor(typeof(AnyGeneratedType).Module.ModuleHandle).");
+        act.Should().Throw<MalformedResponseException>().Which.Message.Should().Be(
+            "Malformed response from ledger: ExercisedEvent for contract '00rich' has no choice, though the Ledger API marks the field as required.");
     }
 
     [Fact]

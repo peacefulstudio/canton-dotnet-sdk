@@ -139,6 +139,7 @@ public static class EquatableArray
     Justification = "Array names the shape the way ImmutableArray<T> does: a fixed-length indexed sequence. The Collection suffix the rule asks for reads as a growable collection, which is the one thing this type refuses to be.")]
 [CollectionBuilder(typeof(EquatableArray), nameof(EquatableArray.Create))]
 [JsonConverter(typeof(EquatableArrayJsonConverterFactory))]
+[AbsenceBindsAnUnstatedValue]
 public readonly struct EquatableArray<T> : IReadOnlyList<T>, IList<T>, IEquatable<EquatableArray<T>>
 {
     private readonly T[]? _items;

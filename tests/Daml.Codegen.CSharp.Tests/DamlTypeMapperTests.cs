@@ -346,7 +346,7 @@ public class DamlTypeMapperTests
             .Should().Be(
                 "(global::System.Collections.Generic.IReadOnlyDictionary<string, long?>)value.As<global::Daml.Runtime.Data.DamlGenMap>().Entries.ToDictionary("
                 + "kv => kv.Key.As<global::Daml.Runtime.Data.DamlText>().Value, "
-                + "kv => kv.Value.AsOptional().HasValue ? kv.Value.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlInt64>().Value : null, "
+                + "kv => (long?)(kv.Value.AsOptional().HasValue ? kv.Value.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlInt64>().Value : null), "
                 + "global::Daml.Runtime.Data.DamlEqualityComparer<string>.Default)");
     }
 
@@ -423,7 +423,7 @@ public class DamlTypeMapperTests
     public void FromValue_deserializes_a_list_of_optionals()
     {
         Mapper().FromValue(App(DamlPrimitive.List, App(DamlPrimitive.Optional, Prim(DamlPrimitive.Text))), "value")
-            .Should().Be("(global::System.Collections.Generic.IReadOnlyList<string?>)value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => x.AsOptional().HasValue ? x.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null).ToList()");
+            .Should().Be("(global::System.Collections.Generic.IReadOnlyList<string?>)value.As<global::Daml.Runtime.Data.DamlList>().Values.Select(x => (string?)(x.AsOptional().HasValue ? x.AsOptional().Value!.As<global::Daml.Runtime.Data.DamlText>().Value : null)).ToList()");
     }
 
     [Fact]

@@ -45,17 +45,9 @@ internal sealed class TruncatedBodyServer : IDisposable
         using (connection)
         {
             var stream = connection.GetStream();
-            var buffer = new byte[8192];
-            var received = new StringBuilder();
-            while (!received.ToString().Contains("\r\n\r\n", StringComparison.Ordinal))
+            if (!await LoopbackRequestReader.ReadWholeRequestAsync(stream, _stopped.Token).ConfigureAwait(false))
             {
-                var count = await stream.ReadAsync(buffer, _stopped.Token).ConfigureAwait(false);
-                if (count == 0)
-                {
-                    return;
-                }
-
-                received.Append(Encoding.ASCII.GetString(buffer, 0, count));
+                return;
             }
 
             var response = Encoding.ASCII.GetBytes(

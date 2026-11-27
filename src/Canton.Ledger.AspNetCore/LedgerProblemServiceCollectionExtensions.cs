@@ -1,6 +1,7 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -26,8 +27,9 @@ public static class LedgerProblemServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddProblemDetails();
-        services.AddExceptionHandler<LedgerOperationExceptionHandler>();
         services.TryAddSingleton<LedgerOperationExceptionHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IExceptionHandler, LedgerOperationExceptionHandler>(
+            provider => provider.GetRequiredService<LedgerOperationExceptionHandler>()));
         var options = services.AddOptions<LedgerProblemOptions>();
         if (configure is not null)
             options.Configure(configure);

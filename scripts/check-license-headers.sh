@@ -102,6 +102,7 @@ TYPES_CARRYING_NO_HEADER=(
   csproj
   dalf
   dar
+  jar
   json
   manifest
   md

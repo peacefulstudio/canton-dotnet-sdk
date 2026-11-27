@@ -133,7 +133,19 @@ internal static class EmittedCodeCompilesTestHelpers
     internal static IReadOnlyList<Diagnostic> CompileEmittedFiles(
         IReadOnlyList<GeneratedFile> files,
         DocumentationMode documentationMode) =>
-        CompileEmittedFilesToCompilation(files, documentationMode).GetDiagnostics();
+        [
+            .. EmittedCodeLanguageVersions
+                .SelectMany(languageVersion =>
+                    CompileEmittedFilesToCompilation(files, documentationMode, languageVersion).GetDiagnostics())
+                .DistinctBy(d => (d.Id, d.Severity, d.Location.ToString(), d.GetMessage(CultureInfo.InvariantCulture))),
+        ];
+
+    /// <summary>
+    /// The language versions every emitted-code compile guard holds the output to: C# 14 is
+    /// the .NET 10 SDK default and C# 15 the .NET 11 SDK default, and consumers build with either.
+    /// </summary>
+    internal static IReadOnlyList<LanguageVersion> EmittedCodeLanguageVersions { get; } =
+        [LanguageVersion.CSharp14, LanguageVersion.CSharp15];
 
     /// <summary>
     /// The compilation behind <see cref="CompileEmittedFiles(IReadOnlyList{GeneratedFile})"/>,
@@ -143,9 +155,15 @@ internal static class EmittedCodeCompilesTestHelpers
     /// </summary>
     internal static CSharpCompilation CompileEmittedFilesToCompilation(
         IReadOnlyList<GeneratedFile> files,
-        DocumentationMode documentationMode)
+        DocumentationMode documentationMode) =>
+        CompileEmittedFilesToCompilation(files, documentationMode, LanguageVersion.CSharp14);
+
+    internal static CSharpCompilation CompileEmittedFilesToCompilation(
+        IReadOnlyList<GeneratedFile> files,
+        DocumentationMode documentationMode,
+        LanguageVersion languageVersion)
     {
-        var parseOptions = new CSharpParseOptions(documentationMode: documentationMode);
+        var parseOptions = new CSharpParseOptions(languageVersion, documentationMode);
         var trees = files
             .Where(f => f.RelativePath.EndsWith(".cs", StringComparison.Ordinal))
             .Select(f => CSharpSyntaxTree.ParseText(f.Content, parseOptions, path: f.RelativePath))

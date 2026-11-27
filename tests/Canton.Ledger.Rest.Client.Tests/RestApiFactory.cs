@@ -11,6 +11,6 @@ internal static class RestApiFactory
     {
         var transport = new RecordingHttpHandler();
         var client = new HttpClient(transport) { BaseAddress = new Uri("http://localhost:7575") };
-        return (RestService.For<TApi>(client, RestRefitSettings.Create()), transport);
+        return (RestService.ForGenerated<TApi>(client, RestRefitSettings.Create()), transport);
     }
 }

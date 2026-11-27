@@ -81,4 +81,21 @@ public sealed class CapturedActivitiesTests
 
         stopped.Should().BeSameAs(own);
     }
+
+    [Fact]
+    public async Task RequestActivityFailingInCategoryAsync_returns_the_activity_tagged_with_that_category()
+    {
+        var traceId = ActivityTraceId.CreateRandom();
+        using var activities = new CapturedActivities(traceId);
+        var other = StartRequestIn(traceId);
+        other.SetTag("daml.error_category", "ProbeOtherCategory");
+        other.Stop();
+        var wanted = StartRequestIn(traceId);
+        wanted.SetTag("daml.error_category", "ProbeWantedCategory");
+        wanted.Stop();
+
+        var stopped = await activities.RequestActivityFailingInCategoryAsync("ProbeWantedCategory");
+
+        stopped.Should().BeSameAs(wanted);
+    }
 }

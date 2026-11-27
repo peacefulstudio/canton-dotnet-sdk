@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFrameworks></TargetFrameworks>
+    <TargetFramework>net11.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <Description>Example showing how to use generated Daml C# code</Description>
     <IsPackable>false</IsPackable>

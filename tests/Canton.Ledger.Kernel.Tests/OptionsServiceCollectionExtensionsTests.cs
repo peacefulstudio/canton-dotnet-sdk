@@ -24,6 +24,16 @@ public class OptionsServiceCollectionExtensionsTests
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Name"] = name })
             .Build();
 
+    private static Task ValidateStartupAsync(IServiceProvider provider)
+    {
+#if NET11_0_OR_GREATER
+        return provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
+#else
+        provider.GetRequiredService<IStartupValidator>().Validate();
+        return Task.CompletedTask;
+#endif
+    }
+
     [Fact]
     public void AddValidatedOptions_configuration_binds_options_from_configuration()
     {
@@ -67,39 +77,38 @@ public class OptionsServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddValidatedOptions_configuration_wires_ValidateOnStart_so_invalid_options_fail_at_start()
+    public async Task AddValidatedOptions_configuration_wires_ValidateOnStart_so_invalid_options_fail_at_start()
     {
         var services = new ServiceCollection();
         services.AddValidatedOptions<SampleOptions>(ConfigWith(null)).ValidateDataAnnotations();
 
         var provider = services.BuildServiceProvider();
-        var act = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        var act = () => ValidateStartupAsync(provider);
 
-        act.Should().Throw<OptionsValidationException>()
+        (await act.Should().ThrowAsync<OptionsValidationException>())
             .Which.Failures.Should().Contain(f => f.Contains(nameof(SampleOptions.Name), StringComparison.Ordinal));
     }
 
     [Fact]
-    public void AddValidatedOptions_action_wires_ValidateOnStart_so_invalid_options_fail_at_start()
+    public async Task AddValidatedOptions_action_wires_ValidateOnStart_so_invalid_options_fail_at_start()
     {
         var services = new ServiceCollection();
         services.AddValidatedOptions<SampleOptions>(_ => { }).ValidateDataAnnotations();
 
         var provider = services.BuildServiceProvider();
-        var act = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        var act = () => ValidateStartupAsync(provider);
 
-        act.Should().Throw<OptionsValidationException>();
+        await act.Should().ThrowAsync<OptionsValidationException>();
     }
 
     [Fact]
-    public void AddValidatedOptions_configuration_lets_valid_options_resolve()
+    public async Task AddValidatedOptions_configuration_lets_valid_options_resolve()
     {
         var services = new ServiceCollection();
         services.AddValidatedOptions<SampleOptions>(ConfigWith("ok")).ValidateDataAnnotations();
 
         var provider = services.BuildServiceProvider();
-        provider.Invoking(p => p.GetRequiredService<IStartupValidator>().Validate())
-            .Should().NotThrow();
+        await ValidateStartupAsync(provider);
         provider.GetRequiredService<IOptions<SampleOptions>>().Value.Name.Should().Be("ok");
     }
 

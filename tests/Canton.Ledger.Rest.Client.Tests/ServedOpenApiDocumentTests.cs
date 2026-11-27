@@ -21,7 +21,7 @@ public class ServedOpenApiDocumentTests
         openapi: 3.0.3
         info:
           title: JSON Ledger API HTTP endpoints
-          version: 3.7.2
+          version: 3.7.4
         components:
           schemas:
             JsAssignmentEvent:
@@ -66,7 +66,7 @@ public class ServedOpenApiDocumentTests
 
     [Fact]
     public void Parse_reads_the_canton_version_the_document_declares()
-        => Excerpt().CantonVersion.Should().Be("3.7.2");
+        => Excerpt().CantonVersion.Should().Be("3.7.4");
 
     [Fact]
     public void OneOfArmKeysOf_reads_one_arm_key_per_oneOf_element_in_order()
@@ -100,7 +100,7 @@ public class ServedOpenApiDocumentTests
         openapi: 3.0.3
         info:
           title: JSON Ledger API HTTP endpoints
-          version: 3.7.2
+          version: 3.7.4
         components:
           schemas:
             Duration:

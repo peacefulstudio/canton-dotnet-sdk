@@ -450,8 +450,7 @@ internal sealed class InterfaceStreamEventJsonConverterFactory : JsonConverterFa
         IsClosedInterfaceStreamEvent(typeToConvert) || IsArmOfClosedInterfaceStreamEvent(typeToConvert);
 
     private static bool IsClosedInterfaceStreamEvent(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(InterfaceStreamEvent<,>);
+        ClosedGenericType.IsOf(type, typeof(InterfaceStreamEvent<,>));
 
     private static bool IsArmOfClosedInterfaceStreamEvent(Type type) =>
         type.BaseType is { } baseType && IsClosedInterfaceStreamEvent(baseType);

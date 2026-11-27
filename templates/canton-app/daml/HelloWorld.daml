@@ -1,0 +1,8 @@
+module HelloWorld where
+
+template Greeting
+  with
+    author : Party
+    message : Text
+  where
+    signatory author

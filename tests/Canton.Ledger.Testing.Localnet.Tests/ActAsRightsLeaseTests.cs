@@ -291,10 +291,10 @@ public class ActAsRightsLeaseTests
         participant);
 
     private static string UserIdIn(string body) =>
-        JsonDocument.Parse(body).RootElement.GetProperty("userId").GetString()!;
+        JsonElement.Parse(body).GetProperty("userId").GetString()!;
 
     private static IEnumerable<string> ActAsPartiesIn(string body) =>
-        JsonDocument.Parse(body).RootElement.GetProperty("rights").EnumerateArray()
+        JsonElement.Parse(body).GetProperty("rights").EnumerateArray()
             .Select(right => right.GetProperty("kind").GetProperty("CanActAs")
                 .GetProperty("value").GetProperty("party").GetString()!)
             .ToArray();
@@ -327,7 +327,7 @@ public class ActAsRightsLeaseTests
             };
 
         private static string RightsIn(string requestBody) =>
-            JsonDocument.Parse(requestBody).RootElement.GetProperty("rights").GetRawText();
+            JsonElement.Parse(requestBody).GetProperty("rights").GetRawText();
     }
 
     private sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? BearerToken, string Body);

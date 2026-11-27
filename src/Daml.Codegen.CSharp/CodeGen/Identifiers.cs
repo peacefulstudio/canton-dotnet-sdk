@@ -226,6 +226,19 @@ internal static class Identifiers
     private static bool IsLowerHexDigit(char c) => c is >= '0' and <= '9' or >= 'a' and <= 'f';
 
     /// <summary>
+    /// Whether <paramref name="dottedName"/> is usable verbatim as a C# namespace: one or more
+    /// segments joined by <c>.</c>, each a letter or <c>_</c> followed by letters, digits or
+    /// <c>_</c>, and none a C# keyword. A verbatim <c>@</c> segment is refused, as is anything else
+    /// the emitter would have to rewrite.
+    /// </summary>
+    internal static bool IsDottedIdentifier(string dottedName) =>
+        dottedName.Split('.').All(segment =>
+            segment.Length > 0
+            && (char.IsLetter(segment[0]) || segment[0] == '_')
+            && segment.All(c => char.IsLetterOrDigit(c) || c == '_')
+            && !CSharpKeywords.Contains(segment));
+
+    /// <summary>
     /// Prefixes <c>@</c> when <paramref name="identifier"/> collides with a C# keyword,
     /// making it legal as a declaration. Apply last, once every casing and prefixing
     /// transform has run — see <see cref="SanitizeBare"/>.

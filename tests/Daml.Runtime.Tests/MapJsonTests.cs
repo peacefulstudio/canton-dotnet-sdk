@@ -65,6 +65,17 @@ public class MapJsonTests
 
     private sealed record TextLedger(string Name, Map<string, string> Balances);
 
+    private sealed record Unconvertible(bool Fails);
+
+    private sealed class ThrowingValueConverter : JsonConverter<Unconvertible>
+    {
+        public override Unconvertible Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            throw new InvalidOperationException("the value converter refused to read");
+
+        public override void Write(Utf8JsonWriter writer, Unconvertible value, JsonSerializerOptions options) =>
+            throw new InvalidOperationException("the value converter refused to write");
+    }
+
     /// <summary>
     /// <see cref="Map{TKey, TValue}"/> carries a custom
     /// <see cref="System.Text.Json.Serialization.JsonConverter{T}"/>, <see cref="MapJsonConverter{TKey, TValue}"/>,
@@ -288,5 +299,73 @@ public class MapJsonTests
         book!.Balances.Should().BeNull(
             "the modifier that marks the member required rides on AddDamlConverters, and options "
             + "that register nothing never install it");
+    }
+
+    [Fact]
+    public void Map_round_trips_an_empty_map_through_its_empty_entries()
+    {
+        var empty = new Map<string, long>([]);
+
+        var written = JsonSerializer.Serialize(empty);
+
+        written.Should().Be("""{"Entries":[],"Count":0}""");
+        JsonSerializer.Deserialize<Map<string, long>>(written).Should().Be(empty);
+    }
+
+    [Fact]
+    public void Map_reads_a_null_as_the_absent_map_where_the_slot_permits_one()
+    {
+        var book = JsonSerializer.Deserialize<OptionalBook>("""{"Name":"ledger","Balances":null}""", Registered);
+
+        book!.Balances.Should().BeNull();
+    }
+
+    [Fact]
+    public void Map_refuses_a_null_where_the_slot_forbids_one()
+    {
+        var act = () => JsonSerializer.Deserialize<Book>("""{"Name":"ledger","Balances":null}""", Registered);
+
+        act.Should().Throw<JsonException>()
+            .WithMessage("*constructor parameter 'Balances'*doesn't allow null values*");
+    }
+
+    [Fact]
+    public void Map_wraps_a_non_JsonException_thrown_while_reading_an_entry()
+    {
+        var options = new JsonSerializerOptions { Converters = { new ThrowingValueConverter() } };
+
+        var act = () => JsonSerializer.Deserialize<Map<string, Unconvertible>>(
+            """{"Entries":[{"Key":"alice","Value":{"Fails":true}}]}""", options);
+
+        act.Should().Throw<JsonException>()
+            .WithMessage("Cannot read Map<String, MapJsonTests.Unconvertible>.Entries: the value converter refused to read")
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("the value converter refused to read");
+    }
+
+    public static TheoryData<string> ReferenceHandlers => ["Preserve", "IgnoreCycles"];
+
+    private static JsonSerializerOptions WithReferenceHandler(string handler) => new()
+    {
+        ReferenceHandler = handler == "Preserve" ? ReferenceHandler.Preserve : ReferenceHandler.IgnoreCycles,
+    };
+
+    [Theory]
+    [MemberData(nameof(ReferenceHandlers))]
+    public void Map_refuses_a_ReferenceHandler_on_write(string handler)
+    {
+        var act = () => JsonSerializer.Serialize(Balances, WithReferenceHandler(handler));
+
+        act.Should().Throw<JsonException>().WithMessage("Reference handling is not supported for Map<String, Int64>:*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ReferenceHandlers))]
+    public void Map_refuses_a_ReferenceHandler_on_read(string handler)
+    {
+        var act = () => JsonSerializer.Deserialize<Map<string, long>>(
+            """{"Entries":[{"Key":"alice","Value":10}]}""", WithReferenceHandler(handler));
+
+        act.Should().Throw<JsonException>().WithMessage("Reference handling is not supported for Map<String, Int64>:*");
     }
 }

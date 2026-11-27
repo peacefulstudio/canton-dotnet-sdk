@@ -215,4 +215,24 @@ public class IdentifiersTests
     }
 
     private static bool IsLowerHexDigit(char c) => c is >= '0' and <= '9' or >= 'a' and <= 'f';
+
+    [Theory]
+    [InlineData("Acme", true)]
+    [InlineData("Acme.Ledger", true)]
+    [InlineData("_Acme.v2", true)]
+    [InlineData("Société", true)]
+    [InlineData("", false)]
+    [InlineData(" ", false)]
+    [InlineData("2Acme", false)]
+    [InlineData("Acme.", false)]
+    [InlineData(".Acme", false)]
+    [InlineData("Acme..Ledger", false)]
+    [InlineData("Acme Ledger", false)]
+    [InlineData("Acme-Ledger", false)]
+    [InlineData("Acme.namespace", false)]
+    [InlineData("@class", false)]
+    public void IsDottedIdentifier_accepts_only_dot_separated_non_keyword_identifiers(string dottedName, bool expected)
+    {
+        Identifiers.IsDottedIdentifier(dottedName).Should().Be(expected);
+    }
 }

@@ -35,7 +35,7 @@ public class RetryPipelineFactoryTests
     public void Create_builds_a_pipeline_when_enabled_with_a_delay_of_exactly_one_day()
     {
         var act = () => RetryPipelineFactory.Create(
-            new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromDays(1) });
+            new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromDays(1), MaxDelay = TimeSpan.FromDays(1) });
 
         act.Should().NotThrow();
     }
@@ -108,7 +108,7 @@ public class RetryPipelineFactoryTests
     {
         var time = new FakeTimeProvider();
         var pipeline = RetryPipelineFactory.Create(
-            new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromHours(1) },
+            new RetryOptions { Enabled = true, MaxRetryAttempts = 1, Delay = TimeSpan.FromHours(1), MaxDelay = TimeSpan.FromHours(1) },
             timeProvider: time);
         var attempts = 0;
         var firstAttemptFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -140,5 +140,39 @@ public class RetryPipelineFactoryTests
         await execution;
 
         attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Create_caps_every_exponential_backoff_delay_at_MaxDelay()
+    {
+        var time = new FakeTimeProvider();
+        var observedDelays = new List<TimeSpan>();
+        var pipeline = RetryPipelineFactory.Create(
+            new RetryOptions
+            {
+                Enabled = true,
+                MaxRetryAttempts = 8,
+                Delay = TimeSpan.FromHours(1),
+                MaxDelay = TimeSpan.FromHours(2),
+            },
+            onRetry: attempt => observedDelays.Add(attempt.RetryDelay),
+            timeProvider: time);
+
+        var execution = pipeline.ExecuteAsync(
+            _ => throw new InvalidOperationException("transient"),
+            TestContext.Current.CancellationToken).AsTask();
+
+        using var ceiling = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!execution.IsCompleted)
+        {
+            ceiling.Token.ThrowIfCancellationRequested();
+            time.Advance(TimeSpan.FromHours(2));
+            await Task.Yield();
+        }
+
+        await execution.Invoking(e => e).Should().ThrowAsync<InvalidOperationException>();
+        observedDelays.Should().HaveCount(8)
+            .And.OnlyContain(delay => delay <= TimeSpan.FromHours(2));
+        observedDelays[^1].Should().Be(TimeSpan.FromHours(2));
     }
 }

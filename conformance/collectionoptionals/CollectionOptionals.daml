@@ -1,0 +1,72 @@
+-- Copyright 2026 Peaceful Studio OÜ
+-- SPDX-License-Identifier: Apache-2.0
+module CollectionOptionals where
+
+import DA.TextMap (TextMap)
+import DA.Map (Map)
+
+data Shade = Light | Dark
+  deriving (Eq, Show)
+
+data Tag = Tag
+  with
+    label : Text
+  deriving (Eq, Show)
+
+data OptionalLists = OptionalLists
+  with
+    ints : [Optional Int]
+    texts : [Optional Text]
+    parties : [Optional Party]
+    flags : [Optional Bool]
+    amounts : [Optional Decimal]
+    dates : [Optional Date]
+    tags : [Optional Tag]
+    shades : [Optional Shade]
+  deriving (Eq, Show)
+
+data OptionalMaps = OptionalMaps
+  with
+    countByName : TextMap (Optional Int)
+    noteByName : TextMap (Optional Text)
+    countByKey : Map Text (Optional Int)
+    noteByRank : Map Int (Optional Text)
+  deriving (Eq, Show)
+
+data NestedOptionalCollections = NestedOptionalCollections
+  with
+    maybeInts : Optional [Optional Int]
+    countMaps : [TextMap (Optional Int)]
+    nestedLists : [[Optional Text]]
+  deriving (Eq, Show)
+
+data OptionalCollectionVariant
+  = Counts [Optional Int]
+  | Notes (TextMap (Optional Text))
+  | Nothing'
+  deriving (Eq, Show)
+
+data TaggedView = TaggedView
+  with
+    tags : [Optional Text]
+  deriving (Eq, Show)
+
+interface Tagged where
+  viewtype TaggedView
+
+template Ledgerbook
+  with
+    owner : Party
+    entries : [Optional Int]
+  where
+    signatory owner
+
+    interface instance Tagged for Ledgerbook where
+      view = TaggedView with tags = map (fmap show) entries
+
+    nonconsuming choice Tally : Map Text (Optional Int)
+      with
+        counts : TextMap (Optional Int)
+      controller owner
+      do
+        pure mempty

@@ -186,6 +186,58 @@ public class LedgerOperationExceptionHandlerTests
         problem.GetProperty("detail").GetString().Should().Be("The ledger rejected the command as invalid (INVALID_ARGUMENT).");
     }
 
+    public static TheoryData<string, string> UntrustedErrorIds => new()
+    {
+        { "free text", "contract 00abcd was archived" },
+        { "party id", "trader::1220abcdef" },
+        { "newline", "INVALID\nARGUMENT" },
+        { "trailing newline", "INVALID_ARGUMENT\n" },
+        { "space", "INVALID ARGUMENT" },
+        { "lower case", "invalid_argument" },
+        { "over long", "A" + new string('B', 128) },
+        { "empty", "" },
+    };
+
+    [Theory]
+    [MemberData(nameof(UntrustedErrorIds))]
+    public async Task A_redacted_400_refusal_answers_the_fixed_detail_alone_when_its_error_id_is_not_an_error_code(
+        string idKind, string errorId)
+    {
+        _ = idKind;
+        await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.RedactedRefusal(
+            new TransportStatus.Http(HttpStatusCode.BadRequest), errorId: errorId));
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be("The ledger rejected the command as invalid.");
+    }
+
+    [Theory]
+    [MemberData(nameof(UntrustedErrorIds))]
+    public async Task A_caller_fixable_400_answers_the_fixed_detail_alone_when_its_error_id_is_not_an_error_code(
+        string idKind, string errorId)
+    {
+        _ = idKind;
+        await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.Rejected(
+            DamlErrorCategory.InvalidIndependentOfSystemState, errorId));
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be("The ledger rejected the command as invalid.");
+    }
+
+    [Fact]
+    public async Task A_caller_fixable_400_names_an_error_id_of_the_longest_accepted_length()
+    {
+        var longest = "A" + new string('9', 127);
+        await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.Rejected(
+            DamlErrorCategory.InvalidIndependentOfSystemState, longest));
+
+        var (_, problem) = await host.GetProblemAsync("/fail");
+
+        problem.GetProperty("detail").GetString().Should().Be($"The ledger rejected the command as invalid ({longest}).");
+    }
+
     [Fact]
     public async Task A_redacted_400_refusal_returns_the_failure_message_as_its_detail_when_the_host_opts_in()
     {
@@ -345,6 +397,49 @@ public class LedgerOperationExceptionHandlerTests
         span.GetTagItem("daml.error_id").Should().Be("LOCAL_VERDICT_LOCKED_CONTRACTS");
         span.GetTagItem("daml.error_category").Should().Be("ContentionOnSharedResources");
         span.GetTagItem("daml.error_metadata.agreement_id").Should().BeNull();
+    }
+
+    public static TheoryData<string, string> UntrustedLoggedErrorIds => new()
+    {
+        { "space", "LOCAL VERDICT" },
+        { "newline", "LOCAL_VERDICT\nforged log line" },
+        { "party id", "trader::1220abcdef" },
+    };
+
+    [Theory]
+    [MemberData(nameof(UntrustedLoggedErrorIds))]
+    public async Task A_ledger_failure_logs_an_error_id_that_is_not_an_error_code_as_unrecognised(
+        string idKind, string errorId)
+    {
+        _ = idKind;
+        var logs = new CapturedLogs();
+        await using var host = await LedgerApiHost.StartAsync(
+            app => app.MapGet("/fail", (Func<IResult>)(() => throw LedgerFailures.Rejected(
+                DamlErrorCategory.ContentionOnSharedResources, errorId))),
+            services => services.AddSingleton<ILoggerProvider>(logs));
+
+        await host.GetAsync("/fail");
+
+        logs.Entries.Should().Contain((
+            LogLevel.Warning,
+            "Ledger operation ConnectionRequest.Accept failed (NotCommitted, unrecognised) on GET /fail; answering 409"));
+    }
+
+    [Theory]
+    [MemberData(nameof(UntrustedLoggedErrorIds))]
+    public async Task A_ledger_failure_leaves_the_error_id_tag_off_the_span_when_the_id_is_not_an_error_code(
+        string idKind, string errorId)
+    {
+        _ = idKind;
+        await using var host = await LedgerApiHost.ThrowingAsync(LedgerFailures.Rejected(
+            DamlErrorCategory.ContentionOnSharedResources, errorId));
+        using var activities = new CapturedActivities(host.TraceId);
+
+        await host.GetAsync("/fail");
+
+        var span = await activities.RequestActivityFailingInCategoryAsync("ContentionOnSharedResources");
+        span.GetTagItem("daml.error_id").Should().BeNull();
+        span.GetTagItem("daml.error_category").Should().Be("ContentionOnSharedResources");
     }
 
     [Fact]

@@ -114,6 +114,22 @@ public class EmittedLiteralConstantsTests
     }
 
     [Fact]
+    public void Generate_skips_a_Numeric_constant_longer_than_80_characters_logging_its_length_not_its_digits()
+    {
+        var logger = new CapturingLogger();
+        var generator = new CSharpCodeGenerator(new CodeGenOptions(), new ForwardingLogger(logger));
+
+        var files = generator.Generate(CreateTestDar(RegistryOf(Numeric("hugeRate", "0." + new string('0', 20_000_000) + "1"), Int64("kept", 1))));
+
+        files.Single(file => file.RelativePath == ConstantsPath).Content
+            .Should().Contain("public const long Kept = 1;")
+            .And.NotContain("HugeRate");
+        var record = logger.Records.Should().ContainSingle(entry => entry.Message.Contains("hugeRate")).Subject;
+        record.Level.Should().Be(LogLevel.Information);
+        record.Message.Should().Be("Skipping Daml value Acme.Registry:hugeRate: its Numeric literal is 20000003 characters long, more than the 80 a Daml Numeric of at most 38 digits can take.");
+    }
+
+    [Fact]
     public void Generate_logs_each_skipped_Numeric_constant_naming_the_module_value_and_literal()
     {
         var logger = new CapturingLogger();

@@ -48,7 +48,44 @@ public class RetryOptionsValidationTests
     [Fact]
     public void Delay_of_exactly_one_day_passes_validation()
     {
-        Validate(new RetryOptions { Enabled = true, Delay = TimeSpan.FromDays(1) }).Should().BeEmpty();
+        Validate(new RetryOptions { Enabled = true, Delay = TimeSpan.FromDays(1), MaxDelay = TimeSpan.FromDays(1) })
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MaxDelay_defaults_to_thirty_seconds()
+    {
+        new RetryOptions().MaxDelay.Should().Be(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public void MaxDelay_is_rejected_when_shorter_than_Delay()
+    {
+        var results = Validate(new RetryOptions
+        {
+            Enabled = true,
+            Delay = TimeSpan.FromSeconds(2),
+            MaxDelay = TimeSpan.FromSeconds(1),
+        });
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Equal("MaxDelay");
+    }
+
+    [Fact]
+    public void MaxDelay_is_rejected_when_longer_than_one_day()
+    {
+        var results = Validate(new RetryOptions { Enabled = true, MaxDelay = TimeSpan.FromDays(1) + TimeSpan.FromTicks(1) });
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Equal("MaxDelay");
+    }
+
+    [Fact]
+    public void MaxDelay_equal_to_Delay_passes_validation()
+    {
+        Validate(new RetryOptions { Enabled = true, Delay = TimeSpan.FromSeconds(1), MaxDelay = TimeSpan.FromSeconds(1) })
+            .Should().BeEmpty();
     }
 
     [Fact]
