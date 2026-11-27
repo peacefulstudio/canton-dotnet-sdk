@@ -98,23 +98,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup .NET SDK 11 and the .NET 10 runtime
+      - name: Setup the SDK global.json pins and the .NET 10 runtime
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
-          dotnet-version: |
-            11.0.x
-            10.0.x
+          global-json-file: global.json
+          dotnet-version: '10.0.x'
 
-      - name: Require SDK 11 and a .NET 10 runtime
+      - name: Require the pinned SDK and a .NET 10 runtime
         run: |
           set -euo pipefail
+          pinned_major="$(jq -r '.sdk.version | split(".")[0]' global.json)"
           case "$(dotnet --version)" in
-            11.*) ;;
-            *) echo "::error::expected SDK 11, got $(dotnet --version)"; exit 1 ;;
+            "${pinned_major}".*) ;;
+            *) echo "::error::expected SDK ${pinned_major}, got $(dotnet --version)"; exit 1 ;;
           esac
           dotnet --list-runtimes | grep -E '^Microsoft\.NETCore\.App 10\.'
 
-      - name: Build both targets
+      - name: Build every target
         run: dotnet build --configuration Release
 
       - name: Test the net10.0 assemblies without rolling forward onto a newer runtime
@@ -132,7 +132,7 @@ jobs:
           [ "${ran}" -gt 0 ] || { echo "::error::no test project was built for net10.0"; exit 1; }
 
   net10-consumer-pack:
-    name: Pack the libraries with SDK 11
+    name: Pack the libraries with the pinned SDK
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -143,10 +143,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup .NET SDK 11
+      - name: Setup the SDK global.json pins
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
-          dotnet-version: '11.0.x'
+          global-json-file: global.json
 
       - name: Pack every published package into a local feed
         run: |
