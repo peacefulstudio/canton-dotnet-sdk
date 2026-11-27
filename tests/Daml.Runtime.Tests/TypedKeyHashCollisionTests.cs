@@ -1,6 +1,8 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Collections.ObjectModel;
+using System.Reflection;
 using AwesomeAssertions;
 using Daml.Runtime.Data;
 using Daml.Runtime.Stdlib;
@@ -25,11 +27,8 @@ public class TypedKeyHashCollisionTests
             new DamlGenMap([.. elements.Select(element => (element, (DamlValue)DamlUnit.Instance))])));
 
     private static int DistinctHashesUnderTheSetsComparer<T>(Set<T> set)
-        where T : notnull
-    {
-        var comparer = set.Elements.Should().BeOfType<HashSet<T>>().Subject.Comparer;
-        return set.Elements.Select(element => comparer.GetHashCode(element)).Distinct().Count();
-    }
+        where T : notnull =>
+        set.Elements.Select(element => DamlEqualityComparer<T>.Default.GetHashCode(element)).Distinct().Count();
 
     private static int DistinctHashesOfSetElements<T>(IEnumerable<T> elements)
         where T : notnull
@@ -185,10 +184,16 @@ public class TypedKeyHashCollisionTests
 
         var copy = DamlFieldCollections.Copy((IReadOnlyDictionary<long, string>)source);
 
-        var comparer = copy.Should().BeOfType<Dictionary<long, string>>().Subject.Comparer;
+        var comparer = BackingDictionaryOf(copy.Should().BeOfType<ReadOnlyDictionary<long, string>>().Subject).Comparer;
         copy.Keys.Select(key => comparer.GetHashCode(key)).Distinct().Count()
             .Should().BeGreaterThanOrEqualTo(MinimumDistinctHashes);
     }
+
+    private static Dictionary<TKey, TValue> BackingDictionaryOf<TKey, TValue>(ReadOnlyDictionary<TKey, TValue> wrapper)
+        where TKey : notnull =>
+        (Dictionary<TKey, TValue>)typeof(ReadOnlyDictionary<TKey, TValue>)
+            .GetProperty("Dictionary", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(wrapper)!;
 
     [Fact]
     public void DamlFieldCollections_Hash_spreads_lists_of_Int_values_whose_halves_are_equal()

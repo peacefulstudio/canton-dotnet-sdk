@@ -179,6 +179,36 @@ public sealed class RestAdminClientIdpVettingTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateVettedPackagesAsync_refuses_an_expected_serial_above_the_JSON_API_int32_limit_without_sending()
+    {
+        var transport = new RecordingHttpHandler();
+        IAdminClient client = ClientWith(transport);
+
+        var act = () => client.UpdateVettedPackagesAsync(
+            [],
+            expectedTopologySerial: ExpectedTopologySerial.At(2147483648u),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ArgumentOutOfRangeException>()).Which.ParamName
+            .Should().Be("expectedTopologySerial");
+        transport.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdateVettedPackagesAsync_sends_an_expected_serial_of_int32_MaxValue()
+    {
+        var transport = new RecordingHttpHandler().WithResponse(HttpStatusCode.OK, "{}");
+        IAdminClient client = ClientWith(transport);
+
+        await client.UpdateVettedPackagesAsync(
+            [],
+            expectedTopologySerial: ExpectedTopologySerial.At(2147483647u),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        transport.LastRequestBody.Should().Contain("\"serial\":{\"Prior\":{\"value\":2147483647}}");
+    }
+
+    [Fact]
     public async Task UpdateVettedPackagesAsync_is_never_replayed_by_the_opt_in_retry_pipeline()
     {
         var transport = new RecordingHttpHandler()

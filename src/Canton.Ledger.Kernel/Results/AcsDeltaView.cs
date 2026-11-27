@@ -19,9 +19,10 @@ internal static class AcsDeltaView
 
         var acsDeltaCreates = ledgerEffects.CreatedContracts
             .Where(created => createdInAcsDelta.Contains(created.ContractId));
-        var acsDeltaArchives = ledgerEffects.ExercisedEvents
-            .Where(exercised => exercised.Consuming && exercisedInAcsDelta.Contains(exercised.ContractId))
-            .Select(exercised => exercised.ContractId)
+        var acsDeltaArchives = ledgerEffects.ArchivedContractIds
+            .Concat(ledgerEffects.ExercisedEvents
+                .Where(exercised => exercised.Consuming && exercisedInAcsDelta.Contains(exercised.ContractId))
+                .Select(exercised => exercised.ContractId))
             .Distinct(StringComparer.Ordinal);
 
         return ledgerEffects with

@@ -17,7 +17,7 @@ internal static class FakeToolSeeder
     internal static void Seed(string fakeToolProject, string toolsDir, string tool)
     {
         Directory.CreateDirectory(toolsDir);
-        var buildOutput = Path.Combine(fakeToolProject, "bin", "Debug", "net10.0");
+        var buildOutput = Path.Combine(fakeToolProject, "bin", "Debug", TestTargetFramework.Moniker);
         foreach (var file in Directory.GetFiles(buildOutput))
         {
             File.Copy(file, Path.Combine(toolsDir, Path.GetFileName(file)), overwrite: true);

@@ -112,8 +112,9 @@ stakeholder of the contract can exercise it only by disclosing it explicitly.
 A characterization test reads the DAR and
 asserts each of them, so a fixture edit that flattens a shape fails rather than
 quietly narrowing the evidence. It also carries a content-addressed package name
-(see above); rebuild its DAR, and refresh the `Generated/ContractKeys/` sources the
-package compiles, with one command:
+(see above); rebuild its DAR, and refresh the generated sources the package
+compiles — one folder per Daml module, `Generated/ContractKeys/`,
+`Generated/Disclosure/` and `Generated/KeyBuilders/` — with one command:
 
     scripts/regenerate.sh rebuild-dar --package contractkeys --base contractkeys
 
@@ -156,6 +157,16 @@ Rebuild a DAR with the command below, then run `scripts/regenerate.sh write`:
 A Daml SDK bump that drops `2.5-rc1` from the targets `damlc` accepts fails the `lf25rc1`
 build; retarget the fixture along with the parser's allow-list. The package ids of both are
 pinned in `ConformancePackageIdentityDriftTests`.
+
+The `collectionoptionals` package carries a List, TextMap and GenMap whose element is an
+`Optional` spelled with C# nullable syntax (`[Optional Int]`, `TextMap (Optional Text)`,
+`Map Text (Optional Int)`, ...), as record fields, nested in an `Optional` and in a list, in a
+variant, in a template field, in a choice argument and result, and in an interface view. Its
+generated output is pinned, and compiled, by the `collectionoptionals` drift snapshot under
+`tests/Daml.Codegen.CSharp.Tests/Snapshots`. Rebuild its DAR with the command below, then run
+`scripts/regenerate.sh write`:
+
+    cd conformance/collectionoptionals && dpm build && cp .daml/dist/collectionoptionals-*.dar ./collectionoptionals.dar
 
 The `defaulttarget` package is a single boring template whose only job is
 to be compiled with **no `build-options:` block at all**. `damlc` picks a

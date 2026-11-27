@@ -206,7 +206,7 @@ public class ActAsRightsLeaseRaceTests
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(request.Method == HttpMethod.Patch
-                    ? $$"""{"newlyRevokedRights":{{JsonDocument.Parse(body).RootElement.GetProperty("rights").GetRawText()}}}"""
+                    ? $$"""{"newlyRevokedRights":{{JsonElement.Parse(body).GetProperty("rights").GetRawText()}}}"""
                     : "{}"),
             };
         }

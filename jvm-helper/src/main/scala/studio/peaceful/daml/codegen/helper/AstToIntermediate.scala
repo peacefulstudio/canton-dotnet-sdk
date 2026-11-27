@@ -263,12 +263,21 @@ object AstToIntermediate {
     case Ast.BTContractId      => PbBuiltinType.BUILTIN_TYPE_CONTRACT_ID
     case Ast.BTAny             => PbBuiltinType.BUILTIN_TYPE_ANY
     case Ast.BTTypeRep         => PbBuiltinType.BUILTIN_TYPE_TYPE_REP
-    case Ast.BTRoundingMode    => PbBuiltinType.BUILTIN_TYPE_ROUNDING_MODE
-    case Ast.BTBigNumeric      => PbBuiltinType.BUILTIN_TYPE_BIGNUMERIC
+    case Ast.BTRoundingMode    => rejectUnsupported("RoundingMode", DevOnlyValueTypeRationale)
+    case Ast.BTBigNumeric      => rejectUnsupported("BigNumeric", DevOnlyValueTypeRationale)
     case Ast.BTAnyException    => PbBuiltinType.BUILTIN_TYPE_ANY_EXCEPTION
     case Ast.BTUpdate          => PbBuiltinType.BUILTIN_TYPE_UPDATE
-    case Ast.BTScenario        => PbBuiltinType.BUILTIN_TYPE_SCENARIO
+    case Ast.BTScenario        => rejectUnsupported("Scenario", "reserved and removed in Daml-LF 2.x, so no valid archive carries it")
     case Ast.BTArrow           => PbBuiltinType.BUILTIN_TYPE_ARROW
     case Ast.BTFailureCategory => PbBuiltinType.BUILTIN_TYPE_FAILURE_CATEGORY
   }
+
+  private val DevOnlyValueTypeRationale =
+    "a Daml-LF 2.dev-only value type with no correct serialization mapping"
+
+  /** Fails on the builtins the C# DarParser catalogs as Unsupported, so both
+    * Intermediate DAR producers refuse the same DAR at the same stage.
+    */
+  private def rejectUnsupported(name: String, rationale: String): Nothing =
+    throw new UnsupportedOperationException(s"Daml-LF builtin type $name is unsupported: $rationale")
 }

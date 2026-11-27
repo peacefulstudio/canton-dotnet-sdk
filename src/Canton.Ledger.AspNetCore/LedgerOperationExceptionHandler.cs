@@ -75,8 +75,8 @@ internal sealed partial class LedgerOperationExceptionHandler(
                 span.SetTag(ErrorMetadataTagPrefix + key, value);
         }
 
-        if (failure.ErrorId is not null)
-            span.SetTag(ErrorIdTag, failure.ErrorId);
+        if (ErrorCodeId.OrNull(failure.ErrorId) is { } errorCode)
+            span.SetTag(ErrorIdTag, errorCode);
         if (failure.Category is not null)
             span.SetTag(ErrorCategoryTag, failure.Category.ToString());
     }
@@ -88,11 +88,18 @@ internal sealed partial class LedgerOperationExceptionHandler(
             return;
 
         var loggedException = failure.RedactingUnless(options.Value.IncludeLedgerErrorMessages);
+        var loggedErrorId = LoggedErrorId(failure.ErrorId);
         LedgerFailureAnswered(
             _logger, level, loggedException,
-            failure.Operation ?? "unknown", failure.CommitState, failure.ErrorId ?? "none",
+            failure.Operation ?? "unknown", failure.CommitState, loggedErrorId,
             httpContext.Request.Method, httpContext.Request.Path, problem.Status);
     }
+
+    private static string LoggedErrorId(string? errorId) => errorId switch
+    {
+        null => "none",
+        _ => ErrorCodeId.OrNull(errorId) ?? "unrecognised",
+    };
 
     [LoggerMessage(Message = "Ledger operation {Operation} failed ({CommitState}, {ErrorId}) on {Method} {Path}; answering {StatusCode}")]
     private static partial void LedgerFailureAnswered(

@@ -1,7 +1,12 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
+    <TestTargetFrameworks>net10.0;net11.0</TestTargetFrameworks>
+    <TestTargetFrameworks Condition="'$(GITHUB_ACTIONS)' == 'true' And '$(SDK_TEST_ALL_TARGET_FRAMEWORKS)' != 'true'">net11.0</TestTargetFrameworks>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
     <OutputType>Exe</OutputType>
+    <RollForward>Major</RollForward>
+    <UseAppHost>true</UseAppHost>
     <!-- Test assemblies publish no API, so they opt out of the repo-wide
          documentation file rather than suppressing CS1591 over it. -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
@@ -11,13 +16,9 @@
          CA1822 — xUnit fixture and builder members are reached through the injected
                   fixture instance, so marking them static would break the call sites
                   that make the fixture idiom work. -->
-    <!-- NU1603 — Microsoft.CodeAnalysis.CSharp 5.9.0 depends on
-         Microsoft.CodeAnalysis.Analyzers >= 5.9.0-1.26328.17 (a private daily build not on
-         the public feed); NuGet resolves 5.9.0 stable, which satisfies the constraint, and
-         emits NU1603 anyway. Suppress rather than pin the pre-release transitive dep. -->
-    <NoWarn>$(NoWarn);CA1707;CA1822;NU1603</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;CA1822</NoWarn>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
-    <TestingPlatformCommandLineArguments>--coverage --coverage-output-format cobertura --coverage-output $(MSBuildProjectName).cobertura.xml --coverage-settings $(MSBuildThisFileDirectory)../coverage.settings.xml</TestingPlatformCommandLineArguments>
+    <TestingPlatformCommandLineArguments>--coverage --coverage-output-format cobertura --coverage-output $(MSBuildProjectName).cobertura.xml --coverage-settings $(MSBuildThisFileDirectory)../coverage.settings.xml --hangdump --hangdump-timeout 20m --hangdump-type Mini</TestingPlatformCommandLineArguments>
   </PropertyGroup>
   <ItemGroup Condition="'$(UseMicrosoftTestingPlatformRunner)' == 'true'">
     <Compile Include="$(MSBuildThisFileDirectory)Shared\TestNamingConventionTests.cs" Link="Shared\TestNamingConventionTests.cs" />
@@ -25,6 +26,7 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Include="AwesomeAssertions" />
   </ItemGroup>
   <ItemGroup>

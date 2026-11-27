@@ -26,7 +26,9 @@ var disclosedContracts = factory.ChoiceContext.DisclosedContracts
     .ToList();
 ```
 
-`AddSpliceTokenRegistryClients` registers one interface per API, over one named `HttpClient` (`ServiceCollectionExtensions.HttpClientName`) whose base address is the registry's. Outside dependency injection, build an interface with `RestService.For<T>(httpClient, SpliceRegistryRefitSettings.Create())`.
+`AddSpliceTokenRegistryClients` registers one interface per API, over one named `HttpClient` (`ServiceCollectionExtensions.HttpClientName`) whose base address is the registry's. Outside dependency injection, build an interface with `RestService.ForGenerated<T>(httpClient, SpliceRegistryRefitSettings.Create())`.
+
+The named client treats the registry as untrusted: it never follows a redirect (a `3xx` surfaces as a `Refit.ApiException`), bounds every call to 30 seconds, and refuses a response body above 16 MiB with a `Refit.ApiRequestException`. Configure it further through the builder `AddSpliceTokenRegistryClients` returns: `ConfigureHttpClient` replaces the timeout, and `UseSocketsHttpHandler((handler, _) => handler.SslOptions = ...)` sets TLS options while keeping redirects refused.
 
 ## What is covered
 

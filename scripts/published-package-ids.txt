@@ -8,6 +8,7 @@ Canton.Ledger.Pqs.Client
 Canton.Ledger.Rest
 Canton.Ledger.Rest.Client
 Canton.Ledger.Testing
+Canton.ProjectTemplates
 Daml.Codegen.CSharp
 Daml.Codegen.CSharp.MSBuild
 Daml.Codegen.Intermediate

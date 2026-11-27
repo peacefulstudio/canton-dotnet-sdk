@@ -106,7 +106,10 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
     /// <c>class</c>, <c>event</c> — by prepending <c>@</c>, which is legal on a property but not
     /// on the local bound by the <c>is { } __name</c> pattern, so an <c>Optional</c> field called
     /// <c>lock</c> would emit the unparsable <c>__@lock</c>. Only the local is stripped; the
-    /// property reference keeps its escape so the record property stays addressable.
+    /// property reference keeps its escape so the record property stays addressable. A collection
+    /// element is reached through an expression such as <c>kv.Value</c>, not an identifier, so its
+    /// local drops the non-identifier characters and takes the nesting depth as a suffix
+    /// (<c>__kvValue1</c>), which keeps a GenMap's key and value locals apart.
     /// </remarks>
     private string ToValue(DamlType type, string fieldName, IReadOnlyDictionary<string, string>? typeVarDelegates, int depth)
     {
@@ -114,6 +117,10 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
 
         return new ToValueVisitor(this, resolver, fieldName, typeVarDelegates, depth).Dispatch(type);
     }
+
+    private static bool IsNullableOptional(DamlType type) =>
+        type is DamlOptionalType
+            or DamlTypeApp { Base: DamlPrimitiveType { Primitive: DamlPrimitive.Optional }, Arguments.Count: 1 };
 
     private static string FallbackToValueStub(string fieldName) =>
         $"{TypeReferenceQualifier.Qualify(RuntimeTypeNames.GenericStub)}.NotImplemented<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)}>(\"{fieldName}\")";
@@ -977,26 +984,40 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
 
         public override string VisitList(DamlListType type) =>
             $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlList)}({fieldName}.Select(x => "
-            + $"({TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)})"
-            + $"{Mapper.ToValue(type.Element, "x", typeVarDelegates, Depth + 1)}).ToList())";
+            + $"{ElementToValue(type.Element, "x")}).ToList())";
 
-        public override string VisitOptional(DamlOptionalType type) =>
-            $"{fieldName} is {{ }} __{fieldName.TrimStart('@')} ? "
-            + $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlOptional)}"
-            + $"({Mapper.ToValue(type.Value, $"__{fieldName.TrimStart('@')}", typeVarDelegates, Depth + 1)}) "
-            + $": {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlOptional)}.None";
+        public override string VisitOptional(DamlOptionalType type)
+        {
+            var local = OptionalPatternLocal();
+            return $"{fieldName} is {{ }} {local} ? "
+                + $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlOptional)}"
+                + $"({Mapper.ToValue(type.Value, local, typeVarDelegates, Depth + 1)}) "
+                + $": {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlOptional)}.None";
+        }
 
         public override string VisitTextMap(DamlTextMapType type) =>
             $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlTextMap)}({fieldName}.ToDictionary(kv => kv.Key, kv => "
-            + $"({TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)})"
-            + $"{Mapper.ToValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)}))";
+            + $"{ElementToValue(type.Value, "kv.Value")}))";
 
         public override string VisitGenMap(DamlGenMapType type) =>
             $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlGenMap)}({fieldName}.Select(kv => ("
-            + $"({TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)})"
-            + $"{Mapper.ToValue(type.Key, "kv.Key", typeVarDelegates, Depth + 1)}, "
-            + $"({TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)})"
-            + $"{Mapper.ToValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)})).ToList())";
+            + $"{ElementToValue(type.Key, "kv.Key")}, "
+            + $"{ElementToValue(type.Value, "kv.Value")})).ToList())";
+
+        private string ElementToValue(DamlType element, string elementName)
+        {
+            var conversion = Mapper.ToValue(element, elementName, typeVarDelegates, Depth + 1);
+            var cast = $"({TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlValue)})";
+            return DamlTypeMapper.IsNullableOptional(element) ? $"{cast}({conversion})" : $"{cast}{conversion}";
+        }
+
+        private string OptionalPatternLocal()
+        {
+            var name = fieldName.TrimStart('@');
+            return name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')
+                ? $"__{name}"
+                : $"__{new string([.. name.Where(char.IsAsciiLetterOrDigit)])}{Depth}";
+        }
 
         public override string VisitContractId(DamlContractIdType type) => $"{fieldName}.ToDamlValue()";
 
@@ -1070,7 +1091,7 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
         public override string VisitList(DamlListType type) =>
             $"({TypeReferenceQualifier.Qualify("IReadOnlyList")}<{Mapper.MapType(type.Element, Depth + 1)}>)"
             + $"{valueName}.As<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlList)}>().Values"
-            + $".Select(x => {Mapper.FromValue(type.Element, "x", typeVarDelegates, Depth + 1)}).ToList()";
+            + $".Select(x => {ElementFromValue(type.Element, "x")}).ToList()";
 
         public override string VisitOptional(DamlOptionalType type) =>
             $"{valueName}.AsOptional().HasValue ? "
@@ -1081,14 +1102,20 @@ internal sealed class DamlTypeMapper(PackageEmitContext context, DarCrossPackage
             $"({TypeReferenceQualifier.Qualify("IReadOnlyDictionary")}<string, {Mapper.MapType(type.Value, Depth + 1)}>)"
             + $"{valueName}.As<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlTextMap)}>().Values"
             + $".ToDictionary(kv => kv.Key, kv => "
-            + $"{Mapper.FromValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)})";
+            + $"{ElementFromValue(type.Value, "kv.Value")})";
 
         public override string VisitGenMap(DamlGenMapType type) =>
             $"({TypeReferenceQualifier.Qualify("IReadOnlyDictionary")}<{Mapper.MapType(type.Key, Depth + 1)}, {Mapper.MapType(type.Value, Depth + 1)}>)"
             + $"{valueName}.As<{TypeReferenceQualifier.Qualify(RuntimeTypeNames.DamlGenMap)}>().Entries"
-            + $".ToDictionary(kv => {Mapper.FromValue(type.Key, "kv.Key", typeVarDelegates, Depth + 1)}, "
-            + $"kv => {Mapper.FromValue(type.Value, "kv.Value", typeVarDelegates, Depth + 1)}, "
+            + $".ToDictionary(kv => {ElementFromValue(type.Key, "kv.Key")}, "
+            + $"kv => {ElementFromValue(type.Value, "kv.Value")}, "
             + $"{DamlTypeMapper.EqualityComparerFor(Mapper.MapType(type.Key, Depth + 1))})";
+
+        private string ElementFromValue(DamlType element, string elementName)
+        {
+            var conversion = Mapper.FromValue(element, elementName, typeVarDelegates, Depth + 1);
+            return DamlTypeMapper.IsNullableOptional(element) ? $"({Mapper.MapType(element, Depth + 1)})({conversion})" : conversion;
+        }
 
         public override string VisitContractId(DamlContractIdType type) =>
             $"new {TypeReferenceQualifier.Qualify(RuntimeTypeNames.ContractId)}<{Mapper.MapType(type.Payload, Depth + 1)}>"

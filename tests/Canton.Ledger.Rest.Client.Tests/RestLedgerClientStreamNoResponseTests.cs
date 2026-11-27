@@ -454,7 +454,7 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
     {
         var transport = new ScriptedTransport(
             ScriptedTransport.Ok(CompletionCheckpointWindow("11")), new ScriptedTransport.Hang());
-        var client = ClientOver(transport, httpClientTimeout: TimeSpan.FromMilliseconds(100));
+        var client = ClientOver(transport, httpClientTimeout: TimeSpan.FromSeconds(2));
 
         var events = await DrainAsync(client.CompletionStreamAsync(
             AliceSubmitter, LedgerOffset.At(5), TestContext.Current.CancellationToken));
@@ -470,7 +470,7 @@ public sealed class RestLedgerClientStreamNoResponseTests : IDisposable
     {
         var transport = new ScriptedTransport(
             ScriptedTransport.Ok(ActiveContractsPage("page-2", "00a")), new ScriptedTransport.Hang());
-        var client = ClientOver(transport, httpClientTimeout: TimeSpan.FromMilliseconds(100));
+        var client = ClientOver(transport, httpClientTimeout: TimeSpan.FromSeconds(2));
 
         var entries = await DrainAsync(client.SubscribeActiveAsync<TestTemplate>(
             Alice, LedgerOffset.At(9), cancellationToken: TestContext.Current.CancellationToken));

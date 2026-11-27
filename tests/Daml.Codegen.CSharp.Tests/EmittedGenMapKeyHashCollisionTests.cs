@@ -101,7 +101,10 @@ public class EmittedGenMapKeyHashCollisionTests
 
     private static int DistinctHashesUnderTheDictionarysComparer(string property)
     {
-        var dictionary = Holder.Value.GetProperty(property)!.GetValue(DecodeHolder())!;
+        var readOnlyView = Holder.Value.GetProperty(property)!.GetValue(DecodeHolder())!;
+        var dictionary = readOnlyView.GetType()
+            .GetProperty("Dictionary", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(readOnlyView)!;
         var keyType = dictionary.GetType().GetGenericArguments()[0];
         var comparer = dictionary.GetType().GetProperty("Comparer")!.GetValue(dictionary)!;
         var hash = typeof(IEqualityComparer<>).MakeGenericType(keyType).GetMethod("GetHashCode")!;

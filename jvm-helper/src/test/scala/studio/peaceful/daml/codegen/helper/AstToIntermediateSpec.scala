@@ -381,7 +381,7 @@ class AstToIntermediateSpec extends AnyWordSpec with Matchers with OptionValues 
       zeta.observers.value.shape.isDynamic shouldBe true
     }
 
-    "map every Ast.BuiltinType to its proto BuiltinType counterpart" in {
+    "map every supported Ast.BuiltinType to its proto BuiltinType counterpart" in {
       import com.digitalasset.daml.lf.archive.Dar
       import com.digitalasset.daml.lf.data.{ImmArray, Ref}
       import com.digitalasset.daml.lf.data.Ref.{DottedName, ModuleName}
@@ -403,11 +403,8 @@ class AstToIntermediateSpec extends AnyWordSpec with Matchers with OptionValues 
         Ast.BTContractId      -> PbBuiltinType.BUILTIN_TYPE_CONTRACT_ID,
         Ast.BTAny             -> PbBuiltinType.BUILTIN_TYPE_ANY,
         Ast.BTTypeRep         -> PbBuiltinType.BUILTIN_TYPE_TYPE_REP,
-        Ast.BTRoundingMode    -> PbBuiltinType.BUILTIN_TYPE_ROUNDING_MODE,
-        Ast.BTBigNumeric      -> PbBuiltinType.BUILTIN_TYPE_BIGNUMERIC,
         Ast.BTAnyException    -> PbBuiltinType.BUILTIN_TYPE_ANY_EXCEPTION,
         Ast.BTUpdate          -> PbBuiltinType.BUILTIN_TYPE_UPDATE,
-        Ast.BTScenario        -> PbBuiltinType.BUILTIN_TYPE_SCENARIO,
         Ast.BTArrow           -> PbBuiltinType.BUILTIN_TYPE_ARROW,
         Ast.BTFailureCategory -> PbBuiltinType.BUILTIN_TYPE_FAILURE_CATEGORY,
       )
@@ -498,6 +495,68 @@ class AstToIntermediateSpec extends AnyWordSpec with Matchers with OptionValues 
       method.name shouldBe "getOwner"
       method.returnType.value.sort.isBuiltin shouldBe true
       method.returnType.value.getBuiltin shouldBe PbBuiltinType.BUILTIN_TYPE_PARTY
+    }
+  }
+
+  private def packageWithInterfaceMethodReturning(returnType: com.digitalasset.daml.lf.language.Ast.Type) = {
+    import com.digitalasset.daml.lf.archive.Dar
+    import com.digitalasset.daml.lf.data.Ref
+    import com.digitalasset.daml.lf.data.Ref.{DottedName, ModuleName}
+    import com.digitalasset.daml.lf.language.{Ast, LanguageVersion}
+
+    val methodName = Ref.Name.assertFromString("amount")
+    val ifaceSig = Ast.DefInterfaceSignature(
+      requires = Set.empty,
+      param = Ref.Name.assertFromString("this"),
+      choices = Map.empty,
+      methods = Map(methodName -> Ast.InterfaceMethod(methodName, returnType)),
+      view = Ast.TBuiltin(Ast.BTUnit),
+      coImplements = Map.empty,
+    )
+    val mod = Ast.ModuleSignature(
+      name = ModuleName.assertFromString("Mod"),
+      definitions = Map.empty,
+      templates = Map.empty,
+      exceptions = Map.empty,
+      interfaces = Map(DottedName.assertFromString("HasAmount") -> ifaceSig),
+      featureFlags = Ast.FeatureFlags.default,
+    )
+    val pkg = Ast.PackageSignature(
+      modules = Map(mod.name -> mod),
+      directDeps = Set.empty,
+      languageVersion = LanguageVersion.defaultLfVersion,
+      metadata = Ast.PackageMetadata(
+        name = Ref.PackageName.assertFromString("synth-unsupported-builtin"),
+        version = Ref.PackageVersion.assertFromString("0.0.0"),
+        upgradedPackageId = None,
+      ),
+      imports = Ast.DeclaredImports(Set.empty),
+    )
+    Dar(main = Ref.PackageId.assertFromString("synth-unsupported-builtin-pkg") -> pkg, dependencies = List.empty)
+  }
+
+  "AstToIntermediate with a builtin the C# DarParser catalogs as Unsupported" should {
+    import com.digitalasset.daml.lf.language.Ast
+
+    val unsupported: Seq[(Ast.BuiltinType, String)] = Seq(
+      Ast.BTBigNumeric   -> "BigNumeric",
+      Ast.BTRoundingMode -> "RoundingMode",
+      Ast.BTScenario     -> "Scenario",
+    )
+
+    unsupported.foreach { case (builtin, name) =>
+      s"reject an interface method returning $name instead of writing it to the intermediate" in {
+        val thrown = the[UnsupportedOperationException] thrownBy
+          AstToIntermediate.translate(packageWithInterfaceMethodReturning(Ast.TBuiltin(builtin)))
+        thrown.getMessage should include(s"Daml-LF builtin type $name is unsupported")
+      }
+    }
+
+    "reject BigNumeric nested as a type argument" in {
+      val listOfBigNumeric = Ast.TApp(Ast.TBuiltin(Ast.BTList), Ast.TBuiltin(Ast.BTBigNumeric))
+      the[UnsupportedOperationException] thrownBy
+        AstToIntermediate.translate(packageWithInterfaceMethodReturning(listOfBigNumeric)) should have message
+        "Daml-LF builtin type BigNumeric is unsupported: a Daml-LF 2.dev-only value type with no correct serialization mapping"
     }
   }
 }

@@ -11,8 +11,8 @@ namespace Canton.Ledger.Testing.Tests;
 /// <summary>
 /// Proof that the fake applies the caller-error rule of the real clients to every public member
 /// taking a per-call <c>timeout</c>, so a consumer test cannot pass with a timeout production
-/// rejects. The members are read off <see cref="FakeLedgerClient"/> by reflection, so one added
-/// later is covered without a new row.
+/// rejects. The members are read off <see cref="FakeLedgerClient"/> and the default interface
+/// methods it inherits by reflection, so one added later is covered without a new row.
 /// </summary>
 public class FakeLedgerClientPerCallTimeoutGuardTests
 {
@@ -44,6 +44,41 @@ public class FakeLedgerClientPerCallTimeoutGuardTests
             .Which.ParamName.Should().Be(TimeoutParameter);
     }
 
+    public static TheoryData<string, long> RejectedDrainWindowRows()
+    {
+        var rows = new TheoryData<string, long>();
+        foreach (var member in TimeoutTakingDefaultInterfaceMembers())
+        {
+            rows.Add(member.ToString()!, -50_000L);
+            rows.Add(member.ToString()!, -300_000_000L);
+            rows.Add(member.ToString()!, 51_840_000_000_000L);
+        }
+
+        return rows;
+    }
+
+    [Theory]
+    [MemberData(nameof(RejectedDrainWindowRows))]
+    public void TimeoutTakingDefaultInterfaceMember_throws_for_a_timeout_the_drain_cannot_honour_at_the_call(
+        string memberSignature, long ticks)
+    {
+        var member = CloseOverTestTypes(
+            TimeoutTakingDefaultInterfaceMembers().Single(candidate => candidate.ToString() == memberSignature));
+        var client = FakeLedgerClient.Create().Build();
+
+        Action act = () => InvokeWithoutAwaiting(member, client, TimeSpan.FromTicks(ticks));
+
+        act.Should().ThrowExactly<ArgumentOutOfRangeException>(
+                "{0} must reject the timeout before a task exists", memberSignature)
+            .Which.ParamName.Should().Be(TimeoutParameter);
+    }
+
+    [Fact]
+    public void TimeoutTakingDefaultInterfaceMembers_are_the_interface_view_snapshot()
+    {
+        TimeoutTakingDefaultInterfaceMembers().Select(member => member.Name).Should().Equal("QueryActiveAsync");
+    }
+
     [Fact]
     public void TimeoutTakingMembers_are_the_twenty_nine_the_fake_publishes()
     {
@@ -68,6 +103,12 @@ public class FakeLedgerClientPerCallTimeoutGuardTests
         typeof(FakeLedgerClient)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Where(method => method.GetParameters().Any(parameter =>
+                parameter.Name == TimeoutParameter && parameter.ParameterType == typeof(TimeSpan?)));
+
+    private static IEnumerable<MethodInfo> TimeoutTakingDefaultInterfaceMembers() =>
+        typeof(FakeLedgerClient).GetInterfaces()
+            .SelectMany(contract => contract.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(method => !method.IsAbstract && method.GetParameters().Any(parameter =>
                 parameter.Name == TimeoutParameter && parameter.ParameterType == typeof(TimeSpan?)));
 
     private static MethodInfo CloseOverTestTypes(MethodInfo member)

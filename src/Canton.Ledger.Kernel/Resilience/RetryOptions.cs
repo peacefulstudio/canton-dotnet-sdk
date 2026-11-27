@@ -15,12 +15,13 @@ namespace Canton.Ledger.Kernel.Resilience;
 /// Implements <see cref="IValidatableObject"/> so a host wiring these options through
 /// <c>ValidateDataAnnotations().ValidateOnStart()</c> fails fast on a misconfiguration —
 /// a negative <see cref="MaxRetryAttempts"/> (which Polly would treat as effectively
-/// unbounded retries) or a <see cref="Delay"/> that is negative or longer than one day (which
-/// would throw deep inside the Polly pipeline build) — instead of at the first RPC.
+/// unbounded retries), a <see cref="Delay"/> that is negative or longer than one day (which
+/// would throw deep inside the Polly pipeline build), or a <see cref="MaxDelay"/> shorter than
+/// <see cref="Delay"/> or longer than one day — instead of at the first RPC.
 /// </remarks>
 public sealed record RetryOptions : IValidatableObject
 {
-    private static readonly TimeSpan MaxDelay = TimeSpan.FromDays(1);
+    private static readonly TimeSpan DelayCeiling = TimeSpan.FromDays(1);
 
     /// <summary>Whether the retry pipeline is active. Default: <see langword="false"/>.</summary>
     public bool Enabled { get; init; }
@@ -38,6 +39,13 @@ public sealed record RetryOptions : IValidatableObject
     /// </summary>
     public TimeSpan Delay { get; init; } = TimeSpan.FromMilliseconds(200);
 
+    /// <summary>
+    /// Longest single wait between attempts once <see cref="Enabled"/> is <see langword="true"/>: the
+    /// exponential backoff grows from <see cref="Delay"/> until it reaches this value, and every later
+    /// attempt waits this long. At least <see cref="Delay"/> and at most one day. Default: 30 seconds.
+    /// </summary>
+    public TimeSpan MaxDelay { get; init; } = TimeSpan.FromSeconds(30);
+
     /// <inheritdoc />
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -46,9 +54,18 @@ public sealed record RetryOptions : IValidatableObject
                 "RetryOptions.Delay must be zero or greater.",
                 [nameof(Delay)]);
 
-        if (Delay > MaxDelay)
+        if (Delay > DelayCeiling)
             yield return new ValidationResult(
                 "RetryOptions.Delay must be at most one day.",
                 [nameof(Delay)]);
+
+        if (MaxDelay > DelayCeiling)
+            yield return new ValidationResult(
+                "RetryOptions.MaxDelay must be at most one day.",
+                [nameof(MaxDelay)]);
+        else if (Delay <= DelayCeiling && MaxDelay < Delay)
+            yield return new ValidationResult(
+                $"RetryOptions.MaxDelay ({MaxDelay}) must be at least RetryOptions.Delay ({Delay}).",
+                [nameof(MaxDelay)]);
     }
 }

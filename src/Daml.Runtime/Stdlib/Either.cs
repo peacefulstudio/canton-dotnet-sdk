@@ -156,8 +156,7 @@ internal sealed class EitherJsonConverterFactory : JsonConverterFactory, IDiscri
         IsClosedEither(typeToConvert) || IsArmOfClosedEither(typeToConvert);
 
     private static bool IsClosedEither(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(Either<,>);
+        ClosedGenericType.IsOf(type, typeof(Either<,>));
 
     private static bool IsArmOfClosedEither(Type type) =>
         type.BaseType is { } baseType && IsClosedEither(baseType);

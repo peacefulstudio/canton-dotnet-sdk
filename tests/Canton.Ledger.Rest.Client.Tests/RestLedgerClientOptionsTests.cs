@@ -40,6 +40,35 @@ public class RestLedgerClientOptionsTests
             .Which.MemberNames.Should().Equal("Timeout");
     }
 
+    [Theory]
+    [InlineData(400)]
+    [InlineData(999)]
+    public void Validate_rejects_a_StreamWindowIdleTimeout_below_one_millisecond(int microseconds)
+    {
+        var options = new RestLedgerClientOptions
+        {
+            HttpAddress = "http://localhost:7575",
+            StreamWindowIdleTimeout = TimeSpan.FromMicroseconds(microseconds),
+        };
+
+        var results = options.Validate(new ValidationContext(options));
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Equal("StreamWindowIdleTimeout");
+    }
+
+    [Fact]
+    public void Validate_accepts_a_StreamWindowIdleTimeout_of_exactly_one_millisecond()
+    {
+        var options = new RestLedgerClientOptions
+        {
+            HttpAddress = "http://localhost:7575",
+            StreamWindowIdleTimeout = TimeSpan.FromMilliseconds(1),
+        };
+
+        options.Validate(new ValidationContext(options)).Should().BeEmpty();
+    }
+
     [Fact]
     public void Validate_accepts_a_null_Timeout_as_no_SDK_side_deadline()
     {

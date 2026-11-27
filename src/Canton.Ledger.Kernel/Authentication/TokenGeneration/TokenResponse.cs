@@ -7,5 +7,7 @@ namespace Canton.Ledger.Kernel.Authentication.TokenGeneration;
 
 internal sealed record TokenResponse(
     [property: JsonPropertyName("access_token")] string AccessToken,
-    [property: JsonPropertyName("expires_in")] int ExpiresIn,
+    [property: JsonPropertyName("expires_in")]
+    [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    double? ExpiresIn,
     [property: JsonPropertyName("token_type")] string? TokenType);

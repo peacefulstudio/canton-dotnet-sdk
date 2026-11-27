@@ -38,6 +38,14 @@ namespace Daml.Runtime.Stdlib;
 /// in the order the set enumerates them, which for a set built from a sequence is the order of
 /// first occurrence in that sequence.
 /// </para>
+/// <para>
+/// A <see cref="JsonSerializerOptions.ReferenceHandler"/> is refused with a <see cref="JsonException"/>
+/// naming the type, on read and on write: the converter reaches its elements through nested
+/// <see cref="JsonSerializer"/> calls that each start their own reference resolver, so
+/// <see cref="ReferenceHandler.Preserve"/> would emit <c>$id</c> values colliding with the outer
+/// operation's and lose aliasing on read, and <see cref="ReferenceHandler.IgnoreCycles"/> would not see a
+/// cycle through this type.
+/// </para>
 /// </remarks>
 /// <typeparam name="T">Element type of the set.</typeparam>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -48,6 +56,7 @@ namespace Daml.Runtime.Stdlib;
     "CA1000:Do not declare static members on generic types",
     Justification = "The static factory is the wire-decoding entry point for this Daml stdlib shape; generated code calls it as Set<...>.FromRecord, mirroring the Daml constructor it decodes.")]
 [JsonConverter(typeof(SetJsonConverterFactory))]
+[AbsenceBindsAnUnstatedValue]
 public sealed record Set<T>
     where T : notnull
 {
@@ -171,19 +180,24 @@ internal sealed class SetJsonConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert) => IsClosedSet(typeToConvert);
 
     private static bool IsClosedSet(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(Set<>);
+        ClosedGenericType.IsOf(type, typeof(Set<>));
 
-    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
-        (JsonConverter)Activator.CreateInstance(
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (!CanConvert(typeToConvert))
+        {
+            throw new ArgumentException($"'{typeToConvert}' is not a closed {nameof(Set<object>)}<T>.", nameof(typeToConvert));
+        }
+
+        return (JsonConverter)Activator.CreateInstance(
             typeof(SetJsonConverter<>).MakeGenericType(typeToConvert.GetGenericArguments()[0]))!;
+    }
 }
 
-internal sealed class SetJsonConverter<T> : JsonConverter<Set<T>>
+internal sealed class SetJsonConverter<T>() : JsonArrayConverter<Set<T>, T>(
+    $"{nameof(Set<object>)}<{DiscriminatedUnionJson.Describe(typeof(T))}>")
     where T : notnull
 {
-    private static readonly string TypeName = $"{nameof(Set<object>)}<{DiscriminatedUnionJson.Describe(typeof(T))}>";
-
     /// <remarks>
     /// The posture <see cref="Serialization.ContractIdJsonConverterFactory"/> already holds: a null
     /// token is read as the absent value the declared type already permits, and refused by
@@ -195,69 +209,17 @@ internal sealed class SetJsonConverter<T> : JsonConverter<Set<T>>
 
     public override Set<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            throw new JsonException($"Expected array token for {TypeName}, got {reader.TokenType}.");
-        }
+        DiscriminatedUnionJson.EnsureNoReferenceHandler(options, TypeName);
 
-        var elements = new List<T>();
-        while (true)
-        {
-            if (!reader.Read())
-            {
-                throw new JsonException($"Unexpected end of JSON while reading {TypeName}.");
-            }
-
-            if (reader.TokenType == JsonTokenType.EndArray)
-            {
-                break;
-            }
-
-            elements.Add(ReadElement(ref reader, elements.Count, options));
-        }
-
-        try
-        {
-            return new Set<T>(elements);
-        }
-        catch (ArgumentException ex)
-        {
-            throw new JsonException($"Invalid element in {TypeName}: {ex.Message}", ex);
-        }
+        return ReadArray(ref reader, options);
     }
 
     public override void Write(Utf8JsonWriter writer, Set<T> value, JsonSerializerOptions options)
     {
-        writer.WriteStartArray();
-        var index = 0;
-        foreach (var element in value.Elements)
-        {
-            WriteElement(writer, element, index++, options);
-        }
-        writer.WriteEndArray();
+        DiscriminatedUnionJson.EnsureNoReferenceHandler(options, TypeName);
+
+        WriteArray(writer, value.Elements, options);
     }
 
-    private static T ReadElement(ref Utf8JsonReader reader, int index, JsonSerializerOptions options)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<T>(ref reader, options)!;
-        }
-        catch (Exception ex)
-        {
-            throw new JsonException($"Cannot read element {index} of {TypeName}: {ex.Message}", ex);
-        }
-    }
-
-    private static void WriteElement(Utf8JsonWriter writer, T element, int index, JsonSerializerOptions options)
-    {
-        try
-        {
-            JsonSerializer.Serialize(writer, element, options);
-        }
-        catch (Exception ex)
-        {
-            throw new JsonException($"Cannot write element {index} of {TypeName}: {ex.Message}", ex);
-        }
-    }
+    protected override Set<T> Create(List<T> elements) => new(elements);
 }

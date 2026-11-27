@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Refit;
 
 namespace Splice.Api.Token.Registry.Client;
@@ -18,12 +19,13 @@ public static class SpliceRegistryRefitSettings
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
     };
 
     /// <summary>
     /// Creates the <see cref="RefitSettings"/> to build a registry interface with when the
     /// dependency injection registration is not used, for example
-    /// <c>RestService.For&lt;IAllocationV2Api&gt;(httpClient, SpliceRegistryRefitSettings.Create())</c>.
+    /// <c>RestService.ForGenerated&lt;IAllocationV2Api&gt;(httpClient, SpliceRegistryRefitSettings.Create())</c>.
     /// </summary>
     public static RefitSettings Create() => new()
     {

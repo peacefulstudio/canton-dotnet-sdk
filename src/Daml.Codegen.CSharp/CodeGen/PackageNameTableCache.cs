@@ -31,12 +31,23 @@ internal sealed class PackageNameTableCache
     /// <param name="mainPackageId">The package id of the DAR's main package, the only one the namespace prefix applies to; <c>null</c> when the cache serves a dependency alone.</param>
     /// <param name="logger">Where table warnings go; omit it and the cache stays silent.</param>
     public PackageNameTableCache(CodeGenOptions options, string? mainPackageId, ILogger? logger = null)
+        : this(options, mainPackageId, new TypeRootFilter(options?.RootFilter), logger)
     {
+    }
+
+    /// <summary>Creates the cache of one DAR whose emitted packages are filtered by <paramref name="rootFilter"/>.</summary>
+    /// <param name="options">Read for the namespace prefix and whether dependencies are emitted.</param>
+    /// <param name="mainPackageId">The package id of the DAR's main package, the only one the namespace prefix applies to; <c>null</c> when the cache serves a dependency alone.</param>
+    /// <param name="rootFilter">The root filter of the main package, and of every dependency when dependencies are emitted: <see cref="CodeGenOptions.RootFilter"/> closed by <see cref="RootFilterClosure"/>.</param>
+    /// <param name="logger">Where table warnings go; omit it and the cache stays silent.</param>
+    public PackageNameTableCache(CodeGenOptions options, string? mainPackageId, TypeRootFilter rootFilter, ILogger? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(rootFilter);
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
         _mainPackageId = mainPackageId;
         _logger = logger ?? NullLogger.Instance;
-        _mainRootFilter = new TypeRootFilter(options.RootFilter);
+        _mainRootFilter = rootFilter;
         _dependencyRootFilter = options.IncludeDependencies ? _mainRootFilter : TypeRootFilter.IncludeAll;
     }
 
@@ -58,7 +69,7 @@ internal sealed class PackageNameTableCache
         ArgumentNullException.ThrowIfNull(package);
         ArgumentNullException.ThrowIfNull(rootFilter);
 
-        var key = (package.PackageId, rootFilter.Pattern);
+        var key = (package.PackageId, rootFilter.CacheKey);
         if (!_tables.TryGetValue(key, out var table))
         {
             table = PackageNameTable.For(package, _options, IsMainPackage(package), rootFilter);

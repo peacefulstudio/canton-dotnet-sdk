@@ -365,8 +365,7 @@ internal sealed class ExerciseOutcomeJsonConverterFactory : JsonConverterFactory
         IsClosedExerciseOutcome(typeToConvert) || IsArmOfClosedExerciseOutcome(typeToConvert);
 
     private static bool IsClosedExerciseOutcome(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(ExerciseOutcome<>);
+        ClosedGenericType.IsOf(type, typeof(ExerciseOutcome<>));
 
     private static bool IsArmOfClosedExerciseOutcome(Type type) =>
         type.BaseType is { } baseType && IsClosedExerciseOutcome(baseType);

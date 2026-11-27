@@ -95,6 +95,7 @@ public sealed class ConformancePackageIdentityDriftTests
             ["defaulttarget/defaulttarget.dar"] = "b4407177424383cbb474e2b574411c43024435e8007bdf90445a30da9add2251",
             ["lf24/lf24.dar"] = "11b83285dfaaaf75d535bf22a3b1e9501f3e9c7df7c2adeec439ec77c40de400",
             ["lf25rc1/lf25rc1.dar"] = "708ff3391df8290ab903cb84c6ac119ccb84dce2bb96aa39e5438d19a45fce88",
+            ["collectionoptionals/collectionoptionals.dar"] = "7764b4d970a119786e5c0c11f971d447e09a0ac75f2fe29162723ba6c7f6f002",
             ["nonserializable/nonserializable.dar"] = "9945469c2677bb8ba341678233b394f3222cc1cf72687301cbff3a3aa5ad912b",
             ["richtypes/richtypes.dar"] = "3acb9f11503a1c56db40eb057c7f630247329f66bde28d381d31955a1b334a2c",
         };

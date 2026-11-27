@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Numerics;
 
 namespace Canton.Ledger.Abstractions;
 
@@ -75,7 +76,7 @@ public sealed class PackageIdResolver
         string packageName)
     {
         string? highestPackageId = null;
-        int[]? highestVersion = null;
+        BigInteger[]? highestVersion = null;
 
         foreach (var package in knownPackages)
         {
@@ -96,14 +97,14 @@ public sealed class PackageIdResolver
             $"The participant knows no package named '{packageName}'.");
     }
 
-    private static int[] ParseVersion(PackageDetails package)
+    private static BigInteger[] ParseVersion(PackageDetails package)
     {
         var components = package.Version.Split('.');
-        var parsed = new int[components.Length];
+        var parsed = new BigInteger[components.Length];
 
         for (var index = 0; index < components.Length; index++)
         {
-            parsed[index] = int.TryParse(
+            parsed[index] = BigInteger.TryParse(
                 components[index], NumberStyles.None, CultureInfo.InvariantCulture, out var component)
                 ? component
                 : throw new InvalidOperationException(
@@ -115,7 +116,7 @@ public sealed class PackageIdResolver
         return parsed;
     }
 
-    private static int Compare(int[] left, int[] right)
+    private static int Compare(BigInteger[] left, BigInteger[] right)
     {
         for (var index = 0; index < Math.Max(left.Length, right.Length); index++)
         {
@@ -129,5 +130,6 @@ public sealed class PackageIdResolver
         return 0;
     }
 
-    private static int ComponentAt(int[] version, int index) => index < version.Length ? version[index] : 0;
+    private static BigInteger ComponentAt(BigInteger[] version, int index) =>
+        index < version.Length ? version[index] : BigInteger.Zero;
 }

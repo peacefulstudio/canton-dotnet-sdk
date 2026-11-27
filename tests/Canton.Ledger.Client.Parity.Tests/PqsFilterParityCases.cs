@@ -267,9 +267,12 @@ internal static class PqsFilterParityCases
         yield return Corners("corners_tuple_pair_component", _ => Filter.Where<TypeCorners>(t => t.Pair._2 == 3), "a", "b");
         yield return Corners("corners_recursive_list_any", _ => Filter.Where<TypeCorners>(t => t.Branch.Children.Any()), "a", "c");
         yield return Corners("corners_recursive_list_empty", _ => Filter.Where<TypeCorners>(t => !t.Branch.Children.Any()), "b");
+        // Workaround: the dotnet/roslyn-analyzers CA1860 analyzer fires inside expression trees; PqsPredicateTranslator only translates Enumerable.Any.
+        #pragma warning disable CA1860
         yield return Corners("corners_recursive_list_nested_condition", _ => Filter.Where<TypeCorners>(t => t.Branch.Children.Any(child => child.Label == "leaf" && !child.Children.Any())), "a");
         yield return Corners("corners_recursive_list_child_with_children", _ => Filter.Where<TypeCorners>(t => t.Branch.Children.Any(child => child.Children.Any())), "c");
         yield return Corners("corners_recursive_list_all_childless_passes_empty", _ => Filter.Where<TypeCorners>(t => t.Branch.Children.All(child => !child.Children.Any())), "a", "b");
+        #pragma warning restore CA1860
     }
 
     private static IEnumerable<PqsFilterParityCase> TypeCornersNumericCases()

@@ -173,6 +173,28 @@ public class GeneratedTypeRegistryBindingLoaderTests
     }
 
     [Fact]
+    public void FindRecordReader_rethrows_a_failed_binding_load_and_runs_the_loader_again_on_the_next_lookup()
+    {
+        var failedOnce = false;
+        var loader = new CountingLoader(registry =>
+        {
+            if (!failedOnce)
+            {
+                failedOnce = true;
+                throw new InvalidOperationException("binding scan failed");
+            }
+
+            registry.ForRecord<LateRecord>();
+        });
+
+        var first = () => loader.Registry.FindRecordReader(LateRecordId);
+
+        first.Should().Throw<InvalidOperationException>().WithMessage("binding scan failed");
+        ResolvedRecord(loader.Registry.FindRecordReader(LateRecordId)).DeclaringType.Should().Be<LateRecord>();
+        loader.Runs.Should().Be(2);
+    }
+
+    [Fact]
     public void A_Resolved_lookup_does_not_run_the_binding_loader()
     {
         var loader = new CountingLoader(_ => { });

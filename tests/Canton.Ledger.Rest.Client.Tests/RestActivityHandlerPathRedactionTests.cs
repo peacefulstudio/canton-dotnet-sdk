@@ -33,7 +33,7 @@ public sealed class RestActivityHandlerPathRedactionTests : IDisposable
 
         var handler = new RestActivityHandler { InnerHandler = _transport };
         _client = new HttpClient(handler) { BaseAddress = new Uri($"http://{_ownHost}:7575") };
-        _api = RestService.For<IProbeApi>(_client);
+        _api = RestService.ForGenerated<IProbeApi>(_client, RestRefitSettings.Create());
     }
 
     private bool CapturesOwnRequest(Activity activity) =>
@@ -109,7 +109,7 @@ public sealed class RestActivityHandlerPathRedactionTests : IDisposable
             BaseAddress = new Uri($"http://{_ownHost}:7575/json-api"),
         };
 
-        await RestService.For<IProbeApi>(prefixedClient).GetParty("alice::1220abcdef");
+        await RestService.ForGenerated<IProbeApi>(prefixedClient, RestRefitSettings.Create()).GetParty("alice::1220abcdef");
 
         _transport.LastRequest!.RequestUri!.AbsolutePath.Should().Be("/json-api/v2/parties/alice%3A%3A1220abcdef");
         var activity = _activities.Should().ContainSingle().Subject;

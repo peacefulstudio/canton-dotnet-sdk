@@ -31,6 +31,15 @@ object PartyExpressionAnalyzer {
 
   type ValueResolver = Ref.ValueRef => Option[Ast.Expr]
 
+  /** A party-expression walk stops once its depth passes this, and an
+    * application or type-application spine stops once its link count does,
+    * resolving to [[PartyAnalysisResult.Dynamic]]. It mirrors the C# DarParser's
+    * bound of the same value, so both Intermediate DAR producers give the same
+    * verdict on a clause nested past it instead of this one reporting Static or
+    * overflowing the stack.
+    */
+  private val MaxExpressionDepth = 256
+
   def analyze(
       expr: Ast.Expr,
       templateParam: String,
@@ -47,6 +56,7 @@ object PartyExpressionAnalyzer {
         resolveValue,
         currentPackageId,
         throughValueIndirection = true,
+        depth = 0,
       )
     )
       PartyAnalysisResult.Static(payloadFields.toList)
@@ -60,19 +70,20 @@ object PartyExpressionAnalyzer {
       resolveValue: ValueResolver,
       currentPackageId: Ref.PackageId,
       throughValueIndirection: Boolean,
-  ): Boolean = stripLocations(expr) match {
+      depth: Int,
+  ): Boolean = depth <= MaxExpressionDepth && (stripLocations(expr) match {
     case _: Ast.ENil =>
       true
 
     case Ast.ECons(_, front, tail) =>
       front.toSeq.forall(collectPayloadFieldProjection(_, templateParam, acc)) &&
-        collectPayloadFields(tail, templateParam, acc, resolveValue, currentPackageId, throughValueIndirection)
+        collectPayloadFields(tail, templateParam, acc, resolveValue, currentPackageId, throughValueIndirection, depth + 1)
 
     case app: Ast.EApp if throughValueIndirection =>
-      resolvePartyValueIndirection(app, templateParam, acc, resolveValue, currentPackageId)
+      resolvePartyValueIndirection(app, templateParam, acc, resolveValue, currentPackageId, depth + 1)
 
     case _ => false
-  }
+  })
 
   private sealed trait PartyBinding
   private object PartyBinding {
@@ -105,50 +116,62 @@ object PartyExpressionAnalyzer {
       acc: mutable.ListBuffer[String],
       resolveValue: ValueResolver,
       currentPackageId: Ref.PackageId,
+      depth: Int,
   ): Boolean = {
-    val (head, args) = flattenApplication(app)
-    args.headOption.map(stripLocations) match {
-      case Some(Ast.EVar(contractArg)) if contractArg.toString == templateParam =>
-        unwrapTypeApplications(head) match {
-          case Ast.EVal(ref) =>
-            resolveValue(ref).map(stripLocations) match {
-              case Some(Ast.EAbs((binder, _), body)) =>
-                val environment =
-                  mutable.Map[String, PartyBinding](binder.toString -> PartyBinding.TemplateParam)
-                reduceSingletonPartyField(
-                  body,
-                  environment,
-                  resolveValue,
-                  currentPackageId,
-                  mutable.Set[Ref.ValueRef](ref),
-                ) match {
-                  case Some(field) => acc += field; true
-                  case None =>
-                    val isTemplateLevelIndirection = args.length == 1
-                    isTemplateLevelIndirection && collectPayloadFields(
-                      body,
-                      binder.toString,
-                      acc,
-                      resolveValue,
-                      currentPackageId,
-                      throughValueIndirection = false,
-                    )
-                }
-              case _ => false
-            }
-          case _ => false
-        }
-      case _ => false
+    val resolvedIndirection =
+      if (depth > MaxExpressionDepth) None
+      else
+        for {
+          (head, args) <- flattenApplication(app)
+          contractArg  <- args.headOption.map(stripLocations)
+          if isVariable(contractArg, templateParam)
+          ref <- unwrapTypeApplications(head).collect { case Ast.EVal(ref) => ref }
+          (binder, body) <- resolveValue(ref).map(stripLocations).collect {
+            case Ast.EAbs((binder, _), body) => (binder, body)
+          }
+        } yield (ref, args, binder, body)
+
+    resolvedIndirection.exists { case (ref, args, binder, body) =>
+      val environment =
+        mutable.Map[String, PartyBinding](binder.toString -> PartyBinding.TemplateParam)
+      reduceSingletonPartyField(
+        body,
+        environment,
+        resolveValue,
+        currentPackageId,
+        mutable.Set[Ref.ValueRef](ref),
+        depth + 1,
+      ) match {
+        case Some(field) => acc += field; true
+        case None =>
+          val isTemplateLevelIndirection = args.length == 1
+          isTemplateLevelIndirection && collectPayloadFields(
+            body,
+            binder.toString,
+            acc,
+            resolveValue,
+            currentPackageId,
+            throughValueIndirection = false,
+            depth + 1,
+          )
+      }
     }
   }
 
-  private def flattenApplication(expr: Ast.Expr): (Ast.Expr, List[Ast.Expr]) = {
+  private def isVariable(expr: Ast.Expr, name: String): Boolean = expr match {
+    case Ast.EVar(variable) => variable.toString == name
+    case _                  => false
+  }
+
+  private def flattenApplication(expr: Ast.Expr): Option[(Ast.Expr, List[Ast.Expr])] = {
     @tailrec
-    def go(e: Ast.Expr, acc: List[Ast.Expr]): (Ast.Expr, List[Ast.Expr]) = stripLocations(e) match {
-      case Ast.EApp(fun, arg) => go(fun, arg :: acc)
-      case other              => (other, acc)
-    }
-    go(expr, Nil)
+    def go(e: Ast.Expr, acc: List[Ast.Expr], links: Int): Option[(Ast.Expr, List[Ast.Expr])] =
+      stripLocations(e) match {
+        case Ast.EApp(_, _) if links >= MaxExpressionDepth => None
+        case Ast.EApp(fun, arg)                            => go(fun, arg :: acc, links + 1)
+        case other                                         => Some((other, acc))
+      }
+    go(expr, Nil, 0)
   }
 
   /** Reduces an expression the analyzer expects to yield a single-element `List
@@ -164,26 +187,27 @@ object PartyExpressionAnalyzer {
       resolveValue: ValueResolver,
       currentPackageId: Ref.PackageId,
       unfoldedValues: mutable.Set[Ref.ValueRef],
-  ): Option[String] = stripLocations(expr) match {
+      depth: Int,
+  ): Option[String] = if (depth > MaxExpressionDepth) None else stripLocations(expr) match {
     case Ast.ELet(binding, body) =>
       binding.binder.foreach(name =>
         environment(name.toString) = resolvePartyBinding(binding.bound, environment)
       )
-      reduceSingletonPartyField(body, environment, resolveValue, currentPackageId, unfoldedValues)
+      reduceSingletonPartyField(body, environment, resolveValue, currentPackageId, unfoldedValues, depth + 1)
 
     case Ast.EAbs((binder, _), body) =>
       environment(binder.toString) = PartyBinding.Opaque
-      reduceSingletonPartyField(body, environment, resolveValue, currentPackageId, unfoldedValues)
+      reduceSingletonPartyField(body, environment, resolveValue, currentPackageId, unfoldedValues, depth + 1)
 
     case Ast.EApp(callee, arg) =>
       unwrapTypeApplications(callee) match {
-        case Ast.EVal(ref) if isImportedToParties(ref, currentPackageId) =>
+        case Some(Ast.EVal(ref)) if isImportedToParties(ref, currentPackageId) =>
           resolvePartyBinding(arg, environment) match {
             case PartyBinding.PayloadField(field) => Some(field)
             case _                                => None
           }
 
-        case Ast.EVal(ref) if ref.packageId == currentPackageId && !unfoldedValues.contains(ref) =>
+        case Some(Ast.EVal(ref)) if ref.packageId == currentPackageId && !unfoldedValues.contains(ref) =>
           unfoldedValues += ref
           val argumentBinding = resolvePartyBinding(arg, environment)
           resolveValue(ref).map(stripLocations).flatMap {
@@ -194,6 +218,7 @@ object PartyExpressionAnalyzer {
                 resolveValue,
                 currentPackageId,
                 unfoldedValues,
+                depth + 1,
               )
             case _ => None
           }
@@ -234,10 +259,14 @@ object PartyExpressionAnalyzer {
     case other                   => other
   }
 
-  @tailrec
-  private def unwrapTypeApplications(expr: Ast.Expr): Ast.Expr = stripLocations(expr) match {
-    case Ast.ETyApp(inner, _) => unwrapTypeApplications(inner)
-    case other                => other
+  private def unwrapTypeApplications(expr: Ast.Expr): Option[Ast.Expr] = {
+    @tailrec
+    def go(e: Ast.Expr, links: Int): Option[Ast.Expr] = stripLocations(e) match {
+      case Ast.ETyApp(_, _) if links >= MaxExpressionDepth => None
+      case Ast.ETyApp(inner, _)                            => go(inner, links + 1)
+      case other                                           => Some(other)
+    }
+    go(expr, 0)
   }
 
   private def collectPayloadFieldProjection(

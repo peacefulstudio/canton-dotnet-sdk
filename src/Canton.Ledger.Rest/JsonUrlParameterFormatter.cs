@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Globalization;
-using System.Reflection;
 using Canton.Ledger.Rest.Client.Raw;
 using Refit;
 
@@ -25,7 +24,7 @@ internal sealed class JsonUrlParameterFormatter : DefaultUrlParameterFormatter
     private const string Rfc3339UtcFormat = "yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'";
 
     /// <inheritdoc />
-    public override string? Format(object? value, ICustomAttributeProvider attributeProvider, Type type) =>
+    public override string? Format(object? value, IParameterAttributeProvider attributeProvider, Type type) =>
         value is DateTimeOffset timestamp
             ? timestamp.UtcDateTime.ToString(Rfc3339UtcFormat, CultureInfo.InvariantCulture)
             : base.Format(value, attributeProvider, type);

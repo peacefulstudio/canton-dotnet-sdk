@@ -22,14 +22,17 @@ namespace Daml.Runtime.Contracts;
 /// hash code read the contents that would silently change an already-computed hash and make the
 /// value unfindable in a set or dictionary that already holds it. Every caller here therefore
 /// copies at each entry point — every constructor and <c>init</c> accessor, so <c>with</c>
-/// expressions are covered too.
+/// expressions are covered too. Each copy is handed out behind a read-only wrapper
+/// (<see cref="ReadOnlyCollection{T}"/>, <see cref="ReadOnlySet{T}"/>,
+/// <see cref="ReadOnlyDictionary{TKey,TValue}"/>), never as the array, set or dictionary it was
+/// built in, so a downcast of the returned value cannot reach the backing store either.
 /// </remarks>
 internal static class EventCollections
 {
     internal static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
     {
         ArgumentNullException.ThrowIfNull(values, parameterName);
-        return values.Count == 0 ? Array.Empty<T>() : [.. values];
+        return values.Count == 0 ? ReadOnlyCollection<T>.Empty : Array.AsReadOnly(values.ToArray());
     }
 
     internal static IReadOnlySet<T> Copy<T>(IEnumerable<T> values, string parameterName)
@@ -37,7 +40,7 @@ internal static class EventCollections
         ArgumentNullException.ThrowIfNull(values, parameterName);
         return values.TryGetNonEnumeratedCount(out var count) && count == 0
             ? ReadOnlySet<T>.Empty
-            : values.ToHashSet();
+            : new ReadOnlySet<T>(values.ToHashSet());
     }
 
     internal static IReadOnlyDictionary<TKey, TValue> Copy<TKey, TValue>(
@@ -46,7 +49,9 @@ internal static class EventCollections
         where TKey : notnull
     {
         ArgumentNullException.ThrowIfNull(values, parameterName);
-        return values.Count == 0 ? ReadOnlyDictionary<TKey, TValue>.Empty : values.ToDictionary();
+        return values.Count == 0
+            ? ReadOnlyDictionary<TKey, TValue>.Empty
+            : new ReadOnlyDictionary<TKey, TValue>(values.ToDictionary());
     }
 
     /// <summary>
@@ -88,7 +93,7 @@ internal static class EventCollections
         ArgumentNullException.ThrowIfNull(values, parameterName);
         if (values.Count == 0)
         {
-            return Array.Empty<T>();
+            return ReadOnlyCollection<T>.Empty;
         }
 
         var copy = new T[values.Count];
@@ -105,7 +110,7 @@ internal static class EventCollections
             copy[index] = item;
         }
 
-        return copy;
+        return Array.AsReadOnly(copy);
     }
 
     /// <summary>
@@ -134,7 +139,7 @@ internal static class EventCollections
             index++;
         }
 
-        return set.Count == 0 ? ReadOnlySet<T>.Empty : set;
+        return set.Count == 0 ? ReadOnlySet<T>.Empty : new ReadOnlySet<T>(set);
     }
 
     /// <summary>
@@ -152,7 +157,7 @@ internal static class EventCollections
         ArgumentNullException.ThrowIfNull(values, parameterName);
         if (values.Count == 0)
         {
-            return Array.Empty<KeyValuePair<TKey, TValue>>();
+            return ReadOnlyCollection<KeyValuePair<TKey, TValue>>.Empty;
         }
 
         var copy = new KeyValuePair<TKey, TValue>[values.Count];
@@ -176,6 +181,6 @@ internal static class EventCollections
             copy[index] = entry;
         }
 
-        return copy;
+        return Array.AsReadOnly(copy);
     }
 }

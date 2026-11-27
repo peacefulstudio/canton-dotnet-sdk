@@ -60,10 +60,26 @@ write_llms_full_txt() {
   done > "${site_output}/llms-full.txt"
 }
 
+assert_site_branding() {
+  local index="${site_output}/index.html" missing=0 marker
+  if [ ! -f "${site_output}/icon.png" ]; then
+    echo "::error::${site_output}/icon.png is missing: docfx.json sets the logo and favicon to icon.png, so the site would render without them." >&2
+    missing=1
+  fi
+  for marker in '<link rel="icon" href="icon.png">' '<img id="logo" class="svg" src="icon.png"'; do
+    if ! grep -qF "${marker}" "${index}"; then
+      echo "::error::${index} lacks '${marker}': the page head or navbar lost the icon.png branding docfx.json sets." >&2
+      missing=1
+    fi
+  done
+  return "${missing}"
+}
+
 cd "${repo_root}"
 rm -rf "${markdown_api}"
 dotnet tool restore
 dotnet docfx docfx.json "$@"
+assert_site_branding
 
 rm -rf "${markdown_output}"
 mkdir -p "${markdown_output}"

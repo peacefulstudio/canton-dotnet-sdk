@@ -96,6 +96,30 @@ public class AcsDeltaViewTests
     }
 
     [Fact]
+    public void Of_keeps_the_archived_ids_of_an_acs_delta_shaped_transaction()
+    {
+        var effects = Effects(created: [], exercised: [], archived: ["00archived", "00alsoarchived"]);
+
+        var view = AcsDeltaView.Of(effects, createdInAcsDelta: NoContracts, exercisedInAcsDelta: NoContracts);
+
+        view.ArchivedContractIds.Should().Equal("00archived", "00alsoarchived");
+    }
+
+    [Fact]
+    public void Of_reports_the_union_of_archived_ids_and_consuming_acs_delta_exercises_once_each()
+    {
+        var effects = Effects(
+            created: [],
+            exercised: [Exercise("00both", consuming: true), Exercise("00exercised", consuming: true)],
+            archived: ["00archived", "00both"]);
+
+        var view = AcsDeltaView.Of(
+            effects, createdInAcsDelta: NoContracts, exercisedInAcsDelta: Ids("00both", "00exercised"));
+
+        view.ArchivedContractIds.Should().Equal("00archived", "00both", "00exercised");
+    }
+
+    [Fact]
     public void Of_preserves_the_transaction_identity()
     {
         var view = AcsDeltaView.Of(
@@ -116,12 +140,13 @@ public class AcsDeltaViewTests
             contractId, TemplateId, InterfaceId: null, new ChoiceName("Choice"),
             DamlUnit.Instance, DamlUnit.Instance, consuming, [], []);
 
-    private static TransactionResult Effects(CreatedContract[] created, ExercisedEvent[] exercised) =>
+    private static TransactionResult Effects(
+        CreatedContract[] created, ExercisedEvent[] exercised, string[]? archived = null) =>
         new(
             UpdateId: "u-effects",
             CompletionOffset: LedgerOffset.At(7),
             CreatedContracts: EquatableArray.Create(created),
-            ArchivedContractIds: [],
+            ArchivedContractIds: EquatableArray.Create(archived ?? []),
             CommandId: new CommandId("cmd-1"))
         {
             ExercisedEvents = EquatableArray.Create(exercised),

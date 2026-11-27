@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>CantonApp.Contracts</AssemblyName>
+    <RootNamespace>CantonApp.Contracts</RootNamespace>
+    <DamlNamespace>CantonApp.Contracts</DamlNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <DamlProject Include="../daml" />
+  </ItemGroup>
+
+  <Target Name="CopyDamlArchiveToOutput" AfterTargets="DamlBuildProject" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <Content Include="$(_DamlProjectDar)" Link="$([System.IO.Path]::GetFileName('$(_DamlProjectDar)'))" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Daml.Codegen.CSharp.MSBuild" PrivateAssets="all" />
+    <PackageReference Include="Daml.Runtime" />
+    <PackageReference Include="Daml.Ledger.Abstractions" />
+  </ItemGroup>
+
+</Project>

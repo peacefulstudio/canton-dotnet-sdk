@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Daml.Codegen.CSharp.MSBuild" Version="@SdkVersion@" />
+    <PackageVersion Include="Daml.Runtime" Version="@SdkVersion@" />
+    <PackageVersion Include="Daml.Ledger.Abstractions" Version="@SdkVersion@" />
+    <PackageVersion Include="Canton.Ledger.Grpc.Client" Version="@SdkVersion@" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
+  </ItemGroup>
+</Project>

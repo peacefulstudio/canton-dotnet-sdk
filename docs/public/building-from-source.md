@@ -6,8 +6,8 @@ Back to the [README](../../README.md).
 
 ## Prerequisites
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) — the exact pinned version is in [`global.json`](../../global.json)
-- Network access to `repo1.maven.org` on the first build — `Canton.Ledger.Grpc` downloads the Canton Ledger API proto JARs from Maven Central and checks each against a pinned SHA-256 before generating the gRPC stubs; allow that host if you build behind a proxy
+- [.NET 11.0 SDK](https://dotnet.microsoft.com/download/dotnet/11.0), with the exact pinned version in [`global.json`](../../global.json). The libraries build for `net10.0` and `net11.0`, and the .NET 11 SDK builds both. See [Target frameworks](#target-frameworks)
+- Network access to `repo1.maven.org` on the first build: `Canton.Ledger.Grpc` downloads the Canton Ledger API proto JARs from Maven Central and checks each against a pinned SHA-256 before generating the gRPC stubs; allow that host if you build behind a proxy
 - (Optional) [Daml SDK via dpm](https://docs.daml.com/) for testing with real DAR files
 
 ## Build
@@ -35,8 +35,20 @@ The repo runs on [Microsoft.Testing.Platform](https://learn.microsoft.com/dotnet
 `--solution` and otherwise discovers from the current directory.
 `--minimum-expected-tests 1` makes a run that discovers nothing fail loudly:
 `Zero tests ran` means the runner found no tests, never that they passed. If a
-run reports zero, `dotnet build` and then execute the test binary directly —
-`./tests/Daml.Runtime.Tests/bin/Debug/net10.0/Daml.Runtime.Tests`.
+run reports zero, `dotnet build` and then execute the test binary directly:
+`./tests/Daml.Runtime.Tests/bin/Debug/net11.0/Daml.Runtime.Tests`.
+
+## Target frameworks
+
+The libraries under `src/` always build both `net10.0` and `net11.0`.
+
+On a developer machine the test projects build both targets too, and `dotnet test` runs both. The `net10.0` test assemblies run on the .NET 10 runtime when it is installed and roll forward to the .NET 11 runtime when it is not, so installing the .NET 10 runtime is what makes them exercise .NET 10. To run one target, pass `--framework`:
+
+```bash
+dotnet test --project tests/Daml.Runtime.Tests/Daml.Runtime.Tests.csproj --framework net11.0 --minimum-expected-tests 1
+```
+
+When the environment variable `GITHUB_ACTIONS` is `true`, the test projects build `net11.0` only, unless `SDK_TEST_ALL_TARGET_FRAMEWORKS` is `true`. Set `GITHUB_ACTIONS=true` on a local run to reproduce what a CI job sees. The test projects of the `Daml.Codegen.CSharp.MSBuild` package build `net11.0` only everywhere.
 
 ## Create NuGet Packages
 

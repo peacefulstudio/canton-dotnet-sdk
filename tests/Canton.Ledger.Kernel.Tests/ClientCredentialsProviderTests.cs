@@ -608,6 +608,45 @@ public class ClientCredentialsProviderTests
         failure.Should().BeAssignableTo<OperationCanceledException>();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetTokenAsync_throws_ObjectDisposedException_naming_the_provider_after_Dispose(bool tokenCached)
+    {
+        var handler = new FakeHttpHandler();
+        var provider = CreateProvider(CreateOptions(), handler);
+        if (tokenCached)
+            await provider.GetTokenAsync(TestContext.Current.CancellationToken);
+        provider.Dispose();
+
+        var act = () => provider.GetTokenAsync(TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ObjectDisposedException>()).Which.ObjectName
+            .Should().Be("Canton.Ledger.Kernel.Authentication.TokenGeneration.ClientCredentialsProvider");
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_times_out_on_the_supplied_TimeProvider()
+    {
+        var time = new FakeTimeProvider();
+        var handler = new FakeHttpHandler().WithDelay(Timeout.InfiniteTimeSpan);
+        var options = CreateOptions();
+        options.TokenAcquisitionTimeout = TimeSpan.FromMinutes(5);
+        using var provider = CreateProvider(options, handler, time);
+
+        var call = provider.GetTokenAsync(TestContext.Current.CancellationToken);
+        using var ceiling = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!call.IsCompleted)
+        {
+            ceiling.Token.ThrowIfCancellationRequested();
+            time.Advance(TimeSpan.FromMinutes(5));
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        var failure = await ObserveFailureAsync(call);
+        failure.Should().BeOfType<TimeoutException>();
+    }
+
     [Fact]
     public void Dispose_can_be_called_twice()
     {
@@ -760,6 +799,64 @@ public class ClientCredentialsProviderTests
             .WithMessage("*invalid expires_in*");
     }
 
+    [Theory]
+    [InlineData("3600.5")]
+    [InlineData("\"3600\"")]
+    public async Task GetTokenAsync_caches_a_token_whose_expires_in_is_fractional_or_a_numeric_string(string expiresIn)
+    {
+        var handler = new FakeHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            $$"""{"access_token":"token","expires_in":{{expiresIn}},"token_type":"Bearer"}""");
+        var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var options = CreateOptions();
+        options.SafetyMargin = TimeSpan.Zero;
+        using var provider = CreateProvider(options, handler, timeProvider);
+
+        (await provider.GetTokenAsync(TestContext.Current.CancellationToken)).Should().Be("token");
+        timeProvider.Advance(TimeSpan.FromSeconds(3599));
+        await provider.GetTokenAsync(TestContext.Current.CancellationToken);
+
+        handler.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_caches_a_token_without_expires_in_for_sixty_seconds_and_warns()
+    {
+        var handler = new FakeHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"access_token":"token","token_type":"Bearer"}""");
+        var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var options = CreateOptions();
+        options.SafetyMargin = TimeSpan.Zero;
+        var loggerFactory = new CapturingLoggerFactory();
+        using var provider = CreateProvider(options, handler, timeProvider, loggerFactory);
+
+        (await provider.GetTokenAsync(TestContext.Current.CancellationToken)).Should().Be("token");
+        timeProvider.Advance(TimeSpan.FromSeconds(59));
+        await provider.GetTokenAsync(TestContext.Current.CancellationToken);
+        handler.CallCount.Should().Be(1);
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await provider.GetTokenAsync(TestContext.Current.CancellationToken);
+
+        handler.CallCount.Should().Be(2);
+        loggerFactory.Records.Should().Contain(r =>
+            r.Level == LogLevel.Warning && r.Message.Contains("expires_in") && r.Message.Contains("60"));
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_throws_on_expires_in_above_int_MaxValue_seconds()
+    {
+        var handler = new FakeHttpHandler().WithResponse(
+            HttpStatusCode.OK,
+            """{"access_token":"token","expires_in":2147483648,"token_type":"Bearer"}""");
+        using var provider = CreateProvider(CreateOptions(), handler);
+
+        var act = () => provider.GetTokenAsync(TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*invalid expires_in*");
+    }
+
     [Fact]
     public async Task GetTokenAsync_throws_on_empty_access_token_in_response()
     {
@@ -843,6 +940,38 @@ public class ClientCredentialsProviderTests
         var act = () => provider.GetTokenAsync(cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_logs_only_the_OAuth_error_and_error_description_of_a_failed_fetch()
+    {
+        var handler = new FakeHttpHandler().WithResponse(
+            HttpStatusCode.Unauthorized,
+            """{"error":"invalid_client","error_description":"Client authentication failed","client_secret":"echoed-secret"}""");
+        var loggerFactory = new CapturingLoggerFactory();
+        using var provider = CreateProvider(CreateOptions(), handler, loggerFactory: loggerFactory);
+
+        await ObserveFailureAsync(provider.GetTokenAsync(TestContext.Current.CancellationToken));
+
+        var record = loggerFactory.Records.Should().ContainSingle(r => r.Message.StartsWith("Token acquisition failed")).Which;
+        record.Message.Should().Be(
+            "Token acquisition failed from https://auth.example.com/oauth/token: HTTP 401, error 'invalid_client', description 'Client authentication failed'");
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_logs_no_body_text_of_a_failed_fetch_whose_body_is_not_an_OAuth_error()
+    {
+        var handler = new FakeHttpHandler().WithResponse(
+            HttpStatusCode.BadGateway,
+            "<html>client_secret=echoed-secret</html>");
+        var loggerFactory = new CapturingLoggerFactory();
+        using var provider = CreateProvider(CreateOptions(), handler, loggerFactory: loggerFactory);
+
+        await ObserveFailureAsync(provider.GetTokenAsync(TestContext.Current.CancellationToken));
+
+        loggerFactory.Records.Should().ContainSingle(r => r.Message.StartsWith("Token acquisition failed"))
+            .Which.Message.Should().Be(
+                "Token acquisition failed from https://auth.example.com/oauth/token: HTTP 502, error '', description ''");
     }
 
     [Fact]

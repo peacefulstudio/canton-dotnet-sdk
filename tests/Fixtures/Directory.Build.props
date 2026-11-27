@@ -4,5 +4,6 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <OutputType>Exe</OutputType>
+    <RollForward>Major</RollForward>
   </PropertyGroup>
 </Project>

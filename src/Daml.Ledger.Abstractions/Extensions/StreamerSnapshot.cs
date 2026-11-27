@@ -103,6 +103,11 @@ public static class StreamerSnapshot
     /// under <see cref="UnreadableRows.Fail"/>.
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="timeout"/> is negative and is not <see cref="Timeout.InfiniteTimeSpan"/>, or is
+    /// longer than 4,294,967,294 milliseconds (about 49.7 days), the longest window the drain's timer
+    /// supports. Zero is legal and fails at once with the deadline error.
+    /// </exception>
     /// <exception cref="LedgerOperationException">
     /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
     /// ended without its terminal checkpoint, or did not reach it within <paramref name="timeout"/>.
@@ -122,6 +127,7 @@ public static class StreamerSnapshot
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(streamer);
+        PerCallTimeoutRule.ThrowIfInvalidDrainWindow(timeout);
 
         var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken);
 
@@ -191,6 +197,11 @@ public static class StreamerSnapshot
     /// under <see cref="UnreadableRows.Fail"/>.
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="timeout"/> is negative and is not <see cref="Timeout.InfiniteTimeSpan"/>, or is
+    /// longer than 4,294,967,294 milliseconds (about 49.7 days), the longest window the drain's timer
+    /// supports. Zero is legal and fails at once with the deadline error.
+    /// </exception>
     /// <exception cref="LedgerOperationException">
     /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
     /// ended without its terminal checkpoint, or did not reach it within <paramref name="timeout"/>.
@@ -211,6 +222,7 @@ public static class StreamerSnapshot
         where T : ITemplate, IDamlRecord<T>
     {
         ArgumentNullException.ThrowIfNull(streamer);
+        PerCallTimeoutRule.ThrowIfInvalidDrainWindow(timeout);
 
         var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken);
 
@@ -270,6 +282,11 @@ public static class StreamerSnapshot
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> or
     /// <paramref name="key"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="timeout"/> is negative and is not <see cref="Timeout.InfiniteTimeSpan"/>, or is
+    /// longer than 4,294,967,294 milliseconds (about 49.7 days), the longest window the drain's timer
+    /// supports. Zero is legal and fails at once with the deadline error.
+    /// </exception>
     /// <exception cref="LedgerOperationException">
     /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
     /// ended without its terminal checkpoint, did not reach it within <paramref name="timeout"/>,
@@ -292,6 +309,7 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
+        PerCallTimeoutRule.ThrowIfInvalidDrainWindow(timeout);
         _ = key;
 
         var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure: false, timeout, unreadableRows, cancellationToken);
@@ -357,6 +375,11 @@ public static class StreamerSnapshot
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="streamer"/> or
     /// <paramref name="key"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="timeout"/> is negative and is not <see cref="Timeout.InfiniteTimeSpan"/>, or is
+    /// longer than 4,294,967,294 milliseconds (about 49.7 days), the longest window the drain's timer
+    /// supports. Zero is legal and fails at once with the deadline error.
+    /// </exception>
     /// <exception cref="LedgerOperationException">
     /// The snapshot faulted, carried an unclassified row under <see cref="UnreadableRows.Fail"/>,
     /// ended without its terminal checkpoint, did not reach it within <paramref name="timeout"/>,
@@ -380,6 +403,7 @@ public static class StreamerSnapshot
     {
         ArgumentNullException.ThrowIfNull(streamer);
         ArgumentNullException.ThrowIfNull(key);
+        PerCallTimeoutRule.ThrowIfInvalidDrainWindow(timeout);
 
         var rows = TemplateSnapshotArmReader<T>.DrainAsync(streamer, submitter, activeAtOffset, includeDisclosure, timeout, unreadableRows, cancellationToken);
 

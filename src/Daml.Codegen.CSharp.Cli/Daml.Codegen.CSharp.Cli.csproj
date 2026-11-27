@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFrameworks></TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <PackageId>Daml.Codegen.CSharp.Cli</PackageId>
     <Description>Thin CLI wiring the IntermediateDar proto reader into the C# emitter. Bundled inside the dpm codegen-cs OCI artifact. Not published to NuGet.</Description>

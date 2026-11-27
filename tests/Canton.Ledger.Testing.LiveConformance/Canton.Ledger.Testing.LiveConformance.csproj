@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Remove="xunit.v3.mtp-v2" />
     <PackageReference Remove="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Remove="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Remove="AwesomeAssertions" />
   </ItemGroup>
 

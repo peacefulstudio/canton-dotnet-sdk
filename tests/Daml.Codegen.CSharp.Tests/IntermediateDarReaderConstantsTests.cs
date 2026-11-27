@@ -68,6 +68,30 @@ public partial class IntermediateDarReaderTests
         act.Should().Throw<InvalidDataException>().WithMessage("*rate*plain decimal*");
     }
 
+    [Fact]
+    public void Read_keeps_a_numeric_constant_of_80_characters()
+    {
+        var eightyCharacters = "-" + new string('1', 40) + "." + new string('2', 38);
+        var proto = MakePackageWith(module =>
+            module.Constants.Add(new PbConstant { Name = "rate", NumericValue = eightyCharacters }));
+
+        IntermediateDarReader.Read(proto).MainPackage.Modules.Single().Constants
+            .Should().Equal(new DamlConstant("rate", new DamlNumericConstantValue(eightyCharacters)));
+    }
+
+    [Theory]
+    [InlineData(81)]
+    [InlineData(4_000_000)]
+    public void Read_rejects_a_numeric_constant_longer_than_80_characters(int digits)
+    {
+        var proto = MakePackageWith(module =>
+            module.Constants.Add(new PbConstant { Name = "rate", NumericValue = new string('9', digits) }));
+
+        var act = () => IntermediateDarReader.Read(proto);
+
+        act.Should().Throw<InvalidDataException>().WithMessage("*rate*longer than 80 characters*");
+    }
+
     [Theory]
     [MemberData(nameof(NamesOutsideTheDamlLfIdentifierGrammar))]
     public void Read_rejects_constant_names_outside_the_identifier_grammar(string maliciousName)

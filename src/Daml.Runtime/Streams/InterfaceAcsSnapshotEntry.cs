@@ -241,8 +241,7 @@ internal sealed class InterfaceAcsSnapshotEntryJsonConverterFactory : JsonConver
         IsClosedInterfaceAcsSnapshotEntry(typeToConvert) || IsArmOfClosedInterfaceAcsSnapshotEntry(typeToConvert);
 
     private static bool IsClosedInterfaceAcsSnapshotEntry(Type type) =>
-        type is { IsConstructedGenericType: true, ContainsGenericParameters: false }
-        && type.GetGenericTypeDefinition() == typeof(InterfaceAcsSnapshotEntry<,>);
+        ClosedGenericType.IsOf(type, typeof(InterfaceAcsSnapshotEntry<,>));
 
     private static bool IsArmOfClosedInterfaceAcsSnapshotEntry(Type type) =>
         type.BaseType is { } baseType && IsClosedInterfaceAcsSnapshotEntry(baseType);

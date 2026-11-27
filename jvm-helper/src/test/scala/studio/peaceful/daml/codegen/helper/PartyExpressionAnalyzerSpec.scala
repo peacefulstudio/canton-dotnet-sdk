@@ -478,4 +478,76 @@ class PartyExpressionAnalyzerSpec extends AnyWordSpec with Matchers {
         PartyAnalysisResult.Dynamic
     }
   }
+
+  private def nestedConsOf(fieldNames: Seq[String]): Ast.Expr =
+    fieldNames.foldRight(Ast.ENil(PartyList): Ast.Expr) { (field, tail) =>
+      Ast.ECons(PartyList, ImmArray(recProjOnThis(field)), tail)
+    }
+
+  private def chainValueName(index: Int): String = s"chain$index"
+
+  private def valueUnfoldingChain(links: Int): PartyExpressionAnalyzer.ValueResolver = {
+    val last = chainValueName(links) -> absOf("p", appOf(ToParties, recProjOnThis("owner", binder = "p")))
+    val forwarding = (0 until links).map { index =>
+      chainValueName(index) -> absOf("p", appOf(selfValueRef(chainValueName(index + 1)), varOf("p")))
+    }
+    resolverOver(forwarding :+ last: _*)
+  }
+
+  private val ValueUnfoldingChainEntry: Ast.Expr =
+    appOf(selfValueRef(chainValueName(0)), varOf(ThisBinder))
+
+  private def applicationSpineEntry(extraLinks: Int): Ast.Expr =
+    (0 until extraLinks).foldLeft(ValueUnfoldingChainEntry)((spine, _) => appOf(spine, varOf(ThisBinder)))
+
+  private def typeApplicationSpineEntry(links: Int): Ast.Expr =
+    appOf(
+      (0 until links).foldLeft(selfValueRef(chainValueName(0)))((callee, _) => Ast.ETyApp(callee, TParty)),
+      varOf(ThisBinder),
+    )
+
+  "PartyExpressionAnalyzer.analyze depth bound" should {
+
+    "resolve a nested Cons chain within the depth bound to Static" in {
+      val fields = (0 until 128).map(index => s"f$index")
+      PartyExpressionAnalyzer.analyze(nestedConsOf(fields), ThisBinder, NoResolution, SpecPackageId) shouldBe
+        PartyAnalysisResult.Static(fields.toList)
+    }
+
+    "return Dynamic for a nested Cons chain past the depth bound" in {
+      val fields = (0 until 1024).map(index => s"f$index")
+      PartyExpressionAnalyzer.analyze(nestedConsOf(fields), ThisBinder, NoResolution, SpecPackageId) shouldBe
+        PartyAnalysisResult.Dynamic
+    }
+
+    "resolve a value unfolding chain within the depth bound to Static" in {
+      PartyExpressionAnalyzer.analyze(ValueUnfoldingChainEntry, ThisBinder, valueUnfoldingChain(128), SpecPackageId) shouldBe
+        PartyAnalysisResult.Static(List("owner"))
+    }
+
+    "return Dynamic instead of overflowing for a value unfolding chain past the depth bound" in {
+      PartyExpressionAnalyzer.analyze(ValueUnfoldingChainEntry, ThisBinder, valueUnfoldingChain(1024), SpecPackageId) shouldBe
+        PartyAnalysisResult.Dynamic
+    }
+
+    "resolve an application spine within the depth bound to Static" in {
+      PartyExpressionAnalyzer.analyze(applicationSpineEntry(128), ThisBinder, valueUnfoldingChain(0), SpecPackageId) shouldBe
+        PartyAnalysisResult.Static(List("owner"))
+    }
+
+    "return Dynamic for an application spine past the depth bound" in {
+      PartyExpressionAnalyzer.analyze(applicationSpineEntry(1024), ThisBinder, valueUnfoldingChain(0), SpecPackageId) shouldBe
+        PartyAnalysisResult.Dynamic
+    }
+
+    "resolve a type-application spine within the depth bound to Static" in {
+      PartyExpressionAnalyzer.analyze(typeApplicationSpineEntry(128), ThisBinder, valueUnfoldingChain(0), SpecPackageId) shouldBe
+        PartyAnalysisResult.Static(List("owner"))
+    }
+
+    "return Dynamic for a type-application spine past the depth bound" in {
+      PartyExpressionAnalyzer.analyze(typeApplicationSpineEntry(1024), ThisBinder, valueUnfoldingChain(0), SpecPackageId) shouldBe
+        PartyAnalysisResult.Dynamic
+    }
+  }
 }

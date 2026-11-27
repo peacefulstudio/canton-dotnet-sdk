@@ -52,13 +52,17 @@ public sealed class DiscriminatedUnionJsonEdgeCaseTests
         Converters = { new ScalarArmConverter() },
     };
 
+    private static readonly string UnwrappedPayloadMessage = Environment.Version.Major >= 11
+        ? "The JSON value could not be converted to System.Int32. Path: $.Value*"
+        : "The JSON value could not be converted to*Optional`1+Some*";
+
     [Fact]
     public void Optional_read_rethrows_a_JsonException_from_the_arms_own_payload_unchanged()
     {
         var act = () => JsonSerializer.Deserialize<Optional<int>>("""{"$case":"Some","Value":"not-a-number"}""");
 
         act.Should().Throw<JsonException>()
-            .WithMessage("The JSON value could not be converted to*Optional`1+Some*")
+            .WithMessage(UnwrappedPayloadMessage)
             .Which.Message.Should().NotContain("Cannot read");
     }
 

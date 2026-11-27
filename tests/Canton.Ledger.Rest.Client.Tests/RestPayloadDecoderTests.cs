@@ -326,15 +326,14 @@ public sealed class RestPayloadDecoderTests
     }
 
     [Fact]
-    public void ExercisePayloadsOf_names_the_template_when_the_event_carries_an_empty_choice()
+    public void ExercisePayloadsOf_refuses_an_empty_choice_as_a_missing_required_field()
     {
         var exercised = ExercisedEvent("fallback-pkg:Fallback.Mod:Thing", "");
 
         FluentActions.Invoking(() => RestPayloadDecoder.ExercisePayloadsOf(
                 exercised, new RuntimeIdentifier("fallback-pkg", "Fallback.Mod", "Thing")))
-            .Should().Throw<TemplateTypeRequiredException>()
-            .Which.Message.Should().Be(
-                $"No generated type is loaded for choice '' of 'fallback-pkg:Fallback.Mod:Thing'; {MissingTypeAdvice}");
+            .Should().Throw<MalformedResponseException>()
+            .Which.Message.Should().EndWith("has no choice, though the Ledger API marks the field as required.");
     }
 
     [Fact]

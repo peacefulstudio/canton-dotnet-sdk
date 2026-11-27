@@ -138,7 +138,7 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
             Offset = field == MalformedField.OffsetNegative ? -1L : 42L,
         };
 
-        if (field == MalformedField.ActingPartyEmpty)
+        if (field is MalformedField.ActingPartyEmpty or MalformedField.ChoiceBlank)
         {
             var exercised = new ProtoExercisedEvent
             {
@@ -146,12 +146,12 @@ public sealed class GrpcMalformedResponseSweepTests : MalformedResponseSweepTest
                 ContractId = "00aa",
                 PackageName = "test-package",
                 TemplateId = FooBarTemplate,
-                Choice = "Accept",
+                Choice = field == MalformedField.ChoiceBlank ? string.Empty : "Accept",
                 ChoiceArgument = new ProtoValue { Unit = new Empty() },
                 ExerciseResult = new ProtoValue { Unit = new Empty() },
                 LastDescendantNodeId = 0,
             };
-            exercised.ActingParties.Add(string.Empty);
+            exercised.ActingParties.Add(field == MalformedField.ActingPartyEmpty ? string.Empty : "alice::ns1");
             transaction.Events.Add(new Event { Exercised = exercised });
         }
 

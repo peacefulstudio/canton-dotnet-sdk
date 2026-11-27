@@ -29,6 +29,7 @@ namespace Daml.Runtime.Outcomes;
 /// <c>"$case"</c> discriminator naming the arm, e.g. <c>{"$case":"Grpc","StatusCode":14}</c>.
 /// </remarks>
 [JsonConverter(typeof(TransportStatusJsonConverterFactory))]
+[AbsenceBindsAnUnstatedValue]
 public abstract record TransportStatus
 {
     /// <summary>Sealed; new variants live alongside the existing ones.</summary>

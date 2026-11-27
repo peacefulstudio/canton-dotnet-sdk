@@ -104,47 +104,16 @@ internal sealed class ScriptedRejectionServer : IDisposable
             using (connection)
             {
                 var stream = connection.GetStream();
-                await DrainRequestAsync(stream).ConfigureAwait(false);
+                if (!await LoopbackRequestReader.ReadWholeRequestAsync(stream, _stopped.Token).ConfigureAwait(false))
+                {
+                    return;
+                }
+
                 await _script(stream, _stopped.Token).ConfigureAwait(false);
             }
         }
         catch (Exception exception) when (exception is OperationCanceledException or ObjectDisposedException or IOException)
         {
-        }
-    }
-
-    private async Task DrainRequestAsync(Stream stream)
-    {
-        var received = new List<byte>();
-        var buffer = new byte[8192];
-        var headerEnd = -1;
-        while (headerEnd < 0)
-        {
-            var count = await stream.ReadAsync(buffer, _stopped.Token).ConfigureAwait(false);
-            if (count == 0)
-            {
-                return;
-            }
-
-            received.AddRange(buffer.AsSpan(0, count).ToArray());
-            headerEnd = Encoding.ASCII.GetString([.. received]).IndexOf("\r\n\r\n", StringComparison.Ordinal);
-        }
-
-        var head = Encoding.ASCII.GetString([.. received], 0, headerEnd);
-        var declaredBody = head.Split("\r\n")
-            .Where(line => line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-            .Select(line => int.Parse(line["Content-Length:".Length..].Trim(), System.Globalization.CultureInfo.InvariantCulture))
-            .FirstOrDefault();
-        var bodyReceived = received.Count - (headerEnd + 4);
-        while (bodyReceived < declaredBody)
-        {
-            var count = await stream.ReadAsync(buffer, _stopped.Token).ConfigureAwait(false);
-            if (count == 0)
-            {
-                return;
-            }
-
-            bodyReceived += count;
         }
     }
 

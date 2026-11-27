@@ -3,6 +3,7 @@
 
 using Canton.Ledger.Abstractions;
 using Canton.Ledger.Rest.Client.Raw;
+using Canton.Ledger.Testing.Helpers;
 using Canton.Ledger.Testing.Localnet;
 using Daml.Ledger.Abstractions;
 using Daml.Ledger.Abstractions.Extensions;
@@ -149,7 +150,7 @@ internal sealed class RestReassignmentHarness
 
         var outcome = await _lane.LedgerClient.TrySubmitAndWaitForTransactionAsync(
             submission, cancellationToken: cancellationToken);
-        var result = Assert.IsType<ExerciseOutcome<TransactionResult>.One>(outcome).Result;
+        var result = ExerciseOutcomeAssert.IsOne(outcome).Result;
         return Assert.Single(result.CreatedContracts).ContractId;
     }
 

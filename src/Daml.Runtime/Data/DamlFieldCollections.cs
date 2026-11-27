@@ -19,7 +19,10 @@ namespace Daml.Runtime.Data;
 /// collection it handed over can mutate it afterwards, and on a record whose equality and hash
 /// code read the contents that silently invalidates an already-computed hash and makes the value
 /// unfindable in a set or dictionary that already holds it. Copying at the primary constructor
-/// and at each <c>init</c> accessor covers <c>with</c> expressions too.
+/// and at each <c>init</c> accessor covers <c>with</c> expressions too. Each copy is handed out
+/// behind a read-only wrapper (<see cref="ReadOnlyCollection{T}"/>,
+/// <see cref="ReadOnlyDictionary{TKey,TValue}"/>), never as the array or dictionary it was built
+/// in, so a downcast of the returned value cannot reach the backing store either.
 /// </remarks>
 public static class DamlFieldCollections
 {
@@ -31,8 +34,8 @@ public static class DamlFieldCollections
     public static IReadOnlyList<T>? Copy<T>(IReadOnlyList<T>? values) => values switch
     {
         null => null,
-        { Count: 0 } => Array.Empty<T>(),
-        _ => [.. values],
+        { Count: 0 } => ReadOnlyCollection<T>.Empty,
+        _ => Array.AsReadOnly(values.ToArray()),
     };
 
     /// <summary>Materializes <paramref name="entries"/> so a later change to the caller's dictionary cannot reach the record.</summary>
@@ -46,7 +49,7 @@ public static class DamlFieldCollections
     {
         null => null,
         { Count: 0 } => ReadOnlyDictionary<TKey, TValue>.Empty,
-        _ => entries.ToDictionary(DamlEqualityComparer<TKey>.Default),
+        _ => new ReadOnlyDictionary<TKey, TValue>(entries.ToDictionary(DamlEqualityComparer<TKey>.Default)),
     };
 
     /// <summary>Compares two lists element by element, in order.</summary>

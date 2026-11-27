@@ -21,8 +21,13 @@ Make the Splice DARs the codegen snapshots were generated from available as
 manifest (default: tests/Daml.Codegen.CSharp.Tests/Snapshots/splice-dars.manifest)
 pins an upstream commit and, per snapshot, the DAR's upstream file name and
 sha256. A cached DAR whose sha256 matches is kept; any other is replaced by a
-download of <base-url>/<commit>/daml/dars/<file>. A download whose sha256 differs
-from the manifest is discarded and fails the run.
+download of <base-url>/<commit>/daml/dars/<file>, bounded by a 15 s connect
+timeout and a 300 s overall timeout and retried 3 times on any error. A download
+whose sha256 differs from the manifest is discarded and fails the run.
+
+Concurrent runs on one cache directory are serialized on the <cache-dir>/.lock
+directory, held for the whole run; a lock whose owner process has exited is
+broken.
 
 Options:
   --manifest <path>  the manifest to read.
@@ -103,6 +108,33 @@ done <"${manifest}"
 
 base_url="${SPLICE_SNAPSHOT_DARS_BASE_URL:-${DEFAULT_BASE_URL}}"
 mkdir -p "${cache_dir}"
+lock_dir="${cache_dir}/.lock"
+
+release_lock() {
+  rm -rf "${lock_dir}"
+}
+
+acquire_lock() {
+  local owner
+  until mkdir "${lock_dir}" 2>/dev/null; do
+    if [ ! -d "${lock_dir}" ]; then
+      mkdir "${lock_dir}" 2>/dev/null && break
+      [ -d "${lock_dir}" ] || broken "cannot create the lock ${lock_dir}."
+    fi
+    owner="$(cat "${lock_dir}/pid" 2>/dev/null || true)"
+    if [ -n "${owner}" ] && ! kill -0 "${owner}" 2>/dev/null; then
+      echo "breaking the lock left by exited run ${owner}" >&2
+      release_lock
+      continue
+    fi
+    sleep 1
+  done
+  trap release_lock EXIT
+  trap 'exit 1' HUP INT TERM
+  printf '%s\n' "$$" >"${lock_dir}/pid"
+}
+
+acquire_lock
 
 for entry in "${entries[@]}"; do
   read -r snapshot upstream_name expected <<<"${entry}"
@@ -116,7 +148,9 @@ for entry in "${entries[@]}"; do
   partial="$(mktemp "${cache_dir}/.partial.XXXXXX")"
   url="${base_url}/${commit}/daml/dars/${upstream_name}"
   echo "fetching ${snapshot} from ${url}" >&2
-  if ! curl --fail --silent --show-error --location --output "${partial}" "${url}"; then
+  if ! curl --fail --silent --show-error --location \
+    --connect-timeout 15 --max-time 300 --retry 3 --retry-all-errors \
+    --output "${partial}" "${url}"; then
     rm -f "${partial}"
     failed "${snapshot}: could not download ${url}."
   fi

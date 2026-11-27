@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Daml.Codegen.MSBuild.TestSupport;
 using AwesomeAssertions;
 using Xunit;
@@ -109,8 +110,7 @@ public sealed class DownloadProtosTargetsTests : IDisposable
         var late = Task.Run(() => MsBuildProcessRunner.RunDotnet(arguments, _projectDir), TestContext.Current.CancellationToken);
         await server.GatedRequestHeld.WaitAsync(TimeSpan.FromMinutes(2), TestContext.Current.CancellationToken);
 
-        var first = await Task.Run(() => MsBuildProcessRunner.RunDotnet(arguments, _projectDir), TestContext.Current.CancellationToken);
-        first.ExitCode.Should().Be(0, $"the build that downloads without delay must publish.\nSTDOUT:\n{first.StdOut}\nSTDERR:\n{first.StdErr}");
+        PublishAsAnotherBuildWould(jars);
         var published = SnapshotPublishedFiles();
         server.ReleaseGatedRequest();
         var second = await late;
@@ -119,6 +119,37 @@ public sealed class DownloadProtosTargetsTests : IDisposable
         SnapshotPublishedFiles().Should().Equal(published,
             "a build whose marker check passed before another build published must discard its staging directory, " +
             "because moving over files the other build is already compiling makes that build fail with MSB3954");
+    }
+
+    [Fact]
+    public async Task DownloadProtos_clean_of_a_multi_targeted_project_removes_the_shared_proto_cache_in_a_single_pass()
+    {
+        WriteProbeProject(targetFrameworks: "net10.0;net11.0");
+        var cache = Path.Combine(_projectDir, "obj", "proto-cache");
+        Directory.CreateDirectory(Path.Combine(cache, "1.0.0-9.9.9", "protos"));
+        File.WriteAllText(Path.Combine(cache, "1.0.0-9.9.9", "protos", "stale.proto"), "stale");
+
+        var clean = await Task.Run(
+            () => MsBuildProcessRunner.RunDotnet($"msbuild Probe.csproj -t:Clean -nodeReuse:false -v:detailed -p:CantonVersion={CantonVersion} -p:GoogleCommonProtosVersion={GoogleCommonProtosVersion}", _projectDir),
+            TestContext.Current.CancellationToken);
+
+        clean.ExitCode.Should().Be(0, $"STDOUT:\n{clean.StdOut}\nSTDERR:\n{clean.StdErr}");
+        Directory.Exists(cache).Should().BeFalse("Clean must remove the proto cache");
+        Regex.Matches(clean.StdOut, "Target \"CleanProtos\" in file").Should().HaveCount(1,
+            "the proto cache is shared by every target framework, so concurrent inner builds must not each remove it");
+    }
+
+    private void PublishAsAnotherBuildWould((string Path, byte[] Bytes)[] jars)
+    {
+        var stagingDir = Path.Combine(_projectDir, "obj", "proto-cache", $"staging-{Guid.NewGuid():N}");
+        for (var index = 0; index < jars.Length; index++)
+        {
+            var protoDir = Path.Combine(stagingDir, "protos", $"pkg{index}");
+            Directory.CreateDirectory(protoDir);
+            File.WriteAllText(Path.Combine(protoDir, $"file{index}.proto"), "syntax = \"proto3\";\n");
+            File.WriteAllBytes(Path.Combine(stagingDir, Path.GetFileName(jars[index].Path)), jars[index].Bytes);
+        }
+        Directory.Move(stagingDir, PublishedDir());
     }
 
     private string PublishedDir() =>
@@ -130,13 +161,16 @@ public sealed class DownloadProtosTargetsTests : IDisposable
             .Select(file => (Path.GetRelativePath(_projectDir, file), File.GetCreationTimeUtc(file).Ticks, File.GetLastWriteTimeUtc(file).Ticks))
             .ToList();
 
-    private void WriteProbeProject()
+    private void WriteProbeProject(string? targetFrameworks = null)
     {
+        var frameworkProperty = targetFrameworks is null
+            ? $"<TargetFramework>{TestTargetFramework.Moniker}</TargetFramework>"
+            : $"<TargetFrameworks>{targetFrameworks}</TargetFrameworks>";
         File.Copy(TargetsFile(), Path.Combine(_projectDir, "DownloadProtos.targets"));
-        File.WriteAllText(Path.Combine(_projectDir, "Probe.csproj"), """
+        File.WriteAllText(Path.Combine(_projectDir, "Probe.csproj"), $"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <TargetFramework>net10.0</TargetFramework>
+                {frameworkProperty}
               </PropertyGroup>
               <Import Project="DownloadProtos.targets" />
             </Project>

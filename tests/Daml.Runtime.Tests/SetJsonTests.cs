@@ -233,4 +233,37 @@ public class SetJsonTests
             .WithInnerException<InvalidOperationException>()
             .WithMessage("*refused to write*");
     }
+
+    public static TheoryData<string> ReferenceHandlers => ["Preserve", "IgnoreCycles"];
+
+    private static JsonSerializerOptions WithReferenceHandler(string handler) => new()
+    {
+        ReferenceHandler = handler == "Preserve" ? ReferenceHandler.Preserve : ReferenceHandler.IgnoreCycles,
+    };
+
+    [Theory]
+    [MemberData(nameof(ReferenceHandlers))]
+    public void Set_refuses_a_ReferenceHandler_on_write(string handler)
+    {
+        var act = () => JsonSerializer.Serialize(new Set<string>(["alice"]), WithReferenceHandler(handler));
+
+        act.Should().Throw<JsonException>().WithMessage("Reference handling is not supported for Set<String>:*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ReferenceHandlers))]
+    public void Set_refuses_a_ReferenceHandler_on_read(string handler)
+    {
+        var act = () => JsonSerializer.Deserialize<Set<string>>("""["alice"]""", WithReferenceHandler(handler));
+
+        act.Should().Throw<JsonException>().WithMessage("Reference handling is not supported for Set<String>:*");
+    }
+
+    [Fact]
+    public void SetJsonConverterFactory_throws_ArgumentException_for_the_open_generic()
+    {
+        var act = () => new SetJsonConverterFactory().CreateConverter(typeof(Set<>), new JsonSerializerOptions());
+
+        act.Should().Throw<ArgumentException>().WithMessage("'Daml.Runtime.Stdlib.Set`1[T]' is not a closed Set<T>.*");
+    }
 }

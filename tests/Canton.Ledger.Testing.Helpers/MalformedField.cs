@@ -37,6 +37,9 @@ public enum MalformedField
     /// <summary>An exercised event acting as the empty party, which no <c>Party</c> can carry.</summary>
     ActingPartyEmpty,
 
+    /// <summary>An exercised event naming a blank choice, which no <c>ChoiceName</c> can carry.</summary>
+    ChoiceBlank,
+
     /// <summary>
     /// A command id of nothing but whitespace, which no <c>CommandId</c> can carry. Distinct from an
     /// absent command id, which both transports read as no command id.

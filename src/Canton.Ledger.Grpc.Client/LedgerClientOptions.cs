@@ -70,7 +70,8 @@ public sealed class LedgerClientOptions : IValidatableObject
     public Action<GrpcChannelOptions>? ConfigureChannel { get; set; }
 
     /// <summary>
-    /// Optional timeout for gRPC calls.
+    /// Optional timeout for gRPC calls. Must be positive when set; <see langword="null"/> applies no
+    /// SDK-side deadline. Defaults to 30 seconds.
     /// </summary>
     /// <remarks>
     /// This is a <em>per-attempt</em> deadline: when <see cref="Retry"/> is enabled, every retry
@@ -171,6 +172,13 @@ public sealed class LedgerClientOptions : IValidatableObject
                 $"{nameof(Tls)} is configured, but {nameof(GrpcAddress)} uses plaintext http. "
                 + "TLS identity and trust settings require https.",
                 [nameof(Tls), nameof(GrpcAddress)]));
+        }
+
+        if (Timeout is { } timeout && timeout <= TimeSpan.Zero)
+        {
+            nestedResults.Add(new ValidationResult(
+                $"{nameof(Timeout)} must be positive when set, but was {timeout}.",
+                [nameof(Timeout)]));
         }
 
         return nestedResults;

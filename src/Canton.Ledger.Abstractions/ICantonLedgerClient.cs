@@ -374,7 +374,12 @@ public interface ICantonLedgerClient : ILedgerClient
     /// its terminal checkpoint, or did not reach it within <paramref name="timeout"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
-    async Task<ActiveSnapshot<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="timeout"/> is negative and is not <see cref="Timeout.InfiniteTimeSpan"/>, or is
+    /// longer than 4,294,967,294 milliseconds (about 49.7 days), the longest window the drain's timer
+    /// supports. Zero is legal and fails at once with the deadline error.
+    /// </exception>
+    Task<ActiveSnapshot<ActiveContract<InterfaceContract<TInterface, TView>>>> QueryActiveAsync<TInterface, TView>(
         RuntimeCommands.SubmitterInfo submitter,
         LedgerOffset? activeAtOffset = null,
         bool includeDisclosure = false,
@@ -384,15 +389,19 @@ public interface ICantonLedgerClient : ILedgerClient
         where TInterface : IDamlInterface, IHasView<TView>
         where TView : IDamlRecord<TView>
     {
-        var rows = await InterfaceSnapshotArmReader<TInterface, TView>.DrainAsync(
+        PerCallTimeoutRule.ThrowIfInvalidDrainWindow(timeout);
+
+        return ToActiveContractsAsync(InterfaceSnapshotArmReader<TInterface, TView>.DrainAsync(
             token => SubscribeActiveAsync(
                 new ViewDescriptor<TInterface, TView>(), submitter, activeAtOffset, includeDisclosure, token),
             timeout,
             unreadableRows,
             TimeProvider,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken));
 
-        return rows.Select(ToActiveContract);
+        static async Task<ActiveSnapshot<ActiveContract<InterfaceContract<TInterface, TView>>>> ToActiveContractsAsync(
+            Task<ActiveSnapshot<InterfaceAcsSnapshotEntry<TInterface, TView>.Created>> draining) =>
+            (await draining.ConfigureAwait(false)).Select(ToActiveContract);
 
         static ActiveContract<InterfaceContract<TInterface, TView>> ToActiveContract(
             InterfaceAcsSnapshotEntry<TInterface, TView>.Created row) =>

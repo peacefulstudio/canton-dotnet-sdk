@@ -35,8 +35,8 @@ public abstract partial class MalformedResponseSweepTests
         .. Rows("SubmitReassignmentAsync(3)", CommitState.Unknown, MalformedField.BodyUnreadable),
         .. Rows("GetConnectedSynchronizersAsync(4)", CommitState.NotCommitted, MalformedField.BodyUnreadable),
         .. Rows("GetLedgerApiVersionAsync(2)", CommitState.NotCommitted, MalformedField.BodyUnreadable),
-        .. Rows("GetUpdateByOffsetAsync(4)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.OffsetNonNumeric, MalformedField.ActingPartyEmpty, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),
-        .. Rows("GetUpdateByIdAsync(4)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.OffsetNonNumeric, MalformedField.ActingPartyEmpty, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),
+        .. Rows("GetUpdateByOffsetAsync(4)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.OffsetNonNumeric, MalformedField.ActingPartyEmpty, MalformedField.ChoiceBlank, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),
+        .. Rows("GetUpdateByIdAsync(4)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.OffsetNonNumeric, MalformedField.ActingPartyEmpty, MalformedField.ChoiceBlank, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),
         .. Rows("GetUpdateTreeByOffsetAsync(4)", CommitState.NotCommitted, MalformedField.OffsetNegative, MalformedField.OffsetNonNumeric, MalformedField.BodyUnreadable),
         .. Rows("EstimateTrafficCostAsync(3)", CommitState.NotCommitted, MalformedField.CostOutOfRange, MalformedField.TimestampOutOfRange, MalformedField.BodyUnreadable),
         .. Rows("GetContractAsync(4)", CommitState.NotCommitted, MalformedField.ContractIdEmpty, MalformedField.ContractIdWhitespace, MalformedField.ContractIdMissing, MalformedField.TemplateIdMissing, MalformedField.ResultMissing, MalformedField.CreateArgumentFieldMissing, MalformedField.CreateArgumentWrongShape, MalformedField.BodyUnreadable),
@@ -48,7 +48,7 @@ public abstract partial class MalformedResponseSweepTests
         .. Rows("PrepareSubmissionAsync(4)", CommitState.NotCommitted, MalformedField.ResultMissing, MalformedField.TimestampOutOfRange, MalformedField.EnumValueUnknown, MalformedField.BodyUnreadable),
         .. Rows("ExecuteSubmissionAsync(3)", CommitState.Unknown, MalformedField.BodyUnreadable),
         .. Rows("ExecuteSubmissionAndWaitAsync(3)", CommitState.Committed, MalformedField.OffsetNegative, MalformedField.BodyUnreadable),
-        .. Rows("ExecuteSubmissionAndWaitForTransactionAsync(4)", CommitState.Committed, MalformedField.ResultMissing, MalformedField.OffsetNegative, MalformedField.ActingPartyEmpty, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),
+        .. Rows("ExecuteSubmissionAndWaitForTransactionAsync(4)", CommitState.Committed, MalformedField.ResultMissing, MalformedField.OffsetNegative, MalformedField.ActingPartyEmpty, MalformedField.ChoiceBlank, MalformedField.CommandIdWhitespace, MalformedField.BodyUnreadable),
         .. Rows("GetPreferredPackagesAsync(5)", CommitState.NotCommitted, MalformedField.SynchronizerIdMissing, MalformedField.BodyUnreadable),
         .. Rows("GetParticipantIdAsync(1)", CommitState.NotCommitted, MalformedField.BodyUnreadable),
         .. Rows("AllocatePartyAsync(3)", CommitState.Committed, MalformedField.BodyUnreadable),
@@ -230,6 +230,7 @@ public abstract partial class MalformedResponseSweepTests
     [Theory]
     [InlineData(MalformedField.OffsetNegative)]
     [InlineData(MalformedField.ActingPartyEmpty)]
+    [InlineData(MalformedField.ChoiceBlank)]
     [InlineData(MalformedField.CommandIdWhitespace)]
     public async Task A_committed_transaction_with_a_value_the_Ledger_API_could_not_have_meant_is_reported_as_CommittedUndecodable(
         MalformedField field)

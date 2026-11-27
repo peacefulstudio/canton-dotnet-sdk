@@ -9,9 +9,10 @@ namespace Canton.Ledger.Grpc.Client;
 
 /// <summary>
 /// gRPC side of the canonical <see cref="DamlErrorCategory"/> status mapping, plus typed
-/// accessors for the untyped <c>int</c> transport status that
-/// <see cref="ExerciseOutcome{T}.InfraError"/> and <see cref="LedgerOperationException"/>
-/// carry. The HTTP side of the same table lives in <c>Canton.Ledger.Abstractions</c> as
+/// accessors over the <see cref="TransportStatus"/> carried by
+/// <see cref="ExerciseOutcome{T}.InfraError"/> and <see cref="LedgerOperationException"/>:
+/// they extract the <see cref="TransportStatus.Grpc"/> case as a <see cref="StatusCode"/> and
+/// reject any other case. The HTTP side of the same table lives in <c>Canton.Ledger.Abstractions</c> as
 /// <c>ToHttpStatusCode()</c>; this half needs the <see cref="StatusCode"/> enum and so
 /// ships with the gRPC client.
 /// </summary>

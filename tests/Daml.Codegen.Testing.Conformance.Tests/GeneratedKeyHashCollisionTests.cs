@@ -1,6 +1,8 @@
 // Copyright 2026 Peaceful Studio OÜ
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Collections.ObjectModel;
+using System.Reflection;
 using AwesomeAssertions;
 using Daml.Codegen.Testing.Conformance.RichTypes;
 using Daml.Runtime.Data;
@@ -32,7 +34,7 @@ public class GeneratedKeyHashCollisionTests
 
         var labelByRank = TypeCorners.FromRecord(payload).LabelByRank;
 
-        var comparer = labelByRank.Should().BeOfType<Dictionary<long, string>>().Subject.Comparer;
+        var comparer = BackingDictionaryOf(labelByRank.Should().BeOfType<ReadOnlyDictionary<long, string>>().Subject).Comparer;
         labelByRank.Should().HaveCount(1_000);
         labelByRank.Keys.Select(key => comparer.GetHashCode(key)).Distinct().Count()
             .Should().BeGreaterThanOrEqualTo(MinimumDistinctHashes);
@@ -46,4 +48,10 @@ public class GeneratedKeyHashCollisionTests
             .Distinct().Count()
             .Should().BeGreaterThanOrEqualTo(MinimumDistinctHashes);
     }
+
+    private static Dictionary<TKey, TValue> BackingDictionaryOf<TKey, TValue>(ReadOnlyDictionary<TKey, TValue> wrapper)
+        where TKey : notnull =>
+        (Dictionary<TKey, TValue>)typeof(ReadOnlyDictionary<TKey, TValue>)
+            .GetProperty("Dictionary", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(wrapper)!;
 }

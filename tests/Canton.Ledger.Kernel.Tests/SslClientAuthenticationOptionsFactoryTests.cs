@@ -167,6 +167,30 @@ public sealed class SslClientAuthenticationOptionsFactoryTests : IDisposable
             .Should().BeEquivalentTo([_certificateAuthority.Thumbprint, secondAuthority.Thumbprint]);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("not a certificate")]
+    public void Create_throws_CryptographicException_naming_a_CertificateAuthorityBundlePemPath_that_holds_no_certificate(
+        string contents)
+    {
+        var bundlePath = Path.Combine(Path.GetTempPath(), $"empty-ca-bundle-{Guid.NewGuid():N}.pem");
+        File.WriteAllText(bundlePath, contents);
+        try
+        {
+            var act = () => SslClientAuthenticationOptionsFactory.Create(new TlsOptions
+            {
+                CertificateAuthorityBundlePemPath = bundlePath
+            });
+
+            act.Should().Throw<CryptographicException>()
+                .WithMessage($"The certificate authority bundle '{bundlePath}' contains no PEM certificate.");
+        }
+        finally
+        {
+            File.Delete(bundlePath);
+        }
+    }
+
     [Fact]
     public void Create_throws_FileNotFoundException_when_ClientCertificatePemPath_is_absent()
     {

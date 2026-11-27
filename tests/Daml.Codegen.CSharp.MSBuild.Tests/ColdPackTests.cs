@@ -138,6 +138,9 @@ public sealed class ColdPackTests : IDisposable
         toolEntries.Should().NotBeEmpty(
             "the packed nupkg must bundle both CLIs under tools/net10.0/ even on a cold, one-shot pack — " +
             $"but it contained: {string.Join(", ", archive.Entries.Select(e => e.FullName))}");
+        archive.Entries.Select(entry => entry.FullName)
+            .Should().NotContain(name => name.StartsWith("tools/net11.0/", StringComparison.Ordinal) || name.StartsWith("lib/", StringComparison.Ordinal),
+                "the CLIs stay net10.0-only so a .NET 10-only machine can run them, and the package is a build-time tool, not a library");
         toolEntries.Should().Contain(entry => entry.FullName.EndsWith("Daml.Codegen.DarParser.Cli.dll", StringComparison.OrdinalIgnoreCase),
             "the dar2intermediate producer must be bundled");
         toolEntries.Should().Contain(entry => entry.FullName.EndsWith("Daml.Codegen.CSharp.Cli.dll", StringComparison.OrdinalIgnoreCase),

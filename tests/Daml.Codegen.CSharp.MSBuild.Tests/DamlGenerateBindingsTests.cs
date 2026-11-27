@@ -32,7 +32,7 @@ public class DamlGenerateBindingsTests : DamlGenerateBindingsAdapterContractTest
 
     private string GeneratedDir => Path.Combine(ProjectDir, "DamlGenerated") + Path.DirectorySeparatorChar;
 
-    private string PinFile => Path.Combine(ProjectDir, "obj", "Debug", "net10.0", "daml-codegen-cs-pin", "daml.yaml");
+    private string PinFile => Path.Combine(ProjectDir, "obj", "Debug", TestTargetFramework.Moniker, "daml-codegen-cs-pin", "daml.yaml");
 
     private IReadOnlyDictionary<string, string?> EnvironmentWith(params (string Key, string? Value)[] variables)
     {
@@ -232,12 +232,12 @@ public class DamlGenerateBindingsTests : DamlGenerateBindingsAdapterContractTest
 
         exit.Should().Be(0, $"DamlGenerateBindings must succeed with the default DamlGeneratedDir.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}");
 
-        var expectedGeneratedDir = Path.Combine(ProjectDir, "obj", "Debug", "net10.0", "DamlGenerated");
+        var expectedGeneratedDir = Path.Combine(ProjectDir, "obj", "Debug", TestTargetFramework.Moniker, "DamlGenerated");
         Directory.GetFiles(expectedGeneratedDir, "*.cs", SearchOption.AllDirectories).Should().NotBeEmpty(
             $"the default DamlGeneratedDir must resolve under the project's own intermediate output ({expectedGeneratedDir}), " +
             "not under the dpm pin directory that DamlCodegenToolWorkingDirectory points $(DamlCodegenTool) at");
 
-        Directory.Exists(Path.Combine(ProjectDir, "obj", "Debug", "net10.0", "daml-codegen-cs-pin", "DamlGenerated")).Should().BeFalse(
+        Directory.Exists(Path.Combine(ProjectDir, "obj", "Debug", TestTargetFramework.Moniker, "daml-codegen-cs-pin", "DamlGenerated")).Should().BeFalse(
             "the generated directory must not be nested inside the pin directory");
     }
 

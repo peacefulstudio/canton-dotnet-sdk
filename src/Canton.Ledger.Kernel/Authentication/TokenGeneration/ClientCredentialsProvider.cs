@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using System.Text.Json;
 using Canton.Ledger.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -24,6 +23,8 @@ namespace Canton.Ledger.Kernel.Authentication.TokenGeneration;
 public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposable
 {
     private const int MaxResponseBodyBytes = 64 * 1024;
+    private const int MaxLoggedOAuthErrorLength = 256;
+    private static readonly TimeSpan LifetimeWithoutExpiresIn = TimeSpan.FromSeconds(60);
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ClientCredentialsOptions _options;
@@ -32,7 +33,7 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     private readonly ILogger<ClientCredentialsProvider> _logger;
     private readonly Func<double> _cooldownJitterSample;
     private readonly object _refreshGate = new();
-    private int _disposed;
+    private bool _disposed;
     private readonly CancellationTokenSource _disposal = new();
 
     private Task<string>? _refreshInFlight;
@@ -98,12 +99,14 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     /// <inheritdoc />
     /// <exception cref="HttpRequestException">The token endpoint returned a non-success status code or was unreachable.</exception>
     /// <exception cref="System.Text.Json.JsonException">The token endpoint returned a body that is not valid JSON.</exception>
-    /// <exception cref="InvalidOperationException">The token endpoint returned a malformed response: <see langword="null"/> after deserialization, missing <c>access_token</c>, or non-positive <c>expires_in</c>.</exception>
+    /// <exception cref="InvalidOperationException">The token endpoint returned a malformed response: <see langword="null"/> after deserialization, missing <c>access_token</c>, or an <c>expires_in</c> that is not positive or exceeds <see cref="int.MaxValue"/> seconds. A response with no <c>expires_in</c> is cached for 60 seconds.</exception>
     /// <exception cref="TimeoutException">The token fetch exceeded <see cref="ClientCredentialsOptions.TokenAcquisitionTimeout"/>.</exception>
-    /// <exception cref="OperationCanceledException">The operation was canceled via <paramref name="cancellationToken"/>.</exception>
+    /// <exception cref="OperationCanceledException">The operation was canceled via <paramref name="cancellationToken"/>, or the provider was disposed while the fetch was in flight.</exception>
+    /// <exception cref="ObjectDisposedException">The provider was disposed before the call.</exception>
     public async Task<string> GetTokenAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed), this);
 
         if (TryGetUnexpiredCachedToken(out var cachedToken))
             return cachedToken;
@@ -115,6 +118,8 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     {
         lock (_refreshGate)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
             if (TryGetUnexpiredCachedToken(out var cachedToken))
                 return Task.FromResult(cachedToken);
 
@@ -215,9 +220,9 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
         var httpClient = _httpClientFactory.CreateClient("CantonAuth");
         using var content = new FormUrlEncodedContent(formData);
 
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(disposalToken);
-        timeoutCts.CancelAfter(_options.TokenAcquisitionTimeout);
-        var fetchToken = timeoutCts.Token;
+        using var timeoutCts = new CancellationTokenSource(_options.TokenAcquisitionTimeout, _timeProvider);
+        using var fetchCts = CancellationTokenSource.CreateLinkedTokenSource(disposalToken, timeoutCts.Token);
+        var fetchToken = fetchCts.Token;
 
         try
         {
@@ -228,10 +233,8 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = Encoding.UTF8.GetString(body.Bytes);
-                if (errorBody.Length > 1024)
-                    errorBody = string.Concat(errorBody.AsSpan(0, 1024), "… (truncated)");
-                LogTokenAcquisitionFailed(_logger, _tokenEndpoint, (int)response.StatusCode, errorBody);
+                var (error, errorDescription) = OAuthError(body.Bytes);
+                LogTokenAcquisitionFailed(_logger, _tokenEndpoint, (int)response.StatusCode, error, errorDescription);
                 response.EnsureSuccessStatusCode();
             }
 
@@ -246,15 +249,9 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
                 throw new InvalidOperationException(
                     $"Token endpoint {_tokenEndpoint} returned a response with no access_token.");
 
-            if (tokenResponse.ExpiresIn <= 0)
-                throw new InvalidOperationException(
-                    $"Token endpoint {_tokenEndpoint} returned an invalid expires_in value '{tokenResponse.ExpiresIn}'. A positive value is required.");
-
             Volatile.Write(
                 ref _cached,
-                new CachedToken(
-                    tokenResponse.AccessToken,
-                    RefreshAtTicks(TimeSpan.FromSeconds(tokenResponse.ExpiresIn))));
+                new CachedToken(tokenResponse.AccessToken, RefreshAtTicks(TokenLifetime(tokenResponse.ExpiresIn))));
 
             LogTokenAcquired(_logger, _tokenEndpoint);
 
@@ -268,6 +265,47 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
         }
     }
 
+    private static (string Error, string Description) OAuthError(byte[] body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return (OAuthErrorField(document.RootElement, "error"), OAuthErrorField(document.RootElement, "error_description"));
+        }
+        catch (JsonException)
+        {
+            return (string.Empty, string.Empty);
+        }
+    }
+
+    private static string OAuthErrorField(JsonElement root, string name)
+    {
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty(name, out var field)
+            || field.ValueKind != JsonValueKind.String)
+            return string.Empty;
+
+        var value = field.GetString()!;
+        return value.Length > MaxLoggedOAuthErrorLength
+            ? string.Concat(value.AsSpan(0, MaxLoggedOAuthErrorLength), "… (truncated)")
+            : value;
+    }
+
+    private TimeSpan TokenLifetime(double? expiresIn)
+    {
+        if (expiresIn is not { } seconds)
+        {
+            LogExpiresInAbsent(_logger, _tokenEndpoint, LifetimeWithoutExpiresIn.TotalSeconds);
+            return LifetimeWithoutExpiresIn;
+        }
+
+        if (!(seconds > 0 && seconds <= int.MaxValue))
+            throw new InvalidOperationException(
+                $"Token endpoint {_tokenEndpoint} returned an invalid expires_in value '{seconds}'. A positive number of seconds no greater than {int.MaxValue} is required.");
+
+        return TimeSpan.FromSeconds(seconds);
+    }
+
     private long RefreshAtTicks(TimeSpan lifetime)
     {
         var margin = TimeSpan.FromTicks(Math.Min(_options.SafetyMargin.Ticks, lifetime.Ticks / 2));
@@ -277,8 +315,11 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     [LoggerMessage(Level = LogLevel.Information, Message = "Token acquired from {Endpoint}")]
     private static partial void LogTokenAcquired(ILogger logger, Uri endpoint);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Token acquisition failed from {Endpoint}: HTTP {StatusCode} — {ErrorBody}")]
-    private static partial void LogTokenAcquisitionFailed(ILogger logger, Uri endpoint, int statusCode, string errorBody);
+    [LoggerMessage(Level = LogLevel.Error, Message = "Token acquisition failed from {Endpoint}: HTTP {StatusCode}, error '{OAuthError}', description '{OAuthErrorDescription}'")]
+    private static partial void LogTokenAcquisitionFailed(ILogger logger, Uri endpoint, int statusCode, string oAuthError, string oAuthErrorDescription);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Token endpoint {Endpoint} returned no expires_in; the token is cached for {LifetimeSeconds} seconds")]
+    private static partial void LogExpiresInAbsent(ILogger logger, Uri endpoint, double lifetimeSeconds);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Token refresh failed from {Endpoint}")]
     private static partial void LogTokenRefreshFailed(ILogger logger, Uri endpoint, Exception exception);
@@ -289,9 +330,12 @@ public sealed partial class ClientCredentialsProvider : ITokenProvider, IDisposa
     /// <inheritdoc />
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        lock (_refreshGate)
         {
-            return;
+            if (_disposed)
+                return;
+
+            Volatile.Write(ref _disposed, true);
         }
 
         _disposal.Cancel();

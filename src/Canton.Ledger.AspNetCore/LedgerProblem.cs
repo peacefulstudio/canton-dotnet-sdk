@@ -47,7 +47,7 @@ internal sealed record LedgerProblem(
         StatusCodes.Status400BadRequest);
 
     private static string WithErrorId(string fixedDetail, string? errorId) =>
-        errorId is null ? $"{fixedDetail}." : $"{fixedDetail} ({errorId}).";
+        ErrorCodeId.OrNull(errorId) is { } errorCode ? $"{fixedDetail} ({errorCode})." : $"{fixedDetail}.";
 
     private static LedgerProblem Forbidden() => new(
         "Forbidden",

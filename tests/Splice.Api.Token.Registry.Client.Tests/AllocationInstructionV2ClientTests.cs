@@ -24,6 +24,7 @@ public class AllocationInstructionV2ClientTests
         handler.Method.Should().Be(HttpMethod.Post);
         handler.RequestUri!.ToString().Should().Be("https://registry.example/registry/allocation-instruction/v2/allocation-factory");
         handler.RequestBody.Should().Be("""{"choiceArguments":{},"excludeDebugFields":true}""");
+        handler.RequestContentType.Should().Be("application/json");
         factory.FactoryId.Should().Be("factory-2");
     }
 }

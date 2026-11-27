@@ -472,4 +472,68 @@ public class NonEmptyJsonTests
             .WithInnerException<InvalidOperationException>()
             .WithMessage("boom on Tl");
     }
+
+    [Fact]
+    public void NonEmpty_round_trips_a_single_element_through_an_empty_tail()
+    {
+        var single = new NonEmpty<string>("alice", []);
+
+        var written = JsonSerializer.Serialize(single);
+
+        written.Should().Be("""{"Hd":"alice","Tl":[],"All":["alice"]}""");
+        JsonSerializer.Deserialize<NonEmpty<string>>(written).Should().Be(single);
+    }
+
+    [Fact]
+    public void NonEmpty_refuses_an_empty_object()
+    {
+        var act = () => JsonSerializer.Deserialize<NonEmpty<string>>("{}");
+
+        act.Should().Throw<JsonException>()
+            .WithMessage("Invalid element in NonEmpty<String>: Hd is null*");
+    }
+
+    [Fact]
+    public void NonEmpty_reads_a_null_as_the_absent_list_where_the_slot_permits_one()
+    {
+        var committee = JsonSerializer.Deserialize<OptionalCommittee>(
+            """{"Name":"board","Members":null}""", Registered);
+
+        committee!.Members.Should().BeNull();
+    }
+
+    [Fact]
+    public void NonEmpty_refuses_a_null_where_the_slot_forbids_one()
+    {
+        var act = () => JsonSerializer.Deserialize<Committee>("""{"Name":"board","Members":null}""", Registered);
+
+        act.Should().Throw<JsonException>()
+            .WithMessage("*constructor parameter 'Members'*doesn't allow null values*");
+    }
+
+    public static TheoryData<string> ReferenceHandlers => ["Preserve", "IgnoreCycles"];
+
+    private static JsonSerializerOptions WithReferenceHandler(string handler) => new()
+    {
+        ReferenceHandler = handler == "Preserve" ? ReferenceHandler.Preserve : ReferenceHandler.IgnoreCycles,
+    };
+
+    [Theory]
+    [MemberData(nameof(ReferenceHandlers))]
+    public void NonEmpty_refuses_a_ReferenceHandler_on_write(string handler)
+    {
+        var act = () => JsonSerializer.Serialize(new NonEmpty<string>("alice", []), WithReferenceHandler(handler));
+
+        act.Should().Throw<JsonException>().WithMessage("Reference handling is not supported for NonEmpty<String>:*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ReferenceHandlers))]
+    public void NonEmpty_refuses_a_ReferenceHandler_on_read(string handler)
+    {
+        var act = () => JsonSerializer.Deserialize<NonEmpty<string>>(
+            """{"Hd":"alice","Tl":[]}""", WithReferenceHandler(handler));
+
+        act.Should().Throw<JsonException>().WithMessage("Reference handling is not supported for NonEmpty<String>:*");
+    }
 }
